@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Infrastructure\Complients\Domain\" />
+    <Folder Include="Infrastructure\CustomerPortal\Domain\" />
+    <Folder Include="Infrastructure\Customer\Domain\" />
+    <Folder Include="Infrastructure\Dashboard\Domain\" />
+    <Folder Include="Infrastructure\Products\Domain\" />
+    <Folder Include="Infrastructure\Report\Domain\" />
+    <Folder Include="Infrastructure\Schedule\Domain\" />
+    <Folder Include="Infrastructure\Settings\Domain\" />
+    <Folder Include="Infrastructure\Spareparts\Domain\" />
+    <Folder Include="Infrastructure\Technician\Domain\" />
+    <Folder Include="Infrastructure\Tracking\Domain\" />
+    <Folder Include="Infrastructure\User\Domain\" />
+    <Folder Include="Infrastructure\WarrantyReturn\Domain\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
+    <PackageReference Include="Microsoft.AspNet.Identity.Core" Version="2.2.4" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.4" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.3" />
+    <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
+  </ItemGroup>
+
+</Project>
