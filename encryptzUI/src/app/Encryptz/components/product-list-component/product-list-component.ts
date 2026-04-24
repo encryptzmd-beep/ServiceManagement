@@ -42,6 +42,13 @@ export class ProductListComponent implements OnInit {
   showViewModal = signal(false);
   selectedProduct = signal<ProductMasterDTO | null>(null);
   isEditMode = signal(false);
+  toastVisible = signal(false);
+  toastMessage = signal('');
+  toastType = signal<'success' | 'error'>('success');
+  confirmVisible = signal(false);
+  confirmMessage = signal('');
+  private confirmAction: (() => void) | null = null;
+  private toastTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   pageSizeOptions = [10, 20, 50, 100];
 
@@ -134,7 +141,7 @@ export class ProductListComponent implements OnInit {
       error: (err) => {
         console.error('Error loading products:', err);
         this.loading.set(false);
-        alert('Error loading products');
+        this.showToast('Error loading products', 'error');
       }
     });
   }
@@ -208,28 +215,28 @@ export class ProductListComponent implements OnInit {
     const count = this.selectedCount();
     if (count === 0) return;
 
-    if (confirm(`Are you sure you want to delete ${count} selected product(s)?`)) {
+    this.openConfirm(`Are you sure you want to delete ${count} selected product(s)?`, () => {
       this.loading.set(true);
       const ids = Array.from(this.selectedProducts());
 
       this.productService.bulkDeleteProducts(ids).subscribe({
         next: (response) => {
           if (response.success) {
-            alert(response.message);
+            this.showToast(response.message || 'Products deleted successfully', 'success');
             this.selectedProducts.set(new Set());
             this.loadProducts();
           } else {
-            alert(response.message || 'Bulk delete failed');
+            this.showToast(response.message || 'Bulk delete failed', 'error');
             this.loading.set(false);
           }
         },
         error: (error) => {
           console.error('Error in bulk delete:', error);
-          alert('Error performing bulk delete');
+          this.showToast('Error performing bulk delete', 'error');
           this.loading.set(false);
         }
       });
-    }
+    });
   }
 
   bulkUpdateStatus(isActive: boolean) {
@@ -237,28 +244,28 @@ export class ProductListComponent implements OnInit {
     if (count === 0) return;
 
     const action = isActive ? 'activate' : 'deactivate';
-    if (confirm(`Are you sure you want to ${action} ${count} selected product(s)?`)) {
+    this.openConfirm(`Are you sure you want to ${action} ${count} selected product(s)?`, () => {
       this.loading.set(true);
       const ids = Array.from(this.selectedProducts());
 
       this.productService.bulkUpdateStatus(ids, isActive).subscribe({
         next: (response) => {
           if (response.success) {
-            alert(response.message);
+            this.showToast(response.message || `Products ${action}d successfully`, 'success');
             this.selectedProducts.set(new Set());
             this.loadProducts();
           } else {
-            alert(response.message || `Bulk ${action} failed`);
+            this.showToast(response.message || `Bulk ${action} failed`, 'error');
             this.loading.set(false);
           }
         },
         error: (error) => {
           console.error(`Error in bulk ${action}:`, error);
-          alert(`Error performing bulk ${action}`);
+          this.showToast(`Error performing bulk ${action}`, 'error');
           this.loading.set(false);
         }
       });
-    }
+    });
   }
 
   openProductForm(product?: ProductMasterDTO) {
@@ -267,9 +274,18 @@ export class ProductListComponent implements OnInit {
     this.showFormModal.set(true);
   }
 
-  closeFormModal(refresh = false) {
+  closeFormModal(result: boolean | { refresh?: boolean; message?: string; type?: 'success' | 'error' } = false) {
     this.showFormModal.set(false);
     this.selectedProduct.set(null);
+
+    const refresh = typeof result === 'boolean' ? result : !!result.refresh;
+    const message = typeof result === 'object' ? result.message : '';
+    const type = typeof result === 'object' && result.type ? result.type : 'success';
+
+    if (message) {
+      this.showToast(message, type);
+    }
+
     if (refresh) {
       this.loadProducts();
     }
@@ -286,26 +302,69 @@ export class ProductListComponent implements OnInit {
   }
 
   deleteProduct(product: ProductMasterDTO) {
-    if (!confirm(`Are you sure you want to delete product "${product.productCode} - ${product.productName}"?`)) return;
+    this.openConfirm(`Are you sure you want to delete product "${product.productCode} - ${product.productName}"?`, () => {
+      this.loading.set(true);
 
-    this.loading.set(true);
-
-    this.productService.deleteProduct(product.productMasterId).subscribe({
-      next: (response) => {
-        if (response.success) {
-          alert('Product deleted successfully');
-          this.loadProducts();
-        } else {
-          alert(response.message || 'Delete failed');
+      this.productService.deleteProduct(product.productMasterId).subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.showToast('Product deleted successfully', 'success');
+            this.loadProducts();
+          } else {
+            this.showToast(response.message || 'Delete failed', 'error');
+            this.loading.set(false);
+          }
+        },
+        error: (error) => {
+          console.error('Error deleting product:', error);
+          this.showToast('Error deleting product', 'error');
           this.loading.set(false);
         }
-      },
-      error: (error) => {
-        console.error('Error deleting product:', error);
-        alert('Error deleting product');
-        this.loading.set(false);
-      }
+      });
     });
+  }
+
+  showToast(message: string, type: 'success' | 'error' = 'success') {
+    this.toastMessage.set(message);
+    this.toastType.set(type);
+    this.toastVisible.set(true);
+
+    if (this.toastTimeoutId) {
+      clearTimeout(this.toastTimeoutId);
+    }
+
+    this.toastTimeoutId = setTimeout(() => {
+      this.toastVisible.set(false);
+      this.toastTimeoutId = null;
+    }, 3500);
+  }
+
+  hideToast() {
+    this.toastVisible.set(false);
+    if (this.toastTimeoutId) {
+      clearTimeout(this.toastTimeoutId);
+      this.toastTimeoutId = null;
+    }
+  }
+
+  openConfirm(message: string, action: () => void) {
+    this.confirmMessage.set(message);
+    this.confirmAction = action;
+    this.confirmVisible.set(true);
+  }
+
+  cancelConfirm() {
+    this.confirmVisible.set(false);
+    this.confirmMessage.set('');
+    this.confirmAction = null;
+  }
+
+  proceedConfirm() {
+    const action = this.confirmAction;
+    this.cancelConfirm();
+    if (action) {
+      action();
+    }
   }
 
   formatCurrency(value: number) {
