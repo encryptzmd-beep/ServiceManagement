@@ -1,203 +1,246 @@
-<!-- components/product-list/product-list.component.html -->
-<div class="container">
-  <div class="card">
-    <div class="card-header">
-      <h2>
-        📦 Product Master
-      </h2>
-      <button class="btn btn-primary" (click)="openProductForm()">
-        ➕ Add Product
-      </button>
+<div class="mgmt-page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Products</div>
+      <div class="page-sub">Manage product master data, pricing, and availability</div>
     </div>
 
-    <div class="card-body">
-      <!-- Bulk Actions Bar -->
-      <div class="bulk-actions-bar" *ngIf="getSelectedCount() > 0">
-        <div class="selected-info">
-          ✅ {{getSelectedCount()}} product(s) selected
-        </div>
-        <div class="bulk-actions">
-          <button class="btn btn-primary btn-sm" (click)="bulkUpdateStatus(true)">
-            ✅ Activate
-          </button>
-          <button class="btn btn-secondary btn-sm" (click)="bulkUpdateStatus(false)">
-            ⛔ Deactivate
-          </button>
-          <button class="btn btn-danger btn-sm" (click)="bulkDelete()">
-            🗑️ Delete
-          </button>
-        </div>
-      </div>
+    <button class="btn-new" (click)="openProductForm()">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <path d="M7 1v12M1 7h12" stroke="#fff" stroke-width="2" stroke-linecap="round" />
+      </svg>
+      Add Product
+    </button>
+  </div>
 
-      <!-- Filters -->
-      <div class="filters-section">
-        <div class="filter-group">
-          <label>🔍 Search</label>
-          <input
-            type="text"
-            [ngModel]="searchTerm()"
-            (ngModelChange)="searchTerm.set($event)"
-            (keyup.enter)="applyFilter()"
-            placeholder="Search by code, name, model...">
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Total Products</div>
+      <div class="stat-val">{{ totalCount() }}</div>
+      <div class="stat-pill pill-blue">Across all pages</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Visible Records</div>
+      <div class="stat-val stat-active">{{ products().length }}</div>
+      <div class="stat-pill pill-green">Current page</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Selected</div>
+      <div class="stat-val stat-inactive">{{ getSelectedCount() }}</div>
+      <div class="stat-pill" [class.pill-red]="getSelectedCount() > 0" [class.pill-blue]="getSelectedCount() === 0">
+        {{ getSelectedCount() > 0 ? 'Bulk actions ready' : 'No selection' }}
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content">
+    <div class="table-wrap">
+      <div class="table-toolbar">
+        <div class="toolbar-left">
+          <span class="table-title">All Products</span>
+          <span class="table-count">{{ products().length }} of {{ totalCount() }}</span>
         </div>
-        <div class="filter-group">
-          <label>📁 Category</label>
-          <select [ngModel]="selectedCategory()" (ngModelChange)="selectedCategory.set($event); applyFilter()">
+
+        <div class="toolbar-right">
+          <div class="search-box">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="7" cy="7" r="5" stroke="#8a9ab0" stroke-width="1.5" />
+              <path d="M11 11l3 3" stroke="#8a9ab0" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+            <input
+              type="text"
+              class="search-input-inline"
+              [value]="searchTerm()"
+              (input)="searchTerm.set($any($event.target).value)"
+              (keyup.enter)="applyFilter()"
+              placeholder="Search by code, name, model..." />
+          </div>
+
+          <select
+            class="filter-select"
+            [ngModel]="selectedCategory()"
+            (ngModelChange)="selectedCategory.set($event); applyFilter()">
             <option value="">All Categories</option>
             <option *ngFor="let cat of dropdownData().categories" [value]="cat.value">
-              {{cat.label}}
+              {{ cat.label }}
             </option>
           </select>
-        </div>
-        <div class="filter-group">
-          <label>📂 Sub Category</label>
-          <select [ngModel]="selectedSubCategory()" (ngModelChange)="selectedSubCategory.set($event); applyFilter()">
+
+          <select
+            class="filter-select"
+            [ngModel]="selectedSubCategory()"
+            (ngModelChange)="selectedSubCategory.set($event); applyFilter()">
             <option value="">All Sub Categories</option>
             <option *ngFor="let sub of dropdownData().subCategories" [value]="sub.value">
-              {{sub.label}}
+              {{ sub.label }}
             </option>
           </select>
+
+          <button class="btn-primary toolbar-btn" (click)="applyFilter()">Apply Filters</button>
+
+          <button class="btn-secondary toolbar-btn" (click)="resetFilters()" *ngIf="hasActiveFilters()">
+            Reset
+          </button>
         </div>
-        <button class="btn btn-primary" (click)="applyFilter()">Apply Filters</button>
-        <button class="btn btn-outline" (click)="resetFilters()" *ngIf="hasActiveFilters()">
-          Reset
-        </button>
       </div>
 
-      <!-- Loading -->
+      <div class="bulk-actions-bar" *ngIf="getSelectedCount() > 0">
+        <div class="selected-info">
+          {{ getSelectedCount() }} product(s) selected
+        </div>
+
+        <div class="bulk-actions">
+          <button class="btn-primary toolbar-btn small-btn" (click)="bulkUpdateStatus(true)">
+            Activate
+          </button>
+          <button class="btn-secondary toolbar-btn small-btn" (click)="bulkUpdateStatus(false)">
+            Deactivate
+          </button>
+          <button class="btn-danger toolbar-btn small-btn" (click)="bulkDelete()">
+            Delete
+          </button>
+        </div>
+      </div>
+
       <div class="loading-container" *ngIf="loading()">
         <div class="spinner"></div>
         <p>Loading products...</p>
       </div>
 
-      <!-- Products Table -->
       <div class="table-container" *ngIf="!loading()">
-        <table>
+        <table class="data-table styled-table">
           <thead>
             <tr>
-              <th style="width: 40px">
+              <th class="check-col">
                 <input
                   type="checkbox"
                   class="checkbox"
                   [checked]="isAllSelected()"
-                  (change)="toggleAllSelection()">
+                  (change)="toggleAllSelection()" />
               </th>
-              <th (click)="sortData('productCode')">
-                Product Code {{getSortIcon('productCode')}}
-              </th>
-              <th (click)="sortData('productName')">
-                Product Name {{getSortIcon('productName')}}
-              </th>
-              <th (click)="sortData('model')">
-                Model {{getSortIcon('model')}}
-              </th>
-              <th (click)="sortData('category')">
-                Category {{getSortIcon('category')}}
-              </th>
-              <th (click)="sortData('subCategory')">
-                Sub Category {{getSortIcon('subCategory')}}
-              </th>
-              <th (click)="sortData('mrp')">
-                MRP (₹) {{getSortIcon('mrp')}}
-              </th>
+              <th (click)="sortData('productCode')">Product Code {{ getSortIcon('productCode') }}</th>
+              <th (click)="sortData('productName')">Product Name {{ getSortIcon('productName') }}</th>
+              <th (click)="sortData('model')">Model {{ getSortIcon('model') }}</th>
+              <th (click)="sortData('category')">Category {{ getSortIcon('category') }}</th>
+              <th (click)="sortData('subCategory')">Sub Category {{ getSortIcon('subCategory') }}</th>
+              <th (click)="sortData('mrp')">MRP {{ getSortIcon('mrp') }}</th>
               <th>Org</th>
               <th>Status</th>
-              <th style="width: 120px">Actions</th>
+              <th class="actions-col">Actions</th>
             </tr>
           </thead>
+
           <tbody>
-            <tr *ngFor="let product of products()" [class.inactive]="!product.isActive">
-              <td>
+            <tr *ngFor="let product of products()" [class.row-inactive]="!product.isActive">
+              <td class="check-col">
                 <input
                   type="checkbox"
                   class="checkbox"
                   [checked]="selectedProducts().has(product.productMasterId)"
-                  (change)="toggleSelection(product.productMasterId)">
+                  (change)="toggleSelection(product.productMasterId)" />
               </td>
-              <td><strong>{{product.productCode}}</strong></td>
+
+              <td class="product-code">
+                <strong>{{ product.productCode }}</strong>
+              </td>
+
               <td>
-                {{product.productName}}
-                <span *ngIf="product.model" style="color: #666; font-size: 12px; margin-left: 8px;">
-                  ({{product.model}})
+                <div class="product-name-cell">
+                  <span class="product-name">{{ product.productName }}</span>
+                  <span *ngIf="product.model" class="product-model-inline">{{ product.model }}</span>
+                </div>
+              </td>
+
+              <td class="muted-cell">{{ product.model || '-' }}</td>
+
+              <td>
+                <span class="info-badge" *ngIf="product.category">{{ product.category }}</span>
+                <span class="muted-cell" *ngIf="!product.category">-</span>
+              </td>
+
+              <td>
+                <span class="sub-badge" *ngIf="product.subCategory">{{ product.subCategory }}</span>
+                <span class="muted-cell" *ngIf="!product.subCategory">-</span>
+              </td>
+
+              <td class="price-cell">{{ formatCurrency(product.mrp) }}</td>
+
+              <td>
+                <span class="org-chip" [class.org-primary]="product.org === 'SOFPL'" [class.org-accent]="product.org === 'NFPL'">
+                  {{ product.org }}
                 </span>
               </td>
-              <td>{{product.model || '-'}}</td>
+
               <td>
-                <span class="badge badge-info" *ngIf="product.category">{{product.category}}</span>
-                <span *ngIf="!product.category">-</span>
-              </td>
-              <td>
-                <span class="badge badge-primary" *ngIf="product.subCategory">{{product.subCategory}}</span>
-                <span *ngIf="!product.subCategory">-</span>
-              </td>
-              <td style="color: #28a745; font-weight: 600;">
-                {{formatCurrency(product.mrp)}}
-              </td>
-              <td>
-                <span class="chip" [class.chip-primary]="product.org === 'SOFPL'" [class.chip-accent]="product.org === 'NFPL'">
-                  {{product.org}}
+                <span class="status-badge" [class.active]="product.isActive" [class.inactive]="!product.isActive">
+                  <span class="status-dot" [class.dot-active]="product.isActive" [class.dot-inactive]="!product.isActive"></span>
+                  {{ product.isActive ? 'Active' : 'Inactive' }}
                 </span>
               </td>
+
               <td>
-                <span class="badge" [class.badge-success]="product.isActive" [class.badge-danger]="!product.isActive">
-                  {{product.isActive ? 'Active' : 'Inactive'}}
-                </span>
-              </td>
-              <td>
-                <div class="btn-group">
-                  <button class="btn btn-outline btn-sm" (click)="viewProduct(product)" title="View">
-                    👁️
+                <div class="row-actions">
+                  <button class="action-btn icon-btn" (click)="viewProduct(product)" title="View" aria-label="View">
+                    <span class="material-icons">visibility</span>
                   </button>
-                  <button class="btn btn-outline btn-sm" (click)="openProductForm(product)" title="Edit">
-                    ✏️
+                  <button class="action-btn icon-btn" (click)="openProductForm(product)" title="Edit" aria-label="Edit">
+                    <span class="material-icons">edit</span>
                   </button>
-                  <button class="btn btn-danger btn-sm" (click)="deleteProduct(product)" title="Delete">
-                    🗑️
+                  <button class="action-btn icon-btn danger" (click)="deleteProduct(product)" title="Delete" aria-label="Delete">
+                    <span class="material-icons">delete</span>
                   </button>
                 </div>
               </td>
             </tr>
+
             <tr *ngIf="products().length === 0">
-              <td colspan="10" style="text-align: center; padding: 60px;">
-                <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
-                <p>No products found</p>
-                <button class="btn btn-primary" (click)="openProductForm()">
-                  Add your first product
-                </button>
+              <td colspan="10" class="empty-row">
+                <div class="empty-state">
+                  <div class="empty-title">No products found</div>
+                  <div class="empty-sub">Try changing filters or add a new product to get started.</div>
+                  <button class="btn-primary toolbar-btn empty-btn" (click)="openProductForm()">
+                    Add your first product
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- Pagination -->
-      <div class="pagination" *ngIf="!loading() && totalCount() > 0">
-        <div>
-          <select [value]="pageSize()" (change)="onPageSizeChange($event)" style="padding: 6px; border-radius: 4px;">
-            <option *ngFor="let size of pageSizeOptions" [value]="size">{{size}} per page</option>
+      <div class="pagination-bar" *ngIf="!loading() && totalCount() > 0">
+        <div class="pagination-left">
+          <select class="filter-select page-size-select" [value]="pageSize()" (change)="onPageSizeChange($event)">
+            <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} per page</option>
           </select>
         </div>
-        <div class="btn-group">
-          <button (click)="onPageChange(1)" [disabled]="currentPage() === 1">⏮️ First</button>
-          <button (click)="onPageChange(currentPage() - 1)" [disabled]="currentPage() === 1">◀ Prev</button>
-          <button *ngFor="let page of getVisiblePages()"
-                  (click)="onPageChange(page)"
-                  [style.background]="page === currentPage() ? '#667eea' : ''"
-                  [style.color]="page === currentPage() ? 'white' : ''">
-            {{page}}
+
+        <div class="pagination-center">
+          <button class="page-btn" (click)="onPageChange(1)" [disabled]="currentPage() === 1">First</button>
+          <button class="page-btn" (click)="onPageChange(currentPage() - 1)" [disabled]="currentPage() === 1">Prev</button>
+
+          <button
+            *ngFor="let page of getVisiblePages()"
+            class="page-btn"
+            [class.active-page]="page === currentPage()"
+            (click)="onPageChange(page)">
+            {{ page }}
           </button>
-          <button (click)="onPageChange(currentPage() + 1)" [disabled]="currentPage() === getTotalPages()">Next ▶</button>
-          <button (click)="onPageChange(getTotalPages())" [disabled]="currentPage() === getTotalPages()">Last ⏭️</button>
+
+          <button class="page-btn" (click)="onPageChange(currentPage() + 1)" [disabled]="currentPage() === getTotalPages()">Next</button>
+          <button class="page-btn" (click)="onPageChange(getTotalPages())" [disabled]="currentPage() === getTotalPages()">Last</button>
         </div>
-        <div class="page-info">
-          Page {{currentPage()}} of {{getTotalPages()}} | Total: {{totalCount()}} items
+
+        <div class="pagination-info">
+          Page {{ currentPage() }} of {{ getTotalPages() }} | Total: {{ totalCount() }} items
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Product Form Modal -->
 <app-product-form
   *ngIf="showFormModal()"
   [product]="selectedProduct()"
@@ -205,9 +248,37 @@
   (close)="closeFormModal($event)">
 </app-product-form>
 
-<!-- Product View Modal -->
 <app-product-view
   *ngIf="showViewModal()"
   [product]="selectedProduct()"
   (close)="closeViewModal()">
 </app-product-view>
+
+<div class="toast-stack" *ngIf="toastVisible()">
+  <div class="app-toast" [class.toast-error]="toastType() === 'error'" [class.toast-success]="toastType() === 'success'">
+    <div class="toast-icon">{{ toastType() === 'success' ? '✓' : '!' }}</div>
+    <div class="toast-copy">
+      <div class="toast-title">{{ toastType() === 'success' ? 'Success' : 'Something went wrong' }}</div>
+      <div class="toast-message">{{ toastMessage() }}</div>
+    </div>
+    <button class="toast-close" (click)="hideToast()" aria-label="Close notification">×</button>
+  </div>
+</div>
+
+<div class="confirm-overlay" *ngIf="confirmVisible()">
+  <div class="confirm-dialog">
+    <div class="confirm-header">
+      <div class="confirm-title">Confirm Action</div>
+      <button class="confirm-close" (click)="cancelConfirm()" aria-label="Close confirmation">×</button>
+    </div>
+    <div class="confirm-body">{{ confirmMessage() }}</div>
+    <div class="confirm-actions">
+      <button class="confirm-btn confirm-cancel-btn" (click)="cancelConfirm()">
+        Cancel
+      </button>
+      <button class="confirm-btn confirm-danger-btn" (click)="proceedConfirm()">
+        Confirm
+      </button>
+    </div>
+  </div>
+</div>

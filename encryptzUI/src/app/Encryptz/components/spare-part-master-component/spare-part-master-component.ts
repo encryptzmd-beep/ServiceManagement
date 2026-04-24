@@ -1,6 +1,6 @@
 // spare-part-master.component.ts
 
-import { Component, OnInit, inject, signal, DestroyRef } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../Services/API/api-service';
@@ -20,626 +20,631 @@ export interface SparePart {
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="spare-master-container">
-      <!-- Header -->
+    <div class="mgmt-page">
       <div class="page-header">
-        <div class="header-left">
-          <h1>Spare Parts Master</h1>
-          <p>Manage all spare parts inventory</p>
+        <div>
+          <div class="page-title">Spare Parts</div>
+          <div class="page-sub">Manage spare parts inventory, stock levels, and pricing</div>
         </div>
-        <div class="header-right">
-          <button class="btn-add" (click)="openAddModal()">
-            <span class="material-icons">add</span> Add New Part
-          </button>
-        </div>
-      </div>
 
-      <!-- Filters -->
-      <div class="filters-bar">
-        <div class="search-box">
-          <span class="material-icons">search</span>
-          <input
-            type="text"
-            [(ngModel)]="filters.searchTerm"
-            (input)="onSearch()"
-            placeholder="Search by part name or number..."
-          />
-        </div>
-        <div class="filter-group">
-          <select [(ngModel)]="filters.isActive" (change)="loadData()">
-            <option [value]="null">All Status</option>
-            <option [value]="true">Active</option>
-            <option [value]="false">Inactive</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <select [(ngModel)]="filters.sortBy" (change)="loadData()">
-            <option value="SparePartId">ID</option>
-            <option value="PartName">Part Name</option>
-            <option value="StockQuantity">Stock</option>
-            <option value="UnitPrice">Price</option>
-          </select>
-          <select [(ngModel)]="filters.sortOrder" (change)="loadData()">
-            <option value="ASC">↑ Ascending</option>
-            <option value="DESC">↓ Descending</option>
-          </select>
-        </div>
-        <button class="btn-refresh" (click)="loadData()">
-          <span class="material-icons">refresh</span>
+        <button class="btn-new" (click)="openAddModal()">
+          <span class="material-icons">add</span>
+          Add New Part
         </button>
       </div>
 
-      <!-- Bulk Actions -->
-      @if (selectedIds().size > 0) {
-        <div class="bulk-bar">
-          <span>{{ selectedIds().size }} item(s) selected</span>
-          <button class="btn-bulk-delete" (click)="bulkDelete()">
-            <span class="material-icons">delete</span> Delete Selected
-          </button>
-          <button class="btn-clear" (click)="clearSelection()">
-            Clear Selection
-          </button>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Visible Parts</div>
+          <div class="stat-val">{{ spareParts().length }}</div>
+          <div class="stat-pill pill-blue">Current page</div>
         </div>
-      }
 
-      <!-- Loading State -->
-      @if (loading()) {
-        <div class="loading-overlay">
-          <div class="spinner"></div>
-          <p>Loading spare parts...</p>
+        <div class="stat-card">
+          <div class="stat-label">Active</div>
+          <div class="stat-val stat-active">{{ activeCount() }}</div>
+          <div class="stat-pill pill-green">{{ spareParts().length ? activePercent() : 0 }}% active</div>
         </div>
-      }
 
-      <!-- Table -->
-      @if (!loading()) {
-        <div class="table-responsive">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th class="checkbox-col">
-                  <input
-                    type="checkbox"
-                    [checked]="isAllSelected()"
-                    (change)="toggleSelectAll()"
-                  />
-                </th>
-                <th>ID</th>
-                <th>Part Name</th>
-                <th>Part Number</th>
-                <th>Stock Quantity</th>
-                <th>Unit Price (₹)</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of spareParts(); track item.sparePartId) {
-                <tr [class.selected]="selectedIds().has(item.sparePartId)">
-                  <td class="checkbox-col">
-                    <input
-                      type="checkbox"
-                      [checked]="selectedIds().has(item.sparePartId)"
-                      (change)="toggleSelection(item.sparePartId)"
-                    />
-                  </td>
-                  <td>{{ item.sparePartId }}</td>
-                  <td class="part-name">{{ item.partName }}</td>
-                  <td>{{ item.partNumber || '—' }}</td>
-                  <td>
-                    <span class="stock-badge" [class.low-stock]="item.stockQuantity < 5">
-                      {{ item.stockQuantity }}
-                    </span>
-                  </td>
-                  <td>{{ item.unitPrice | currency:'INR':'symbol':'1.0-0' }}</td>
-                  <td>
-                    <span class="status-badge" [class.active]="item.isActive" [class.inactive]="!item.isActive">
-                      {{ item.isActive ? 'Active' : 'Inactive' }}
-                    </span>
-                  </td>
-                  <td class="actions-cell">
-                    <button class="btn-edit" (click)="openEditModal(item)" title="Edit">
-                      <span class="material-icons">edit</span>
-                    </button>
-                    <button class="btn-delete" (click)="deleteItem(item.sparePartId)" title="Delete">
-                      <span class="material-icons">delete</span>
-                    </button>
-                  </td>
-                </tr>
-              } @empty {
-                <tr>
-                  <td colspan="8" class="empty-cell">
-                    <span class="material-icons">inventory_2</span>
-                    <p>No spare parts found</p>
-                    <button class="btn-primary" (click)="openAddModal()">Add New Part</button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+        <div class="stat-card">
+          <div class="stat-label">Selected</div>
+          <div class="stat-val stat-inactive">{{ selectedIds().size }}</div>
+          <div class="stat-pill" [class.pill-red]="selectedIds().size > 0" [class.pill-blue]="selectedIds().size === 0">
+            {{ selectedIds().size > 0 ? 'Bulk action ready' : 'No selection' }}
+          </div>
         </div>
-      }
+      </div>
 
-      <!-- Pagination -->
-      @if (totalPages() > 1) {
-        <div class="pagination">
-          <button
-            class="page-btn"
-            (click)="goToPage(currentPage() - 1)"
-            [disabled]="currentPage() <= 1"
-          >
-            « Prev
-          </button>
-          <span class="page-info">
-            Page {{ currentPage() }} of {{ totalPages() }}
-          </span>
-          <button
-            class="page-btn"
-            (click)="goToPage(currentPage() + 1)"
-            [disabled]="currentPage() >= totalPages()"
-          >
-            Next »
-          </button>
+      <div class="tab-content">
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <div class="toolbar-left">
+              <span class="table-title">All Spare Parts</span>
+              <span class="table-count">{{ spareParts().length }} items</span>
+            </div>
+
+            <div class="toolbar-right">
+              <div class="search-box">
+                <span class="material-icons">search</span>
+                <input
+                  type="text"
+                  class="search-input-inline"
+                  [(ngModel)]="filters.searchTerm"
+                  (input)="onSearch()"
+                  placeholder="Search by part name or number..." />
+              </div>
+
+              <select class="filter-select" [(ngModel)]="filters.isActive" (change)="loadData()">
+                <option [ngValue]="null">All Status</option>
+                <option [ngValue]="true">Active</option>
+                <option [ngValue]="false">Inactive</option>
+              </select>
+
+              <select class="filter-select" [(ngModel)]="filters.sortBy" (change)="loadData()">
+                <option value="SparePartId">ID</option>
+                <option value="PartName">Part Name</option>
+                <option value="StockQuantity">Stock</option>
+                <option value="UnitPrice">Price</option>
+              </select>
+
+              <select class="filter-select" [(ngModel)]="filters.sortOrder" (change)="loadData()">
+                <option value="ASC">Ascending</option>
+                <option value="DESC">Descending</option>
+              </select>
+
+              <button class="action-square" (click)="loadData()" title="Refresh">
+                <span class="material-icons">refresh</span>
+              </button>
+            </div>
+          </div>
+
+          @if (selectedIds().size > 0) {
+            <div class="bulk-bar">
+              <div class="selected-info">{{ selectedIds().size }} item(s) selected</div>
+
+              <div class="bulk-actions">
+                <button class="toolbar-btn danger-btn" (click)="bulkDelete()">
+                  Delete Selected
+                </button>
+                <button class="toolbar-btn secondary-btn" (click)="clearSelection()">
+                  Clear Selection
+                </button>
+              </div>
+            </div>
+          }
+
+          @if (loading()) {
+            <div class="loading-container">
+              <div class="spinner"></div>
+              <p>Loading spare parts...</p>
+            </div>
+          }
+
+          @if (!loading()) {
+            <div class="table-container">
+              <table class="data-table styled-table">
+                <thead>
+                  <tr>
+                    <th class="check-col">
+                      <input
+                        type="checkbox"
+                        [checked]="isAllSelected()"
+                        (change)="toggleSelectAll()" />
+                    </th>
+                    <th>ID</th>
+                    <th>Part Name</th>
+                    <th>Part Number</th>
+                    <th>Stock Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Status</th>
+                    <th class="actions-col">Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  @for (item of spareParts(); track item.sparePartId) {
+                    <tr [class.row-selected]="selectedIds().has(item.sparePartId)">
+                      <td class="check-col">
+                        <input
+                          type="checkbox"
+                          [checked]="selectedIds().has(item.sparePartId)"
+                          (change)="toggleSelection(item.sparePartId)" />
+                      </td>
+                      <td class="muted-cell">{{ item.sparePartId }}</td>
+                      <td class="item-name">{{ item.partName }}</td>
+                      <td class="muted-cell">{{ item.partNumber || '—' }}</td>
+                      <td>
+                        <span class="stock-badge" [class.low-stock]="item.stockQuantity < 5">
+                          {{ item.stockQuantity }}
+                        </span>
+                      </td>
+                      <td class="price-cell">{{ item.unitPrice | currency:'INR':'symbol':'1.0-0' }}</td>
+                      <td>
+                        <span class="status-badge" [class.active]="item.isActive" [class.inactive]="!item.isActive">
+                          <span class="status-dot" [class.dot-active]="item.isActive" [class.dot-inactive]="!item.isActive"></span>
+                          {{ item.isActive ? 'Active' : 'Inactive' }}
+                        </span>
+                      </td>
+                      <td>
+                        <div class="row-actions">
+                          <button class="action-btn" (click)="openEditModal(item)" title="Edit">
+                            <span class="material-icons">edit</span>
+                          </button>
+                          <button class="action-btn danger" (click)="deleteItem(item.sparePartId)" title="Delete">
+                            <span class="material-icons">delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="8" class="empty-row">
+                        <div class="empty-state">
+                          <div class="empty-title">No spare parts found</div>
+                          <div class="empty-sub">Try changing the filters or add a new spare part to get started.</div>
+                          <button class="toolbar-btn primary-btn empty-btn" (click)="openAddModal()">Add New Part</button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          @if (totalPages() > 1) {
+            <div class="pagination-bar">
+              <div class="pagination-left">
+                <span class="pagination-info">Page {{ currentPage() }} of {{ totalPages() }}</span>
+              </div>
+
+              <div class="pagination-center">
+                <button class="page-btn" (click)="goToPage(currentPage() - 1)" [disabled]="currentPage() <= 1">
+                  Prev
+                </button>
+                <button class="page-btn" (click)="goToPage(currentPage() + 1)" [disabled]="currentPage() >= totalPages()">
+                  Next
+                </button>
+              </div>
+            </div>
+          }
         </div>
-      }
+      </div>
     </div>
 
-    <!-- Add/Edit Modal -->
     @if (showModal()) {
-      <div class="modal-overlay" (click)="closeModal()"></div>
-      <div class="modal-container">
-        <div class="modal-header">
-          <h3>{{ isEditing() ? 'Edit Spare Part' : 'Add New Spare Part' }}</h3>
-          <button class="modal-close" (click)="closeModal()">
-            <span class="material-icons">close</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>Part Name *</label>
-            <input
-              type="text"
-              [(ngModel)]="formData.partName"
-              class="form-control"
-              placeholder="Enter part name"
-            />
-          </div>
-          <div class="form-group">
-            <label>Part Number</label>
-            <input
-              type="text"
-              [(ngModel)]="formData.partNumber"
-              class="form-control"
-              placeholder="Enter part number (optional)"
-            />
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Stock Quantity</label>
-              <input
-                type="number"
-                [(ngModel)]="formData.stockQuantity"
-                class="form-control"
-                min="0"
-              />
+      <div class="modal-overlay" (click)="closeModal()">
+        <div class="modal-card role-access-modal" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <div class="modal-heading">
+              <h3>{{ isEditing() ? 'Edit Spare Part' : 'Add New Spare Part' }}</h3>
+              <p>{{ isEditing() ? 'Update inventory details and pricing' : 'Create a new spare part in the master catalog' }}</p>
             </div>
-            <div class="form-group">
-              <label>Unit Price (₹)</label>
-              <input
-                type="number"
-                [(ngModel)]="formData.unitPrice"
-                class="form-control"
-                min="0"
-                step="0.01"
-              />
+
+            <button class="close-btn" (click)="closeModal()" aria-label="Close">
+              <span class="material-icons">close</span>
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <div class="role-form-grid">
+              <div class="form-row vertical">
+                <label>Part Name *</label>
+                <input
+                  type="text"
+                  [(ngModel)]="formData.partName"
+                  placeholder="Enter part name" />
+              </div>
+
+              <div class="form-row vertical">
+                <label>Part Number</label>
+                <input
+                  type="text"
+                  [(ngModel)]="formData.partNumber"
+                  placeholder="Enter part number (optional)" />
+              </div>
+            </div>
+
+            <div class="role-form-grid">
+              <div class="form-row vertical">
+                <label>Stock Quantity</label>
+                <input
+                  type="number"
+                  [(ngModel)]="formData.stockQuantity"
+                  min="0" />
+              </div>
+
+              <div class="form-row vertical">
+                <label>Unit Price (INR)</label>
+                <input
+                  type="number"
+                  [(ngModel)]="formData.unitPrice"
+                  min="0"
+                  step="0.01" />
+              </div>
+            </div>
+
+            <div class="form-row checkbox-row active-row">
+              <label class="checkbox-inline">
+                <input type="checkbox" [(ngModel)]="formData.isActive" />
+                Active Spare Part
+              </label>
             </div>
           </div>
-          <div class="form-group">
-            <label class="checkbox-label">
-              <input type="checkbox" [(ngModel)]="formData.isActive" />
-              <span>Active</span>
-            </label>
+
+          <div class="modal-actions sticky-actions">
+            <button class="btn-secondary" (click)="closeModal()">Cancel</button>
+            <button class="btn-primary" (click)="saveItem()" [disabled]="saving()">
+              @if (saving()) {
+                <span class="mini-spinner"></span>
+              }
+              {{ isEditing() ? 'Update Part' : 'Create Part' }}
+            </button>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-cancel" (click)="closeModal()">Cancel</button>
-          <button class="btn-save" (click)="saveItem()" [disabled]="saving()">
-            @if (saving()) {
-              <div class="mini-spinner"></div>
-            }
-            {{ isEditing() ? 'Update' : 'Create' }}
-          </button>
         </div>
       </div>
     }
 
-    <!-- Toast Notification -->
     @if (toastMessage()) {
-      <div class="toast" [class.toast-error]="toastType() === 'error'">
-        <span class="material-icons">{{ toastType() === 'success' ? 'check_circle' : 'error' }}</span>
-        <span>{{ toastMessage() }}</span>
+      <div class="toast-stack">
+        <div class="app-toast" [class.toast-error]="toastType() === 'error'" [class.toast-success]="toastType() === 'success'">
+          <div class="toast-icon">{{ toastType() === 'success' ? '✓' : '!' }}</div>
+          <div class="toast-copy">
+            <div class="toast-title">{{ toastType() === 'success' ? 'Success' : 'Something went wrong' }}</div>
+            <div class="toast-message">{{ toastMessage() }}</div>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (confirmVisible()) {
+      <div class="confirm-overlay">
+        <div class="confirm-dialog">
+          <div class="confirm-header">
+            <div class="confirm-title">Confirm Action</div>
+            <button class="confirm-close" (click)="cancelConfirm()" aria-label="Close confirmation">
+              <span class="material-icons">close</span>
+            </button>
+          </div>
+          <div class="confirm-body">{{ confirmMessage() }}</div>
+          <div class="confirm-actions">
+            <button class="confirm-btn confirm-cancel-btn" (click)="cancelConfirm()">Cancel</button>
+            <button class="confirm-btn confirm-danger-btn" (click)="proceedConfirm()">Confirm</button>
+          </div>
+        </div>
       </div>
     }
   `,
   styles: [`
-    .spare-master-container {
-      padding: 20px;
-      max-width: 1400px;
-      margin: 0 auto;
+    .mgmt-page {
+      --brand-red: #d42b2b;
+      --brand-red-light: #f9e8e8;
+      --brand-navy: #1b4a7a;
+      --brand-navy-light: #e8eef5;
+      --brand-navy-mid: #4a7ab5;
+      --content-bg: #f5f7fa;
+      --text-primary: #1a2332;
+      --text-secondary: #5a6a7e;
+      --text-muted: #8a9ab0;
+      --border: #e2e8f0;
+
+      padding: 4px 0 20px;
+      width: 100%;
+      max-width: 100%;
+      color: var(--text-primary);
     }
 
     .page-header {
       display: flex;
+      align-items: flex-start;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-
-      h1 {
-        font-size: 24px;
-        font-weight: 700;
-        color: #1a1a2e;
-        margin: 0 0 4px;
-      }
-
-      p {
-        font-size: 14px;
-        color: #6b7280;
-        margin: 0;
-      }
+      gap: 16px;
+      margin-bottom: 22px;
     }
 
-    .btn-add {
+    .page-title {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .page-sub {
+      margin-top: 3px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .btn-new,
+    .toolbar-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+
+    .btn-new {
+      background: var(--brand-red);
+      color: #fff;
+    }
+
+    .btn-new:hover {
+      background: #b82424;
+    }
+
+    .primary-btn,
+    .btn-primary {
+      background: #1b4a7a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .primary-btn:hover,
+    .btn-primary:hover:not(:disabled) {
+      background: #163a60;
+    }
+
+    .secondary-btn,
+    .btn-secondary {
+      background: #f5f7fa;
+      color: #334155;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 9px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .secondary-btn:hover,
+    .btn-secondary:hover {
+      background: #e8eef5;
+    }
+
+    .danger-btn {
+      background: var(--brand-red);
+      color: #fff;
+    }
+
+    .danger-btn:hover {
+      background: #b82424;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 16px 18px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .stat-val {
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-top: 6px;
+      line-height: 1;
+    }
+
+    .stat-active {
+      color: #2d7a38;
+    }
+
+    .stat-inactive {
+      color: var(--brand-red);
+    }
+
+    .stat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11.5px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      margin-top: 8px;
+      font-weight: 500;
+    }
+
+    .pill-green {
+      background: #edf7ee;
+      color: #2d7a38;
+    }
+
+    .pill-red {
+      background: var(--brand-red-light);
+      color: var(--brand-red);
+    }
+
+    .pill-blue {
+      background: var(--brand-navy-light);
+      color: var(--brand-navy);
+    }
+
+    .tab-content {
+      margin-top: 8px;
+    }
+
+    .table-wrap {
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .table-toolbar {
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toolbar-right {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .table-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .table-count {
+      font-size: 12px;
+      background: var(--brand-navy-light);
+      color: var(--brand-navy);
+      padding: 2px 9px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+
+    .search-box {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 10px 20px;
-      background: linear-gradient(135deg, #6366f1, #8b5cf6);
-      border: none;
-      border-radius: 10px;
-      color: #fff;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-
-      &:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-      }
-
-      .material-icons {
-        font-size: 18px;
-      }
+      background: var(--content-bg);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 6px 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+      width: 280px;
+      transition: border-color 0.15s, background 0.15s;
     }
 
-    .filters-bar {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
+    .search-box:focus-within {
+      background: #fff;
+      border-color: var(--brand-navy-mid);
+    }
+
+    .search-input-inline {
+      border: none;
+      outline: none;
+      background: transparent;
+      width: 100%;
+      font-size: 13px;
+      color: var(--text-primary);
+      padding: 3px 0;
+    }
+
+    .search-input-inline::placeholder {
+      color: var(--text-muted);
+    }
+
+    .filter-select {
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 8px 14px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      background: #fff;
+      cursor: pointer;
+      min-width: 130px;
+    }
+
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--brand-navy-mid);
+    }
+
+    .action-square {
+      width: 38px;
+      height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: #fff;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: inline-flex;
       align-items: center;
+      justify-content: center;
+      transition: all 0.12s ease;
+    }
 
-      .search-box {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 16px;
-        background: #fff;
-        border: 1.5px solid #e5e7eb;
-        border-radius: 10px;
-        flex: 1;
-        min-width: 250px;
-
-        .material-icons {
-          color: #9ca3af;
-          font-size: 20px;
-        }
-
-        input {
-          flex: 1;
-          border: none;
-          outline: none;
-          font-size: 14px;
-        }
-
-        &:focus-within {
-          border-color: #6366f1;
-        }
-      }
-
-      .filter-group {
-        display: flex;
-        gap: 8px;
-
-        select {
-          padding: 8px 12px;
-          border: 1.5px solid #e5e7eb;
-          border-radius: 8px;
-          font-size: 13px;
-          background: #fff;
-          cursor: pointer;
-          outline: none;
-
-          &:focus {
-            border-color: #6366f1;
-          }
-        }
-      }
-
-      .btn-refresh {
-        width: 38px;
-        height: 38px;
-        border: 1.5px solid #e5e7eb;
-        border-radius: 8px;
-        background: #fff;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        &:hover {
-          border-color: #6366f1;
-          color: #6366f1;
-        }
-      }
+    .action-square:hover {
+      background: var(--brand-navy-light);
+      border-color: var(--brand-navy-mid);
+      color: var(--brand-navy);
     }
 
     .bulk-bar {
       display: flex;
+      justify-content: space-between;
       align-items: center;
       gap: 12px;
-      padding: 12px 16px;
-      background: #fefce8;
-      border: 1px solid #fef08a;
-      border-radius: 10px;
-      margin-bottom: 20px;
-
-      span {
-        font-size: 13px;
-        font-weight: 600;
-        color: #ca8a04;
-      }
-
-      .btn-bulk-delete {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 12px;
-        background: #fef2f2;
-        border: none;
-        border-radius: 6px;
-        color: #dc2626;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-
-        &:hover {
-          background: #dc2626;
-          color: #fff;
-        }
-      }
-
-      .btn-clear {
-        padding: 6px 12px;
-        background: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 6px;
-        font-size: 12px;
-        cursor: pointer;
-
-        &:hover {
-          border-color: #9ca3af;
-        }
-      }
+      flex-wrap: wrap;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: #f8fafc;
     }
 
-    .table-responsive {
-      overflow-x: auto;
-      border-radius: 12px;
-      border: 1px solid #e5e7eb;
-      background: #fff;
-    }
-
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-
-      th {
-        padding: 14px 16px;
-        text-align: left;
-        font-size: 12px;
-        font-weight: 600;
-        color: #6b7280;
-        background: #f8fafc;
-        border-bottom: 1px solid #e5e7eb;
-      }
-
-      td {
-        padding: 12px 16px;
-        font-size: 13px;
-        color: #374151;
-        border-bottom: 1px solid #f3f4f6;
-      }
-
-      tr:hover {
-        background: #f9fafb;
-      }
-
-      tr.selected {
-        background: #eef2ff;
-      }
-
-      .checkbox-col {
-        width: 40px;
-        text-align: center;
-
-        input {
-          width: 16px;
-          height: 16px;
-          cursor: pointer;
-        }
-      }
-
-      .part-name {
-        font-weight: 600;
-        color: #1e293b;
-      }
-
-      .stock-badge {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
-        background: #ecfdf5;
-        color: #059669;
-
-        &.low-stock {
-          background: #fef2f2;
-          color: #dc2626;
-        }
-      }
-
-      .status-badge {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 600;
-
-        &.active {
-          background: #d1fae5;
-          color: #059669;
-        }
-
-        &.inactive {
-          background: #f3f4f6;
-          color: #6b7280;
-        }
-      }
-
-      .actions-cell {
-        display: flex;
-        gap: 8px;
-
-        button {
-          width: 30px;
-          height: 30px;
-          border-radius: 6px;
-          border: none;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          .material-icons {
-            font-size: 16px;
-          }
-        }
-
-        .btn-edit {
-          background: #eef2ff;
-          color: #6366f1;
-
-          &:hover {
-            background: #6366f1;
-            color: #fff;
-          }
-        }
-
-        .btn-delete {
-          background: #fef2f2;
-          color: #dc2626;
-
-          &:hover {
-            background: #dc2626;
-            color: #fff;
-          }
-        }
-      }
-    }
-
-    .empty-cell {
-      text-align: center;
-      padding: 60px !important;
-      color: #9ca3af;
-
-      .material-icons {
-        font-size: 48px;
-        display: block;
-        margin-bottom: 12px;
-      }
-
-      p {
-        margin-bottom: 16px;
-      }
-    }
-
-    .btn-primary {
-      padding: 8px 16px;
-      background: #6366f1;
-      border: none;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 12px;
+    .selected-info {
+      font-size: 13px;
       font-weight: 600;
-      cursor: pointer;
-
-      &:hover {
-        background: #4f46e5;
-      }
+      color: var(--brand-navy);
     }
 
-    .pagination {
+    .bulk-actions {
       display: flex;
-      justify-content: center;
+      gap: 10px;
       align-items: center;
-      gap: 16px;
-      margin-top: 20px;
-      padding: 16px;
-
-      .page-btn {
-        padding: 8px 16px;
-        border: 1.5px solid #e5e7eb;
-        border-radius: 8px;
-        background: #fff;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-
-        &:hover:not(:disabled) {
-          border-color: #6366f1;
-          color: #6366f1;
-        }
-
-        &:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-      }
-
-      .page-info {
-        font-size: 13px;
-        color: #6b7280;
-      }
+      flex-wrap: wrap;
     }
 
-    .loading-overlay {
+    .loading-container {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 60px;
-      background: #fff;
-      border-radius: 12px;
-      border: 1px solid #e5e7eb;
+      padding: 60px 20px;
+      gap: 16px;
+      color: var(--text-secondary);
     }
 
     .spinner {
-      width: 40px;
-      height: 40px;
+      display: inline-block;
+      width: 26px;
+      height: 26px;
       border: 3px solid #e5e7eb;
-      border-top-color: #6366f1;
+      border-top-color: var(--brand-navy);
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      animation: spin 1s linear infinite;
     }
 
     .mini-spinner {
@@ -656,189 +661,599 @@ export interface SparePart {
       to { transform: rotate(360deg); }
     }
 
-    /* Modal Styles */
+    .table-container {
+      overflow-x: auto;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    .styled-table {
+      font-size: 13.5px;
+      background: #fff;
+    }
+
+    .styled-table thead tr {
+      background: #f8fafc;
+    }
+
+    .styled-table thead th {
+      background: #f8fafc;
+      padding: 9px 18px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .styled-table tbody td {
+      padding: 10px 18px;
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      line-height: 1.3;
+    }
+
+    .styled-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .styled-table tbody tr:hover td {
+      background: #fafbfe;
+    }
+
+    .row-selected td {
+      background: #f4f8fd;
+    }
+
+    .check-col {
+      width: 44px;
+      text-align: center;
+    }
+
+    .check-col input {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .actions-col {
+      width: 110px;
+    }
+
+    .muted-cell {
+      color: var(--text-secondary);
+    }
+
+    .item-name {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .stock-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 11px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      background: #edf7ee;
+      color: #2d7a38;
+    }
+
+    .stock-badge.low-stock {
+      background: var(--brand-red-light);
+      color: var(--brand-red);
+    }
+
+    .price-cell {
+      color: #2d7a38;
+      font-weight: 600;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 11px;
+      border-radius: 20px;
+    }
+
+    .status-badge.active {
+      background: #edf7ee;
+      color: #2d7a38;
+    }
+
+    .status-badge.inactive {
+      background: var(--brand-red-light);
+      color: var(--brand-red);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .dot-active {
+      background: #2d7a38;
+    }
+
+    .dot-inactive {
+      background: var(--brand-red);
+    }
+
+    .row-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--brand-navy);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s ease;
+    }
+
+    .action-btn:hover {
+      background: var(--brand-navy-light);
+      border-color: var(--brand-navy-mid);
+    }
+
+    .action-btn.danger {
+      color: var(--brand-red);
+    }
+
+    .action-btn.danger:hover {
+      background: var(--brand-red-light);
+      border-color: #efb8b8;
+    }
+
+    .empty-row {
+      text-align: center;
+      padding: 0;
+    }
+
+    .empty-state {
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .empty-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .empty-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .empty-btn {
+      margin-top: 8px;
+    }
+
+    .pagination-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      background: #fff;
+    }
+
+    .pagination-left,
+    .pagination-center {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pagination-info {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .page-btn {
+      min-width: 38px;
+      height: 34px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+
+    .page-btn:hover:not(:disabled) {
+      background: #f8fafc;
+      border-color: var(--brand-navy-mid);
+      color: var(--brand-navy);
+    }
+
+    .page-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
       z-index: 1000;
-      backdrop-filter: blur(3px);
+      padding: 20px;
     }
 
-    .modal-container {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 500px;
-      max-width: 90vw;
+    .role-access-modal {
       background: #fff;
+      width: min(760px, 96vw);
+      max-height: 92vh;
       border-radius: 16px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-      z-index: 1001;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
     }
 
     .modal-header {
       display: flex;
+      align-items: flex-start;
       justify-content: space-between;
+      padding: 18px 24px;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .modal-heading h3 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .modal-heading p {
+      margin: 4px 0 0;
+      font-size: 13px;
+      opacity: 0.8;
+    }
+
+    .close-btn {
+      width: 34px;
+      height: 34px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      cursor: pointer;
+      display: inline-flex;
       align-items: center;
-      padding: 18px 20px;
-      background: #f8fafc;
-      border-bottom: 1px solid #e5e7eb;
+      justify-content: center;
+    }
 
-      h3 {
-        font-size: 16px;
-        font-weight: 700;
-        margin: 0;
-      }
-
-      .modal-close {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        border: none;
-        background: #f3f4f6;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        &:hover {
-          background: #e5e7eb;
-        }
-      }
+    .close-btn:hover {
+      background: rgba(255, 255, 255, 0.22);
     }
 
     .modal-body {
-      padding: 20px;
+      padding: 20px 24px 18px;
+      overflow-y: auto;
     }
 
-    .form-group {
-      margin-bottom: 16px;
-
-      label {
-        display: block;
-        font-size: 13px;
-        font-weight: 600;
-        color: #374151;
-        margin-bottom: 6px;
-      }
-
-      .form-control {
-        width: 100%;
-        padding: 10px 12px;
-        border: 1.5px solid #e5e7eb;
-        border-radius: 8px;
-        font-size: 13px;
-        outline: none;
-
-        &:focus {
-          border-color: #6366f1;
-        }
-      }
-
-      .checkbox-label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-
-        input {
-          width: 16px;
-          height: 16px;
-          cursor: pointer;
-        }
-
-        span {
-          font-size: 13px;
-          font-weight: normal;
-        }
-      }
-    }
-
-    .form-row {
+    .role-form-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
+      margin-bottom: 16px;
     }
 
-    .modal-footer {
+    .form-row.vertical {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 0;
+    }
+
+    .form-row.vertical label,
+    .checkbox-row label {
+      font-size: 12px;
+      color: #555;
+      font-weight: 500;
+    }
+
+    .form-row.vertical input {
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .form-row.vertical input:focus {
+      border-color: transparent;
+      outline: 2px solid #1976d2;
+    }
+
+    .checkbox-row {
+      padding: 0;
+      margin-bottom: 0;
+    }
+
+    .checkbox-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .sticky-actions {
       display: flex;
       justify-content: flex-end;
       gap: 12px;
-      padding: 16px 20px;
-      background: #f8fafc;
+      padding: 16px 24px;
       border-top: 1px solid #e5e7eb;
-
-      button {
-        padding: 8px 20px;
-        border-radius: 8px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-      }
-
-      .btn-cancel {
-        background: #fff;
-        border: 1.5px solid #e5e7eb;
-
-        &:hover {
-          border-color: #9ca3af;
-        }
-      }
-
-      .btn-save {
-        background: #6366f1;
-        border: none;
-        color: #fff;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-
-        &:hover:not(:disabled) {
-          background: #4f46e5;
-        }
-
-        &:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-      }
+      background: #fff;
+      flex-shrink: 0;
     }
 
-    /* Toast */
-    .toast {
+    .btn-primary:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .toast-stack {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
+      top: 84px;
+      right: 24px;
+      z-index: 1200;
+    }
+
+    .app-toast {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      min-width: 320px;
+      max-width: 420px;
+      padding: 14px 16px;
+      border: 1px solid #d6e0ec;
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
+    }
+
+    .toast-success {
+      border-color: #cfe5d3;
+    }
+
+    .toast-error {
+      border-color: #f0c6c6;
+    }
+
+    .toast-icon {
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border-radius: 999px;
+      background: #e8eef5;
+      color: var(--brand-navy);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .toast-error .toast-icon {
+      background: var(--brand-red-light);
+      color: var(--brand-red);
+    }
+
+    .toast-success .toast-icon {
+      background: #edf7ee;
+      color: #2d7a38;
+    }
+
+    .toast-copy {
+      flex: 1;
+    }
+
+    .toast-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .toast-message {
+      margin-top: 2px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.35;
+    }
+
+    .confirm-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1250;
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 12px 20px;
-      background: #10b981;
-      color: #fff;
-      border-radius: 10px;
-      z-index: 1100;
-      animation: slideIn 0.3s ease;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.42);
+      backdrop-filter: blur(2px);
+    }
 
-      &.toast-error {
-        background: #ef4444;
+    .confirm-dialog {
+      width: min(460px, 96vw);
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.2);
+      overflow: hidden;
+    }
+
+    .confirm-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px 12px;
+    }
+
+    .confirm-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: #1a2332;
+    }
+
+    .confirm-close {
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: #8a9ab0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .confirm-close:hover {
+      background: #f5f7fa;
+      color: #1a2332;
+    }
+
+    .confirm-body {
+      padding: 0 20px 20px;
+      font-size: 14px;
+      color: #5a6a7e;
+      line-height: 1.45;
+    }
+
+    .confirm-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 16px 20px 20px;
+      border-top: 1px solid #e2e8f0;
+      background: #fff;
+    }
+
+    .confirm-btn {
+      min-width: 104px;
+      min-height: 40px;
+      padding: 0 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+
+    .confirm-cancel-btn {
+      background: #f5f7fa;
+      color: #334155;
+      border-color: #e2e8f0;
+    }
+
+    .confirm-cancel-btn:hover {
+      background: #e8eef5;
+    }
+
+    .confirm-danger-btn {
+      background: #d42b2b;
+      color: #fff;
+      border-color: #d42b2b;
+    }
+
+    .confirm-danger-btn:hover {
+      background: #b82424;
+      border-color: #b82424;
+    }
+
+    @media (max-width: 1100px) {
+      .stats-row {
+        grid-template-columns: 1fr;
       }
 
-      .material-icons {
-        font-size: 20px;
+      .toolbar-right {
+        width: 100%;
+      }
+
+      .search-box {
+        width: 100%;
       }
     }
 
-    @keyframes slideIn {
-      from {
-        transform: translateX(100%);
-        opacity: 0;
+    @media (max-width: 768px) {
+      .page-header,
+      .bulk-bar,
+      .pagination-bar {
+        flex-direction: column;
+        align-items: stretch;
       }
-      to {
-        transform: translateX(0);
-        opacity: 1;
+
+      .toolbar-left,
+      .toolbar-right,
+      .pagination-left,
+      .pagination-center {
+        width: 100%;
+      }
+
+      .toolbar-btn,
+      .btn-new,
+      .filter-select,
+      .page-btn {
+        width: 100%;
+      }
+
+      .role-form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .role-access-modal {
+        width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+      }
+
+      .sticky-actions {
+        flex-wrap: wrap;
+      }
+
+      .sticky-actions button {
+        flex: 1 1 calc(50% - 6px);
       }
     }
   `]
@@ -846,18 +1261,15 @@ export interface SparePart {
 export class SparePartMasterComponent implements OnInit {
   private api = inject(ApiService);
 
-  // State
   loading = signal(false);
   saving = signal(false);
   spareParts = signal<SparePart[]>([]);
   selectedIds = signal<Set<number>>(new Set());
 
-  // Pagination
   currentPage = signal(1);
   totalPages = signal(1);
   pageSize = 20;
 
-  // Filters
   filters = {
     searchTerm: '',
     isActive: null as boolean | null,
@@ -865,9 +1277,10 @@ export class SparePartMasterComponent implements OnInit {
     sortOrder: 'DESC'
   };
 
-  // Modal
   showModal = signal(false);
   isEditing = signal(false);
+  confirmVisible = signal(false);
+  confirmMessage = signal('');
   formData: SparePart = {
     sparePartId: 0,
     partName: '',
@@ -877,12 +1290,26 @@ export class SparePartMasterComponent implements OnInit {
     isActive: true
   };
 
-  // Toast
   toastMessage = signal('');
   toastType = signal<'success' | 'error'>('success');
+  private confirmAction: (() => void) | null = null;
 
   ngOnInit() {
     this.loadData();
+  }
+
+  activeCount(): number {
+    return this.spareParts().filter(item => item.isActive).length;
+  }
+
+  inactiveCount(): number {
+    return this.spareParts().filter(item => !item.isActive).length;
+  }
+
+  activePercent(): number {
+    const total = this.spareParts().length;
+    if (!total) return 0;
+    return Math.round((this.activeCount() / total) * 1000) / 10;
   }
 
   loadData() {
@@ -967,7 +1394,7 @@ export class SparePartMasterComponent implements OnInit {
             this.showToast(response.message || 'Update failed', 'error');
           }
         },
-        error: (error) => {
+        error: () => {
           this.saving.set(false);
           this.showToast('Error updating spare part', 'error');
         }
@@ -984,7 +1411,7 @@ export class SparePartMasterComponent implements OnInit {
             this.showToast(response.message || 'Creation failed', 'error');
           }
         },
-        error: (error) => {
+        error: () => {
           this.saving.set(false);
           this.showToast('Error creating spare part', 'error');
         }
@@ -993,7 +1420,7 @@ export class SparePartMasterComponent implements OnInit {
   }
 
   deleteItem(id: number) {
-    if (confirm('Are you sure you want to delete this spare part?')) {
+    this.openConfirm('Are you sure you want to delete this spare part?', () => {
       this.api.deleteSparePart(id).subscribe({
         next: (response: any) => {
           if (response.success) {
@@ -1004,11 +1431,11 @@ export class SparePartMasterComponent implements OnInit {
             this.showToast(response.message || 'Delete failed', 'error');
           }
         },
-        error: (error) => {
+        error: () => {
           this.showToast('Error deleting spare part', 'error');
         }
       });
-    }
+    });
   }
 
   toggleSelection(id: number) {
@@ -1045,7 +1472,7 @@ export class SparePartMasterComponent implements OnInit {
       return;
     }
 
-    if (confirm(`Delete ${this.selectedIds().size} selected spare part(s)?`)) {
+    this.openConfirm(`Delete ${this.selectedIds().size} selected spare part(s)?`, () => {
       const ids = Array.from(this.selectedIds()).join(',');
       this.api.bulkDeleteSpareParts(ids).subscribe({
         next: (response: any) => {
@@ -1057,10 +1484,30 @@ export class SparePartMasterComponent implements OnInit {
             this.showToast(response.message || 'Delete failed', 'error');
           }
         },
-        error: (error) => {
+        error: () => {
           this.showToast('Error deleting items', 'error');
         }
       });
+    });
+  }
+
+  openConfirm(message: string, action: () => void) {
+    this.confirmMessage.set(message);
+    this.confirmAction = action;
+    this.confirmVisible.set(true);
+  }
+
+  cancelConfirm() {
+    this.confirmVisible.set(false);
+    this.confirmMessage.set('');
+    this.confirmAction = null;
+  }
+
+  proceedConfirm() {
+    const action = this.confirmAction;
+    this.cancelConfirm();
+    if (action) {
+      action();
     }
   }
 
