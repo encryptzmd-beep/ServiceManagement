@@ -1,0 +1,81 @@
+<div class="page">
+  <div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Service management overview</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card blue">
+      <div class="stat-icon"><span class="material-icons">confirmation_number</span></div>
+      <div class="stat-content">
+        <span class="stat-value">{{ data()?.totalComplaints ?? 0 }}</span>
+        <span class="stat-label">Total Complaints</span>
+      </div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-icon"><span class="material-icons">pending_actions</span></div>
+      <div class="stat-content">
+        <span class="stat-value">{{ data()?.openComplaints ?? 0 }}</span>
+        <span class="stat-label">Open Complaints</span>
+      </div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-icon"><span class="material-icons">check_circle</span></div>
+      <div class="stat-content">
+        <span class="stat-value">{{ data()?.closedToday ?? 0 }}</span>
+        <span class="stat-label">Closed Today</span>
+      </div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-icon"><span class="material-icons">warning</span></div>
+      <div class="stat-content">
+        <span class="stat-value">{{ data()?.slaBreached ?? 0 }}</span>
+        <span class="stat-label">SLA Breached</span>
+      </div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-icon"><span class="material-icons">engineering</span></div>
+      <div class="stat-content">
+        <span class="stat-value">{{ data()?.activeTechnicians ?? 0 }}</span>
+        <span class="stat-label">Active Technicians</span>
+      </div>
+    </div>
+    <div class="stat-card teal">
+      <div class="stat-icon"><span class="material-icons">schedule</span></div>
+      <div class="stat-content">
+        <span class="stat-value">{{ (data()?.avgResolutionHours ?? 0) | number:'1.1-1' }}h</span>
+        <span class="stat-label">Avg Resolution Time</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="quick-actions">
+    <h3>Quick Actions</h3>
+    <div class="actions-grid">
+      <a routerLink="/complaints/list" class="action-card">
+        <span class="material-icons">list_alt</span>
+        <span>View Complaints</span>
+      </a>
+      <a routerLink="/complaints/assign" class="action-card">
+        <span class="material-icons">person_add</span>
+        <span>Assign Technician</span>
+      </a>
+      <a routerLink="/tracking/attendance" class="action-card">
+        <span class="material-icons">fingerprint</span>
+        <span>Attendance</span>
+      </a>
+      <a routerLink="/schedule/daily" class="action-card">
+        <span class="material-icons">today</span>
+        <span>Today's Schedule</span>
+      </a>
+      <a routerLink="/reports/sla" class="action-card">
+        <span class="material-icons">timer</span>
+        <span>SLA Report</span>
+      </a>
+      <a routerLink="/reports/productivity" class="action-card">
+        <span class="material-icons">trending_up</span>
+        <span>Productivity</span>
+      </a>
+    </div>
+  </div>
+</div>

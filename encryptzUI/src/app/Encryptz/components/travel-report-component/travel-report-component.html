@@ -1,0 +1,156 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Travel Report</h1>
+      <p class="page-subtitle">View technician travel distance and site visit data</p>
+    </div>
+  </div>
+
+  <!-- ═══ Filters ═══ -->
+  <div class="filter-bar">
+    <div class="filter-row">
+      <!-- Tech Autocomplete -->
+      <div class="filter-field tech-field">
+        <label>Technician</label>
+        <div class="tech-autocomplete">
+          <div class="tech-input-wrap" [class.has-val]="!!selectedTech()">
+            <span class="material-icons ta-ic">search</span>
+            <input type="text"
+                   [(ngModel)]="techSearch"
+                   class="tech-input"
+                   placeholder="All technicians..."
+                   (input)="onTechSearch()"
+                   (focus)="showTechDropdown = true"
+                   autocomplete="off" />
+            @if (selectedTech()) {
+            <button class="ta-clear" type="button" (click)="clearTech()">
+              <span class="material-icons">close</span>
+            </button>
+            }
+            @if (techSearchLoading()) { <div class="ta-spinner"></div> }
+          </div>
+
+          @if (showTechDropdown && techResults().length > 0 && !selectedTech()) {
+          <div class="ta-dropdown">
+            @for (t of techResults(); track t.technicianId) {
+            <div class="ta-item" (click)="selectTech(t)">
+              <div class="ta-avatar" [ngClass]="getTechAvailClass(t.availabilityStatus)">
+                {{ t.fullName?.charAt(0) || '?' }}
+              </div>
+              <div class="ta-info">
+                <strong>{{ t.fullName }}</strong>
+                <small>{{ t.specialization || 'General' }}</small>
+              </div>
+            </div>
+            }
+          </div>
+          }
+        </div>
+      </div>
+
+      <div class="filter-field">
+        <label>From Date</label>
+        <input type="date" [(ngModel)]="fromDate" class="input" />
+      </div>
+      <div class="filter-field">
+        <label>To Date</label>
+        <input type="date" [(ngModel)]="toDate" class="input" />
+      </div>
+      <button class="btn-primary" (click)="load()" [disabled]="loading() || !fromDate || !toDate">
+        @if (loading()) { <span class="spinner"></span> }
+        @else { <span class="material-icons">directions_car</span> }
+        Generate
+      </button>
+    </div>
+  </div>
+
+  @if (loaded() && data().length > 0) {
+
+  <!-- ═══ Summary Cards ═══ -->
+  @if (summary()) {
+  <div class="summary-grid">
+    <div class="sum-card">
+      <div class="sum-icon dist-bg"><span class="material-icons">straighten</span></div>
+      <div class="sum-body">
+        <span class="sum-val">{{ summary()!.totalDistance | number:'1.1-1' }} km</span>
+        <span class="sum-label">Total Distance</span>
+      </div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-icon visit-bg"><span class="material-icons">pin_drop</span></div>
+      <div class="sum-body">
+        <span class="sum-val">{{ summary()!.totalVisits }}</span>
+        <span class="sum-label">Site Visits</span>
+      </div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-icon avg-bg"><span class="material-icons">speed</span></div>
+      <div class="sum-body">
+        <span class="sum-val">{{ summary()!.avgDistance | number:'1.1-1' }} km</span>
+        <span class="sum-label">Avg Distance/Day</span>
+      </div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-icon days-bg"><span class="material-icons">date_range</span></div>
+      <div class="sum-body">
+        <span class="sum-val">{{ summary()!.daysCount }}</span>
+        <span class="sum-label">Days Reported</span>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- ═══ Table ═══ -->
+  <div class="table-card">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Technician</th>
+            <th>Date</th>
+            <th>Distance</th>
+            <th>Site Visits</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of data(); track r.travelDate + r.technicianName) {
+          <tr>
+            <td>
+              <div class="tech-cell">
+                <div class="tc-avatar">{{ r.technicianName?.charAt(0) || 'T' }}</div>
+                <strong>{{ r.technicianName }}</strong>
+              </div>
+            </td>
+            <td class="date-cell">{{ r.travelDate }}</td>
+            <td>
+              <span class="dist-val" [ngClass]="getDistanceClass(r.totalDistanceKm)">
+                {{ r.totalDistanceKm | number:'1.1-1' }} km
+              </span>
+            </td>
+            <td>
+              <span class="visit-val">
+                <span class="material-icons">pin_drop</span>
+                {{ r.serviceVisits }}
+              </span>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  } @else if (loaded() && data().length === 0) {
+  <div class="empty-state">
+    <span class="material-icons">directions_car</span>
+    <h3>No Travel Data</h3>
+    <p>No travel records found for the selected date range and technician.</p>
+  </div>
+  } @else if (!loaded()) {
+  <div class="empty-state">
+    <span class="material-icons">route</span>
+    <h3>Generate Travel Report</h3>
+    <p>Select a date range and optionally a technician, then click Generate.</p>
+  </div>
+  }
+</div>

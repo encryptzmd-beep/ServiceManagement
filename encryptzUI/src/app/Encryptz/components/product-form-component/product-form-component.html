@@ -1,0 +1,184 @@
+<!-- components/product-form/product-form.component.html -->
+<div class="product-form-container">
+  <div class="form-header">
+    <div class="header-icon">
+      <mat-icon>{{isEditMode ? 'edit' : 'add_circle'}}</mat-icon>
+    </div>
+    <h2>{{isEditMode ? 'Edit Product' : 'Add New Product'}}</h2>
+    <button mat-icon-button class="close-btn" (click)="onCancel()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="form-body">
+    <form [formGroup]="productForm" (ngSubmit)="onSubmit()">
+      <mat-tab-group>
+        <!-- Basic Information Tab -->
+        <mat-tab label="Basic Information">
+          <div class="tab-content">
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Product Code *</mat-label>
+                <input matInput formControlName="productCode" placeholder="Enter product code">
+                <mat-icon matPrefix>code</mat-icon>
+                <mat-error *ngIf="productForm.get('productCode')?.hasError('required')">
+                  Product code is required
+                </mat-error>
+                <mat-error *ngIf="productForm.get('productCode')?.hasError('maxlength')">
+                  Maximum 50 characters
+                </mat-error>
+              </mat-form-field>
+            </div>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Product Name *</mat-label>
+                <input matInput formControlName="productName" placeholder="Enter product name">
+                <mat-icon matPrefix>inventory_2</mat-icon>
+                <mat-error *ngIf="productForm.get('productName')?.hasError('required')">
+                  Product name is required
+                </mat-error>
+              </mat-form-field>
+            </div>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Model</mat-label>
+                <input matInput formControlName="model" placeholder="Enter model number">
+                <mat-icon matPrefix>model_training</mat-icon>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Brand</mat-label>
+                <input matInput formControlName="brand" placeholder="Enter brand">
+                <mat-icon matPrefix>branding_watermark</mat-icon>
+              </mat-form-field>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- Category Tab -->
+        <mat-tab label="Category">
+          <div class="tab-content">
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Category</mat-label>
+                <input matInput formControlName="category" placeholder="Enter category (e.g., Treadmill, Elliptical)">
+                <mat-icon matPrefix>category</mat-icon>
+              </mat-form-field>
+            </div>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Sub Category</mat-label>
+                <input matInput formControlName="subCategory" placeholder="Enter sub category (e.g., Commercial, Domestic)">
+                <mat-icon matPrefix>subdirectory_arrow_right</mat-icon>
+              </mat-form-field>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- Pricing Tab -->
+        <mat-tab label="Pricing">
+          <div class="tab-content">
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>MRP (₹)</mat-label>
+                <input matInput type="number" formControlName="mrp" placeholder="Enter MRP">
+                <mat-icon matPrefix>currency_rupee</mat-icon>
+                <mat-error *ngIf="productForm.get('mrp')?.hasError('min')">
+                  MRP must be greater than 0
+                </mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Organization</mat-label>
+                <mat-select formControlName="org">
+                  <mat-option *ngFor="let org of orgOptions" [value]="org">
+                    {{org}}
+                  </mat-option>
+                </mat-select>
+                <mat-icon matPrefix>business</mat-icon>
+              </mat-form-field>
+            </div>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Price Change Status</mat-label>
+                <mat-select formControlName="priceChangeStatus">
+                  <mat-option value="">No Change</mat-option>
+                  <mat-option *ngFor="let status of statusOptions" [value]="status" *ngIf="status">
+                    {{status}}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Price Effective Date</mat-label>
+                <input matInput [matDatepicker]="picker" formControlName="priceEffectiveDate">
+                <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+                <mat-datepicker #picker></mat-datepicker>
+                <mat-icon matPrefix>event</mat-icon>
+              </mat-form-field>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- Warranty & Status Tab -->
+        <mat-tab label="Warranty & Status">
+          <div class="tab-content">
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Warranty (Months)</mat-label>
+                <input matInput type="number" formControlName="warrantyMonths" placeholder="Enter warranty period">
+                <mat-icon matPrefix>verified</mat-icon>
+                <mat-error *ngIf="productForm.get('warrantyMonths')?.hasError('min')">
+                  Warranty cannot be negative
+                </mat-error>
+                <mat-error *ngIf="productForm.get('warrantyMonths')?.hasError('max')">
+                  Maximum 120 months
+                </mat-error>
+              </mat-form-field>
+
+              <div class="status-checkbox">
+                <mat-checkbox formControlName="isActive" color="primary">
+                  <mat-icon>check_circle</mat-icon>
+                  Active
+                </mat-checkbox>
+              </div>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- Description Tab -->
+        <mat-tab label="Description">
+          <div class="tab-content">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Description</mat-label>
+              <textarea matInput formControlName="description" rows="6"
+                        placeholder="Enter detailed product description"></textarea>
+              <mat-icon matPrefix>description</mat-icon>
+              <mat-hint align="end">{{productForm.get('description')?.value?.length || 0}}/500</mat-hint>
+              <mat-error *ngIf="productForm.get('description')?.hasError('maxlength')">
+                Maximum 500 characters
+              </mat-error>
+            </mat-form-field>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </form>
+  </div>
+
+  <div class="form-footer">
+    <button mat-button class="cancel-btn" (click)="onCancel()" [disabled]="isSubmitting">
+      Cancel
+    </button>
+    <button mat-raised-button color="primary" (click)="onSubmit()" [disabled]="productForm.invalid || isSubmitting">
+      <mat-spinner diameter="20" *ngIf="isSubmitting"></mat-spinner>
+      <span *ngIf="!isSubmitting">
+        <mat-icon>{{isEditMode ? 'save' : 'add'}}</mat-icon>
+        {{isEditMode ? 'Update Product' : 'Create Product'}}
+      </span>
+    </button>
+  </div>
+</div>

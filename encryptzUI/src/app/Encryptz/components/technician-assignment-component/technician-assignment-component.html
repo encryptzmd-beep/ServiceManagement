@@ -1,0 +1,344 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Technician Assignment</h1>
+      <p class="page-subtitle">Assign, schedule and manage technicians for complaints</p>
+    </div>
+    <div class="header-stats">
+      <div class="stat-chip available">
+        <span class="material-icons">engineering</span>
+        <span>{{ getAvailableCount() }} Available</span>
+      </div>
+      <div class="stat-chip busy">
+        <span class="material-icons">work</span>
+        <span>{{ getBusyCount() }} Busy</span>
+      </div>
+      <div class="stat-chip scheduled">
+        <span class="material-icons">event</span>
+        <span>{{ activeAssignments().length }} Active</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-layout">
+    <!-- LEFT PANEL -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="material-icons panel-icon">person_add</span>
+        <div>
+          <h3>{{ editingAssignment ? 'Modify Assignment' : 'Assign Technician' }}</h3>
+          <p>{{ editingAssignment ? 'Update schedule or reassign' : 'Select technician, role and schedule' }}</p>
+        </div>
+        @if (editingAssignment) {
+        <button class="btn-cancel-edit" (click)="cancelEdit()">
+          <span class="material-icons">close</span> Cancel
+        </button>
+        }
+      </div>
+
+      <div class="tab-bar">
+        <button class="tab" [class.active]="activeTab === 'assign'" (click)="activeTab = 'assign'">
+          <span class="material-icons">person_add</span> Assign
+        </button>
+        <button class="tab" [class.active]="activeTab === 'complete'" (click)="activeTab = 'complete'; loadActiveAssignments()">
+          <span class="material-icons">check_circle</span> Complete
+        </button>
+      </div>
+
+      <!-- ═══ ASSIGN TAB ═══ -->
+      @if (activeTab === 'assign') {
+      <form (ngSubmit)="assign()" class="form">
+
+        <!-- Complaint Autocomplete -->
+        <div class="field">
+          <label>Complaint <span class="req">*</span></label>
+          <div class="autocomplete-wrap">
+            <div class="iw">
+              <span class="material-icons ic">confirmation_number</span>
+              <input type="text" [(ngModel)]="complaintSearch" name="csearch" class="inp"
+                placeholder="Search complaint no, subject, customer..."
+                (input)="onComplaintSearch()" (focus)="showComplaintDropdown = true" autocomplete="off" />
+              @if (form.complaintId) {
+              <button type="button" class="clear-btn" (click)="clearComplaint()">
+                <span class="material-icons">close</span>
+              </button>
+              }
+            </div>
+            @if (selectedComplaint) {
+            <div class="selected-complaint">
+              <div class="sc-header">
+                <span class="sc-no">{{ selectedComplaint.complaintNumber }}</span>
+                <span class="priority-dot" [ngClass]="selectedComplaint.priority.toLowerCase()">{{ selectedComplaint.priority }}</span>
+              </div>
+              <div class="sc-subject">{{ selectedComplaint.subject }}</div>
+              <div class="sc-customer">
+                <span class="material-icons">person</span> {{ selectedComplaint.customerName }}
+                <span class="material-icons">phone</span> {{ selectedComplaint.customerPhone }}
+                @if (selectedComplaint.customerPlace) {
+                <span class="material-icons">location_on</span> {{ selectedComplaint.customerPlace }}
+                }
+              </div>
+            </div>
+            }
+            @if (showComplaintDropdown && complaintResults().length > 0 && !form.complaintId) {
+            <div class="autocomplete-dropdown">
+              @for (c of complaintResults(); track c.complaintId) {
+              <div class="ac-item" (click)="selectComplaint(c)">
+                <div class="ac-left">
+                  <span class="ac-no">{{ c.complaintNumber }}</span>
+                  <span class="ac-subject">{{ c.subject }}</span>
+                </div>
+                <div class="ac-right">
+                  <span class="ac-customer">{{ c.customerName }}</span>
+                  <span class="ac-phone">{{ c.customerPhone }}</span>
+                </div>
+                <span class="priority-dot sm" [ngClass]="c.priority.toLowerCase()">{{ c.priority }}</span>
+              </div>
+              }
+            </div>
+            }
+          </div>
+        </div>
+
+        <!-- Technician List -->
+        <div class="field">
+          <label>Select Technician <span class="req">*</span></label>
+          <div class="search-box">
+            <span class="material-icons ic">search</span>
+            <input type="text" [(ngModel)]="searchTerm" name="search" class="inp" placeholder="Search by name, specialization..." />
+            <div class="filter-chips">
+              <button type="button" class="chip" [class.active]="filterStatus === null" (click)="filterStatus = null">All</button>
+              <button type="button" class="chip av" [class.active]="filterStatus === 1" (click)="filterStatus = 1">Available</button>
+              <button type="button" class="chip busy" [class.active]="filterStatus === 2" (click)="filterStatus = 2">Busy</button>
+            </div>
+          </div>
+          <div class="tech-list">
+            @for (t of filteredTechnicians(); track t.technicianId) {
+            <div class="tech-opt" [class.sel]="form.technicianId === t.technicianId" (click)="selectTechnician(t.technicianId)">
+              <div class="t-avatar" [class.av]="t.availabilityStatus === 1" [class.busy]="t.availabilityStatus === 2" [class.leave]="t.availabilityStatus === 3">
+                {{ t.fullName?.charAt(0) || '?' }}
+              </div>
+              <div class="t-info">
+                <strong>{{ t.fullName }}</strong>
+                <small>{{ t.specialization || 'General' }} &bull; {{ t.mobileNumber || 'N/A' }}</small>
+                <div class="t-meta">
+                  @if (t.rating > 0) { <span class="meta-tag rating"><span class="material-icons">star</span> {{ t.rating }}</span> }
+                  @if (t.totalCompletedJobs > 0) { <span class="meta-tag jobs"><span class="material-icons">task_alt</span> {{ t.totalCompletedJobs }}</span> }
+                </div>
+              </div>
+              <div class="t-right">
+                <span class="avail-tag" [class.av]="t.availabilityStatus === 1" [class.busy]="t.availabilityStatus === 2" [class.leave]="t.availabilityStatus === 3">
+                  <span class="dot"></span>
+                  {{ t.availabilityStatus === 1 ? 'Available' : t.availabilityStatus === 2 ? 'Busy' : 'On Leave' }}
+                </span>
+                <span class="material-icons chk">{{ form.technicianId === t.technicianId ? 'radio_button_checked' : 'radio_button_unchecked' }}</span>
+              </div>
+            </div>
+            } @empty {
+            <div class="t-empty"><span class="material-icons">engineering</span><p>No technicians found</p></div>
+            }
+          </div>
+        </div>
+
+        <!-- Assignment Role -->
+        <div class="field">
+          <label>Assignment Role <span class="req">*</span></label>
+          <div class="role-opts">
+            <button type="button" class="role-btn" [class.sel]="form.assignmentRole === 'Primary'" (click)="form.assignmentRole = 'Primary'">
+              <span class="material-icons">star</span>
+              <div><strong>Primary</strong><small>Lead technician</small></div>
+            </button>
+            <button type="button" class="role-btn" [class.sel]="form.assignmentRole === 'Supporting'" (click)="form.assignmentRole = 'Supporting'">
+              <span class="material-icons">group</span>
+              <div><strong>Supporting</strong><small>Assist primary</small></div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Priority -->
+        <div class="field">
+          <label>Priority</label>
+          <div class="priority-opts">
+            @for (p of priorities; track p.value) {
+            <button type="button" class="priority-btn" [class.sel]="form.priority === p.value"
+              [style.--pc]="p.color" (click)="form.priority = p.value">
+              <span class="material-icons">{{ p.icon }}</span> {{ p.label }}
+            </button>
+            }
+          </div>
+        </div>
+
+        <!-- Schedule Section -->
+        <div class="schedule-section">
+          <div class="schedule-toggle">
+            <label class="toggle-label">
+              <input type="checkbox" [(ngModel)]="form.isScheduled" name="isScheduled" />
+              <span class="toggle-switch"></span>
+              <span class="toggle-text">
+                <span class="material-icons">schedule</span> Schedule for specific time
+              </span>
+            </label>
+            <small class="toggle-hint">Set visit date &amp; time window</small>
+          </div>
+          @if (form.isScheduled) {
+          <div class="schedule-fields">
+            <div class="field-row">
+              <div class="field half">
+                <label>Visit Date <span class="req">*</span></label>
+                <div class="iw"><span class="material-icons ic">calendar_today</span>
+                  <input type="date" [(ngModel)]="form.scheduledDate" name="sdate" class="inp" [min]="today" />
+                </div>
+              </div>
+              <div class="field half">
+                <label>Time Slot</label>
+                <div class="timeslot-opts">
+                  @for (slot of timeSlots; track slot.value) {
+                  <button type="button" class="slot-btn" [class.sel]="form.timeSlot === slot.value" (click)="form.timeSlot = slot.value">
+                    <span class="material-icons">{{ slot.icon }}</span>
+                    <div><strong>{{ slot.label }}</strong><small>{{ slot.time }}</small></div>
+                  </button>
+                  }
+                </div>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field half">
+                <label>Start Time</label>
+                <div class="iw"><span class="material-icons ic">access_time</span>
+                  <input type="time" [(ngModel)]="form.startTime" name="stime" class="inp" />
+                </div>
+              </div>
+              <div class="field half">
+                <label>End Time</label>
+                <div class="iw"><span class="material-icons ic">access_time</span>
+                  <input type="time" [(ngModel)]="form.endTime" name="etime" class="inp" />
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Estimated Duration (minutes)</label>
+              <div class="iw"><span class="material-icons ic">timer</span>
+                <input type="number" [(ngModel)]="form.estimatedDuration" name="dur" class="inp" placeholder="e.g. 60" />
+              </div>
+            </div>
+          </div>
+          }
+        </div>
+
+        <!-- Notes -->
+        <div class="field">
+          <label>Notes</label>
+          <div class="iw ta"><span class="material-icons ic">notes</span>
+            <textarea [(ngModel)]="form.notes" name="notes" class="inp textarea" placeholder="Special instructions..." rows="2"></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary fw"
+          [disabled]="!form.complaintId || !form.technicianId || saving() || (form.isScheduled && !form.scheduledDate)">
+          @if (saving()) { <span class="spinner"></span> }
+          @else { <span class="material-icons">{{ editingAssignment ? 'edit' : 'person_add' }}</span> }
+          {{ saving() ? 'Assigning...' : (editingAssignment ? 'Update Assignment' : 'Assign Technician') }}
+        </button>
+      </form>
+      }
+
+      <!-- ═══ COMPLETE TAB ═══ -->
+      @if (activeTab === 'complete') {
+      <div class="form">
+        <div class="field">
+          <label>Select Assignment to Complete</label>
+          <div class="search-box">
+            <span class="material-icons ic">search</span>
+            <input type="text" [(ngModel)]="assignmentSearch" name="asearch" class="inp" placeholder="Search by technician, complaint, customer..." />
+          </div>
+        </div>
+        <div class="assignment-list">
+          @for (a of filteredAssignments(); track a.assignmentId) {
+          <div class="assignment-card" [class.sel]="completeForm.assignmentId === a.assignmentId" (click)="selectAssignment(a)">
+            <div class="ac-top">
+              <span class="ac-id">#{{ a.assignmentId }}</span>
+              <span class="ac-complaint">{{ a.complaintNumber }}</span>
+              <span class="status-tag" [ngClass]="a.status.toLowerCase()">{{ a.status }}</span>
+              @if (a.priority) { <span class="priority-dot sm" [ngClass]="a.priority.toLowerCase()">{{ a.priority }}</span> }
+            </div>
+            <div class="ac-subject">{{ a.complaintSubject }}</div>
+            <div class="ac-meta">
+              <span><span class="material-icons">engineering</span> {{ a.technicianName }} ({{ a.assignmentRole }})</span>
+              <span><span class="material-icons">person</span> {{ a.customerName }}</span>
+              <span><span class="material-icons">phone</span> {{ a.customerPhone }}</span>
+            </div>
+            @if (a.scheduledDate) {
+            <div class="ac-schedule">
+              <span class="material-icons">event</span> {{ a.scheduledDate | date:'dd MMM yyyy' }}
+              @if (a.startTime) { &bull; {{ a.startTime }} - {{ a.endTime }} }
+            </div>
+            }
+            @if (a.notes) { <div class="ac-notes"><span class="material-icons">notes</span> {{ a.notes }}</div> }
+            <div class="ac-date">Assigned: {{ a.assignedAt | date:'dd MMM, hh:mm a' }}</div>
+          </div>
+          } @empty {
+          <div class="t-empty"><span class="material-icons">assignment_turned_in</span><p>No active assignments</p></div>
+          }
+        </div>
+        @if (completeForm.assignmentId) {
+        <div class="complete-section">
+          <div class="field">
+            <label>Completion Remarks</label>
+            <div class="iw ta"><span class="material-icons ic">notes</span>
+              <textarea [(ngModel)]="completeForm.remarks" name="cremarks" class="inp textarea" placeholder="Describe work done..." rows="3"></textarea>
+            </div>
+          </div>
+          <button class="btn-complete fw" (click)="completeAssignment()" [disabled]="saving()">
+            @if (saving()) { <span class="spinner"></span> } @else { <span class="material-icons">check_circle</span> }
+            {{ saving() ? 'Completing...' : 'Mark as Complete' }}
+          </button>
+        </div>
+        }
+      </div>
+      }
+
+      @if (successMsg()) { <div class="alert ok"><span class="material-icons">check_circle</span> {{ successMsg() }}</div> }
+      @if (errorMsg()) { <div class="alert err"><span class="material-icons">error</span> {{ errorMsg() }}</div> }
+    </div>
+
+    <!-- RIGHT PANEL: Audit Log -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="material-icons panel-icon audit-ic">history</span>
+        <div><h3>Assignment Audit Log</h3><p>View history of technician assignments</p></div>
+      </div>
+      <div class="audit-search">
+        <div class="iw"><span class="material-icons ic">search</span>
+          <input type="number" [(ngModel)]="auditComplaintId" class="inp" placeholder="Complaint ID" />
+        </div>
+        <button class="btn-out" (click)="loadAuditLog()" [disabled]="!auditComplaintId">
+          <span class="material-icons">search</span> Search
+        </button>
+      </div>
+      <div class="audit-list">
+        @for (log of auditLogs(); track log.auditId) {
+        <div class="audit-item">
+          <div class="a-icon" [ngClass]="log.action.toLowerCase()"><span class="material-icons">{{ getAuditIcon(log.action) }}</span></div>
+          <div class="a-body">
+            <div class="a-top">
+              <span class="a-action" [ngClass]="log.action.toLowerCase()">{{ log.action }}</span>
+              <span class="a-time">{{ log.changedAt | date:'dd MMM, hh:mm a' }}</span>
+            </div>
+            @if (log.newTechnician) {
+            <p class="a-detail">
+              @if (log.oldTechnician) { <span class="old">{{ log.oldTechnician }}</span> <span class="material-icons arr">arrow_forward</span> }
+              <span class="new">{{ log.newTechnician }}</span>
+              @if (log.newRole) { <span class="rtag">{{ log.newRole }}</span> }
+            </p>
+            }
+            @if (log.remarks) { <p class="a-remarks">"{{ log.remarks }}"</p> }
+            @if (log.changedByName) { <span class="a-actor"><span class="material-icons">person</span> {{ log.changedByName }}</span> }
+          </div>
+        </div>
+        } @empty {
+        <div class="audit-empty"><span class="material-icons">history_toggle_off</span><p>Enter a complaint ID to view history</p></div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

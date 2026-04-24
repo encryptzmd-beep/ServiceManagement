@@ -1,0 +1,183 @@
+<div class="fx-page page">
+  <!-- Page Header -->
+  <div class="fx-page-header page-header">
+    <div class="header-left">
+      <div class="fx-page-title">My Complaints</div>
+      <div class="fx-page-sub">Track status and timeline of your service requests</div>
+    </div>
+    <a routerLink="/customer/complaints/new" class="fx-btn-new">
+      <span class="material-icons" style="font-size:18px;">add_circle</span> New Complaint
+    </a>
+  </div>
+
+  <!-- Stats Summary -->
+  @if (complaints().length > 0) {
+  <div class="fx-stats-row">
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Total</div>
+      <div class="fx-stat-val">{{ complaints().length }}</div>
+      <div class="fx-stat-pill pill-navy">All complaints</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Open</div>
+      <div class="fx-stat-val is-pending">{{ getOpenCount() }}</div>
+      <div class="fx-stat-pill pill-amber">In progress</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Closed</div>
+      <div class="fx-stat-val is-active">{{ getClosedCount() }}</div>
+      <div class="fx-stat-pill pill-green">Resolved</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">SLA Breached</div>
+      <div class="fx-stat-val is-inactive">{{ getBreachedCount() }}</div>
+      <div class="fx-stat-pill" [class.pill-red]="getBreachedCount() > 0" [class.pill-green]="getBreachedCount() === 0">
+        {{ getBreachedCount() > 0 ? 'Needs attention' : 'All on track' }}
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- Complaints List -->
+  <div class="complaints-list">
+    @for (c of complaints(); track c.complaintId) {
+    <div class="complaint-card" [class.breached-border]="c.isSLABreached">
+      <!-- Card Header -->
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="complaint-number">{{ c.complaintNumber }}</span>
+          <h3 class="complaint-subject">{{ c.subject }}</h3>
+          <div class="complaint-meta">
+            <span class="meta-item">
+              <span class="material-icons">fitness_center</span> {{ c.productName }}
+            </span>
+            <span class="meta-item">
+              <span class="material-icons">qr_code</span> {{ c.serialNumber }}
+            </span>
+            <span class="meta-item">
+              <span class="material-icons">calendar_today</span> {{ c.createdAt | date:'dd MMM yyyy' }}
+            </span>
+          </div>
+        </div>
+        <div class="card-header-right">
+          <span class="status-badge" [style.background]="(c.statusColor || '#64748b') + '18'"
+            [style.color]="c.statusColor || '#64748b'">
+            {{ c.statusName }}
+          </span>
+          <span class="priority-badge" [attr.data-priority]="c.priority">
+            {{ c.priority }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Description -->
+      @if (c.description) {
+      <div class="complaint-desc">
+        <p>{{ c.description }}</p>
+      </div>
+      }
+
+      <!-- SLA Alert -->
+      @if (c.isSLABreached) {
+      <div class="sla-alert">
+        <span class="material-icons">warning_amber</span>
+        <div>
+          <strong>SLA Breached</strong>
+          <span>Deadline was {{ c.slaDeadline | date:'dd MMM yyyy, hh:mm a' }}</span>
+        </div>
+      </div>
+      }
+
+      <!-- Assigned Technicians -->
+      @if (c.assignments?.length) {
+      <div class="technicians-bar">
+        <span class="section-label">Assigned Technicians</span>
+        <div class="tech-chips">
+          @for (a of c.assignments; track a.assignmentId) {
+          <div class="tech-chip">
+            <div class="tech-avatar">{{ a.technicianName.charAt(0) }}</div>
+            <div class="tech-info">
+              <strong>{{ a.technicianName }}</strong>
+              <small>{{ a.assignmentRole }} • {{ a.status }}</small>
+            </div>
+          </div>
+          }
+        </div>
+      </div>
+      }
+
+      <!-- Timeline -->
+      @if (c.timeline?.length) {
+      <div class="timeline-section">
+        <button class="timeline-toggle" (click)="toggleTimeline(c.complaintId)">
+          <span class="material-icons">{{ expandedTimelines.has(c.complaintId) ? 'expand_less' : 'expand_more' }}</span>
+          Timeline ({{ c.timeline.length }} updates)
+        </button>
+
+        @if (expandedTimelines.has(c.complaintId)) {
+        <div class="timeline animate-in">
+          @for (t of c.timeline; track t.timelineId) {
+          <div class="tl-item">
+            <div class="tl-dot" [style.background]="t.statusColor || '#94a3b8'"></div>
+            <div class="tl-line"></div>
+            <div class="tl-content">
+              <div class="tl-top">
+                <strong class="tl-status">{{ t.statusName }}</strong>
+                <span class="tl-time">{{ t.actionAt | date:'dd MMM, hh:mm a' }}</span>
+              </div>
+              @if (t.remarks) {
+              <p class="tl-remarks">{{ t.remarks }}</p>
+              }
+              @if (t.actionByName) {
+              <span class="tl-actor">
+                <span class="material-icons">person</span> {{ t.actionByName }}
+              </span>
+              }
+            </div>
+          </div>
+          }
+        </div>
+        }
+      </div>
+      }
+
+      <!-- Confirm Closure Bar -->
+      @if (c.statusName === 'WorkCompleted' && !c.isCustomerConfirmed) {
+      <div class="confirm-bar">
+        <div class="confirm-info">
+          <span class="material-icons">task_alt</span>
+          <div>
+            <strong>Service Completed</strong>
+            <p>The technician has completed the service. Please confirm if the issue is resolved.</p>
+          </div>
+        </div>
+        <div class="confirm-actions">
+          <button class="btn-confirm" (click)="confirmClosure(c.complaintId)" [disabled]="confirming()">
+            @if (confirming()) { <span class="spinner-sm"></span> }
+            <span class="material-icons">check_circle</span>
+            Confirm & Close
+          </button>
+        </div>
+      </div>
+      }
+
+      <!-- Closed Confirmation -->
+      @if (c.isCustomerConfirmed) {
+      <div class="confirmed-bar">
+        <span class="material-icons">verified</span>
+        <span>You confirmed closure on {{ c.updatedAt | date:'dd MMM yyyy' }}</span>
+      </div>
+      }
+    </div>
+    } @empty {
+    <div class="empty-state">
+      <span class="material-icons empty-icon">inbox</span>
+      <h3>No Complaints Yet</h3>
+      <p>When you register a complaint, it will appear here for tracking.</p>
+      <a routerLink="/customer/complaints/new" class="btn-primary">
+        <span class="material-icons">add_circle</span> Register Your First Complaint
+      </a>
+    </div>
+    }
+  </div>
+</div>

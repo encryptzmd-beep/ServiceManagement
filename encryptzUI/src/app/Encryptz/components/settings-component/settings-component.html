@@ -1,0 +1,74 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1>Settings</h1>
+      <p class="subtitle">System configuration and preferences</p>
+    </div>
+    <button class="btn-primary" (click)="saveAll()" [disabled]="!hasChanges()">
+      💾 Save All Changes
+    </button>
+  </div>
+
+  <div class="loading" *ngIf="loading()"><div class="spinner"></div></div>
+
+  <!-- Group Tabs -->
+  <div class="group-tabs" *ngIf="!loading()">
+    <button *ngFor="let g of groups()" [class.active]="activeGroup === g" (click)="activeGroup = g">
+      {{ g }}
+    </button>
+  </div>
+
+  <!-- Settings List -->
+  <div class="settings-list" *ngIf="!loading()">
+    <div class="setting-item" *ngFor="let s of filteredSettings()">
+      <div class="setting-info">
+        <h3>{{ formatKey(s.settingKey) }}</h3>
+        <p>{{ s.description }}</p>
+        <span class="setting-key">{{ s.settingKey }}</span>
+      </div>
+      <div class="setting-control">
+        <ng-container [ngSwitch]="s.dataType">
+          <label *ngSwitchCase="'bool'" class="toggle">
+            <input
+              type="checkbox"
+              [checked]="s.settingValue === 'true'"
+              (change)="onToggle(s, $event)"
+              [disabled]="!s.isEditable"
+            />
+            <span class="toggle-slider"></span>
+          </label>
+          <input
+            *ngSwitchCase="'int'"
+            type="number"
+            [(ngModel)]="s.settingValue"
+            (ngModelChange)="markChanged(s)"
+            [disabled]="!s.isEditable"
+            class="fi num"
+          />
+          <input
+            *ngSwitchCase="'time'"
+            type="time"
+            [(ngModel)]="s.settingValue"
+            (ngModelChange)="markChanged(s)"
+            [disabled]="!s.isEditable"
+            class="fi"
+          />
+          <input
+            *ngSwitchDefault
+            type="text"
+            [(ngModel)]="s.settingValue"
+            (ngModelChange)="markChanged(s)"
+            [disabled]="!s.isEditable"
+            class="fi"
+          />
+        </ng-container>
+      </div>
+    </div>
+    <div class="empty" *ngIf="filteredSettings().length === 0">
+      <p>No settings in this group</p>
+    </div>
+  </div>
+
+  <!-- Save Success -->
+  <div class="toast" *ngIf="saveSuccess()">✅ Settings saved successfully!</div>
+</div>

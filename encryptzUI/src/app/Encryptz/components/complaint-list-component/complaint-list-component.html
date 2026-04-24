@@ -1,0 +1,140 @@
+<div class="fx-page">
+
+  <div class="fx-page-header">
+    <div>
+      <div class="fx-page-title">Complaints</div>
+      <div class="fx-page-sub">View and manage all service complaints</div>
+    </div>
+    <button class="fx-btn-navy" (click)="showFilters.set(!showFilters())">
+      <span class="material-icons" style="font-size:18px;">filter_list</span>
+      Filters
+    </button>
+  </div>
+
+  <!-- STATS -->
+  <div class="fx-stats-row">
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Total Complaints</div>
+      <div class="fx-stat-val">{{ totalCount() }}</div>
+      <div class="fx-stat-pill pill-navy">Current page</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">On Time</div>
+      <div class="fx-stat-val is-active">{{ onTimeCount() }}</div>
+      <div class="fx-stat-pill pill-green">Within SLA</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">SLA Breached</div>
+      <div class="fx-stat-val is-inactive">{{ breachedCount() }}</div>
+      <div class="fx-stat-pill" [class.pill-red]="breachedCount() > 0" [class.pill-green]="breachedCount() === 0">
+        {{ breachedCount() > 0 ? 'Needs attention' : 'All on track' }}
+      </div>
+    </div>
+  </div>
+
+  @if (showFilters()) {
+    <div class="filter-bar">
+      <select [(ngModel)]="filter.statusId" (change)="load()" class="fx-filter-select">
+        <option [ngValue]="undefined">All Statuses</option>
+        @for (s of statuses; track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+      </select>
+      <select [(ngModel)]="filter.priority" (change)="load()" class="fx-filter-select">
+        <option value="">All Priorities</option>
+        @for (p of priorities; track p) { <option [value]="p">{{ p }}</option> }
+      </select>
+      <input type="date" [(ngModel)]="filter.fromDate" (change)="load()" class="filter-input" placeholder="From" />
+      <input type="date" [(ngModel)]="filter.toDate" (change)="load()" class="filter-input" placeholder="To" />
+    </div>
+  }
+
+  <div class="fx-table-wrap">
+    <div class="fx-table-toolbar">
+      <div class="fx-toolbar-left">
+        <span class="fx-table-title">All Complaints</span>
+        <span class="fx-table-count">{{ filteredComplaints().length }} of {{ totalCount() }}</span>
+      </div>
+      <div class="fx-toolbar-right">
+        <div class="fx-search-box">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <circle cx="7" cy="7" r="5" stroke="#8a9ab0" stroke-width="1.5"/>
+            <path d="M11 11l3 3" stroke="#8a9ab0" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <input
+            type="text"
+            class="fx-search-input"
+            placeholder="Search complaints..."
+            [value]="searchTerm()"
+            (input)="searchTerm.set($any($event.target).value)" />
+        </div>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="fx-table data-table">
+        <thead>
+          <tr>
+            <th>Complaint #</th>
+            <th>Subject</th>
+            <th>Customer</th>
+            <th>Product</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>SLA</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of filteredComplaints(); track c.complaintId) {
+            <tr>
+              <td class="mono">{{ c.complaintNumber }}</td>
+              <td>{{ c.subject }}</td>
+              <td>{{ c.customerName }}</td>
+              <td>{{ c.productName }}</td>
+              <td><span class="priority-badge" [attr.data-priority]="c.priority">{{ c.priority }}</span></td>
+              <td><span class="status-badge" [style.background]="c.statusColor + '20'" [style.color]="c.statusColor">{{
+                  c.statusName }}</span></td>
+              <td>
+                @if (c.isSLABreached) {
+                  <span class="fx-badge is-inactive"><span class="fx-dot"></span>Breached</span>
+                } @else {
+                  <span class="fx-badge is-active"><span class="fx-dot"></span>On Time</span>
+                }
+              </td>
+              <td class="date-cell">{{ c.createdAt | date:'dd MMM yyyy' }}</td>
+   <td>
+  <button class="fx-action-btn" (click)="openComplaintDetails(c.complaintId, $event)" title="View">
+    <span class="material-icons">visibility</span>
+  </button>
+</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="9" class="fx-empty-row">No complaints found</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages() > 1) {
+      <div class="fx-pagination">
+        <div class="fx-pagination-info">
+          Page {{ filter.pageNumber }} of {{ totalPages() }}
+        </div>
+        <div class="fx-pagination-actions">
+          <button (click)="prevPage()" [disabled]="filter.pageNumber <= 1" class="fx-page-btn">‹ Prev</button>
+          <button (click)="nextPage()" [disabled]="filter.pageNumber >= totalPages()" class="fx-page-btn">Next ›</button>
+        </div>
+      </div>
+    }
+  </div>
+</div>
+@if (showDetailPopup() && selectedComplaintId()) {
+  <app-complaint-detail-popup
+    [complaintId]="selectedComplaintId()!"
+    [viewOnly]="true"
+    (closed)="closeDetailPopup()"
+    (refreshed)="handleRefresh()">
+  </app-complaint-detail-popup>
+}

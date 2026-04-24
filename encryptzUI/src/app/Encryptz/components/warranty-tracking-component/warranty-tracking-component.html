@@ -1,0 +1,35 @@
+<div class="page">
+  <div class="page-header">
+    <h1 class="page-title">Warranty Returns</h1>
+  </div>
+  <div class="table-card">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Return #</th>
+            <th>Complaint</th>
+            <th>Part</th>
+            <th>Old Serial</th>
+            <th>Status</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (w of returns(); track w.returnId) {
+          <tr>
+            <td class="mono">WR-{{ w.returnId }}</td>
+            <td class="mono">{{ w.complaintNumber }}</td>
+            <td>{{ w.partName }}</td>
+            <td>{{ w.oldPartSerialNumber || '-' }}</td>
+            <td><span class="status" [class]="w.returnStatus.toLowerCase()">{{ w.returnStatus }}</span></td>
+            <td class="date">{{ w.createdAt | date:'dd MMM yyyy' }}</td>
+          </tr>
+          } @empty { <tr>
+            <td colspan="6" class="empty">No warranty returns found</td>
+          </tr> }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

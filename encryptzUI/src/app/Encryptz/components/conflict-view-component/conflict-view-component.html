@@ -1,0 +1,16 @@
+<div class="page">
+  <div class="page-header">
+    <h1 class="page-title">Schedule Conflicts</h1>
+  </div>
+  @for (c of conflicts(); track c.scheduleId) {
+  <div class="conflict-card">
+    <div class="conflict-icon"><span class="material-icons">warning</span></div>
+    <div class="conflict-info">
+      <strong>{{ c.technicianName }}</strong> — {{ c.complaintNumber }}
+      <p>{{ c.subject }}</p>
+      <div class="meta">{{ c.scheduledDate }} • {{ c.timeSlotStart }} - {{ c.timeSlotEnd }} • <span class="status">{{
+          c.status }}</span></div>
+    </div>
+  </div>
+  } @empty { <div class="empty"><span class="material-icons">check_circle</span> No scheduling conflicts found</div> }
+</div>

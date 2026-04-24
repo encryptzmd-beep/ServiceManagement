@@ -1,0 +1,45 @@
+<header class="header">
+  <div class="header-left">
+    <button class="menu-toggle" (click)="toggleSidebar.emit()">
+      <span class="material-icons">menu</span>
+    </button>
+    <div class="brand">
+  <span class="brand-text">
+    {{ companyName }}
+    <span class="brand-accent">{{ companySuffix }}</span>
+  </span>
+</div>
+  </div>
+
+  <!-- <div class="header-center">
+    <div class="search-box">
+      <span class="material-icons search-icon">search</span>
+      <input type="text" placeholder="Search complaints, customers..." class="search-input" />
+    </div>
+  </div> -->
+
+  <div class="header-right">
+    <!-- <button class="icon-btn" title="Notifications">
+      <span class="material-icons">notifications</span>
+      <span class="badge">3</span>
+    </button> -->
+    <div class="user-menu" (click)="showDropdown = !showDropdown">
+      <div class="avatar">{{ initials }}</div>
+      <div class="user-info">
+        <span class="user-name">{{ auth.userName() }}</span>
+        <span class="user-role">{{ auth.userRole() }}</span>
+      </div>
+      <span class="material-icons">expand_more</span>
+    </div>
+    @if (showDropdown) {
+    <div class="dropdown" (click)="showDropdown = false">
+      <a routerLink="/customer/profile" class="dropdown-item">
+        <span class="material-icons">person</span> Profile
+      </a>
+      <a class="dropdown-item" (click)="auth.logout()">
+        <span class="material-icons">logout</span> Logout
+      </a>
+    </div>
+    }
+  </div>
+</header>

@@ -1,0 +1,71 @@
+<div class="fx-page">
+  <div class="fx-page-header">
+    <div>
+      <div class="fx-page-title">Schedule Conflicts</div>
+      <div class="fx-page-sub">Detect technician scheduling conflicts</div>
+    </div>
+  </div>
+
+  <div class="fx-stats-row">
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Total Conflicts</div>
+      <div class="fx-stat-val">{{ conflicts().length }}</div>
+      <div class="fx-stat-pill pill-navy">Current date</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Critical</div>
+      <div class="fx-stat-val is-inactive">{{ getCriticalCount() }}</div>
+      <div class="fx-stat-pill pill-red">Needs attention</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Warnings</div>
+      <div class="fx-stat-val is-pending">{{ getWarningCount() }}</div>
+      <div class="fx-stat-pill pill-amber">Overlaps</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Info</div>
+      <div class="fx-stat-val is-navy">{{ getInfoCount() }}</div>
+      <div class="fx-stat-pill pill-navy">Notices</div>
+    </div>
+  </div>
+
+  <div class="fx-table-wrap">
+    <div class="fx-table-toolbar">
+      <div class="fx-toolbar-left">
+        <span class="fx-table-title">Conflicts</span>
+        <span class="fx-table-count">{{ conflicts().length }}</span>
+      </div>
+      <div class="fx-toolbar-right">
+        <label class="date-label">Date</label>
+        <input type="date" [(ngModel)]="date" (change)="load()" class="fx-filter-select" />
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      @if (conflicts().length === 0) {
+        <div class="fx-empty-row">No conflicts found</div>
+      } @else {
+        <table class="fx-table">
+          <thead>
+            <tr>
+              <th>Technician</th>
+              <th>Date</th>
+              <th>Time Slot</th>
+              <th>Complaint</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of conflicts(); track c.scheduleId) {
+            <tr>
+              <td>{{ c.technicianName }}</td>
+              <td class="date-cell">{{ c.scheduledDate | date }}</td>
+              <td>{{ c.timeSlotStart }} - {{ c.timeSlotEnd }}</td>
+              <td class="mono">#{{ c.complaintId }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </div>
+</div>

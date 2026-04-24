@@ -1,0 +1,233 @@
+<div class="fx-page">
+
+  <div class="fx-page-header">
+    <div>
+      <div class="fx-page-title">Technicians</div>
+      <div class="fx-page-sub">Manage your field service technicians</div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="fx-stats-row">
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Total Technicians</div>
+      <div class="fx-stat-val">{{ totalCount() }}</div>
+      <div class="fx-stat-pill pill-navy">All pages</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Available</div>
+      <div class="fx-stat-val is-active">{{ availableCount() }}</div>
+      <div class="fx-stat-pill pill-green">Ready for jobs</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">On Job</div>
+      <div class="fx-stat-val is-pending">{{ onJobCount() }}</div>
+      <div class="fx-stat-pill pill-amber">Currently busy</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Inactive</div>
+      <div class="fx-stat-val is-inactive">{{ inactiveCount() }}</div>
+      <div class="fx-stat-pill pill-red">Unavailable</div>
+    </div>
+  </div>
+
+  <div class="fx-table-wrap">
+    <div class="fx-table-toolbar">
+      <div class="fx-toolbar-left">
+        <span class="fx-table-title">All Technicians</span>
+        <span class="fx-table-count">{{ technicians().length }} of {{ totalCount() }}</span>
+      </div>
+      <div class="fx-toolbar-right">
+        <div class="fx-search-box">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <circle cx="7" cy="7" r="5" stroke="#8a9ab0" stroke-width="1.5"/>
+            <path d="M11 11l3 3" stroke="#8a9ab0" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <input
+            type="text"
+            class="fx-search-input"
+            [(ngModel)]="filter.searchTerm"
+            (input)="onSearch()"
+            placeholder="Search by name, code, specialization..." />
+        </div>
+        <select [(ngModel)]="filter.statusFilter" (change)="loadData()" class="fx-filter-select">
+          <option [ngValue]="undefined">All Status</option>
+          <option [ngValue]="1">Available</option>
+          <option [ngValue]="2">On Job</option>
+          <option [ngValue]="3">On Leave</option>
+          <option [ngValue]="4">Inactive</option>
+        </select>
+        <select [(ngModel)]="filter.sortBy" (change)="loadData()" class="fx-filter-select">
+          <option value="FullName">Sort by Name</option>
+          <option value="Rating">Sort by Rating</option>
+          <option value="Jobs">Sort by Jobs</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="tech-body">
+      <!-- Loading -->
+      <div class="loading" *ngIf="loading()">
+        <div class="spinner"></div>
+      </div>
+
+      <!-- Grid View -->
+      <div class="tech-grid" *ngIf="!loading()">
+        <div class="tech-card" *ngFor="let tech of technicians()" (click)="viewDetail(tech)">
+          <div class="card-top"
+               [style.border-left-color]="getStatusColor(tech.availabilityStatus, tech.isActive)">
+            <div class="avatar" [style.background]="getAvatarBg(tech.fullName)">
+              {{ getInitials(tech.fullName) }}
+            </div>
+            <div class="card-info">
+              <h3>{{ tech.fullName }}</h3>
+              <span class="emp-code">{{ tech.employeeCode }}</span>
+              <span class="spec-tag">{{ tech.specialization }}</span>
+            </div>
+            <span class="status-dot"
+                  [style.background]="getStatusColor(tech.availabilityStatus, tech.isActive)"
+                  [title]="getStatusLabel(tech.availabilityStatus, tech.isActive)">
+            </span>
+          </div>
+          <div class="card-stats">
+            <div class="mini-stat">
+              <span class="val">{{ tech.rating | number:'1.1-1' }}</span>
+              <span class="lbl">⭐ Rating</span>
+            </div>
+            <div class="mini-stat">
+              <span class="val">{{ tech.totalCompletedJobs }}</span>
+              <span class="lbl">Jobs Done</span>
+            </div>
+            <div class="mini-stat">
+              <span class="val">{{ tech.todayAssignments }}/{{ tech.maxDailyAssignments }}</span>
+              <span class="lbl">Today</span>
+            </div>
+            <div class="mini-stat">
+              <span class="val">{{ tech.experienceYears }}y</span>
+              <span class="lbl">Experience</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <span class="active-badge" *ngIf="tech.activeComplaints > 0">{{ tech.activeComplaints }} active</span>
+            <div class="card-actions">
+              <button class="fx-action-btn" (click)="editTech(tech); $event.stopPropagation()" title="Edit">
+                <span class="material-icons">edit</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="fx-empty-row" *ngIf="!loading() && technicians().length === 0">
+        No technicians found
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="fx-pagination" *ngIf="totalCount() > filter.pageSize">
+      <div class="fx-pagination-info">
+        Page {{ filter.pageNumber }} of {{ totalPages() }}
+      </div>
+      <div class="fx-pagination-actions">
+        <button [disabled]="filter.pageNumber <= 1"
+                (click)="filter.pageNumber = filter.pageNumber - 1; loadData()"
+                class="fx-page-btn">‹ Prev</button>
+        <button [disabled]="filter.pageNumber >= totalPages()"
+                (click)="filter.pageNumber = filter.pageNumber + 1; loadData()"
+                class="fx-page-btn">Next ›</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Create/Edit Modal -->
+  <div class="modal-overlay" *ngIf="showCreateModal || showEditModal" (click)="closeModals()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ showEditModal ? 'Edit' : 'Add' }} Technician</h2>
+        <button class="modal-close" (click)="closeModals()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group" *ngIf="!showEditModal">
+            <label>Full Name *</label>
+            <input type="text" [(ngModel)]="formData.fullName" class="form-input" placeholder="Enter full name" />
+          </div>
+          <div class="form-group" *ngIf="!showEditModal">
+            <label>Mobile Number *</label>
+            <input type="text" [(ngModel)]="formData.mobileNumber" class="form-input" placeholder="9876543210" />
+          </div>
+          <div class="form-group" *ngIf="!showEditModal">
+            <label>Email</label>
+            <input type="email" [(ngModel)]="formData.email" class="form-input" placeholder="tech@company.com" />
+          </div>
+          <div class="form-group">
+            <label>Specialization *</label>
+            <input type="text" [(ngModel)]="formData.specialization" class="form-input" placeholder="AC Repair, Electrical..." />
+          </div>
+          <div class="form-group">
+            <label>Experience (Years)</label>
+            <input type="number" [(ngModel)]="formData.experienceYears" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Max Daily Assignments</label>
+            <input type="number" [(ngModel)]="formData.maxDailyAssignments" class="form-input" />
+          </div>
+          <div class="form-group" *ngIf="showEditModal">
+            <label>Availability Status</label>
+            <select [(ngModel)]="formData.availabilityStatus" class="form-input">
+              <option *ngFor="let s of getAvailableStatuses(formData.availabilityStatus)"
+                      [ngValue]="s.value">
+                {{ s.label }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group" *ngIf="!showEditModal">
+            <label>Join Date</label>
+            <input type="date" [(ngModel)]="formData.joinDate" class="form-input" />
+          </div>
+        </div>
+        <p class="form-note" *ngIf="!showEditModal">
+          * User account will be auto-created. Employee code auto-generated. Password is temporary (null).
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeModals()">Cancel</button>
+        <button class="fx-btn-navy" (click)="saveTechnician()" [disabled]="!showEditModal && (!formData.fullName || !formData.mobileNumber || !formData.specialization)">
+          {{ showEditModal ? 'Update' : 'Create' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div class="modal-overlay" *ngIf="selectedTech()" (click)="selectedTech.set(null)">
+    <div class="modal-content wide" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Technician Detail</h2>
+        <button class="modal-close" (click)="selectedTech.set(null)">✕</button>
+      </div>
+      <div class="modal-body" *ngIf="selectedTech() as t">
+        <div class="detail-top">
+          <div class="detail-avatar" [style.background]="getAvatarBg(t.fullName)">{{ getInitials(t.fullName) }}</div>
+          <div class="detail-info">
+            <h3>{{ t.fullName }}</h3>
+            <p>{{ t.employeeCode }} · {{ t.specialization }}</p>
+            <p>{{ t.email }} · {{ t.phone }}</p>
+          </div>
+          <span class="status-pill"
+                [style.background]="getStatusColor(t.availabilityStatus, t.isActive)">
+            {{ getStatusLabel(t.availabilityStatus, t.isActive) }}
+          </span>
+        </div>
+        <div class="detail-stats">
+          <div class="d-stat"><span>{{ t.totalCompletedJobs }}</span><small>Total Jobs</small></div>
+          <div class="d-stat"><span>{{ t.rating | number:'1.1-1' }}</span><small>Rating</small></div>
+          <div class="d-stat"><span>{{ t.experienceYears }}y</span><small>Experience</small></div>
+          <div class="d-stat"><span>{{ t.activeComplaints }}</span><small>Active</small></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,104 @@
+<aside
+  class="sidebar"
+  [class.collapsed]="!dashState.sidebarOpen()"
+  [class.mobile-open]="dashState.sidebarOpen()">
+
+  <div
+    class="sidebar-overlay"
+    (click)="dashState.closeSidebar()"
+    [class.show]="dashState.sidebarOpen()">
+  </div>
+
+  <div class="sidebar-header">
+    <span class="sidebar-brand"></span>
+
+    <button
+      class="sidebar-toggle-btn"
+      (click)="dashState.toggleSidebar()"
+      title="Toggle sidebar">
+      <span class="material-icons">
+        {{ dashState.sidebarOpen() ? 'menu_open' : 'menu' }}
+      </span>
+    </button>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+
+     @for (menu of buildMenuTree(); track menu.menuId) {
+
+  <!-- Parent without children -> direct route -->
+  @if (!menu.children || menu.children.length === 0) {
+    <a
+      class="nav-item"
+      [routerLink]="menu.menuPath"
+      routerLinkActive="active"
+      [title]="menu.menuName"
+      (click)="onNavClick()">
+
+      <span class="material-icons nav-icon">
+        {{ menu.icon || 'circle' }}
+      </span>
+
+      <span class="nav-label">
+        {{ menu.menuName }}
+      </span>
+    </a>
+  }
+
+  <!-- Parent with children -> expandable -->
+  @else {
+    <div class="nav-group" [class.expanded]="isExpanded(menu.menuId)">
+
+      <button
+        type="button"
+        class="nav-item nav-group-header"
+        [title]="menu.menuName"
+        (click)="toggleMenu(menu.menuId)">
+
+        <span class="material-icons nav-icon">
+          {{ menu.icon || 'folder' }}
+        </span>
+
+        <span class="nav-label">
+          {{ menu.menuName }}
+        </span>
+
+        <!-- arrow only when children exist -->
+        <span class="material-icons nav-arrow">
+          {{ isExpanded(menu.menuId) ? 'expand_less' : 'expand_more' }}
+        </span>
+      </button>
+
+      @if (isExpanded(menu.menuId)) {
+        <div class="nav-children">
+          @for (child of menu.children; track child.menuId) {
+            <a
+              class="nav-item child"
+              [routerLink]="child.menuPath"
+              routerLinkActive="active"
+              [title]="child.menuName"
+              (click)="onNavClick()">
+
+              <span class="material-icons nav-icon child-icon">
+                {{ child.icon || 'chevron_right' }}
+              </span>
+
+              <span class="nav-label">
+                {{ child.menuName }}
+              </span>
+            </a>
+          }
+        </div>
+      }
+    </div>
+  }
+}
+
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="env-badge">v1.0.0 • Dev</div>
+    </div>
+  </nav>
+</aside>

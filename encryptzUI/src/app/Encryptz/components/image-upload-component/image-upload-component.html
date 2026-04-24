@@ -1,0 +1,190 @@
+<!-- ============================================================
+     ADD "Details" button to work-order card action area
+     Replace existing btn-view link with this:
+     ============================================================ -->
+
+
+
+
+<!-- ============================================================
+     image-upload-component.html  (full file)
+     ============================================================ -->
+<div class="page">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Upload Service Images</h1>
+      <p class="page-subtitle">Upload before/after photos and service documentation</p>
+    </div>
+  </div>
+
+  <!-- Technician Selector -->
+  <div class="tech-selector-card">
+    <div class="ts-label"><span class="material-icons">engineering</span><strong>Select Technician</strong></div>
+    <div class="tech-autocomplete">
+      <div class="tech-input-wrap">
+        <span class="material-icons ta-ic">search</span>
+        <input type="text" [(ngModel)]="techSearch" class="tech-input"
+               placeholder="Search technician name..."
+               (input)="onTechSearch()" (focus)="showTechDropdown = true" autocomplete="off" />
+        @if (selectedTech()) {
+        <button class="ta-clear" type="button" (click)="clearTech()"><span class="material-icons">close</span></button>
+        }
+        @if (techSearchLoading()) { <div class="ta-spinner"></div> }
+      </div>
+      @if (showTechDropdown && techResults().length > 0 && !selectedTech()) {
+      <div class="ta-dropdown">
+        @for (t of techResults(); track t.technicianId) {
+        <div class="ta-item" (click)="selectTech(t)">
+          <div class="ta-avatar" [ngClass]="getTechAvailClass(t.availabilityStatus)">{{ t.fullName?.charAt(0)||'?' }}</div>
+          <div class="ta-info">
+            <strong>{{ t.fullName }}</strong>
+            <small>{{ t.specialization || 'General' }}</small>
+          </div>
+          <span class="ta-avail-tag" [ngClass]="getTechAvailClass(t.availabilityStatus)">
+            <span class="dot"></span>{{ getTechAvailLabel(t.availabilityStatus) }}
+          </span>
+        </div>
+        }
+      </div>
+      }
+      @if (selectedTech()) {
+      <div class="selected-tech-chip">
+        <div class="stc-avatar" [ngClass]="getTechAvailClass(selectedTech().availabilityStatus)">
+          {{ selectedTech().fullName?.charAt(0) || 'T' }}
+        </div>
+        <div class="stc-info">
+          <strong>{{ selectedTech().fullName }}</strong>
+          <span>{{ selectedTech().specialization || 'General' }}</span>
+        </div>
+      </div>
+      }
+    </div>
+  </div>
+
+  @if (selectedTech()) {
+
+  <!-- Upload Config -->
+  <div class="upload-config-card">
+    <div class="config-row">
+      <div class="config-field">
+        <label>Complaint ID <span class="req">*</span></label>
+        <div class="input-wrap">
+          <span class="material-icons iic">confirmation_number</span>
+          <input type="number" [(ngModel)]="complaintId" class="inp" placeholder="Enter complaint ID" />
+        </div>
+      </div>
+      <div class="config-field">
+        <label>Image Type</label>
+        <div class="type-opts">
+          @for (t of imageTypes; track t) {
+          <button type="button" class="type-btn" [class.sel]="imageType === t" (click)="imageType = t">
+            {{ t }}
+          </button>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drop Zone -->
+  <div class="drop-zone"
+       [class.dragover]="isDragOver"
+       (dragover)="onDragOver($event)"
+       (dragleave)="onDragLeave()"
+       (drop)="onDrop($event)"
+       (click)="fileInput.click()">
+    <span class="material-icons dz-icon">cloud_upload</span>
+    <h3>Drag & Drop images here</h3>
+    <p>or click to browse — JPG, PNG, WEBP up to 10MB each</p>
+    <input #fileInput type="file" multiple accept="image/jpeg,image/png,image/webp"
+           (change)="onFileSelect($event)" style="display:none" />
+  </div>
+
+  <!-- Image Queue -->
+  @if (items().length > 0) {
+  <div class="queue-card">
+    <div class="queue-header">
+      <h3>
+        <span class="material-icons">photo_library</span>
+        Queue ({{ items().length }})
+        @if (doneCount > 0) { <span class="done-badge">{{ doneCount }} done</span> }
+      </h3>
+      <div class="queue-actions">
+        @if (doneCount > 0) {
+        <button class="btn-clear-done" (click)="clearDone()">
+          <span class="material-icons">clear_all</span> Clear Done
+        </button>
+        }
+        <button class="btn-upload-all" (click)="uploadAll()"
+                [disabled]="uploading() || !complaintId || !techId || pendingCount === 0">
+          @if (uploading()) { <span class="mini-spin white"></span> Uploading... }
+          @else { <span class="material-icons">upload</span> Upload All ({{ pendingCount }}) }
+        </button>
+      </div>
+    </div>
+
+    <div class="img-queue">
+      @for (item of items(); track $index; let i = $index) {
+      <div class="queue-item" [attr.data-status]="item.status">
+        <div class="qi-thumb" (click)="openPreview(item)">
+          <img [src]="item.preview" [alt]="item.file.name" />
+          <div class="qi-overlay">
+            @if (item.status === 'uploading') { <div class="mini-spin white"></div> }
+            @else if (item.status === 'done') { <span class="material-icons qi-done">check_circle</span> }
+            @else if (item.status === 'error') { <span class="material-icons qi-err">error</span> }
+            @else { <span class="material-icons qi-preview">zoom_in</span> }
+          </div>
+        </div>
+        <div class="qi-info">
+          <span class="qi-name">{{ item.file.name }}</span>
+          <span class="qi-size">{{ (item.file.size / 1024).toFixed(0) }} KB</span>
+          <select [(ngModel)]="item.type" class="qi-type-sel" [disabled]="item.status !== 'pending'">
+            @for (t of imageTypes; track t) { <option [value]="t">{{ t }}</option> }
+          </select>
+          @if (item.status === 'error' && item.error) {
+          <span class="qi-error">{{ item.error }}</span>
+          }
+        </div>
+        @if (item.status === 'pending' || item.status === 'error') {
+        <button class="qi-remove" (click)="removeItem(i)">
+          <span class="material-icons">close</span>
+        </button>
+        }
+      </div>
+      }
+    </div>
+  </div>
+  }
+
+  @if (msg()) {
+  <div class="alert" [class.ok]="!msgErr()" [class.err]="msgErr()">
+    <span class="material-icons">{{ msgErr() ? 'error' : 'check_circle' }}</span> {{ msg() }}
+  </div>
+  }
+
+  } @else {
+  <div class="no-tech-state">
+    <span class="material-icons">camera_alt</span>
+    <h3>Select a Technician</h3>
+    <p>Search and select a technician to upload service images.</p>
+  </div>
+  }
+
+</div>
+
+<!-- Image Preview Modal -->
+@if (previewItem()) {
+<div class="preview-overlay" (click)="closePreview()"></div>
+<div class="preview-modal">
+  <button class="preview-close" (click)="closePreview()">
+    <span class="material-icons">close</span>
+  </button>
+  <img [src]="previewItem()!.preview" [alt]="previewItem()!.file.name" />
+  <div class="preview-info">
+    <span>{{ previewItem()!.file.name }}</span>
+    <span class="type-tag">{{ previewItem()!.type }}</span>
+  </div>
+</div>
+}

@@ -1,0 +1,184 @@
+<div class="fx-page page">
+  <div class="fx-page-header page-header">
+    <div>
+      <div class="fx-page-title">Attendance Report</div>
+      <div class="fx-page-sub">Track technician check-in/out records and work hours</div>
+    </div>
+  </div>
+
+  <!-- ═══ Filters ═══ -->
+  <div class="filter-bar">
+    <div class="filter-row">
+      <!-- Tech Autocomplete -->
+      <div class="filter-field tech-field">
+        <label>Technician</label>
+        <div class="tech-autocomplete">
+          <div class="tech-input-wrap" [class.has-val]="!!selectedTech()">
+            <span class="material-icons ta-ic">search</span>
+            <input type="text"
+                   [(ngModel)]="techSearch"
+                   class="tech-input"
+                   placeholder="All technicians..."
+                   (input)="onTechSearch()"
+                   (focus)="showTechDropdown = true"
+                   autocomplete="off" />
+            @if (selectedTech()) {
+            <button class="ta-clear" type="button" (click)="clearTech()">
+              <span class="material-icons">close</span>
+            </button>
+            }
+            @if (techSearchLoading()) { <div class="ta-spinner"></div> }
+          </div>
+
+          @if (showTechDropdown && techResults().length > 0 && !selectedTech()) {
+          <div class="ta-dropdown">
+            @for (t of techResults(); track t.technicianId) {
+            <div class="ta-item" (click)="selectTech(t)">
+              <div class="ta-avatar" [ngClass]="getTechAvailClass(t.availabilityStatus)">
+                {{ t.fullName?.charAt(0) || '?' }}
+              </div>
+              <div class="ta-info">
+                <strong>{{ t.fullName }}</strong>
+                <small>{{ t.specialization || 'General' }}</small>
+              </div>
+            </div>
+            }
+          </div>
+          }
+        </div>
+      </div>
+
+      <div class="filter-field">
+        <label>From Date</label>
+        <input type="date" [(ngModel)]="fromDate" class="input" />
+      </div>
+      <div class="filter-field">
+        <label>To Date</label>
+        <input type="date" [(ngModel)]="toDate" class="input" />
+      </div>
+      <button class="btn-primary" (click)="load()" [disabled]="loading()">
+        @if (loading()) { <span class="spinner"></span> }
+        @else { <span class="material-icons">search</span> }
+        Filter
+      </button>
+    </div>
+  </div>
+
+  @if (records().length > 0) {
+
+  <!-- ═══ Summary Cards ═══ -->
+  @if (summary()) {
+  <div class="summary-grid">
+    <div class="sum-card">
+      <div class="sum-icon total-bg"><span class="material-icons">assignment</span></div>
+      <div class="sum-body">
+        <span class="sum-val">{{ summary()!.totalRecords }}</span>
+        <span class="sum-label">Records</span>
+      </div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-icon active-bg"><span class="material-icons">radio_button_checked</span></div>
+      <div class="sum-body">
+        <span class="sum-val active-val">{{ summary()!.active }}</span>
+        <span class="sum-label">Currently Active</span>
+      </div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-icon hours-bg"><span class="material-icons">schedule</span></div>
+      <div class="sum-body">
+        <span class="sum-val">{{ summary()!.totalHours | number:'1.1-1' }}h</span>
+        <span class="sum-label">Total Hours</span>
+      </div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-icon avg-bg"><span class="material-icons">analytics</span></div>
+      <div class="sum-body">
+        <span class="sum-val">{{ summary()!.avgHours | number:'1.1-1' }}h</span>
+        <span class="sum-label">Avg Hours/Day</span>
+      </div>
+    </div>
+    @if (summary()!.overtime > 0) {
+    <div class="sum-card overtime-card">
+      <div class="sum-icon overtime-bg"><span class="material-icons">warning</span></div>
+      <div class="sum-body">
+        <span class="sum-val overtime-val">{{ summary()!.overtime }}</span>
+        <span class="sum-label">Overtime (>8h)</span>
+      </div>
+    </div>
+    }
+  </div>
+  }
+
+  <!-- ═══ Table ═══ -->
+  <div class="table-card">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Technician</th>
+            <th>Date</th>
+            <th>Check In</th>
+            <th>Location</th>
+            <th>Check Out</th>
+            <th>Location</th>
+            <th>Hours</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of records(); track a.attendanceId) {
+          <tr>
+            <td>
+              <div class="tech-cell">
+                <div class="tc-avatar">{{ a.technicianName?.charAt(0) || 'T' }}</div>
+                <strong>{{ a.technicianName }}</strong>
+              </div>
+            </td>
+            <td class="date-cell">{{ a.attendanceDate }}</td>
+            <td>
+              @if (a.checkInTime) {
+              <span class="time-chip in">
+                <span class="material-icons">login</span>
+                {{ a.checkInTime | date:'hh:mm a' }}
+              </span>
+              } @else {
+              <span class="text-muted">—</span>
+              }
+            </td>
+            <td class="loc-cell" [title]="a.checkInAddress || ''">{{ a.checkInAddress || '—' }}</td>
+            <td>
+              @if (a.checkOutTime) {
+              <span class="time-chip out">
+                <span class="material-icons">logout</span>
+                {{ a.checkOutTime | date:'hh:mm a' }}
+              </span>
+              } @else {
+              <span class="active-indicator">
+                <span class="blink-dot"></span> Active
+              </span>
+              }
+            </td>
+            <td class="loc-cell" [title]="a.checkOutAddress || ''">{{ a.checkOutAddress || '—' }}</td>
+            <td>
+              @if (a.totalWorkHours) {
+              <span class="hours-val" [class.overtime]="a.totalWorkHours > 8">
+                {{ a.totalWorkHours | number:'1.1-1' }}h
+              </span>
+              } @else {
+              <span class="text-muted">—</span>
+              }
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  } @else if (!loading()) {
+  <div class="empty-state">
+    <span class="material-icons">event_busy</span>
+    <h3>No Attendance Records</h3>
+    <p>Adjust the date range or technician filter and click Filter.</p>
+  </div>
+  }
+</div>

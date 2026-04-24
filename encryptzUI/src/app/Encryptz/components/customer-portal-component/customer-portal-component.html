@@ -1,0 +1,125 @@
+<div class="portal-container">
+  <div class="portal-header">
+    <h1>Customer Portal</h1>
+    <p class="subtitle">Track your complaints and submit service requests</p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button [class.active]="activeTab==='complaints'" (click)="activeTab='complaints'">My Complaints</button>
+    <button [class.active]="activeTab==='track'" (click)="activeTab='track'">Track Complaint</button>
+    <button [class.active]="activeTab==='request'" (click)="activeTab='request'">New Request</button>
+  </div>
+
+  <!-- My Complaints Tab -->
+  <div *ngIf="activeTab==='complaints'" class="tab-content">
+    <div class="filter-row">
+      <select [(ngModel)]="statusFilter" (change)="loadComplaints()" class="form-select">
+        <option [ngValue]="undefined">All Status</option>
+        <option [ngValue]="1">New</option>
+        <option [ngValue]="2">In Progress</option>
+        <option [ngValue]="3">Resolved</option>
+        <option [ngValue]="4">Closed</option>
+      </select>
+    </div>
+    <div class="loading" *ngIf="loading()">
+      <div class="spinner"></div>
+    </div>
+    <div class="complaint-list" *ngIf="!loading()">
+      <div class="c-card" *ngFor="let c of complaints()">
+        <div class="c-top">
+          <span class="c-no">{{c.complaintNo}}</span>
+          <span class="status-badge" [class]="'s-'+c.statusId">{{getStatusLabel(c.statusId)}}</span>
+        </div>
+        <h3>{{c.subject}}</h3>
+        <p class="c-desc">{{c.description}}</p>
+        <div class="c-meta">
+          <span>📅 {{c.createdDate | date:'dd MMM yyyy'}}</span>
+          <span *ngIf="c.technicianName">👷 {{c.technicianName}}</span>
+          <span *ngIf="c.isWarranty" class="warranty-tag">🛡️ Warranty</span>
+        </div>
+        <div class="c-actions">
+          <button class="btn-sm" (click)="trackNo=c.complaintNo; activeTab='track'; trackComplaint()">Track →</button>
+        </div>
+      </div>
+      <div class="empty" *ngIf="complaints().length===0">
+        <p>No complaints found</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Track Tab -->
+  <div *ngIf="activeTab==='track'" class="tab-content">
+    <div class="track-search">
+      <input type="text" [(ngModel)]="trackNo" placeholder="Enter Complaint No (e.g. CMP-20260201-0001)"
+        class="form-input" />
+      <button class="btn-primary" (click)="trackComplaint()">Track</button>
+    </div>
+    <div class="loading" *ngIf="trackLoading()">
+      <div class="spinner"></div>
+    </div>
+    <div class="track-result" *ngIf="trackDetail() as d">
+      <div class="track-header">
+        <div>
+          <h2>{{d.complaintNo}}</h2>
+          <p>{{d.subject}}</p>
+        </div>
+        <span class="status-badge lg" [class]="'s-'+d.statusId">{{getStatusLabel(d.statusId)}}</span>
+      </div>
+      <div class="track-info">
+        <div class="ti"><label>Customer</label><span>{{d.customerName}}</span></div>
+        <div class="ti"><label>Technician</label><span>{{d.technicianName || 'Not assigned'}}</span></div>
+        <div class="ti"><label>Created</label><span>{{d.createdDate | date:'dd MMM yyyy HH:mm'}}</span></div>
+        <div class="ti"><label>Assigned</label><span>{{d.assignedDate ? (d.assignedDate | date:'dd MMM yyyy HH:mm') :
+            '-'}}</span></div>
+        <div class="ti"><label>Resolved</label><span>{{d.resolvedDate ? (d.resolvedDate | date:'dd MMM yyyy HH:mm') :
+            '-'}}</span></div>
+      </div>
+      <div class="timeline" *ngIf="d.statusHistory?.length">
+        <h3>Status Timeline</h3>
+        <div class="tl-item" *ngFor="let h of d.statusHistory">
+          <div class="tl-dot"></div>
+          <div class="tl-content">
+            <div class="tl-top"><span class="status-badge sm"
+                [class]="'s-'+h.newStatusId">{{getStatusLabel(h.newStatusId)}}</span><small>{{h.changedDate | date:'dd
+                MMM HH:mm'}}</small></div>
+            <p *ngIf="h.remarks">{{h.remarks}}</p>
+            <small>By: {{h.changedByName}}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Request Tab -->
+  <div *ngIf="activeTab==='request'" class="tab-content">
+    <div class="request-form">
+      <h2>Submit Service Request</h2>
+      <div class="form-grid">
+        <div class="fg"><label>Request Type</label><select [(ngModel)]="newRequest.requestType" class="fi">
+            <option [ngValue]="1">New Complaint</option>
+            <option [ngValue]="2">Follow Up</option>
+            <option [ngValue]="3">Inquiry</option>
+            <option [ngValue]="4">Feedback</option>
+          </select></div>
+        <div class="fg"><label>Product ID (optional)</label><input type="number" [(ngModel)]="newRequest.productId"
+            class="fi" /></div>
+        <div class="fg full"><label>Subject</label><input type="text" [(ngModel)]="newRequest.subject" class="fi"
+            placeholder="Brief description of your issue" /></div>
+        <div class="fg full"><label>Description</label><textarea [(ngModel)]="newRequest.description" class="fi"
+            rows="4" placeholder="Provide details..."></textarea></div>
+        <div class="fg"><label>Preferred Date</label><input type="date" [(ngModel)]="newRequest.preferredDate"
+            class="fi" /></div>
+        <div class="fg"><label>Preferred Time</label><select [(ngModel)]="newRequest.preferredTimeSlot" class="fi">
+            <option value="">Select...</option>
+            <option value="09:00-12:00">Morning (9-12)</option>
+            <option value="12:00-15:00">Afternoon (12-3)</option>
+            <option value="15:00-18:00">Evening (3-6)</option>
+          </select></div>
+      </div>
+      <div class="form-actions"><button class="btn-primary" (click)="submitRequest()">Submit Request</button></div>
+      <div class="success-msg" *ngIf="requestSuccess()">✅ Request submitted successfully! Reference: {{requestRef()}}
+      </div>
+    </div>
+  </div>
+</div>

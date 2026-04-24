@@ -1,0 +1,765 @@
+<!-- complaint-detail-popup-component.html  (v5) -->
+
+<div class="cd-overlay" (click)="close()"></div>
+<div class="cd-popup">
+
+  <div class="cd-toast" [class.show]="showToast()" [class.error]="toastType()==='error'">
+    <span class="material-icons">{{ toastType()==='success' ? 'check_circle' : 'error' }}</span>
+    <span>{{ toastMessage() }}</span>
+  </div>
+
+  <div class="cd-header">
+    <div class="cd-header-left">
+      <div class="cd-icon"><span class="material-icons">assignment</span></div>
+      <div>
+        <h3>{{ display(complaintData()?.ComplaintNumber, 'Loading…') }}</h3>
+        <p class="cd-sub">{{ display(complaintData()?.Subject, ' ') }}</p>
+      </div>
+    </div>
+    <button class="cd-close" (click)="close()"><span class="material-icons">close</span></button>
+  </div>
+
+  @if (loading()) {
+    <div class="cd-loading"><div class="spinner"></div><p>Loading complaint details...</p></div>
+  }
+
+  @if (!loading() && complaintData()) {
+
+    <div class="cd-tabs">
+      <button class="cd-tab" [class.active]="activeTab()==='overview'" (click)="activeTab.set('overview')">
+        <span class="material-icons">info</span> Overview</button>
+      <button class="cd-tab" [class.active]="activeTab()==='customer'" (click)="activeTab.set('customer')">
+        <span class="material-icons">person</span> Customer</button>
+      <button class="cd-tab" [class.active]="activeTab()==='product'" (click)="activeTab.set('product')">
+        <span class="material-icons">devices</span> Product</button>
+      <button class="cd-tab" [class.active]="activeTab()==='location'" (click)="activeTab.set('location')">
+        <span class="material-icons">location_on</span> Location</button>
+      <button class="cd-tab" [class.active]="activeTab()==='assignments'" (click)="activeTab.set('assignments')">
+        <span class="material-icons">engineering</span> Technicians
+        <span class="cd-tab-count">{{ assignments().length }}</span></button>
+      <button class="cd-tab" [class.active]="activeTab()==='spare'" (click)="activeTab.set('spare')">
+        <span class="material-icons">build</span> Spares
+        <span class="cd-tab-count">{{ spareParts().length }}</span></button>
+      <button class="cd-tab" [class.active]="activeTab()==='comments'" (click)="activeTab.set('comments')">
+        <span class="material-icons">chat</span> Comments
+        <span class="cd-tab-count">{{ comments().length }}</span></button>
+        <button class="cd-tab" [class.active]="activeTab()==='images'" (click)="activeTab.set('images')">
+  <span class="material-icons">photo_library</span> Photos
+  <span class="cd-tab-count">{{ complaintImages().length }}</span>
+</button>
+    </div>
+
+    <div class="cd-body">
+
+      <!-- ═══════════════ OVERVIEW ═══════════════ -->
+      @if (activeTab()==='overview') {
+        <div class="cd-section">
+          <div class="cd-section-header">
+            <h3>Complaint Information</h3>
+            @if (!viewOnly && !editing.complaint) {
+              <button class="cd-btn-edit" (click)="startEdit('complaint')">
+                <span class="material-icons">edit</span> Edit
+              </button>
+            }
+          </div>
+
+          @if (editing.complaint) {
+            <div class="cd-edit-form">
+              <div class="cd-form-row">
+                <div class="cd-field">
+                  <label>Subject <span class="req">*</span></label>
+                  <div class="cd-iw"><span class="material-icons cd-ic">short_text</span>
+                    <input class="cd-inp" [(ngModel)]="editData.complaint.Subject">
+                  </div>
+                </div>
+                <div class="cd-field">
+                  <label>Priority</label>
+                  <select class="cd-inp bare cd-select" [(ngModel)]="editData.complaint.Priority">
+                    <option value="Critical">Critical</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                  </select>
+                </div>
+              </div>
+              <div class="cd-field"><label>Description</label>
+                <textarea class="cd-textarea" rows="4" [(ngModel)]="editData.complaint.Description"></textarea>
+              </div>
+              <div class="cd-form-row">
+                <div class="cd-field"><label>Category</label>
+                  <input class="cd-inp bare" [(ngModel)]="editData.complaint.Category"></div>
+                <div class="cd-field"><label>Brand</label>
+                  <input class="cd-inp bare" [(ngModel)]="editData.complaint.BrandName"></div>
+                <div class="cd-field"><label>Model</label>
+                  <input class="cd-inp bare" [(ngModel)]="editData.complaint.ModelNumber"></div>
+              </div>
+              <div class="cd-form-row">
+                <div class="cd-field"><label>Preferred Date</label>
+                  <input class="cd-inp bare" type="date" [(ngModel)]="editData.complaint.PreferredDate"></div>
+                <div class="cd-field"><label>Preferred Time Slot</label>
+                  <select class="cd-inp bare cd-select" [(ngModel)]="editData.complaint.PreferredTimeSlot">
+                    <option value="">Any</option>
+                    <option value="Morning (9AM-12PM)">Morning (9AM-12PM)</option>
+                    <option value="Afternoon (12PM-4PM)">Afternoon (12PM-4PM)</option>
+                    <option value="Evening (4PM-7PM)">Evening (4PM-7PM)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="cd-form-actions">
+                <button class="cd-btn-cancel" (click)="cancelEdit('complaint')">Cancel</button>
+                <button class="cd-btn-save" (click)="saveComplaint()" [disabled]="saving()">
+                  @if (saving()) { <span class="mini-spinner white"></span> Saving… }
+                  @else { <span class="material-icons">save</span> Save }
+                </button>
+              </div>
+            </div>
+          } @else {
+            <div class="cd-detail-grid">
+              <div class="cd-detail"><span class="cd-lbl">Complaint #</span><span class="cd-val mono">{{ display(complaintData()?.ComplaintNumber) }}</span></div>
+              <div class="cd-detail"><span class="cd-lbl">Status</span>
+                <span class="cd-val"><span class="status-badge" [ngClass]="statusClass(complaintData()?.StatusId)">{{ display(complaintData()?.StatusName) }}</span></span></div>
+              <div class="cd-detail"><span class="cd-lbl">Priority</span>
+                <span class="cd-val"><span class="priority-badge" [ngClass]="priorityClass(complaintData()?.Priority)">{{ display(complaintData()?.Priority) }}</span></span></div>
+              <div class="cd-detail"><span class="cd-lbl">Created</span><span class="cd-val">{{ formatDateTime(complaintData()?.CreatedAt) }}</span></div>
+              <div class="cd-detail"><span class="cd-lbl">Category</span><span class="cd-val">{{ display(complaintData()?.Category) }}</span></div>
+              <div class="cd-detail"><span class="cd-lbl">Brand / Model</span><span class="cd-val">{{ display(complaintData()?.BrandName) }} / {{ display(complaintData()?.ModelNumber) }}</span></div>
+              <div class="cd-detail"><span class="cd-lbl">Preferred</span><span class="cd-val">{{ formatDate(complaintData()?.PreferredDate) }} · {{ display(complaintData()?.PreferredTimeSlot, 'Any') }}</span></div>
+              <div class="cd-detail"><span class="cd-lbl">SLA Deadline</span><span class="cd-val">{{ formatDateTime(complaintData()?.SLADeadline) }}</span></div>
+              <div class="cd-detail full"><span class="cd-lbl">Subject</span><span class="cd-val">{{ display(complaintData()?.Subject) }}</span></div>
+              <div class="cd-detail full"><span class="cd-lbl">Description</span><p class="cd-desc">{{ display(complaintData()?.Description, 'No description') }}</p></div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- ═══════════════ CUSTOMER (with View Profile button) ═══════════════ -->
+      @if (activeTab()==='customer') {
+        <div class="cd-section">
+          <div class="cd-section-header">
+            <h3>Customer Details</h3>
+            <div class="cd-header-actions">
+              @if (customerData()?.CustomerId && !editing.customer) {
+                <button class="cd-btn-view" >
+                  <span class="material-icons">open_in_new</span> View Full Profile
+                </button>
+              }
+@if (!viewOnly && !editing.customer && customerData()) {
+                <button class="cd-btn-edit" (click)="startEdit('customer')">
+                  <span class="material-icons">edit</span> Edit
+                </button>
+              }
+            </div>
+          </div>
+
+          @if (!customerData()) {
+            <div class="cd-empty"><span class="material-icons">person_off</span><p>No customer linked</p></div>
+          } @else if (editing.customer) {
+            <div class="cd-edit-form">
+              <div class="cd-form-row">
+                <div class="cd-field"><label>Name <span class="req">*</span></label>
+                  <div class="cd-iw"><span class="material-icons cd-ic">person</span>
+                    <input class="cd-inp" [(ngModel)]="editData.customer.CustomerName">
+                  </div>
+                </div>
+                <div class="cd-field"><label>Mobile <span class="req">*</span></label>
+                  <div class="cd-iw"><span class="material-icons cd-ic">phone</span>
+                    <input class="cd-inp" type="tel" [(ngModel)]="editData.customer.MobileNumber">
+                  </div>
+                </div>
+              </div>
+              <div class="cd-form-row">
+                <div class="cd-field"><label>Alternate Phone</label>
+                  <input class="cd-inp bare" type="tel" [(ngModel)]="editData.customer.AlternatePhone"></div>
+                <div class="cd-field"><label>Email</label>
+                  <input class="cd-inp bare" type="email" [(ngModel)]="editData.customer.Email"></div>
+              </div>
+
+              <div class="map-picker">
+                <label class="map-label"><span class="material-icons">map</span> Home Location (drag pin or search)</label>
+                <div class="map-search-row">
+                  <div class="map-search-box">
+                    <span class="material-icons">search</span>
+                    <input type="text" placeholder="Search city, area, landmark..." (input)="onCustomerSearchInput($event)">
+                  </div>
+                  <button type="button" class="btn-locate" (click)="useCurrentLocationCustomer()">
+                    <span class="material-icons">my_location</span> My location
+                  </button>
+                </div>
+                @if (customerSearchResults.length > 0) {
+                  <div class="map-search-results">
+                    @for (r of customerSearchResults; track r.place_id) {
+                      <div class="map-result" (click)="selectCustomerSearchResult(r)">
+                        <span class="material-icons">place</span>
+                        <div>
+                          <strong>{{ r.display_name.split(',')[0] }}</strong>
+                          <small>{{ r.display_name }}</small>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+                <div #customerMap class="map-container"></div>
+                <div class="map-coords">
+                  <span class="material-icons">location_on</span>
+                  <span>{{ display(editData.customer?.Latitude) }}, {{ display(editData.customer?.Longitude) }}</span>
+                </div>
+              </div>
+
+              <div class="cd-field"><label>Address</label>
+                <textarea class="cd-textarea" rows="2" [(ngModel)]="editData.customer.Address"></textarea>
+              </div>
+              <div class="cd-form-row">
+                <div class="cd-field"><label>City</label><input class="cd-inp bare" [(ngModel)]="editData.customer.City"></div>
+                <div class="cd-field"><label>State</label><input class="cd-inp bare" [(ngModel)]="editData.customer.State"></div>
+                <div class="cd-field"><label>Pincode</label><input class="cd-inp bare" [(ngModel)]="editData.customer.PinCode"></div>
+              </div>
+              <div class="cd-field"><label>Landmark</label>
+                <input class="cd-inp bare" [(ngModel)]="editData.customer.Landmark">
+              </div>
+              <div class="cd-form-actions">
+                <button class="cd-btn-cancel" (click)="cancelEdit('customer')">Cancel</button>
+                <button class="cd-btn-save" (click)="saveCustomer()" [disabled]="saving()">
+                  @if (saving()) { <span class="mini-spinner white"></span> Saving… }
+                  @else { <span class="material-icons">save</span> Save }
+                </button>
+              </div>
+            </div>
+          } @else {
+            <div class="cd-detail-grid">
+              <div class="cd-detail"><span class="cd-lbl">Customer ID</span>
+                <span class="cd-val">
+                  <label class="customer-id-link" >#{{ display(customerData()?.CustomerId) }} <span class="material-icons">open_in_new</span></label>
+                </span>
+              </div>
+              <div class="cd-detail"><span class="cd-lbl">Name</span><span class="cd-val">{{ display(customerData()?.CustomerName) }}</span></div>
+              <div class="cd-detail"><span class="cd-lbl">Mobile</span>
+                <span class="cd-val">
+                  @if (customerData()?.MobileNumber) { <a [href]="'tel:' + customerData()?.MobileNumber">{{ display(customerData()?.MobileNumber) }}</a> } @else { — }
+                </span>
+              </div>
+              <div class="cd-detail"><span class="cd-lbl">Alternate</span><span class="cd-val">{{ display(customerData()?.AlternatePhone) }}</span></div>
+              <div class="cd-detail"><span class="cd-lbl">Email</span><span class="cd-val">{{ display(customerData()?.Email) }}</span></div>
+              <div class="cd-detail full"><span class="cd-lbl">Address</span>
+                <span class="cd-val">
+                  {{ display(customerData()?.Address) }}{{ customerData()?.City ? ', ' + customerData()?.City : '' }}{{ customerData()?.State ? ', ' + customerData()?.State : '' }}{{ customerData()?.PinCode ? ' - ' + customerData()?.PinCode : '' }}
+                </span>
+              </div>
+              <div class="cd-detail"><span class="cd-lbl">Landmark</span><span class="cd-val">{{ display(customerData()?.Landmark) }}</span></div>
+              <div class="cd-detail"><span class="cd-lbl">Coordinates</span>
+                <span class="cd-val mono">{{ display(customerData()?.Latitude) }}, {{ display(customerData()?.Longitude) }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- ═══════════════ PRODUCT (full form in both modes) ═══════════════ -->
+      @if (activeTab()==='product') {
+        <div class="cd-section">
+          <div class="cd-section-header">
+            <h3>Product Details</h3>
+       @if (!viewOnly && !editing.product) {
+              <button class="cd-btn-edit" (click)="startEdit('product')">
+                <span class="material-icons">edit</span> {{ hasProduct() ? 'Edit' : 'Add Product' }}
+              </button>
+            }
+          </div>
+
+          @if (editing.product) {
+            <div class="cd-edit-form">
+              @if (!editData.product.__isProduct) {
+                <div class="fallback-note">
+                  <span class="material-icons">info</span>
+                  No product is linked to this complaint yet. Fill in the details below to create a product record and link it — the complaint will be updated to point to the new product.
+                </div>
+              }
+
+              <div class="cd-field">
+                <label>Product Name <span class="req">*</span></label>
+                <div class="cd-iw"><span class="material-icons cd-ic">devices</span>
+                  <input class="cd-inp" [(ngModel)]="editData.product.ProductName"
+                         placeholder="e.g. Samsung Refrigerator RT28M3022S8">
+                </div>
+              </div>
+
+              <div class="cd-form-row">
+                <div class="cd-field"><label>Brand</label>
+                  <input class="cd-inp bare" [(ngModel)]="editData.product.Brand"
+                         placeholder="e.g. Samsung"></div>
+                <div class="cd-field"><label>Model Number</label>
+                  <input class="cd-inp bare" [(ngModel)]="editData.product.ModelNumber"
+                         placeholder="e.g. RT28M3022S8"></div>
+              </div>
+
+              <div class="cd-field"><label>Serial Number</label>
+                <input class="cd-inp bare" [(ngModel)]="editData.product.SerialNumber"
+                       placeholder="e.g. SN12345ABC">
+              </div>
+
+              <div class="cd-form-row">
+                <div class="cd-field"><label>Category</label>
+                  <input class="cd-inp bare" [(ngModel)]="editData.product.ProductCategory"
+                         placeholder="e.g. Refrigerator, AC, Washing Machine"></div>
+                <div class="cd-field"><label>Purchase Date</label>
+                  <input class="cd-inp bare" type="date" [(ngModel)]="editData.product.PurchaseDate"></div>
+                <div class="cd-field"><label>Warranty Expiry</label>
+                  <input class="cd-inp bare" type="date" [(ngModel)]="editData.product.WarrantyExpiryDate"></div>
+              </div>
+
+              <div class="cd-form-actions">
+                <button class="cd-btn-cancel" (click)="cancelEdit('product')">Cancel</button>
+                <button class="cd-btn-save" (click)="saveProduct()" [disabled]="saving()">
+                  @if (saving()) { <span class="mini-spinner white"></span> Saving… }
+                  @else {
+                    <span class="material-icons">save</span>
+                    {{ editData.product.__isProduct ? 'Save' : 'Create & Link' }}
+                  }
+                </button>
+              </div>
+            </div>
+          } @else {
+            @if (hasProduct()) {
+              <div class="cd-detail-grid">
+                <div class="cd-detail"><span class="cd-lbl">Product ID</span><span class="cd-val mono">#{{ display(productData()?.ProductId) }}</span></div>
+                <div class="cd-detail"><span class="cd-lbl">Product</span><span class="cd-val">{{ display(productData()?.ProductName) }}</span></div>
+                <div class="cd-detail"><span class="cd-lbl">Brand</span><span class="cd-val">{{ display(productData()?.Brand) }}</span></div>
+                <div class="cd-detail"><span class="cd-lbl">Model</span><span class="cd-val">{{ display(productData()?.ModelNumber) }}</span></div>
+                <div class="cd-detail"><span class="cd-lbl">Serial</span><span class="cd-val mono">{{ display(productData()?.SerialNumber) }}</span></div>
+                <div class="cd-detail"><span class="cd-lbl">Category</span><span class="cd-val">{{ display(productData()?.ProductCategory) }}</span></div>
+                <div class="cd-detail"><span class="cd-lbl">Purchase Date</span><span class="cd-val">{{ formatDate(productData()?.PurchaseDate) }}</span></div>
+                <div class="cd-detail"><span class="cd-lbl">Warranty Expiry</span><span class="cd-val">{{ formatDate(productData()?.WarrantyExpiryDate) }}</span></div>
+                <div class="cd-detail"><span class="cd-lbl">Warranty Status</span>
+                  <span class="cd-val">
+                    <span class="warranty-badge" [class.expired]="isWarrantyExpired()">
+                      {{ display(productData()?.WarrantyStatus, 'No Warranty') }}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            } @else {
+              <div class="fallback-note">
+                <span class="material-icons">info</span>
+                No product record is linked to this complaint. Showing what's stored on the complaint itself. Use "Add Product" above to create a linked product record.
+              </div>
+              <div class="cd-detail-grid">
+                <div class="cd-detail"><span class="cd-lbl">Category</span><span class="cd-val">{{ display(complaintData()?.Category) }}</span></div>
+                <div class="cd-detail"><span class="cd-lbl">Brand</span><span class="cd-val">{{ display(complaintData()?.BrandName) }}</span></div>
+                <div class="cd-detail"><span class="cd-lbl">Model Number</span><span class="cd-val">{{ display(complaintData()?.ModelNumber) }}</span></div>
+              </div>
+            }
+          }
+        </div>
+      }
+
+      <!-- ═══════════════ LOCATION (with map) ═══════════════ -->
+      @if (activeTab()==='location') {
+        <div class="cd-section">
+          <div class="cd-section-header">
+            <h3>Service Location</h3>
+           @if (!viewOnly && !editing.location) {
+              <button class="cd-btn-edit" (click)="startEdit('location')">
+                <span class="material-icons">edit</span> Edit
+              </button>
+            }
+          </div>
+
+          @if (editing.location) {
+            <div class="cd-edit-form">
+              <div class="cd-field"><label>Location Name</label>
+                <div class="cd-iw"><span class="material-icons cd-ic">label</span>
+                  <input class="cd-inp" placeholder="e.g. Home, Office" [(ngModel)]="editData.location.LocationName">
+                </div>
+              </div>
+
+              <div class="map-picker">
+                <label class="map-label"><span class="material-icons">map</span> Service Location (drag pin or search)</label>
+                <div class="map-search-row">
+                  <div class="map-search-box">
+                    <span class="material-icons">search</span>
+                    <input type="text" placeholder="Search city, area, landmark..." (input)="onLocationSearchInput($event)">
+                  </div>
+                  <button type="button" class="btn-locate" (click)="useCurrentLocationLocation()">
+                    <span class="material-icons">my_location</span> My location
+                  </button>
+                </div>
+                @if (locationSearchResults.length > 0) {
+                  <div class="map-search-results">
+                    @for (r of locationSearchResults; track r.place_id) {
+                      <div class="map-result" (click)="selectLocationSearchResult(r)">
+                        <span class="material-icons">place</span>
+                        <div>
+                          <strong>{{ r.display_name.split(',')[0] }}</strong>
+                          <small>{{ r.display_name }}</small>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+                <div #locationMap class="map-container"></div>
+                <div class="map-coords">
+                  <span class="material-icons">location_on</span>
+                  <span>{{ display(editData.location?.Latitude) }}, {{ display(editData.location?.Longitude) }}</span>
+                </div>
+              </div>
+
+              <div class="cd-field"><label>Complete Address</label>
+                <textarea class="cd-textarea" rows="3" [(ngModel)]="editData.location.LocationAddress"></textarea>
+              </div>
+              <div class="cd-form-actions">
+                <button class="cd-btn-cancel" (click)="cancelEdit('location')">Cancel</button>
+                <button class="cd-btn-save" (click)="saveLocation()" [disabled]="saving()">
+                  @if (saving()) { <span class="mini-spinner white"></span> Saving… }
+                  @else { <span class="material-icons">save</span> Save }
+                </button>
+              </div>
+            </div>
+          } @else {
+            <div class="cd-detail-grid">
+              <div class="cd-detail full"><span class="cd-lbl">Location Name</span><span class="cd-val">{{ display(complaintData()?.LocationName) }}</span></div>
+              <div class="cd-detail full"><span class="cd-lbl">Address</span><span class="cd-val">{{ display(complaintData()?.LocationAddress) }}</span></div>
+              <div class="cd-detail"><span class="cd-lbl">Latitude</span><span class="cd-val mono">{{ display(complaintData()?.Latitude) }}</span></div>
+              <div class="cd-detail"><span class="cd-lbl">Longitude</span><span class="cd-val mono">{{ display(complaintData()?.Longitude) }}</span></div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- ═══════════════ TECHNICIANS (with Mark Complete) ═══════════════ -->
+      @if (activeTab()==='assignments') {
+        <div class="cd-section">
+          <div class="cd-section-header">
+            <h3>Technician Assignments</h3>
+             @if (!viewOnly) {
+            <button class="cd-btn-add" (click)="requestNewAssign()">
+              <span class="material-icons">person_add</span> Assign Technician
+            </button>
+          }
+          </div>
+
+          <div class="assign-list">
+            @for (a of pagedAssignments(); track a.AssignmentId) {
+              <div class="assign-card" [class.completed]="a.Status==='Completed'">
+                <div class="ac-header">
+                  <div class="ac-avatar" [ngClass]="assignStatusClass(a.Status)">
+                    {{ (a.TechnicianName || 'T').charAt(0) }}
+                  </div>
+                  <div class="ac-info">
+                    <strong>{{ display(a.TechnicianName) }}</strong>
+                    <div class="ac-tags">
+                      <span class="role-tag">{{ display(a.Role, 'Primary') }}</span>
+                      <span class="status-tag" [ngClass]="assignStatusClass(a.Status)">{{ display(a.Status) }}</span>
+                    </div>
+                  </div>
+                  <div class="ac-actions">
+                      @if (!viewOnly) {
+                    <!-- @if (isAssignmentActive(a) && completingAssignmentId !== a.AssignmentId) {
+                      <button class="btn-complete" (click)="startMarkComplete(a)">
+                        <span class="material-icons">check_circle</span> Mark Complete
+                      </button>
+                    } -->
+                    <button class="btn-reassign" (click)="requestReassign(a)">
+                      <span class="material-icons">swap_horiz</span> Reassign
+                    </button>
+                    <button class="btn-unassign" (click)="requestUnassign(a)" [disabled]="a.Status==='Completed'">
+                      <span class="material-icons">person_remove</span>
+                    </button>
+                  }
+                  </div>
+                </div>
+
+                <div class="ac-body">
+                  @if (a.ScheduledDate) {
+                    <div class="ac-row"><span class="material-icons">event</span>
+                      <span>{{ formatDate(a.ScheduledDate) }}
+                        @if (a.StartTime) { · {{ display(a.StartTime) }} – {{ display(a.EndTime) }} }
+                      </span>
+                    </div>
+                  }
+                  @if (a.Specialization) { <div class="ac-row"><span class="material-icons">build</span><span>{{ display(a.Specialization) }}</span></div> }
+                  @if (a.Notes) { <div class="ac-row"><span class="material-icons">note</span><span>{{ display(a.Notes) }}</span></div> }
+                  @if (a.WorkDone) { <div class="ac-row"><span class="material-icons">work</span><span>{{ display(a.WorkDone) }}</span></div> }
+                  @if (a.CompletionRemarks) { <div class="ac-row"><span class="material-icons">check_circle</span><span>{{ display(a.CompletionRemarks) }}</span></div> }
+                </div>
+
+                @if (completingAssignmentId === a.AssignmentId) {
+                  <div class="complete-form">
+                    <div class="complete-form-header">
+                      <span class="material-icons">check_circle</span>
+                      <strong>Mark Assignment Complete</strong>
+                    </div>
+                    <div class="cd-field">
+                      <label>Work Done <span class="req">*</span></label>
+                      <textarea class="cd-textarea" rows="2" [(ngModel)]="completeForm.WorkDone"
+                                placeholder="Describe the work performed..."></textarea>
+                    </div>
+                    <div class="cd-field">
+                      <label>Parts Used</label>
+                      <input class="cd-inp bare" [(ngModel)]="completeForm.PartsUsed"
+                             placeholder="Any parts replaced or used">
+                    </div>
+                    <div class="cd-field">
+                      <label>Completion Remarks</label>
+                      <textarea class="cd-textarea" rows="2" [(ngModel)]="completeForm.CompletionRemarks"
+                                placeholder="Final notes"></textarea>
+                    </div>
+                    <div class="cd-form-actions">
+                      <button class="cd-btn-cancel" (click)="cancelMarkComplete()">Cancel</button>
+                      <button class="cd-btn-save green" (click)="submitMarkComplete(a)" [disabled]="savingComplete()">
+                        @if (savingComplete()) { <span class="mini-spinner white"></span> Completing… }
+                        @else { <span class="material-icons">check_circle</span> Mark Complete }
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            } @empty {
+              <div class="cd-empty">
+                <span class="material-icons">person_off</span>
+                <p>No technicians assigned yet</p>
+                  @if (!viewOnly) {
+                <button class="cd-btn-add" (click)="requestNewAssign()">
+                  <span class="material-icons">person_add</span> Assign Now
+                </button>
+              }
+              </div>
+            }
+          </div>
+        </div>
+        @if (assignTotalPages() > 1) {
+  <div class="tab-pagination">
+    <button (click)="prevAssign()" [disabled]="assignPage() <= 1" class="page-btn">&laquo; Prev</button>
+    <span class="page-info">Page {{ assignPage() }} of {{ assignTotalPages() }} · {{ assignments().length }} total</span>
+    <button (click)="nextAssign()" [disabled]="assignPage() >= assignTotalPages()" class="page-btn">Next &raquo;</button>
+  </div>
+}
+      }
+
+      <!-- ═══════════════ SPARE (list-only — no add form) ═══════════════ -->
+      @if (activeTab()==='spare') {
+        <div class="cd-section">
+          <div class="cd-section-header"><h3>Spare Part Requests</h3></div>
+
+          @if (spareParts().length === 0) {
+            <div class="cd-empty">
+              <span class="material-icons">inventory_2</span>
+              <p>No spare parts requested for this complaint</p>
+            </div>
+          } @else {
+            <div class="spare-wrap">
+              <table class="spare-tbl">
+                <thead>
+                  <tr><th>Part</th><th>Qty</th><th>Urgency</th><th>Status</th><th>Technician</th><th>Requested</th><th></th></tr>
+                </thead>
+                <tbody>
+                  @for (p of pagedSpares(); track p.RequestId) {
+                    @if (editingSpareId !== p.RequestId) {
+                      <tr>
+                        <td>
+                          <strong>{{ display(p.PartName) }}</strong>
+                          @if (p.PartNumber) { <small class="mono">{{ display(p.PartNumber) }}</small> }
+                        </td>
+                        <td class="qty">× {{ display(p.Quantity, '1') }}</td>
+                        <td><span class="urg-tag u-{{ (p.UrgencyLevel || 'normal').toLowerCase() }}">{{ display(p.UrgencyLevel, 'Normal') }}</span></td>
+                        <td><span class="sp-status s-{{ (p.Status || 'requested').toLowerCase() }}">{{ display(p.Status, 'Requested') }}</span></td>
+                        <td>{{ display(p.TechnicianName) }}</td>
+                        <td class="mono">{{ formatDate(p.RequestedAt) }}</td>
+                        <td class="row-actions">
+                           @if (!viewOnly) {
+                          <button class="btn-icon" (click)="startEditSpare(p)"><span class="material-icons">edit</span></button>
+                          <button class="btn-icon danger" (click)="deleteSpare(p.RequestId)"><span class="material-icons">delete</span></button>
+                           }
+                        </td>
+                      </tr>
+                      @if (p.Remarks) {
+                        <tr class="notes-row"><td colspan="7"><div class="part-notes"><span class="material-icons">note</span>{{ display(p.Remarks) }}</div></td></tr>
+                      }
+                    } @else {
+                      <tr class="edit-row">
+                        <td><strong>{{ display(p.PartName) }}</strong></td>
+                        <td><input type="number" min="1" class="cd-inp bare sm" [(ngModel)]="editSpare.Quantity"></td>
+                        <td>
+                          <select class="cd-inp bare sm cd-select" [(ngModel)]="editSpare.UrgencyLevel">
+                            <option value="Normal">Normal</option>
+                            <option value="Urgent">Urgent</option>
+                            <option value="Critical">Critical</option>
+                          </select>
+                        </td>
+                        <td>
+                          <select class="cd-inp bare sm cd-select" [(ngModel)]="editSpare.Status">
+                            <option value="Requested">Requested</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Dispatched">Dispatched</option>
+                            <option value="Used">Used</option>
+                            <option value="Rejected">Rejected</option>
+                          </select>
+                        </td>
+                        <td>{{ display(p.TechnicianName) }}</td>
+                        <td class="mono">{{ formatDate(p.RequestedAt) }}</td>
+                        <td class="row-actions">
+                          <button class="btn-icon ok" [disabled]="savingSpare()" (click)="saveEditSpare(p)"><span class="material-icons">check</span></button>
+                          <button class="btn-icon" (click)="cancelEditSpare()"><span class="material-icons">close</span></button>
+                        </td>
+                      </tr>
+                      <tr class="edit-row">
+                        <td colspan="7">
+                          <label class="remarks-lbl">Remarks</label>
+                          <input class="cd-inp bare" [(ngModel)]="editSpare.Remarks">
+                        </td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+              @if (spareTotalPages() > 1) {
+  <div class="tab-pagination">
+    <button (click)="prevSpare()" [disabled]="sparePage() <= 1" class="page-btn">&laquo; Prev</button>
+    <span class="page-info">Page {{ sparePage() }} of {{ spareTotalPages() }} · {{ spareParts().length }} total</span>
+    <button (click)="nextSpare()" [disabled]="sparePage() >= spareTotalPages()" class="page-btn">Next &raquo;</button>
+  </div>
+}
+            </div>
+          }
+        </div>
+      }
+
+      <!-- ═══════════════ COMMENTS ═══════════════ -->
+      @if (activeTab()==='comments') {
+        <div class="cd-section">
+          <div class="cd-section-header"><h3>Comments & Timeline</h3></div>
+@if (!viewOnly) {
+          <div class="comment-add">
+            <textarea rows="3" class="cd-textarea" placeholder="Add a comment…" [(ngModel)]="newComment"></textarea>
+            <div class="comment-add-actions">
+              <label class="internal-check">
+                <input type="checkbox" [(ngModel)]="isInternalComment">
+                <span>Internal note</span>
+              </label>
+              <button class="cd-btn-save sm" (click)="addComment()" [disabled]="!newComment.trim() || savingComment()">
+                @if (savingComment()) { <span class="mini-spinner white"></span> }
+                @else { <span class="material-icons">send</span> }
+                Post
+              </button>
+            </div>
+          </div>
+        }
+
+          <div class="comment-list">
+          @for (c of pagedComments(); track c.CommentId) {
+              <div class="comment-item" [class.internal]="c.IsInternal">
+                <div class="comment-av" [ngClass]="(c.PostedByRole || 'system').toLowerCase()">
+                  <span class="material-icons">person</span>
+                </div>
+                <div class="comment-body">
+                  <div class="comment-hdr">
+                    <strong>{{ display(c.PostedBy, 'System') }}</strong>
+                    <span class="comment-role" [ngClass]="(c.PostedByRole || 'system').toLowerCase()">{{ display(c.PostedByRole, 'System') }}</span>
+                    <span class="comment-time">{{ formatDateTime(c.PostedAt) }}</span>
+                    @if (c.IsInternal) { <span class="internal-tag">Internal</span> }
+                  </div>
+                  <p class="comment-text">{{ display(c.Comment, '(empty)') }}</p>
+                </div>
+              </div>
+            } @empty {
+              <div class="cd-empty"><span class="material-icons">chat_bubble_outline</span><p>No comments yet</p></div>
+            }
+          </div>
+          @if (commentTotalPages() > 1) {
+  <div class="tab-pagination">
+    <button (click)="prevComment()" [disabled]="commentPage() <= 1" class="page-btn">&laquo; Prev</button>
+    <span class="page-info">Page {{ commentPage() }} of {{ commentTotalPages() }} · {{ comments().length }} total</span>
+    <button (click)="nextComment()" [disabled]="commentPage() >= commentTotalPages()" class="page-btn">Next &raquo;</button>
+  </div>
+}
+        </div>
+      }
+<!-- ═══════════════ IMAGES / PHOTOS ═══════════════ -->
+@if (activeTab()==='images') {
+  <div class="cd-section">
+    <div class="cd-section-header">
+      <h3>Complaint Photos</h3>
+      <span class="cd-muted">{{ complaintImages().length }} image(s)</span>
+    </div>
+
+    @if (complaintImages().length === 0) {
+      <div class="cd-empty">
+        <span class="material-icons">photo_library</span>
+        <p>No photos uploaded for this complaint</p>
+      </div>
+    } @else {
+      <div class="img-grid">
+        @for (img of pagedImages(); track img.ImageId) {
+          <div class="img-card" (click)="openLightbox(img)">
+            <div class="img-thumb">
+              <img [src]="getImageSrc(img)" [alt]="img.ImageName || 'Complaint image'"
+                   loading="lazy" (error)="onImgError($event)">
+              <div class="img-fail" style="display:none">
+                <span class="material-icons">broken_image</span>
+                <small>Unable to load</small>
+              </div>
+              @if (img.ImageType) {
+                <span class="img-type-tag" [ngClass]="imageTypeClass(img.ImageType)">
+                  {{ display(img.ImageType) }}
+                </span>
+              }
+            </div>
+            <div class="img-meta">
+              <strong class="img-name">{{ display(img.ImageName, 'Untitled') }}</strong>
+              <div class="img-sub">
+                <span class="material-icons">person</span>
+                <span>{{ display(img.UploadedByName, 'Customer') }}</span>
+              </div>
+              <div class="img-sub">
+                <span class="material-icons">schedule</span>
+                <span>{{ formatDateTime(img.UploadedAt) }}</span>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+      @if (imageTotalPages() > 1) {
+  <div class="tab-pagination">
+    <button (click)="prevImage()" [disabled]="imagePage() <= 1" class="page-btn">&laquo; Prev</button>
+    <span class="page-info">Page {{ imagePage() }} of {{ imageTotalPages() }} · {{ complaintImages().length }} photos</span>
+    <button (click)="nextImage()" [disabled]="imagePage() >= imageTotalPages()" class="page-btn">Next &raquo;</button>
+  </div>
+}
+    }
+  </div>
+}
+@if (lightboxImage()) {
+  <div class="lb-overlay" (click)="closeLightbox()">
+    <div class="lb-box" (click)="$event.stopPropagation()">
+      <div class="lb-header">
+        <div class="lb-title">
+          <strong>{{ display(lightboxImage()?.ImageName, 'Image') }}</strong>
+          <small>
+            {{ display(lightboxImage()?.UploadedByName, 'Customer') }} ·
+            {{ formatDateTime(lightboxImage()?.UploadedAt) }}
+            @if (lightboxImage()?.ImageType) { · {{ display(lightboxImage()?.ImageType) }} }
+          </small>
+        </div>
+        <div class="lb-actions">
+          <button class="lb-btn" (click)="downloadImage(lightboxImage())" title="Download">
+            <span class="material-icons">download</span>
+          </button>
+          <button class="lb-btn" (click)="closeLightbox()" title="Close">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+      </div>
+      <div class="lb-body">
+        <img [src]="getImageSrc(lightboxImage())" [alt]="lightboxImage()?.ImageName || 'Image'">
+      </div>
+    </div>
+  </div>
+}
+    </div>
+  }
+
+  <div class="cd-footer">
+    <button class="cd-btn-cancel" (click)="close()">Close</button>
+    <button class="cd-btn-save primary" (click)="refresh()">
+      <span class="material-icons">refresh</span> Refresh
+    </button>
+  </div>
+</div>

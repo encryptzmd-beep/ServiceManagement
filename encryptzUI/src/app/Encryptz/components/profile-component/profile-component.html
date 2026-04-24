@@ -1,0 +1,336 @@
+<div class="page">
+  <div class="page-header">
+    <div class="header-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+    </div>
+    <div class="header-text">
+      <h1 class="page-title">My Profile</h1>
+      <p class="page-subtitle">Manage your personal information</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="form-card loading-card">
+      <div class="spinner-lg"></div>
+      <p>Loading profile…</p>
+    </div>
+  }
+
+  @if (!loading() && error()) {
+    <div class="alert alert-error">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span>{{ error() }}</span>
+      <button class="retry-btn" type="button" (click)="loadProfile()">Retry</button>
+    </div>
+  }
+
+  @if (!loading() && !error()) {
+    <div class="form-card">
+      <form (ngSubmit)="save()" #profileForm="ngForm" class="form-grid" novalidate>
+
+        <div class="field full-width">
+          <label>Full Name *</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </span>
+            <input
+              type="text"
+              [(ngModel)]="form.fullName"
+              name="fullName"
+              class="input"
+              required
+              minlength="3"
+              placeholder="Your full name"
+              #fullNameField="ngModel"
+              [class.invalid]="fullNameField.invalid && fullNameField.touched"
+            />
+          </div>
+          @if (fullNameField.invalid && fullNameField.touched) {
+            <div class="field-error">Name must be at least 3 characters</div>
+          }
+        </div>
+
+        <div class="field">
+          <label>Email *</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <rect x="2" y="4" width="20" height="16" rx="2"/>
+                <path d="m2 7 10 7 10-7"/>
+              </svg>
+            </span>
+            <input
+              type="email"
+              [(ngModel)]="form.email"
+              name="email"
+              class="input"
+              required
+              email
+              placeholder="you&#64;example.com"
+              #emailField="ngModel"
+              [class.invalid]="emailField.invalid && emailField.touched"
+            />
+          </div>
+          @if (emailField.invalid && emailField.touched) {
+            <div class="field-error">Enter a valid email address</div>
+          }
+        </div>
+
+        <div class="field">
+          <label>Mobile Number</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+            </span>
+            <input
+              type="tel"
+              [(ngModel)]="form.mobileNumber"
+              name="mobileNumber"
+              class="input"
+              readonly
+              disabled
+            />
+          </div>
+          <small class="field-hint">Mobile number cannot be changed</small>
+        </div>
+
+        <div class="field full-width">
+          <label>Address</label>
+          <div class="input-wrap textarea-wrap">
+            <span class="input-icon top">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </span>
+            <textarea
+              [(ngModel)]="form.address"
+              name="address"
+              class="input textarea"
+              rows="2"
+              placeholder="Enter your address"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>City</label>
+          <div class="input-wrap">
+            <input type="text" [(ngModel)]="form.city" name="city" class="input no-icon" placeholder="City" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>State</label>
+          <div class="input-wrap">
+            <input type="text" [(ngModel)]="form.state" name="state" class="input no-icon" placeholder="State" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>PIN Code</label>
+          <div class="input-wrap">
+            <input
+              type="text"
+              [(ngModel)]="form.pinCode"
+              name="pinCode"
+              class="input no-icon"
+              pattern="^[0-9]{6}$"
+              placeholder="6-digit PIN"
+              #pinField="ngModel"
+              [class.invalid]="pinField.invalid && pinField.touched"
+            />
+          </div>
+          @if (pinField.invalid && pinField.touched) {
+            <div class="field-error">Enter a valid 6-digit PIN code</div>
+          }
+        </div>
+
+        <div class="field">
+          <label>Alternate Phone</label>
+          <div class="input-wrap">
+            <input
+              type="tel"
+              [(ngModel)]="form.alternatePhone"
+              name="alternatePhone"
+              class="input no-icon"
+              pattern="^[0-9]{10}$"
+              placeholder="10-digit number"
+            />
+          </div>
+        </div>
+
+        <div class="field full-width">
+          <label>Landmark</label>
+          <div class="input-wrap">
+            <input
+              type="text"
+              [(ngModel)]="form.landmark"
+              name="landmark"
+              class="input no-icon"
+              placeholder="Nearby landmark"
+            />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Latitude</label>
+          <div class="input-wrap">
+            <input
+              type="text"
+              [(ngModel)]="form.latitude"
+              name="latitude"
+              class="input no-icon"
+              readonly
+              placeholder="Selected from map"
+            />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Longitude</label>
+          <div class="input-wrap">
+            <input
+              type="text"
+              [(ngModel)]="form.longitude"
+              name="longitude"
+              class="input no-icon"
+              readonly
+              placeholder="Selected from map"
+            />
+          </div>
+        </div>
+
+        <div class="field full-width location-field">
+          <button type="button" class="btn-secondary with-icon" (click)="openMapSelector()">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            Select Location
+          </button>
+        </div>
+
+        <div class="form-actions">
+          @if (!saving()) {
+            <button type="button" class="btn-secondary" (click)="resetForm()">
+              Reset
+            </button>
+          }
+          <button
+            type="submit"
+            class="btn-primary"
+            [disabled]="profileForm.invalid || saving()"
+          >
+            <span class="btn-shimmer"></span>
+            @if (saving()) {
+              <span class="spinner-small"></span>
+              <span>Saving…</span>
+            } @else {
+              <span>Update Profile</span>
+            }
+          </button>
+        </div>
+      </form>
+
+      @if (msg()) {
+        <div class="alert alert-success">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+          <span>{{ msg() }}</span>
+        </div>
+      }
+
+      @if (errorMsg()) {
+        <div class="alert alert-error">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>{{ errorMsg() }}</span>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+@if (showLocationPopup) {
+  <div class="popup-backdrop" (click)="showLocationPopup = false">
+    <div class="popup-card" (click)="$event.stopPropagation()">
+      <h3>Select Location</h3>
+      <p>Choose how you want to set your location.</p>
+
+      <div class="popup-actions">
+        <button class="btn-primary" type="button" (click)="useCurrentLocation()">
+          <span class="btn-shimmer"></span>
+          Use Current Location
+        </button>
+        <button class="btn-secondary" type="button" (click)="selectFromMap()">
+          Select from Google Maps
+        </button>
+      </div>
+
+      <button class="popup-close" type="button" (click)="showLocationPopup = false">
+        Cancel
+      </button>
+    </div>
+  </div>
+}
+
+@if (showMapInputPopup) {
+  <div class="popup-backdrop" (click)="showMapInputPopup = false">
+    <div class="popup-card" (click)="$event.stopPropagation()">
+      <h3>Enter Map Coordinates</h3>
+      <p>Google Maps has been opened in a new tab. Paste the coordinates below.</p>
+
+      <div class="field"><label>Latitude</label>
+        <div class="input-wrap"><input #lat class="input no-icon" placeholder="Latitude" /></div>
+      </div>
+      <div class="field"><label>Longitude</label>
+        <div class="input-wrap"><input #lng class="input no-icon" placeholder="Longitude" /></div>
+      </div>
+
+      <div class="popup-actions">
+        <button class="btn-primary" type="button" (click)="saveMapCoordinates(lat.value, lng.value)">
+          <span class="btn-shimmer"></span>
+          Save
+        </button>
+        <button class="btn-secondary" type="button" (click)="showMapInputPopup = false">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (toast.show) {
+  <div class="custom-toast" [class]="toast.type">
+    {{ toast.message }}
+  </div>
+}
+
+@if (isFetchingLocation) {
+  <div class="popup-backdrop">
+    <div class="popup-card loader-popup">
+      <div class="loader-spinner"></div>
+      <h3>Fetching Location…</h3>
+      <p>Please wait while we get your current GPS location.</p>
+    </div>
+  </div>
+}

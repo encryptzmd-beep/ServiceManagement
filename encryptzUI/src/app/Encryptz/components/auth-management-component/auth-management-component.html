@@ -1,0 +1,490 @@
+<!-- auth-management-component.html -->
+<div class="mgmt-page">
+
+  <!-- ==================== PAGE HEADER ==================== -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">User Management</div>
+      <div class="page-sub">Manage company users and pending invitations</div>
+    </div>
+
+    <button class="btn-new" (click)="openInviteModal()">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M7 1v12M1 7h12" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      Invite New User
+    </button>
+  </div>
+
+  @if (activeTab() === 'users') {
+
+    <!-- STATS -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total Users</div>
+        <div class="stat-val">{{ totalUserCount() }}</div>
+        <div class="stat-pill pill-green">All tracked</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active</div>
+        <div class="stat-val stat-active">{{ activeUserCount() }}</div>
+        <div class="stat-pill pill-green">Company members</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pending</div>
+        <div class="stat-val stat-pending">{{ pendingUserCount() }}</div>
+        <div class="stat-pill" [class.pill-amber]="pendingUserCount() > 0" [class.pill-green]="pendingUserCount() === 0">
+          {{ pendingUserCount() > 0 ? 'Awaiting response' : 'No pending invites' }}
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content">
+
+      <!-- TABLE CARD -->
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <div class="toolbar-left">
+            <span class="table-title">All Users</span>
+            <span class="table-count">{{ filteredTotal() }} of {{ totalUserCount() }}</span>
+          </div>
+
+          <div class="toolbar-right">
+            <div class="search-box">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <circle cx="7" cy="7" r="5" stroke="#8a9ab0" stroke-width="1.5"/>
+                <path d="M11 11l3 3" stroke="#8a9ab0" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <input
+                type="text"
+                class="search-input-inline"
+                placeholder="Search users..."
+                [value]="userSearchTerm()"
+                (input)="userSearchTerm.set($any($event.target).value)" />
+            </div>
+
+            <select
+              class="filter-select"
+              [value]="userStatusFilter()"
+              (change)="userStatusFilter.set($any($event.target).value)">
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table styled-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">#</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Mobile</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Assigned By</th>
+                <th style="width: 80px;">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (user of filteredCompanyUsers(); track user.userId; let i = $index) {
+                <tr>
+                  <td class="num">{{ i + 1 }}</td>
+                  <td>
+                    <div class="user-name">{{ user.fullName }}</div>
+                  </td>
+                  <td>{{ user.email }}</td>
+                  <td>{{ user.mobileNumber }}</td>
+                  <td>
+                    <span class="badge role">
+                      {{ getRoleDisplayName(user.roleInCompany) }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="status-badge active">
+                      <span class="status-dot dot-active"></span>
+                      Active
+                    </span>
+                  </td>
+                  <td>{{ user.assignedBy }}</td>
+                  <td class="actions-cell">
+                    <button
+                      class="action-btn danger"
+                      title="Remove User"
+                      (click)="selectedDeleteUser.set(user)">
+                      <span class="material-icons">delete</span>
+                    </button>
+                  </td>
+                </tr>
+              }
+
+              @for (inv of filteredPendingInvitations(); track inv.invitationId; let j = $index) {
+                <tr class="pending-row">
+                  <td class="num">{{ filteredCompanyUsers().length + j + 1 }}</td>
+                  <td>
+                    <div class="user-name pending-name">
+                      {{ getInvitationUserName(inv.email) }}
+                    </div>
+                  </td>
+                  <td>{{ inv.email }}</td>
+                  <td>-</td>
+                  <td>
+                    <span class="badge role">
+                      {{ getRoleDisplayName(inv.roleInCompany) }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="status-badge pending">
+                      <span class="status-dot dot-pending"></span>
+                      Pending
+                    </span>
+                  </td>
+                  <td>{{ inv.createdByName }}</td>
+                  <td class="actions-cell">
+                    <button
+                      class="action-btn danger"
+                      title="Cancel Invitation"
+                      (click)="selectedDeleteInvitation.set(inv)">
+                      <span class="material-icons">close</span>
+                    </button>
+                  </td>
+                </tr>
+              }
+
+              @if (filteredTotal() === 0) {
+                <tr>
+                  <td colspan="8" class="empty-row">No users match the current filters.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            Showing
+            {{ ((pageNumber - 1) * pageSize) + 1 }}
+            -
+            {{ Math.min(pageNumber * pageSize, totalItems) }}
+            of
+            {{ totalItems }}
+          </div>
+
+          <div class="pagination-actions">
+            <button
+              class="page-btn"
+              [disabled]="pageNumber === 1"
+              (click)="changePage(pageNumber - 1)">
+              ‹
+            </button>
+
+            @for (page of pages; track page) {
+              <button
+                class="page-btn"
+                [class.active]="page === pageNumber"
+                (click)="changePage(page)">
+                {{ page }}
+              </button>
+            }
+
+            <button
+              class="page-btn"
+              [disabled]="pageNumber === totalPages"
+              (click)="changePage(pageNumber + 1)">
+              ›
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete User Confirmation -->
+      @if (selectedDeleteUser()) {
+        <div class="modal-overlay small-confirm">
+          <div class="confirm-modal">
+            <div class="confirm-icon delete">
+              <span class="material-icons">delete</span>
+            </div>
+
+            <h3>Remove User?</h3>
+
+            <p>
+              Are you sure you want to remove
+              <strong>{{ selectedDeleteUser()?.fullName }}</strong>
+              from this company?
+            </p>
+
+            <div class="confirm-actions">
+              <button
+                class="btn-secondary"
+                (click)="selectedDeleteUser.set(null)">
+                No
+              </button>
+
+              <button
+                class="btn-danger"
+                (click)="removeUser(selectedDeleteUser()!.userId); selectedDeleteUser.set(null)">
+                Yes, Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Cancel Invitation Confirmation -->
+      @if (selectedDeleteInvitation()) {
+        <div class="modal-overlay small-confirm">
+          <div class="confirm-modal">
+            <div class="confirm-icon warning">
+              <span class="material-icons">mail_off</span>
+            </div>
+
+            <h3>Cancel Invitation?</h3>
+
+            <p>
+              Cancel invitation for
+              <strong>{{ selectedDeleteInvitation()?.email }}</strong> ?
+            </p>
+
+            <div class="confirm-actions">
+              <button
+                class="btn-secondary"
+                (click)="selectedDeleteInvitation.set(null)">
+                No
+              </button>
+
+              <button
+                class="btn-danger"
+                (click)="cancelInvitation(selectedDeleteInvitation()!.invitationId); selectedDeleteInvitation.set(null)">
+                Yes, Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Invite User Modal -->
+      @if (showInviteModal()) {
+        <div class="modal-overlay">
+          <div class="modal-card invite-modal">
+
+            <div class="modal-header">
+              <div class="modal-header-icon">
+                <span class="material-icons">person_add</span>
+              </div>
+
+              <h3>Invite User to Company</h3>
+
+              <button class="modal-close" (click)="closeInviteModal()">
+                <span class="material-icons">close</span>
+              </button>
+            </div>
+
+            <div class="modal-body">
+
+              <!-- Search User -->
+              <div class="form-group">
+                <label class="form-label required">
+                  <span class="material-icons">search</span>
+                  Search User
+                </label>
+
+                <div class="search-wrapper">
+                  <div class="search-input-group">
+
+                    <span class="search-icon material-icons">search</span>
+
+                    <input
+                      type="text"
+                      [(ngModel)]="searchUserTerm"
+                      class="search-input"
+                      placeholder="Search by exact email, name, mobile or user ID"
+                      autocomplete="off"
+                      (keyup.enter)="onSearchUser()" />
+
+                    <button
+                      type="button"
+                      class="search-btn"
+                      [disabled]="!searchUserTerm()?.trim() || searchingUsers()"
+                      (click)="onSearchUser()">
+
+                      @if (searchingUsers()) {
+                        <span class="search-spinner"></span>
+                      } @else {
+                        <span class="material-icons">search</span>
+                      }
+                    </button>
+                  </div>
+
+                  @if (showSearchResults()) {
+                    <div class="search-dropdown">
+
+                      @if (searchResults().length > 0) {
+                        <div class="dropdown-header">
+                          <span class="material-icons">people</span>
+                          Select a user
+                        </div>
+
+                        @for (user of searchResults(); track user.userId) {
+                          <div class="search-result-item" (click)="selectUser(user)">
+                            <div class="result-avatar">
+                              <span class="material-icons">person</span>
+                            </div>
+
+                            <div class="result-details">
+                              <div class="result-name">{{ user.fullName }}</div>
+                              <div class="result-email">{{ user.email }}</div>
+                              <div class="result-id">
+                                User ID: {{ user.userId }}
+                              </div>
+                            </div>
+                          </div>
+                        }
+                      } @else {
+                        <div class="no-result">
+                          <span class="material-icons">search_off</span>
+                          No exact user match found
+                        </div>
+                      }
+
+                    </div>
+                  }
+                </div>
+
+                <div class="form-hint">
+                  <span class="material-icons">info</span>
+                  Search by email, mobile number, name or user ID
+                </div>
+              </div>
+
+              <!-- Selected User -->
+              @if (selectedInviteUser()) {
+                <div class="selected-user-card">
+                  <div class="selected-user-avatar">
+                    <span class="material-icons">check_circle</span>
+                  </div>
+
+                  <div class="selected-user-info">
+                    <div class="selected-user-name">
+                      {{ selectedInviteUser()!.fullName }}
+                    </div>
+
+                    <div class="selected-user-email">
+                      {{ selectedInviteUser()!.email }}
+                    </div>
+
+                    <div class="selected-user-id">
+                      User ID: {{ selectedInviteUser()!.userId }}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="change-user-btn"
+                    (click)="clearSelectedUser()">
+                    Change
+                  </button>
+                </div>
+              }
+
+              <!-- Role -->
+              <div class="form-group">
+                <label class="form-label required">
+                  <span class="material-icons">badge</span>
+                  Assign Role
+                </label>
+
+                <div class="role-select-wrapper">
+                  <select
+                    [(ngModel)]="inviteRole"
+                    class="role-select"
+                    [disabled]="!selectedInviteUser()">
+
+                    <option value="" disabled>
+                      -- Select Role --
+                    </option>
+
+                    @for (role of activeRoles(); track role.roleId) {
+                      <option [value]="role.roleName">
+                        {{ role.roleName }}
+                      </option>
+                    }
+                  </select>
+
+                  <span class="select-icon material-icons">expand_more</span>
+                </div>
+              </div>
+
+              <!-- Remarks -->
+              <div class="form-group">
+                <label class="form-label">
+                  <span class="material-icons">notes</span>
+                  Remarks
+                </label>
+
+                <textarea
+                  [(ngModel)]="inviteRemarks"
+                  class="form-textarea"
+                  rows="3"
+                  placeholder="Add notes or instructions...">
+                </textarea>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button class="btn-cancel" (click)="closeInviteModal()">
+                Cancel
+              </button>
+
+              <button
+                class="btn-send"
+                [disabled]="!selectedInviteUser() || !inviteRole"
+                (click)="sendInvitation()">
+                Send Invitation
+              </button>
+            </div>
+
+          </div>
+        </div>
+      }
+
+    </div>
+  }
+
+  @if (toastMessage()) {
+    <div class="toast-container">
+      <div class="toast" [class.error]="toastType() === 'error'">
+        <span class="material-icons">
+          {{ toastType() === 'error' ? 'error' : 'check_circle' }}
+        </span>
+        <span>{{ toastMessage() }}</span>
+      </div>
+    </div>
+  }
+
+  @if (confirmModal()) {
+    <div class="modal-backdrop">
+      <div class="confirm-modal">
+        <div class="confirm-header">
+          <h3>{{ confirmTitle() }}</h3>
+        </div>
+
+        <div class="confirm-body">
+          {{ confirmMessage() }}
+        </div>
+
+        <div class="confirm-actions">
+          <button class="btn-secondary" (click)="closeConfirm()">
+            No
+          </button>
+
+          <button class="btn-danger" (click)="runConfirmAction()">
+            Yes
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

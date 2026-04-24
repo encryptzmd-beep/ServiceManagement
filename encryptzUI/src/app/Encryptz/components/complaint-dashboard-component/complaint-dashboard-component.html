@@ -1,0 +1,870 @@
+<div class="fx-page dashboard-container">
+
+  <!-- Page Header -->
+  <div class="fx-page-header page-header">
+    <div class="header-left">
+      <div class="fx-page-title">Complaint Dashboard</div>
+      <div class="fx-page-sub">Overview of all complaints and service metrics</div>
+    </div>
+    <div class="header-right">
+      <button class="fx-btn-new" (click)="openBlankPanel()">
+        <span class="material-icons" style="font-size:18px;">person_add</span> Assign Technician
+      </button>
+      <select [(ngModel)]="chartDays" (ngModelChange)="loadChartData()" class="fx-filter-select">
+        <option [value]="7">Last 7 Days</option>
+        <option [value]="15">Last 15 Days</option>
+        <option [value]="30">Last 30 Days</option>
+        <option [value]="90">Last 90 Days</option>
+      </select>
+      <button class="fx-btn-navy" (click)="loadData()">
+        <span class="material-icons" style="font-size:18px;">refresh</span> Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-overlay" *ngIf="loading()">
+    <div class="spinner"></div>
+    <p>Loading dashboard...</p>
+  </div>
+
+  <!-- Stats Tiles -->
+  <div class="stats-grid" *ngIf="!loading()">
+    <div class="stat-card" *ngFor="let card of statCards()"
+         [class.active]="activeTile()?.key === card.key"
+         [style.--accent]="card.accent"
+         (click)="onTileClick(card)"
+         title="Click to filter">
+      <div class="stat-icon" [style.background]="card.bg"><span>{{ card.icon }}</span></div>
+      <div class="stat-info">
+        <h3>{{ card.value }}</h3>
+        <p>{{ card.label }}</p>
+      </div>
+      <div class="stat-trend" [class.up]="card.up" [class.down]="!card.up">
+        {{ card.up ? '▲' : '▼' }} {{ card.pct }}%
+      </div>
+      <div class="tile-bar"></div>
+      <span class="tile-chevron material-icons">
+        {{ activeTile()?.key===card.key ? 'expand_less' : 'expand_more' }}
+      </span>
+    </div>
+  </div>
+
+  <!-- ═══ SPARE SUMMARY BAR ════════════════════════════════ -->
+  @if (spareSummary() && !loading()) {
+  <div class="spare-summary-bar">
+    <div class="ssb-item pending">
+      <span class="material-icons">pending_actions</span>
+      <div><span class="ssb-val">{{ spareSummary().pendingCount }}</span><span class="ssb-lbl">Pending</span></div>
+    </div>
+    @if (spareSummary().criticalPending > 0) {
+    <div class="ssb-item critical">
+      <span class="material-icons">priority_high</span>
+      <div><span class="ssb-val">{{ spareSummary().criticalPending }}</span><span class="ssb-lbl">Critical</span></div>
+    </div>
+    }
+    <div class="ssb-item approved">
+      <span class="material-icons">check_circle</span>
+      <div><span class="ssb-val">{{ spareSummary().approvedCount }}</span><span class="ssb-lbl">Approved</span></div>
+    </div>
+    <div class="ssb-item dispatched">
+      <span class="material-icons">local_shipping</span>
+      <div><span class="ssb-val">{{ spareSummary().dispatchedCount }}</span><span class="ssb-lbl">Dispatched</span></div>
+    </div>
+    <div class="ssb-sep"></div>
+    <button class="ssb-manage-btn" (click)="openSparePanel()">
+      <span class="material-icons">manage_accounts</span>
+      Manage Spare Requests
+      @if (spareSummary().pendingCount > 0) {
+      <span class="ssb-pending-dot">{{ spareSummary().pendingCount }}</span>
+      }
+    </button>
+  </div>
+  }
+
+  <!-- ═══ TILE SECTION ═════════════════════════════════ -->
+  @if (activeTile() && !loading()) {
+  <div class="tile-section">
+    <div class="tcs-header">
+      <div class="tcs-title">
+        <span class="material-icons">filter_list</span>
+        <h2>{{ activeTile()!.label }}</h2>
+       <span class="tcs-badge">{{ tileTotalCount() }} records</span>
+      </div>
+      <button class="tcs-close" (click)="clearTile()">
+        <span class="material-icons">close</span> Clear
+      </button>
+    </div>
+
+    <div class="tile-loading" *ngIf="tileLoading()">
+      <div class="mini-spinner"></div><span>Loading...</span>
+    </div>
+
+    @if (!tileLoading()) {
+
+    <!-- SLA Tile -->
+    @if (isSLATile()) {
+    <div class="sla-full-list">
+      @for (b of pagedItems; track $index) {
+      <div class="sla-full-item">
+        <div class="sfi-left">
+          <span class="sfi-no">{{ $any(b).complaintNo }}</span>
+          <span class="sfi-subject">{{ b.subject }}</span>
+          <span class="sfi-customer"><span class="material-icons">person</span>{{ b.customerName }}</span>
+        </div>
+        <div class="sfi-right">
+          <span class="overdue-badge">
+            <span class="material-icons">schedule</span>{{ $any(b).hoursOverdue }}h overdue
+          </span>
+          <button class="btn-assign" (click)="openAssign(b, $event)">
+            <span class="material-icons">person_add</span> Assign
+          </button>
+        </div>
+      </div>
+      } @empty {
+      <div class="tc-empty"><span class="material-icons">check_circle</span><p>No SLA breaches</p></div>
+      }
+    </div>
+    }
+
+    <!-- Active Assignments Tile -->
+    @else if (isAssignTile()) {
+    <div class="assign-tile-list">
+      @for (a of pagedItems; track $index) {
+      <div class="atl-item">
+        <div class="atl-left">
+          <span class="atl-id">#{{ $any(a).assignmentId }}</span>
+          <span class="atl-no">{{ $any(a).complaintNumber }}</span>
+          <span class="atl-subject">{{ $any(a).complaintSubject }}</span>
+          <span class="atl-meta">
+            <span class="material-icons">engineering</span>{{ $any(a).technicianName }}
+            <span class="role-tag">{{ $any(a).assignmentRole }}</span>
+          </span>
+          <span class="atl-meta"><span class="material-icons">person</span>{{ $any(a).customerName }}</span>
+        </div>
+        <div class="atl-right">
+          <span class="status-tag" [ngClass]="$any(a).status?.toLowerCase()">{{ $any(a).status }}</span>
+          @if ($any(a).scheduledDate) {
+          <span class="atl-sched">
+            <span class="material-icons">event</span>{{ $any(a).scheduledDate | date:'dd MMM' }}
+          </span>
+          }
+          <div class="atl-actions">
+            <button class="btn-assign reassign" (click)="openAssign(a, $event)" title="Reassign">
+              <span class="material-icons">swap_horiz</span> Reassign
+            </button>
+            <button class="btn-complete-sm" (click)="quickComplete(a, $event)" title="Complete">
+              <span class="material-icons">check_circle</span> Complete
+            </button>
+            <button class="btn-unassign" (click)="openUnAssign(a, $event)" title="Unassign">
+              <span class="material-icons">person_remove</span> Unassign
+            </button>
+          </div>
+        </div>
+      </div>
+      } @empty {
+      <div class="tc-empty"><span class="material-icons">assignment_turned_in</span><p>No active assignments</p></div>
+      }
+    </div>
+    }
+
+    <!-- Standard Complaints Table -->
+    @else {
+    <div class="table-responsive">
+      <table class="data-table tile-table">
+        <thead>
+          <tr>
+            <th>Complaint #</th><th>Subject</th><th>Customer</th><th>Product</th>
+            <th>Priority</th><th>Status</th><th>SLA</th><th>Technician</th><th>Created</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of pagedItems; track $any(c).complaintId) {
+          <tr>
+            <td class="mono">{{ c.complaintNumber }}</td>
+            <td>{{ c.subject }}</td>
+            <td>{{ c.customerName }}</td>
+            <td>{{ $any(c).productName || '—' }}</td>
+            <td><span class="priority-badge" [attr.data-priority]="$any(c).priority">{{ $any(c).priority }}</span></td>
+            <td>
+              <span class="status-badge"
+                [style.background]="$any(c).statusColor?$any(c).statusColor+'20':''"
+                [style.color]="$any(c).statusColor||''">{{ $any(c).statusName }}</span>
+            </td>
+            <td>
+              @if ($any(c).isSLABreached) {
+              <span class="sla-breach"><span class="material-icons">error</span> Breached</span>
+              } @else {
+              <span class="sla-ok"><span class="material-icons">check</span> OK</span>
+              }
+            </td>
+           <td>
+  <span class="tech-cell" [class.unassigned]="!$any(c).assignedTechnicians">
+    <span class="material-icons">{{ $any(c).assignedTechnicians ? 'engineering' : 'person_off' }}</span>
+    {{ $any(c).assignedTechnicians || 'Unassigned' }}
+  </span>
+</td>
+            <td class="date-cell">{{ c.createdAt | date:'dd MMM yyyy' }}</td>
+            <td>
+              <div class="row-actions">
+                <!-- Add this after the opening open_in_new button in the table -->
+<a class="btn-sm-view" (click)="openComplaintDetails(c.complaintId, $event)">
+  <span class="material-icons">open_in_new</span>
+</a>
+                <button class="btn-assign" [class.reassign]="isReassign(c)" (click)="openAssign(c, $event)">
+                  <span class="material-icons">{{ isReassign(c) ? 'swap_horiz' : 'person_add' }}</span>
+                  {{ isReassign(c) ? 'Reassign' : 'Assign' }}
+                </button>
+              </div>
+            </td>
+          </tr>
+          } @empty {
+          <tr>
+            <td colspan="10" class="tc-empty-cell">
+              <span class="material-icons">inbox</span><p>No complaints found</p>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    }
+
+    <!-- Pagination -->
+   <!-- Pagination -->
+@if (tileTotalPages() > 1) {
+  <div class="tile-pagination">
+    <button (click)="tilePrev()" [disabled]="tilePage<=1" class="page-btn">
+      <span class="material-icons">chevron_left</span> Prev
+    </button>
+    <span class="page-info">
+      Page <strong>{{ tilePage }}</strong> of <strong>{{ tileTotalPages() }}</strong>
+      <span class="page-sep">·</span>
+     <span class="page-total">{{ tileTotalCount() }} records</span>
+    </span>
+    <button (click)="tileNext()" [disabled]="tilePage>=tileTotalPages()" class="page-btn">
+      Next <span class="material-icons">chevron_right</span>
+    </button>
+  </div>
+}
+    }
+  </div>
+  }
+
+</div>
+
+<!-- ═══ ASSIGN PANEL ══════════════════════════════════════ -->
+@if (showPanel()) {
+<div class="panel-overlay" (click)="closePanel()"></div>
+<div class="assign-panel">
+
+  <div class="ap-header">
+    <div class="ap-header-left">
+      <div class="ap-icon"><span class="material-icons">engineering</span></div>
+      <div>
+        <h3>Technician Management</h3>
+        <p class="ap-sub">Assign · Complete · Audit</p>
+      </div>
+    </div>
+    <button class="ap-close" (click)="closePanel()"><span class="material-icons">close</span></button>
+  </div>
+
+  <div class="ap-tabs">
+    <button class="ap-tab" [class.active]="panelTab==='assign'" (click)="panelTab='assign'">
+      <span class="material-icons">person_add</span> Assign
+    </button>
+    <button class="ap-tab" [class.active]="panelTab==='complete'" (click)="panelTab='complete'">
+      <span class="material-icons">check_circle</span> Complete
+    </button>
+    <button class="ap-tab" [class.active]="panelTab==='audit'" (click)="panelTab='audit'; loadAuditLog()">
+      <span class="material-icons">history</span> Audit
+    </button>
+  </div>
+
+  <div class="ap-body">
+
+    <!-- ═══ ASSIGN TAB ═══ -->
+    @if (panelTab === 'assign') {
+
+    <!-- 1. Complaint autocomplete field -->
+    <div class="ap-field">
+      <label>Complaint <span class="req">*</span></label>
+      <div class="ap-autocomplete">
+        <div class="ap-iw" [class.has-val]="!!selectedC()">
+          <span class="material-icons ap-ic">confirmation_number</span>
+          <input type="text" [(ngModel)]="cSearch" class="ap-inp"
+                 placeholder="Search complaint no, subject, customer..."
+                 (input)="onCSearch()" (focus)="showCDropdown=true" autocomplete="off" />
+          @if (selectedC()) {
+          <button class="ap-clear" type="button" (click)="clearC()">
+            <span class="material-icons">close</span>
+          </button>
+          }
+        </div>
+
+        <!-- Selected complaint card -->
+        @if (selectedC()) {
+        <div class="selected-c">
+          <div class="sc-top">
+            <span class="sc-no">{{ selectedC()!.complaintNumber }}</span>
+            <span class="priority-dot" [ngClass]="selectedC()!.priority.toLowerCase()">{{ selectedC()!.priority }}</span>
+          </div>
+          <div class="sc-subject">{{ selectedC()!.subject }}</div>
+          <div class="sc-customer">
+            <span class="material-icons">person</span>{{ selectedC()!.customerName }}
+            <span class="material-icons">phone</span>{{ selectedC()!.customerPhone }}
+            @if (selectedC()!.customerPlace) {
+            <span class="material-icons">location_on</span>{{ selectedC()!.customerPlace }}
+            }
+          </div>
+        </div>
+        }
+
+        <!-- Search dropdown -->
+        @if (showCDropdown && cResults().length > 0 && !selectedC()) {
+        <div class="ac-dropdown">
+          @for (c of cResults(); track c.complaintId) {
+          <div class="ac-item" (click)="selectC(c)">
+            <div class="ac-left">
+              <span class="ac-no">{{ c.complaintNumber }}</span>
+              <span class="ac-sub">{{ c.subject }}</span>
+            </div>
+            <div class="ac-right">
+              <span class="ac-cust">{{ c.customerName }}</span>
+              <span class="ac-phone">{{ c.customerPhone }}</span>
+            </div>
+            <span class="priority-dot sm" [ngClass]="c.priority.toLowerCase()">{{ c.priority }}</span>
+          </div>
+          }
+        </div>
+        }
+      </div><!-- /ap-autocomplete -->
+    </div><!-- /ap-field complaint -->
+
+    <!-- 2. Spare parts for selected complaint — OUTSIDE autocomplete, own ap-field -->
+      @if (selectedC() && (complaintAssignments().length > 0 || complaintAssignLoading())) {
+    <div class="ap-existing-section">
+      <div class="ap-existing-header">
+        <span class="material-icons">group</span>
+        <strong>Assigned Technicians</strong>
+        @if (complaintAssignLoading()) { <div class="mini-spinner"></div> }
+        @if (!complaintAssignLoading()) {
+        <span class="ap-existing-count">{{ complaintAssignments().length }}</span>
+        }
+      </div>
+      @if (!complaintAssignLoading()) {
+      <div class="ap-existing-list">
+        @for (a of complaintAssignments(); track $any(a).assignmentId) {
+        <div class="ap-existing-item">
+          <div class="aei-avatar" [ngClass]="$any(a).status?.toLowerCase() === 'completed' ? 'done' : 'active'">
+            {{ $any(a).technicianName?.charAt(0) || '?' }}
+          </div>
+          <div class="aei-info">
+            <strong>{{ $any(a).technicianName }}</strong>
+            <div class="aei-meta">
+              <span class="role-tag">{{ $any(a).assignmentRole }}</span>
+              <span class="status-tag" [ngClass]="$any(a).status?.toLowerCase()">{{ $any(a).status }}</span>
+            </div>
+          </div>
+          <div class="aei-actions">
+            <button class="btn-unassign sm" (click)="openUnAssign(a, $event)" title="Unassign"
+                    [disabled]="$any(a).status === 'Completed'">
+              <span class="material-icons">person_remove</span>
+            </button>
+          </div>
+        </div>
+        } @empty {
+        <p class="ap-existing-empty">No technicians assigned yet</p>
+        }
+      </div>
+      <p class="ap-add-more-hint">
+        <span class="material-icons">info</span>
+        Select another technician below to add more
+      </p>
+      }
+    </div>
+    }
+
+    <!-- 3. Technician field -->
+    <div class="ap-field">
+      <label>Technician <span class="req">*</span></label>
+      <div class="ap-search-bar">
+        <span class="material-icons">search</span>
+        <input type="text" [ngModel]="techSearch()" (ngModelChange)="techSearch.set($event)" placeholder="Search..." />
+        <div class="tc-chips">
+          <button type="button" class="tc-chip" [class.active]="techFilter===null" (click)="techFilter=null">All</button>
+          <button type="button" class="tc-chip av" [class.active]="techFilter===1" (click)="techFilter=1">Available</button>
+          <button type="button" class="tc-chip busy" [class.active]="techFilter===2" (click)="techFilter=2">Busy</button>
+        </div>
+      </div>
+      <div class="ap-tech-list">
+        @for (t of filteredTechs(); track $any(t).technicianId) {
+        <div class="ap-tech" [class.sel]="selectedTech()===$any(t).technicianId" (click)="selTech($any(t).technicianId)">
+          <div class="ap-av" [ngClass]="techClass($any(t).availabilityStatus)">{{ $any(t).fullName?.charAt(0)||'?' }}</div>
+          <div class="ap-ti">
+            <strong>{{ $any(t).fullName }}</strong>
+            <small>{{ $any(t).specialization||'General' }} · {{ $any(t).mobileNumber||'N/A' }}</small>
+            <span class="ap-avail" [ngClass]="techClass($any(t).availabilityStatus)">
+              <span class="dot"></span>{{ techLabel($any(t).availabilityStatus) }}
+            </span>
+          </div>
+          <span class="material-icons ap-chk">{{ selectedTech()===$any(t).technicianId?'radio_button_checked':'radio_button_unchecked' }}</span>
+        </div>
+        } @empty {
+        <div class="ap-empty">
+          @if (techErr()) { <span class="material-icons">error_outline</span><p>Failed to load</p> }
+          @else { <span class="material-icons">search_off</span><p>No technicians found</p> }
+        </div>
+        }
+      </div>
+    </div>
+
+    <!-- 4. Role -->
+    <div class="ap-field">
+      <label>Role</label>
+      <div class="ap-role-opts">
+        <button type="button" [class.sel]="aRole==='Primary'" (click)="aRole='Primary'">
+          <span class="material-icons">star</span><div><strong>Primary</strong><small>Lead</small></div>
+        </button>
+        <button type="button" [class.sel]="aRole==='Supporting'" (click)="aRole='Supporting'">
+          <span class="material-icons">group</span><div><strong>Supporting</strong><small>Assist</small></div>
+        </button>
+      </div>
+    </div>
+
+    <!-- 5. Priority -->
+    <div class="ap-field">
+      <label>Priority</label>
+      <div class="ap-pri-opts">
+        @for (p of priorities; track p.value) {
+        <button type="button" [class.sel]="aPriority===p.value" [style.--pc]="p.color" (click)="aPriority=p.value">{{ p.value }}</button>
+        }
+      </div>
+    </div>
+
+    <!-- 6. Schedule -->
+    <div class="ap-schedule-wrap">
+      <label class="sched-toggle">
+        <input type="checkbox" [(ngModel)]="sched" />
+        <span class="sched-sw"></span>
+        <span class="sched-lbl"><span class="material-icons">schedule</span> Schedule for specific time</span>
+      </label>
+
+      @if (sched) {
+      <div class="sched-fields">
+        <div class="sched-row">
+          <div class="ap-field half">
+            <label>Visit Date</label>
+            <div class="ap-iw"><span class="material-icons ap-ic">calendar_today</span>
+              <input type="date" [(ngModel)]="schedDate" class="ap-inp" [min]="today" />
+            </div>
+          </div>
+          <div class="ap-field half">
+            <label>Time Slot</label>
+            <div class="slot-opts">
+              @for (sl of slots; track sl.value) {
+              <button type="button" class="slot-btn" [class.sel]="schedSlot===sl.value" (click)="schedSlot=sl.value">
+                <span class="material-icons">{{ sl.icon }}</span>
+                <div><strong>{{ sl.label }}</strong><small>{{ sl.time }}</small></div>
+              </button>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="sched-row">
+          <div class="ap-field half">
+            <label>Start Time</label>
+            <div class="ap-iw"><span class="material-icons ap-ic">access_time</span>
+              <input type="time" [(ngModel)]="schedStart" class="ap-inp" />
+            </div>
+          </div>
+          <div class="ap-field half">
+            <label>Estimated Duration (min)</label>
+            <div class="ap-iw"><span class="material-icons ap-ic">timer</span>
+              <input type="number" [(ngModel)]="schedDur" class="ap-inp" placeholder="e.g. 60" min="15" />
+            </div>
+          </div>
+        </div>
+        <!-- Calculated end time display -->
+        @if (schedStart && schedDur) {
+        <div class="sched-calc-end">
+          <span class="material-icons">schedule</span>
+          Estimated end: <strong>{{ calcEndTime(schedStart, schedDur!) }}</strong>
+          <span class="sched-dur-label">({{ schedDur }}min from {{ schedStart }})</span>
+        </div>
+        }
+      </div>
+      }
+    </div>
+
+    <!-- 7. Notes -->
+    <div class="ap-field">
+      <label>Notes</label>
+      <textarea [(ngModel)]="aNotes" rows="2" class="ap-textarea" placeholder="Special instructions..."></textarea>
+    </div>
+
+    @if (assignOk()) { <div class="ap-alert ok"><span class="material-icons">check_circle</span>{{ assignOk() }}</div> }
+    @if (assignErr()) { <div class="ap-alert err"><span class="material-icons">error</span>{{ assignErr() }}</div> }
+
+    <button class="ap-submit" (click)="doAssign()"
+            [disabled]="(!selectedC()&&!assignTarget()?.complaintId)||!selectedTech()||assigning()">
+      @if (assigning()) { <span class="mini-spinner white"></span> Assigning... }
+      @else { <span class="material-icons">person_add</span> Assign Technician }
+    </button>
+    }
+
+    <!-- ═══ COMPLETE TAB ═══ -->
+    @if (panelTab === 'complete') {
+    <div class="ap-field">
+      <label>Search Assignment</label>
+      <div class="ap-search-bar">
+        <span class="material-icons">search</span>
+        <input type="text" [(ngModel)]="aSearch" placeholder="Technician, complaint, customer..." />
+      </div>
+    </div>
+
+    <div class="comp-list">
+      @for (a of filteredAssign(); track $any(a).assignmentId) {
+      <div class="comp-item" [class.sel]="completeForm.id===$any(a).assignmentId" (click)="selAssignment(a)">
+        <div class="ci-top">
+          <span class="ci-id">#{{ $any(a).assignmentId }}</span>
+          <span class="ci-no">{{ $any(a).complaintNumber }}</span>
+          <span class="status-tag" [ngClass]="$any(a).status?.toLowerCase()">{{ $any(a).status }}</span>
+        </div>
+        <div class="ci-subject">{{ $any(a).complaintSubject }}</div>
+        <div class="ci-meta">
+          <span><span class="material-icons">engineering</span>{{ $any(a).technicianName }} ({{ $any(a).assignmentRole }})</span>
+          <span><span class="material-icons">person</span>{{ $any(a).customerName }}</span>
+        </div>
+        @if ($any(a).scheduledDate) {
+        <div class="ci-sched">
+          <span class="material-icons">event</span>{{ $any(a).scheduledDate | date:'dd MMM yyyy' }}
+          @if ($any(a).startTime) { · {{ $any(a).startTime }} – {{ $any(a).endTime }} }
+        </div>
+        }
+        <div class="ci-actions">
+          <button class="btn-unassign sm" (click)="openUnAssign(a, $event)" title="Unassign technician">
+            <span class="material-icons">person_remove</span> Unassign
+          </button>
+        </div>
+      </div>
+      } @empty {
+      <div class="ap-empty"><span class="material-icons">assignment_turned_in</span><p>No active assignments</p></div>
+      }
+    </div>
+
+    @if (completeForm.id) {
+    <div class="ap-field">
+      <label>Completion Remarks</label>
+      <textarea [(ngModel)]="completeForm.remarks" rows="3" class="ap-textarea" placeholder="Describe work done..."></textarea>
+    </div>
+    @if (completeOk()) { <div class="ap-alert ok"><span class="material-icons">check_circle</span>{{ completeOk() }}</div> }
+    @if (completeErr()) { <div class="ap-alert err"><span class="material-icons">error</span>{{ completeErr() }}</div> }
+    <button class="ap-submit complete" (click)="doComplete()" [disabled]="completing()">
+      @if (completing()) { <span class="mini-spinner white"></span> Completing... }
+      @else { <span class="material-icons">check_circle</span> Mark as Complete }
+    </button>
+    }
+    }
+
+    <!-- ═══ AUDIT TAB ═══ -->
+    @if (panelTab === 'audit') {
+    <div class="audit-search">
+      <div class="ap-iw" style="flex:1">
+        <span class="material-icons ap-ic">confirmation_number</span>
+        <input type="number" [(ngModel)]="auditCId" class="ap-inp" placeholder="Complaint ID" />
+      </div>
+      <button class="audit-search-btn" (click)="loadAuditLog()" [disabled]="!auditCId">
+        <span class="material-icons">search</span> Search
+      </button>
+    </div>
+
+    @if (auditLoading()) {
+    <div class="tile-loading"><div class="mini-spinner"></div><span>Loading...</span></div>
+    }
+
+    <div class="audit-list">
+      @for (log of auditLogs(); track $any(log).auditId) {
+      <div class="audit-item">
+        <div class="a-icon" [ngClass]="$any(log).action?.toLowerCase()">
+          <span class="material-icons">{{ getAuditIcon($any(log).action) }}</span>
+        </div>
+        <div class="a-body">
+          <div class="a-top">
+            <span class="a-action" [ngClass]="$any(log).action?.toLowerCase()">{{ $any(log).action }}</span>
+            <span class="a-time">{{ $any(log).changedAt | date:'dd MMM, hh:mm a' }}</span>
+          </div>
+          @if ($any(log).newTechnician) {
+          <p class="a-detail">
+            @if ($any(log).oldTechnician) {
+            <span class="a-old">{{ $any(log).oldTechnician }}</span>
+            <span class="material-icons a-arr">arrow_forward</span>
+            }
+            <span class="a-new">{{ $any(log).newTechnician }}</span>
+            @if ($any(log).newRole) { <span class="a-rtag">{{ $any(log).newRole }}</span> }
+          </p>
+          }
+          @if ($any(log).remarks) { <p class="a-remarks">"{{ $any(log).remarks }}"</p> }
+          @if ($any(log).changedByName) {
+          <span class="a-actor"><span class="material-icons">person</span>{{ $any(log).changedByName }}</span>
+          }
+        </div>
+      </div>
+      } @empty {
+      @if (!auditLoading()) {
+      <div class="ap-empty">
+        <span class="material-icons">history_toggle_off</span>
+        <p>Enter a complaint ID to view audit history</p>
+      </div>
+      }
+      }
+    </div>
+    }
+
+  </div><!-- /ap-body -->
+</div><!-- /assign-panel -->
+}
+
+<!-- ═══ SPARE APPROVAL PANEL ═════════════════════════════ -->
+@if (showSparePanel()) {
+<div class="panel-overlay" (click)="closeSparePanel()"></div>
+<div class="spare-panel">
+
+  <div class="sp-header">
+    <div class="sp-header-left">
+      <div class="sp-icon"><span class="material-icons">build</span></div>
+      <div>
+        <h3>Spare Part Requests</h3>
+        <p class="sp-sub">Review and approve technician requests</p>
+      </div>
+    </div>
+    <button class="ap-close" (click)="closeSparePanel()"><span class="material-icons">close</span></button>
+  </div>
+
+  <div class="sp-filters">
+    <select [(ngModel)]="spareFilter.status" (ngModelChange)="spareFilter.page=1; loadSpareRequests()" class="sp-select">
+      <option value="">All Statuses</option>
+      <option value="Requested">Pending</option>
+      <option value="Approved">Approved</option>
+      <option value="Dispatched">Dispatched</option>
+      <option value="Rejected">Rejected</option>
+      <option value="Used">Used</option>
+    </select>
+    <select [(ngModel)]="spareFilter.urgencyLevel" (ngModelChange)="spareFilter.page=1; loadSpareRequests()" class="sp-select">
+      <option value="">All Urgency</option>
+      <option value="Normal">Normal</option>
+      <option value="Urgent">Urgent</option>
+      <option value="Critical">Critical</option>
+    </select>
+    <button class="sp-refresh-btn" (click)="loadSpareRequests()">
+      <span class="material-icons">refresh</span>
+    </button>
+  </div>
+
+   @if (selectedSpareIds().size > 0) {
+  <div class="sp-bulk-bar">
+    <span class="sp-selected-count">{{ selectedSpareIds().size }} selected</span>
+    <div class="sp-bulk-btns">
+      <!-- Show Approve/Reject only when viewing Requested items -->
+      @if (!spareFilter.status || spareFilter.status === 'Requested') {
+      <button class="sp-bulk-btn approve" (click)="bulkAction('Approved')" [disabled]="spareActioning()">
+        <span class="material-icons">check_circle</span> Approve
+      </button>
+      <button class="sp-bulk-btn reject" (click)="bulkAction('Rejected')" [disabled]="spareActioning()">
+        <span class="material-icons">cancel</span> Reject
+      </button>
+      }
+      <!-- Show Dispatch when viewing Approved items -->
+      @if (!spareFilter.status || spareFilter.status === 'Approved') {
+      <button class="sp-bulk-btn dispatch" (click)="bulkAction('Dispatched')" [disabled]="spareActioning()">
+        <span class="material-icons">local_shipping</span> Dispatch
+      </button>
+      }
+      <!-- Show Mark Used when viewing Dispatched items -->
+      @if (!spareFilter.status || spareFilter.status === 'Dispatched') {
+      <button class="sp-bulk-btn used" (click)="bulkAction('Used')" [disabled]="spareActioning()">
+        <span class="material-icons">build_circle</span> Mark Used
+      </button>
+      }
+    </div>
+    @if (spareActionMsg()) {
+    <span class="sp-action-msg" [class.err]="spareActionErr()">{{ spareActionMsg() }}</span>
+    }
+  </div>
+  }
+
+  <div class="sp-body">
+    @if (spareLoading()) {
+    <div class="sp-loading"><div class="mini-spinner"></div><span>Loading...</span></div>
+    }
+
+    @if (!spareLoading()) {
+    <div class="sp-table-wrap">
+      <table class="sp-table">
+        <thead>
+          <tr>
+            <th class="sp-cb-col">
+              <input type="checkbox" [checked]="isAllSelected()" (change)="toggleSelectAll()" />
+            </th>
+            <th>#</th><th>Complaint</th><th>Part</th>
+            <th>Qty</th><th>Urgency</th><th>Technician</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of spareRequests(); track r.requestId) {
+          <tr [class.sp-critical]="r.urgencyLevel === 'Critical'">
+            <td class="sp-cb-col">
+              <input type="checkbox"
+                     [checked]="selectedSpareIds().has(r.requestId)"
+                     (change)="toggleSpareSelect(r.requestId)" />
+            </td>
+            <td class="sp-id">#{{ r.requestId }}</td>
+            <td>
+              <div class="sp-complaint-cell">
+                <span class="sp-cno">{{ r.complaintNumber }}</span>
+                <span class="sp-csub">{{ r.complaintSubject }}</span>
+                <span class="sp-cust"><span class="material-icons">person</span>{{ r.customerName }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="sp-part-cell">
+                <strong>{{ r.partName }}</strong>
+                @if (r.partNumber) { <small>{{ r.partNumber }}</small> }
+                <span class="sp-stock" [class.low]="r.stockQuantity < 3">
+                  <span class="material-icons">inventory_2</span>{{ r.stockQuantity }} in stock
+                </span>
+              </div>
+            </td>
+            <td><span class="sp-qty">× {{ r.quantity }}</span></td>
+            <td><span class="urg-tag" [ngClass]="getUrgencyClass(r.urgencyLevel)">{{ r.urgencyLevel }}</span></td>
+            <td>
+              <span class="sp-tech">
+                <span class="material-icons">engineering</span>{{ r.technicianName }}
+              </span>
+            </td>
+            <td><span class="sp-status" [ngClass]="getSpareStatusClass(r.status)">{{ r.status }}</span></td>
+            <td>
+              <div class="sp-row-actions">
+                @if (r.status === 'Requested') {
+                <button class="sp-act-btn approve" (click)="singleAction(r.requestId, 'Approved', $event)" title="Approve">
+                  <span class="material-icons">check</span>
+                </button>
+                <button class="sp-act-btn reject" (click)="singleAction(r.requestId, 'Rejected', $event)" title="Reject">
+                  <span class="material-icons">close</span>
+                </button>
+                }
+                @if (r.status === 'Approved') {
+                <button class="sp-act-btn dispatch" (click)="singleAction(r.requestId, 'Dispatched', $event)" title="Dispatch">
+                  <span class="material-icons">local_shipping</span>
+                </button>
+                }
+                @if (r.status === 'Dispatched') {
+                <button class="sp-act-btn used" (click)="singleAction(r.requestId, 'Used', $event)" title="Mark Used">
+                  <span class="material-icons">build_circle</span>
+                </button>
+                }
+              </div>
+            </td>
+          </tr>
+          } @empty {
+          <tr>
+            <td colspan="9" class="sp-empty">
+              <span class="material-icons">build_circle</span>
+              <p>No spare part requests found</p>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (spareTotalPages() > 1) {
+    <div class="sp-pagination">
+      <button (click)="sparePrev()" [disabled]="spareFilter.page <= 1" class="page-btn">&laquo; Prev</button>
+      <span class="page-info">Page {{ spareFilter.page }} of {{ spareTotalPages() }}</span>
+      <button (click)="spareNext()" [disabled]="spareFilter.page >= spareTotalPages()" class="page-btn">Next &raquo;</button>
+    </div>
+    }
+    }
+  </div>
+
+</div>
+}
+
+<!-- ═══ UNASSIGN CONFIRM DIALOG ═══════════════════════════ -->
+@if (showUnAssignConfirm()) {
+<div class="ua-overlay" (click)="closeUnAssign()"></div>
+<div class="ua-dialog">
+
+  <div class="ua-header">
+    <div class="ua-icon-wrap"><span class="material-icons">person_remove</span></div>
+    <div>
+      <h3>Unassign Technician</h3>
+      <p class="ua-sub">This will remove the technician from this assignment</p>
+    </div>
+    <button class="ua-close" (click)="closeUnAssign()"><span class="material-icons">close</span></button>
+  </div>
+
+  @if (unAssignTarget()) {
+  <div class="ua-info">
+    <div class="ua-info-row">
+      <span class="material-icons">engineering</span>
+      <span>
+        <strong>{{ $any(unAssignTarget()).technicianName }}</strong>
+        <span class="role-tag">{{ $any(unAssignTarget()).assignmentRole }}</span>
+      </span>
+    </div>
+    <div class="ua-info-row">
+      <span class="material-icons">confirmation_number</span>
+      <span>{{ $any(unAssignTarget()).complaintNumber }}</span>
+    </div>
+    @if ($any(unAssignTarget()).complaintSubject) {
+    <div class="ua-info-row">
+      <span class="material-icons">assignment</span>
+      <span>{{ $any(unAssignTarget()).complaintSubject }}</span>
+    </div>
+    }
+    @if ($any(unAssignTarget()).scheduledDate) {
+    <div class="ua-info-row warn">
+      <span class="material-icons">event</span>
+      <span>Scheduled: {{ $any(unAssignTarget()).scheduledDate | date:'dd MMM yyyy' }}
+        @if ($any(unAssignTarget()).startTime) {
+        — {{ $any(unAssignTarget()).startTime }} to {{ $any(unAssignTarget()).endTime }}
+        }
+      </span>
+    </div>
+    }
+  </div>
+  }
+
+  <div class="ua-body">
+    <div class="ua-field">
+      <label>Reason <span class="ua-optional">(optional)</span></label>
+      <textarea [(ngModel)]="unAssignReason" rows="2"
+                placeholder="e.g. Technician unavailable, customer rescheduled..."></textarea>
+    </div>
+    @if (unAssignOk()) { <div class="ap-alert ok"><span class="material-icons">check_circle</span> {{ unAssignOk() }}</div> }
+    @if (unAssignErr()) { <div class="ap-alert err"><span class="material-icons">error</span> {{ unAssignErr() }}</div> }
+  </div>
+
+  <div class="ua-footer">
+    <button class="ua-btn-cancel" (click)="closeUnAssign()" [disabled]="unAssigning()">Cancel</button>
+    <button class="ua-btn-confirm" (click)="doUnAssign()" [disabled]="unAssigning()">
+      @if (unAssigning()) { <span class="mini-spinner white"></span> Unassigning... }
+      @else { <span class="material-icons">person_remove</span> Confirm Unassign }
+    </button>
+  </div>
+
+</div>
+}
+   @if (showDetailPopup() && selectedComplaintId()) {
+     <app-complaint-detail-popup
+       [complaintId]="selectedComplaintId()!"
+       (closed)="closeDetailPopup()"
+       (refreshed)="handleRefresh()"
+       (assignRequested)="handleAssignFromPopup($event)"
+       (reassignRequested)="handleReassignFromPopup($event)"
+       (unassignRequested)="handleUnassignFromPopup($event)"
+       (customerRequested)="handleCustomerFromPopup($event)">
+     </app-complaint-detail-popup>
+   }

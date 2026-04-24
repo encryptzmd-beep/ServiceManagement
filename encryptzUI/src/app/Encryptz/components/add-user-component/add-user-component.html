@@ -1,0 +1,98 @@
+<div class="add-user-container">
+      <div class="page-header">
+        <h2>Add User to Company</h2>
+        <p>Invite existing users to join your company</p>
+      </div>
+
+      <div class="card">
+        <form (ngSubmit)="inviteUser()" class="form">
+          <div class="field">
+            <label>User Email *</label>
+            <div class="input-wrapper">
+              <span class="material-icons">email</span>
+              <input
+                type="email"
+                [(ngModel)]="email"
+                name="email"
+                placeholder="user@example.com"
+                required
+                (blur)="checkUser()"
+                (input)="onEmailChange()"
+              />
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Assign Role *</label>
+            <div class="input-wrapper">
+              <span class="material-icons">badge</span>
+              <select [(ngModel)]="selectedRole" name="role" required>
+                <option value="">Select Role</option>
+                @for (role of roles(); track role) {
+                  <option [value]="role">{{ role }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Remarks (Optional)</label>
+            <div class="input-wrapper">
+              <span class="material-icons">notes</span>
+              <textarea [(ngModel)]="remarks" rows="3" placeholder="Any additional notes..."></textarea>
+            </div>
+          </div>
+
+          @if (userChecked && !userExists) {
+            <div class="warning-msg">
+              <span class="material-icons">info</span>
+              User not found! They need to self-register first.
+              <a routerLink="/register">Register here</a>
+            </div>
+          }
+
+          @if (userChecked && userExists) {
+            <div class="success-msg">
+              <span class="material-icons">check_circle</span>
+              User found: {{ foundUserName }} - Ready to invite!
+            </div>
+          }
+
+          <button type="submit" class="btn-primary" [disabled]="loading() || !emailValid || !selectedRole || !userExists">
+            @if (loading()) { <span class="spinner"></span> }
+            Send Invitation
+          </button>
+        </form>
+
+        @if (successMessage()) {
+          <div class="success-alert">{{ successMessage() }}</div>
+        }
+        @if (errorMessage()) {
+          <div class="error-alert">{{ errorMessage() }}</div>
+        }
+      </div>
+
+      <div class="card">
+        <h3>Company Users</h3>
+        <div class="users-table">
+          <table>
+            <thead>
+              <tr><th>Name</th><th>Email</th><th>Role</th><th>Assigned By</th><th>Date</th></tr>
+            </thead>
+            <tbody>
+              @for (user of companyUsers(); track user.userId) {
+                <tr>
+                  <td>{{ user.fullName }}</td>
+                  <td>{{ user.email }}</td>
+                  <td><span class="role-badge">{{ user.roleInCompany }}</span></td>
+                  <td>{{ user.assignedByName }}</td>
+                  <td>{{ user.assignedAt | date }}</td>
+                </tr>
+              } @empty {
+                <tr><td colspan="5" class="empty-row">No users added yet</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>

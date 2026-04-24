@@ -1,0 +1,162 @@
+<div class="fx-page page">
+  <!-- Page Header -->
+  <div class="fx-page-header page-header">
+    <div>
+      <div class="fx-page-title">Technician Productivity</div>
+      <div class="fx-page-sub">Performance metrics, workload analysis, and ranking</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <div class="ff">
+        <label>From</label>
+        <input type="date" [(ngModel)]="fromDate" class="input" />
+      </div>
+      <div class="ff">
+        <label>To</label>
+        <input type="date" [(ngModel)]="toDate" class="input" />
+      </div>
+      <button class="btn-primary" (click)="loadReport()" [disabled]="loading()">
+        @if (loading()) { <span class="spinner"></span> }
+        @else { <span class="material-icons">analytics</span> }
+        Generate
+      </button>
+    </div>
+  </div>
+
+  @if (data().length > 0) {
+  <!-- Summary Stats -->
+  <div class="summary-row">
+    <div class="summary-card">
+      <span class="material-icons sc-icon blue">group</span>
+      <div><span class="sc-val">{{ data().length }}</span><span class="sc-lbl">Technicians</span></div>
+    </div>
+    <div class="summary-card">
+      <span class="material-icons sc-icon purple">assignment</span>
+      <div><span class="sc-val">{{ getTotalAssignments() }}</span><span class="sc-lbl">Total Jobs</span></div>
+    </div>
+    <div class="summary-card">
+      <span class="material-icons sc-icon green">check_circle</span>
+      <div><span class="sc-val">{{ getTotalCompleted() }}</span><span class="sc-lbl">Completed</span></div>
+    </div>
+    <div class="summary-card">
+      <span class="material-icons sc-icon amber">schedule</span>
+      <div><span class="sc-val">{{ getTotalHours() | number:'1.0-0' }}h</span><span class="sc-lbl">Total Hours</span>
+      </div>
+    </div>
+    <div class="summary-card">
+      <span class="material-icons sc-icon teal">directions_car</span>
+      <div><span class="sc-val">{{ getTotalDistance() | number:'1.0-0' }}km</span><span class="sc-lbl">Distance</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Performers -->
+  <h3 class="section-title">Top Performers</h3>
+  <div class="performers-grid">
+    @for (t of getTopPerformers(); track t.technicianId; let i = $index) {
+    <div class="performer-card" [class]="'rank-' + (i + 1)">
+      <div class="rank-badge">{{ i + 1 }}</div>
+      <div class="perf-avatar">{{ t.technicianName.charAt(0) }}</div>
+      <h4>{{ t.technicianName }}</h4>
+      <span class="perf-spec">{{ t.specialization || 'General' }}</span>
+      <div class="perf-metrics">
+        <div class="pm">
+          <span class="pm-val">{{ t.completionRate | number:'1.0-0' }}%</span>
+          <span class="pm-lbl">Completion</span>
+        </div>
+        <div class="pm">
+          <span class="pm-val">{{ t.completedAssignments }}</span>
+          <span class="pm-lbl">Jobs Done</span>
+        </div>
+        <div class="pm">
+          <span class="pm-val">{{ t.avgResolutionHours | number:'1.1-1' }}h</span>
+          <span class="pm-lbl">Avg Time</span>
+        </div>
+      </div>
+      <!-- Completion Bar -->
+      <div class="perf-bar-wrap">
+        <div class="perf-bar">
+          <div class="perf-fill" [style.width.%]="t.completionRate" [class]="getBarClass(t.completionRate)"></div>
+        </div>
+      </div>
+    </div>
+    }
+  </div>
+
+  <!-- Detailed Table -->
+  <h3 class="section-title" style="margin-top: 28px">All Technicians</h3>
+  <div class="table-card">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Technician</th>
+            <th>Specialization</th>
+            <th>Assigned</th>
+            <th>Completed</th>
+            <th>Pending</th>
+            <th>Completion %</th>
+            <th>Work Hours</th>
+            <th>Avg Resolution</th>
+            <th>Distance (km)</th>
+            <th>Parts Used</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of data(); track t.technicianId; let i = $index) {
+          <tr>
+            <td><span class="row-rank">{{ i + 1 }}</span></td>
+            <td>
+              <div class="tech-cell">
+                <div class="tc-avatar">{{ t.technicianName.charAt(0) }}</div>
+                <strong>{{ t.technicianName }}</strong>
+              </div>
+            </td>
+            <td><span class="spec-tag">{{ t.specialization || 'General' }}</span></td>
+            <td><strong>{{ t.totalAssignments }}</strong></td>
+            <td><span class="text-green">{{ t.completedAssignments }}</span></td>
+            <td>
+              @if (t.pendingAssignments > 0) {
+              <span class="text-amber">{{ t.pendingAssignments }}</span>
+              } @else {
+              <span class="text-muted">0</span>
+              }
+            </td>
+            <td>
+              <div class="cell-bar">
+                <span class="cb-val" [class]="getBarClass(t.completionRate)">{{ t.completionRate | number:'1.0-0'
+                  }}%</span>
+                <div class="mini-track">
+                  <div class="mini-fill" [style.width.%]="t.completionRate" [class]="getBarClass(t.completionRate)">
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td>{{ t.totalWorkHours | number:'1.1-1' }}h</td>
+            <td>
+              <span [class.text-green]="t.avgResolutionHours <= 12"
+                [class.text-amber]="t.avgResolutionHours > 12 && t.avgResolutionHours <= 24"
+                [class.text-red]="t.avgResolutionHours > 24">
+                {{ t.avgResolutionHours | number:'1.1-1' }}h
+              </span>
+            </td>
+            <td>{{ t.totalDistanceKm | number:'1.1-1' }}</td>
+            <td>{{ t.sparePartsUsed }}</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+  } @else if (!loading()) {
+  <div class="empty-state">
+    <span class="material-icons empty-icon">analytics</span>
+    <h3>No Report Data</h3>
+    <p>Select a date range and click "Generate" to view technician productivity.</p>
+  </div>
+  }
+</div>

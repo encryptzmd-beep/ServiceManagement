@@ -1,0 +1,29 @@
+<!-- <div class="layout">
+  <app-header (toggleSidebar)="dashState.toggleSidebar()" />
+  <app-sidebar />
+  <main class="main-content" [class.sidebar-open]="dashState.sidebarOpen()">
+    <div class="content-wrapper">
+      <router-outlet />
+    </div>
+    <app-footer />
+  </main>
+</div> -->
+
+<div class="layout">
+  <app-header (toggleSidebar)="dashState.toggleSidebar()" />
+
+  @if (!isTechnician) {
+    <app-sidebar />
+  }
+
+  <main
+    class="main-content"
+    [class.sidebar-open]="dashState.sidebarOpen() && !isTechnician"
+    [class.no-sidebar]="isTechnician"
+  >
+    <div class="content-wrapper">
+      <router-outlet />
+    </div>
+    <app-footer />
+  </main>
+</div>

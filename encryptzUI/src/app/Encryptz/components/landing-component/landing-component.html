@@ -1,0 +1,200 @@
+ <div class="landing-container">
+      <!-- Navigation -->
+      <nav class="navbar" [class.scrolled]="isScrolled">
+        <div class="nav-container">
+          <div class="logo">
+            <div class="logo-icon">E</div>
+            <span class="logo-text">ENCRYPTZ<span class="erp"> ERP</span></span>
+          </div>
+          <div class="nav-links">
+            <a href="#home">Home</a>
+            <a href="#solutions">Solutions</a>
+            <a href="#about">About</a>
+            <a href="#contact">Contact</a>
+          </div>
+          <div class="nav-buttons">
+            <button class="btn-outline" routerLink="/customer-login">Customer Portal</button>
+            <button class="btn-primary" routerLink="/login">Login</button>
+            <button class="btn-secondary" routerLink="/register">Register</button>
+          </div>
+          <div class="mobile-menu" (click)="mobileMenuOpen = !mobileMenuOpen">
+            <span class="material-icons">menu</span>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Mobile Menu -->
+      <div class="mobile-overlay" [class.show]="mobileMenuOpen" (click)="mobileMenuOpen = false">
+        <div class="mobile-menu-content" (click)="$event.stopPropagation()">
+          <a href="#home" (click)="mobileMenuOpen = false">Home</a>
+          <a href="#solutions" (click)="mobileMenuOpen = false">Solutions</a>
+          <a href="#about" (click)="mobileMenuOpen = false">About</a>
+          <a href="#contact" (click)="mobileMenuOpen = false">Contact</a>
+          <hr>
+          <button class="btn-outline w-100" routerLink="/customer-login">Customer Portal</button>
+          <button class="btn-primary w-100" routerLink="/login">Login</button>
+          <button class="btn-secondary w-100" routerLink="/register">Register</button>
+        </div>
+      </div>
+
+      <!-- Hero Section -->
+      <section id="home" class="hero">
+        <div class="hero-content">
+          <div class="hero-badge">
+            <span class="material-icons">verified</span>
+            Enterprise Service Management
+          </div>
+          <h1>
+            <span class="gradient-text">Smart</span> Service Management<br>
+            for Modern Businesses
+          </h1>
+          <p class="hero-description">
+            ENCRYPTZ ERP Solutions provides a complete service management platform to streamline<br>
+            operations, track complaints, manage field technicians, and deliver exceptional customer service.
+          </p>
+          <div class="hero-buttons">
+            <button class="btn-large btn-primary" routerLink="/register">
+              Get Started
+              <span class="material-icons">arrow_forward</span>
+            </button>
+            <button class="btn-large btn-outline" (click)="scrollToContact()">
+              Contact Sales
+            </button>
+          </div>
+          <div class="stats">
+            <div class="stat"><h3>50+</h3><p>Companies</p></div>
+            <div class="stat"><h3>10K+</h3><p>Complaints Resolved</p></div>
+            <div class="stat"><h3>98%</h3><p>Satisfaction</p></div>
+            <div class="stat"><h3>24/7</h3><p>Support</p></div>
+          </div>
+        </div>
+        <div class="hero-image">
+          <div class="dashboard-preview">
+            <div class="preview-header">
+              <div class="preview-dot red"></div>
+              <div class="preview-dot yellow"></div>
+              <div class="preview-dot green"></div>
+            </div>
+            <div class="preview-content">
+              <div class="preview-chart"></div>
+              <div class="preview-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Solutions Section -->
+      <section id="solutions" class="solutions">
+        <div class="container">
+          <div class="section-header">
+            <span class="section-badge">Solutions</span>
+            <h2>Everything You Need</h2>
+            <p>Complete suite of tools for modern service management</p>
+          </div>
+          <div class="solutions-grid">
+            <div class="solution-card" *ngFor="let solution of solutions">
+              <div class="solution-icon"><span class="material-icons">{{solution.icon}}</span></div>
+              <h3>{{solution.title}}</h3>
+              <p>{{solution.description}}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- About Section -->
+      <section id="about" class="about">
+        <div class="container">
+          <div class="about-content">
+            <div class="about-text">
+              <span class="section-badge">About Us</span>
+              <h2>Empowering Businesses Since 2020</h2>
+              <p>ENCRYPTZ ERP Solutions is a leading provider of enterprise service management software. We help businesses streamline operations, improve customer satisfaction, and optimize field workforce productivity.</p>
+              <div class="about-details">
+                <div class="detail-item">
+                  <span class="material-icons">location_on</span>
+                  <div><strong>Our Office</strong><p>1st Floor, Opp. St. Matys C.G.H.S.School Back Gate<br>Kovilvattom Road, Kacheripady, Ernakulam</p></div>
+                </div>
+                <div class="detail-item">
+                  <span class="material-icons">phone</span>
+                  <div><strong>Contact</strong><p>+91 833 005 4949 | +91 974 655 5451</p></div>
+                </div>
+                <div class="detail-item">
+                  <span class="material-icons">email</span>
+                  <div><strong>Email</strong><p>admin@encryptz.in</p></div>
+                </div>
+              </div>
+            </div>
+            <div class="about-image">
+              <img src="assets/office-placeholder.jpg" alt="Office">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Company Portals Section -->
+      <section class="company-section">
+        <div class="container">
+          <div class="section-header">
+            <span class="section-badge">Company Portals</span>
+            <h2>Access Your Company Portal</h2>
+            <p>Select your company to login to your service management dashboard</p>
+          </div>
+          <div class="company-cards">
+            <div class="company-card felix">
+              <div class="company-logo"><span class="material-icons">fitness_center</span></div>
+              <h3>Felix Fitness</h3>
+              <p>Service Management Portal</p>
+              <button class="btn-primary" routerLink="/login">Login to Felix Portal</button>
+            </div>
+            <div class="company-card coming-soon">
+              <div class="company-logo"><span class="material-icons">business</span></div>
+              <h3>Your Company</h3>
+              <p>Coming Soon</p>
+              <button class="btn-outline" disabled>Contact Sales</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Contact Section -->
+      <section id="contact" class="contact">
+        <div class="container">
+          <div class="contact-wrapper">
+            <div class="contact-info">
+              <span class="section-badge">Get In Touch</span>
+              <h2>Ready to Transform<br>Your Service Operations?</h2>
+              <p>Schedule a demo with our experts and see how ENCRYPTZ can help your business.</p>
+              <div class="contact-details">
+                <div class="contact-item"><span class="material-icons">call</span><div><strong>Phone</strong><p>+91 833 005 4949<br>+91 974 655 5451</p></div></div>
+                <div class="contact-item"><span class="material-icons">email</span><div><strong>Email</strong><p>admin@encryptz.in</p></div></div>
+                <div class="contact-item"><span class="material-icons">schedule</span><div><strong>Business Hours</strong><p>Mon-Fri: 9:00 AM - 6:00 PM<br>Sat: 10:00 AM - 2:00 PM</p></div></div>
+              </div>
+            </div>
+            <div class="contact-form">
+              <form (ngSubmit)="submitContact()">
+                <div class="form-row"><input type="text" [(ngModel)]="contactName" name="name" placeholder="Your Name" required><input type="email" [(ngModel)]="contactEmail" name="email" placeholder="Your Email" required></div>
+                <div class="form-row"><input type="tel" [(ngModel)]="contactPhone" name="phone" placeholder="Phone Number"><input type="text" [(ngModel)]="contactCompany" name="company" placeholder="Company Name"></div>
+                <textarea [(ngModel)]="contactMessage" name="message" rows="5" placeholder="Tell us about your requirements..."></textarea>
+                <button type="submit" class="btn-primary btn-full" [disabled]="contactLoading">{{contactLoading ? 'Sending...' : 'Send Message'}}</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <div class="container">
+          <div class="footer-content">
+            <div class="footer-brand"><div class="footer-logo">E</div><p>Enterprise Service Management Platform</p></div>
+            <div class="footer-links">
+              <div class="link-group"><h4>Product</h4><a href="#solutions">Features</a><a href="#">Pricing</a><a href="#">Demo</a></div>
+              <div class="link-group"><h4>Company</h4><a href="#about">About Us</a><a href="#contact">Contact</a><a href="#">Careers</a></div>
+              <div class="link-group"><h4>Resources</h4><a href="#">Documentation</a><a href="#">Support</a><a href="#">Blog</a></div>
+              <div class="link-group"><h4>Legal</h4><a href="#">Privacy Policy</a><a href="#">Terms of Service</a></div>
+            </div>
+          </div>
+          <div class="footer-bottom"><p>&copy; 2026 ENCRYPTZ ERP Solutions. All rights reserved.</p><div class="social-links"><a href="#"><span class="material-icons">facebook</span></a><a href="#"><span class="material-icons">linked_in</span></a><a href="#"><span class="material-icons">twitter</span></a></div></div>
+        </div>
+      </footer>
+    </div>

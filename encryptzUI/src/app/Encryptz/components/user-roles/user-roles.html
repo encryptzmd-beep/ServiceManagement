@@ -1,0 +1,398 @@
+<!-- user-roles.html -->
+<div class="mgmt-page">
+
+  <!-- ==================== PAGE HEADER ==================== -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">User Roles</div>
+      <div class="page-sub">Manage and configure system access roles</div>
+    </div>
+
+    @if (activeTab() === 'roles') {
+      <button class="btn-new" (click)="openRoleForm()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 1v12M1 7h12" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        New Role
+      </button>
+    }
+  </div>
+
+
+  <!-- ==================== TAB 2: ROLES ==================== -->
+  @if (activeTab() === 'roles') {
+
+    <!-- STATS -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total Roles</div>
+        <div class="stat-val">{{ totalRoleCount() }}</div>
+        <div class="stat-pill pill-green">All configured</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active</div>
+        <div class="stat-val stat-active">{{ activeRoleCount() }}</div>
+        <div class="stat-pill pill-green">{{ activePercent() }}% active</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Inactive</div>
+        <div class="stat-val stat-inactive">{{ inactiveRoleCount() }}</div>
+        <div class="stat-pill pill-red">{{ inactiveRoleCount() > 0 ? 'Needs review' : 'All good' }}</div>
+      </div>
+    </div>
+
+    <div class="tab-content">
+
+      @if (showRoleForm()) {
+        <div class="modal-overlay large-modal-overlay">
+          <div class="modal-card role-access-modal">
+
+            <div class="modal-header">
+              <div class="header-left">
+                <h3>{{ editingRole() ? 'Edit Role' : 'Create New Role' }}</h3>
+                <p class="modal-subtitle">
+                  Manage role details and permissions together
+                </p>
+              </div>
+
+              <button
+                type="button"
+                class="close-btn"
+                (click)="showRoleForm.set(false)">
+                ✕
+              </button>
+            </div>
+
+            <form [formGroup]="roleForm" (ngSubmit)="saveRole()">
+
+              <div class="role-form-grid">
+                <div class="form-row">
+                  <label>Role Name</label>
+                  <input
+                    formControlName="roleName"
+                    placeholder="e.g. Technician" />
+                </div>
+
+                <div class="form-row">
+                  <label>Description</label>
+                  <input
+                    formControlName="description"
+                    placeholder="Brief description" />
+                </div>
+              </div>
+
+              <div class="form-row checkbox-row active-row">
+                <label>
+                  <input type="checkbox" formControlName="isActive" />
+                  Active Role
+                </label>
+              </div>
+
+              @if (editingRole()) {
+                <div class="access-section">
+                  <div class="section-header">
+                    <div>
+                      <h4>Menu Access Permissions</h4>
+                      <p class="section-subtitle">
+                        Configure permissions for {{ roleForm.get('roleName')?.value }}
+                      </p>
+                    </div>
+
+                    <span class="role-chip">
+                      {{ roleForm.get('roleName')?.value }}
+                    </span>
+                  </div>
+
+                  @if (menuAccess().length > 0) {
+                    <div class="access-table-wrapper">
+                      <table class="data-table access-table popup-access-table">
+                        <thead>
+                          <tr>
+                            <th>Menu</th>
+                            <th>Path</th>
+                            <th class="perm-col">View</th>
+                            <th class="perm-col">Create</th>
+                            <th class="perm-col">Edit</th>
+                            <th class="perm-col">Delete</th>
+                            <th class="perm-col">All</th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          @for (m of parentMenus(); track m.menuId) {
+                            <tr class="parent-row">
+                              <td>
+                                <strong>{{ m.menuName }}</strong>
+                              </td>
+
+                              <td class="path">
+                                {{ m.menuPath }}
+                              </td>
+
+                              <td class="perm-col">
+                                <input
+                                  type="checkbox"
+                                  [checked]="m.canView"
+                                  (change)="togglePerm(m.menuId, 'canView', $any($event.target).checked)" />
+                              </td>
+
+                              <td class="perm-col">
+                                <input
+                                  type="checkbox"
+                                  [checked]="m.canCreate"
+                                  (change)="togglePerm(m.menuId, 'canCreate', $any($event.target).checked)" />
+                              </td>
+
+                              <td class="perm-col">
+                                <input
+                                  type="checkbox"
+                                  [checked]="m.canEdit"
+                                  (change)="togglePerm(m.menuId, 'canEdit', $any($event.target).checked)" />
+                              </td>
+
+                              <td class="perm-col">
+                                <input
+                                  type="checkbox"
+                                  [checked]="m.canDelete"
+                                  (change)="togglePerm(m.menuId, 'canDelete', $any($event.target).checked)" />
+                              </td>
+
+                              <td class="perm-col">
+                                <input
+                                  type="checkbox"
+                                  title="Toggle all permissions"
+                                  [checked]="m.canView && m.canCreate && m.canEdit && m.canDelete"
+                                  (change)="toggleAll(m.menuId, $any($event.target).checked)" />
+                              </td>
+                            </tr>
+
+                            @for (c of childMenus(m.menuId); track c.menuId) {
+                              <tr class="child-row">
+                                <td>
+                                  <span class="child-menu-label">
+                                    ↳ {{ c.menuName }}
+                                  </span>
+                                </td>
+
+                                <td class="path">
+                                  {{ c.menuPath }}
+                                </td>
+
+                                <td class="perm-col">
+                                  <input
+                                    type="checkbox"
+                                    [checked]="c.canView"
+                                    (change)="togglePerm(c.menuId, 'canView', $any($event.target).checked)" />
+                                </td>
+
+                                <td class="perm-col">
+                                  <input
+                                    type="checkbox"
+                                    [checked]="c.canCreate"
+                                    (change)="togglePerm(c.menuId, 'canCreate', $any($event.target).checked)" />
+                                </td>
+
+                                <td class="perm-col">
+                                  <input
+                                    type="checkbox"
+                                    [checked]="c.canEdit"
+                                    (change)="togglePerm(c.menuId, 'canEdit', $any($event.target).checked)" />
+                                </td>
+
+                                <td class="perm-col">
+                                  <input
+                                    type="checkbox"
+                                    [checked]="c.canDelete"
+                                    (change)="togglePerm(c.menuId, 'canDelete', $any($event.target).checked)" />
+                                </td>
+
+                                <td class="perm-col">
+                                  <input
+                                    type="checkbox"
+                                    [checked]="c.canView && c.canCreate && c.canEdit && c.canDelete"
+                                    (change)="toggleAll(c.menuId, $any($event.target).checked)" />
+                                </td>
+                              </tr>
+                            }
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  } @else {
+                    <div class="empty-access-state">
+                      <span class="material-icons">lock</span>
+                      <p>No menu permissions available for this role.</p>
+                    </div>
+                  }
+                </div>
+              }
+
+              <div class="modal-actions sticky-actions">
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  (click)="showRoleForm.set(false)">
+                  Cancel
+                </button>
+
+                @if (editingRole()) {
+                  <button
+                    type="button"
+                    class="btn-primary secondary-save"
+                    (click)="saveAccess()"
+                    [disabled]="savingAccess()">
+                    {{ savingAccess() ? 'Saving Permissions...' : 'Save Permissions' }}
+                  </button>
+                }
+
+                <button
+                  type="submit"
+                  class="btn-primary"
+                  [disabled]="roleForm.invalid">
+                  {{ editingRole() ? 'Update Role' : 'Create Role' }}
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      }
+
+      <!-- TABLE CARD -->
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <div class="toolbar-left">
+            <span class="table-title">All Roles</span>
+            <span class="table-count">{{ filteredRoles().length }} of {{ totalRoleCount() }}</span>
+          </div>
+
+          <div class="toolbar-right">
+            <div class="search-box">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <circle cx="7" cy="7" r="5" stroke="#8a9ab0" stroke-width="1.5"/>
+                <path d="M11 11l3 3" stroke="#8a9ab0" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <input
+                type="text"
+                class="search-input-inline"
+                placeholder="Search roles..."
+                [value]="roleSearchTerm()"
+                (input)="roleSearchTerm.set($any($event.target).value)" />
+            </div>
+
+            <select
+              class="filter-select"
+              [value]="roleStatusFilter()"
+              (change)="roleStatusFilter.set($any($event.target).value)">
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+
+        <table class="data-table styled-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Role</th>
+              <th>Description</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of filteredRoles(); track r.roleId; let i = $index) {
+              <tr>
+                <td class="num">{{ i + 1 }}</td>
+                <td class="role-name">{{ r.roleName }}</td>
+                <td class="role-desc">{{ r.description }}</td>
+                <td>
+                  <span class="status-badge" [class.active]="r.isActive" [class.inactive]="!r.isActive">
+                    <span class="status-dot" [class.dot-active]="r.isActive" [class.dot-inactive]="!r.isActive"></span>
+                    {{ r.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td>
+                  <button class="action-btn" title="Edit" (click)="openRoleForm(r)">
+                    <span class="material-icons">edit</span>
+                  </button>
+                </td>
+              </tr>
+            }
+            @if (filteredRoles().length === 0) {
+              <tr>
+                <td colspan="5" class="empty-row">No roles match the current filters.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- ==================== TAB 3: MENU ACCESS ==================== -->
+  @if (activeTab() === 'access') {
+    <div class="tab-content">
+      <div class="tab-toolbar access-toolbar">
+        <div class="role-picker">
+          <label>Select Role</label>
+          <select (change)="onRoleChange(+$any($event.target).value)">
+            <option value="0">-- choose role --</option>
+            @for (r of roles(); track r.roleId) {
+              <option [value]="r.roleId">{{ r.roleName }}</option>
+            }
+          </select>
+        </div>
+        @if (selectedRoleId()) {
+          <button class="btn-primary" (click)="saveAccess()" [disabled]="savingAccess()">{{ savingAccess() ? 'Saving…' : 'Save Permissions' }}</button>
+        }
+      </div>
+
+      @if (menuAccess().length > 0) {
+        <table class="data-table access-table">
+          <thead>
+            <tr>
+              <th>Menu</th>
+              <th>Path</th>
+              <th class="perm-col">View</th>
+              <th class="perm-col">Create</th>
+              <th class="perm-col">Edit</th>
+              <th class="perm-col">Delete</th>
+              <th class="perm-col">All</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of parentMenus(); track m.menuId) {
+              <tr class="parent-row">
+                <td><strong>{{ m.menuName }}</strong></td>
+                <td class="path">{{ m.menuPath }}</td>
+                <td class="perm-col"><input type="checkbox" [checked]="m.canView" (change)="togglePerm(m.menuId,'canView', $any($event.target).checked)" /></td>
+                <td class="perm-col"><input type="checkbox" [checked]="m.canCreate" (change)="togglePerm(m.menuId,'canCreate', $any($event.target).checked)" /></td>
+                <td class="perm-col"><input type="checkbox" [checked]="m.canEdit" (change)="togglePerm(m.menuId,'canEdit', $any($event.target).checked)" /></td>
+                <td class="perm-col"><input type="checkbox" [checked]="m.canDelete" (change)="togglePerm(m.menuId,'canDelete', $any($event.target).checked)" /></td>
+                <td class="perm-col"><input type="checkbox" title="Toggle all" [checked]="m.canView && m.canCreate && m.canEdit && m.canDelete" (change)="toggleAll(m.menuId, $any($event.target).checked)" /></td>
+              </tr>
+              @for (c of childMenus(m.menuId); track c.menuId) {
+                <tr class="child-row">
+                  <td>&nbsp;&nbsp;&nbsp;↳ {{ c.menuName }}</td>
+                  <td class="path">{{ c.menuPath }}</td>
+                  <td class="perm-col"><input type="checkbox" [checked]="c.canView" (change)="togglePerm(c.menuId,'canView', $any($event.target).checked)" /></td>
+                  <td class="perm-col"><input type="checkbox" [checked]="c.canCreate" (change)="togglePerm(c.menuId,'canCreate', $any($event.target).checked)" /></td>
+                  <td class="perm-col"><input type="checkbox" [checked]="c.canEdit" (change)="togglePerm(c.menuId,'canEdit', $any($event.target).checked)" /></td>
+                  <td class="perm-col"><input type="checkbox" [checked]="c.canDelete" (change)="togglePerm(c.menuId,'canDelete', $any($event.target).checked)" /></td>
+                  <td class="perm-col"><input type="checkbox" [checked]="c.canView && c.canCreate && c.canEdit && c.canDelete" (change)="toggleAll(c.menuId, $any($event.target).checked)" /></td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      } @else if (selectedRoleId()) {
+        <p class="empty-state">No menu items found for this role.</p>
+      } @else {
+        <p class="empty-state">Select a role above to configure its menu permissions.</p>
+      }
+    </div>
+  }
+
+</div>

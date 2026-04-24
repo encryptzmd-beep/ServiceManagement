@@ -1,0 +1,179 @@
+<div class="fx-page page">
+  <!-- Page Header -->
+  <div class="fx-page-header page-header">
+    <div>
+      <div class="fx-page-title">SLA Compliance Report</div>
+      <div class="fx-page-sub">Track service level agreement performance by priority</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <div class="filter-field">
+        <label>From Date</label>
+        <input type="date" [(ngModel)]="fromDate" class="input" />
+      </div>
+      <div class="filter-field">
+        <label>To Date</label>
+        <input type="date" [(ngModel)]="toDate" class="input" />
+      </div>
+      <button class="btn-primary" (click)="loadReport()" [disabled]="loading()">
+        @if (loading()) { <span class="spinner"></span> }
+        @else { <span class="material-icons">assessment</span> }
+        Generate Report
+      </button>
+    </div>
+  </div>
+
+  @if (data().length > 0) {
+  <!-- Overall Compliance -->
+  <div class="overall-card">
+    <div class="overall-gauge">
+      <svg viewBox="0 0 120 120" class="gauge-svg">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="#e2e8f0" stroke-width="10" />
+        <circle cx="60" cy="60" r="50" fill="none" [attr.stroke]="getOverallColor()" stroke-width="10"
+          stroke-linecap="round" [attr.stroke-dasharray]="314"
+          [attr.stroke-dashoffset]="314 - (314 * getOverallCompliance() / 100)" transform="rotate(-90 60 60)" />
+      </svg>
+      <div class="gauge-label">
+        <span class="gauge-val" [style.color]="getOverallColor()">{{ getOverallCompliance() | number:'1.0-0' }}%</span>
+        <span class="gauge-sub">Overall</span>
+      </div>
+    </div>
+    <div class="overall-stats">
+      <h2>Overall SLA Compliance</h2>
+      <div class="overall-nums">
+        <div class="on"><span class="material-icons">assignment</span>
+          <div><strong>{{ getTotalComplaints() }}</strong><small>Total Complaints</small></div>
+        </div>
+        <div class="on"><span class="material-icons text-green">check_circle</span>
+          <div><strong class="text-green">{{ getTotalWithinSla() }}</strong><small>Within SLA</small></div>
+        </div>
+        <div class="on"><span class="material-icons text-red">cancel</span>
+          <div><strong class="text-red">{{ getTotalBreached() }}</strong><small>SLA Breached</small></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Priority Breakdown Cards -->
+  <h3 class="section-title">Breakdown by Priority</h3>
+  <div class="priority-grid">
+    @for (d of data(); track d.priority) {
+    <div class="priority-card">
+      <div class="pc-header" [attr.data-p]="d.priority">
+        <span class="material-icons">{{ getPriorityIcon(d.priority) }}</span>
+        <h4>{{ d.priority }}</h4>
+        <span class="sla-target">Target: {{ d.slaTargetHours }}h</span>
+      </div>
+
+      <div class="pc-body">
+        <!-- Compliance Bar -->
+        <div class="compliance-row">
+          <div class="compliance-label">
+            <span>Compliance</span>
+            <strong [class]="getComplianceClass(d.compliancePercent)">{{ d.compliancePercent | number:'1.0-0'
+              }}%</strong>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill" [style.width.%]="d.compliancePercent"
+              [class]="getComplianceClass(d.compliancePercent)"></div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="pc-stats">
+          <div class="ps-item">
+            <span class="ps-num">{{ d.total }}</span>
+            <span class="ps-lbl">Total</span>
+          </div>
+          <div class="ps-item ok">
+            <span class="ps-num">{{ d.withinSla }}</span>
+            <span class="ps-lbl">Within SLA</span>
+          </div>
+          <div class="ps-item bad">
+            <span class="ps-num">{{ d.breached }}</span>
+            <span class="ps-lbl">Breached</span>
+          </div>
+        </div>
+
+        <!-- Avg Resolution -->
+        <div class="avg-row">
+          <span class="material-icons">timer</span>
+          <span>Avg Resolution: <strong>{{ d.avgResolutionHours | number:'1.1-1' }}h</strong></span>
+          @if (d.avgResolutionHours <= d.slaTargetHours) { <span class="within-tag"><span
+              class="material-icons">check</span> Within Target</span>
+            } @else {
+            <span class="over-tag"><span class="material-icons">warning</span> Over Target</span>
+            }
+        </div>
+      </div>
+    </div>
+    }
+  </div>
+
+  <!-- Detailed Table -->
+  <h3 class="section-title" style="margin-top: 28px">Detailed Data</h3>
+  <div class="table-card">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Priority</th>
+            <th>SLA Target</th>
+            <th>Total</th>
+            <th>Within SLA</th>
+            <th>Breached</th>
+            <th>Compliance %</th>
+            <th>Avg Resolution</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (d of data(); track d.priority) {
+          <tr>
+            <td>
+              <span class="priority-badge" [attr.data-p]="d.priority">
+                <span class="material-icons">{{ getPriorityIcon(d.priority) }}</span>
+                {{ d.priority }}
+              </span>
+            </td>
+            <td>{{ d.slaTargetHours }}h</td>
+            <td><strong>{{ d.total }}</strong></td>
+            <td><span class="text-green">{{ d.withinSla }}</span></td>
+            <td><span class="text-red">{{ d.breached }}</span></td>
+            <td>
+              <div class="cell-bar">
+                <span [class]="getComplianceClass(d.compliancePercent)">{{ d.compliancePercent | number:'1.0-0'
+                  }}%</span>
+                <div class="mini-bar">
+                  <div class="mini-fill" [style.width.%]="d.compliancePercent"
+                    [class]="getComplianceClass(d.compliancePercent)"></div>
+                </div>
+              </div>
+            </td>
+            <td>{{ d.avgResolutionHours | number:'1.1-1' }}h</td>
+            <td>
+              @if (d.compliancePercent >= 90) {
+              <span class="status-tag good"><span class="material-icons">thumb_up</span> Good</span>
+              } @else if (d.compliancePercent >= 70) {
+              <span class="status-tag warn"><span class="material-icons">warning</span> Warning</span>
+              } @else {
+              <span class="status-tag critical"><span class="material-icons">error</span> Critical</span>
+              }
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+  } @else if (!loading()) {
+  <div class="empty-state">
+    <span class="material-icons empty-icon">assessment</span>
+    <h3>No Report Data</h3>
+    <p>Select a date range and click "Generate Report" to view SLA compliance.</p>
+  </div>
+  }
+</div>

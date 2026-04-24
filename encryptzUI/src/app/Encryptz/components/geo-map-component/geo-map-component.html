@@ -1,0 +1,310 @@
+<div class="fx-page page">
+
+  <!-- ═══ Page Header ═══ -->
+  <div class="fx-page-header page-header">
+    <div>
+      <div class="fx-page-title">GPS Tracking & Trail</div>
+      <div class="fx-page-sub">View technician movement history, site visits, and live position</div>
+    </div>
+  </div>
+
+  <!-- ═══ Controls Row ═══ -->
+  <div class="controls-card">
+    <div class="controls-row">
+
+      <!-- Technician Autocomplete -->
+      <div class="ctrl-group tech-group">
+        <label class="ctrl-label">
+          <span class="material-icons">engineering</span> Technician
+        </label>
+        <div class="tech-autocomplete">
+          <div class="tech-input-wrap" [class.has-val]="!!selectedTech()">
+            <span class="material-icons ta-ic">search</span>
+            <input type="text"
+                   [(ngModel)]="techSearch"
+                   class="tech-input"
+                   placeholder="Search technician..."
+                   (input)="onTechSearch()"
+                   (focus)="showTechDropdown = true"
+                   autocomplete="off" />
+            @if (selectedTech()) {
+            <button class="ta-clear" type="button" (click)="clearTech()">
+              <span class="material-icons">close</span>
+            </button>
+            }
+            @if (techSearchLoading()) { <div class="ta-spinner"></div> }
+          </div>
+
+          @if (showTechDropdown && techResults().length > 0 && !selectedTech()) {
+          <div class="ta-dropdown">
+            @for (t of techResults(); track t.technicianId) {
+            <div class="ta-item" (click)="selectTech(t)">
+              <div class="ta-avatar" [ngClass]="getTechAvailClass(t.availabilityStatus)">
+                {{ t.fullName?.charAt(0) || '?' }}
+              </div>
+              <div class="ta-info">
+                <strong>{{ t.fullName }}</strong>
+                <small>{{ t.specialization || 'General' }} · {{ t.mobileNumber || '' }}</small>
+              </div>
+              <span class="ta-avail-tag" [ngClass]="getTechAvailClass(t.availabilityStatus)">
+                <span class="dot"></span>{{ getTechAvailLabel(t.availabilityStatus) }}
+              </span>
+            </div>
+            }
+          </div>
+          }
+        </div>
+      </div>
+
+      <!-- Date Picker -->
+      <div class="ctrl-group date-group">
+        <label class="ctrl-label">
+          <span class="material-icons">calendar_today</span> Date
+        </label>
+        <div class="date-row">
+          <div class="date-input-wrap">
+            <input type="date"
+                   [(ngModel)]="selectedDate"
+                   class="date-input" />
+          </div>
+          <button class="date-chip" [class.active]="isToday" (click)="setToday()">Today</button>
+          <button class="date-chip" (click)="setYesterday()">Yesterday</button>
+        </div>
+      </div>
+
+      <!-- Load Button -->
+      <div class="ctrl-group btn-group">
+        <button class="load-btn"
+                (click)="loadAll()"
+                [disabled]="!techId || !selectedDate || loading()">
+          @if (loading()) {
+          <span class="spinner"></span> Loading...
+          } @else {
+          <span class="material-icons">route</span> Load Trail
+          }
+        </button>
+      </div>
+    </div>
+
+    <!-- Selected Tech Banner -->
+    @if (selectedTech()) {
+    <div class="selected-tech-strip">
+      <div class="sts-avatar" [ngClass]="getTechAvailClass(selectedTech().availabilityStatus)">
+        {{ selectedTech().fullName?.charAt(0) || 'T' }}
+      </div>
+      <div class="sts-info">
+        <strong>{{ selectedTech().fullName }}</strong>
+        <span>{{ selectedTech().specialization || 'General' }} · ID: {{ selectedTech().technicianId }}</span>
+      </div>
+      <span class="sts-avail" [ngClass]="getTechAvailClass(selectedTech().availabilityStatus)">
+        <span class="dot"></span>{{ getTechAvailLabel(selectedTech().availabilityStatus) }}
+      </span>
+    </div>
+    }
+  </div>
+
+  @if (loaded() && selectedTech()) {
+
+  <!-- ═══ Live Position Banner (if viewing today) ═══ -->
+ @if (isToday && livePosition()) {
+<div class="live-banner">
+  <div class="live-pulse-wrap">
+    <div class="live-pulse"></div>
+    <span class="material-icons live-ic">gps_fixed</span>
+  </div>
+  <div class="live-info">
+    <strong>Live Position</strong>
+    @if (liveLocationName()) {
+    <span class="live-address">
+      <span class="material-icons">location_on</span> {{ liveLocationName() }}
+    </span>
+    }
+    <span class="live-coords">
+      {{ livePosition()!.currentLatitude }}, {{ livePosition()!.currentLongitude }}
+    </span>
+    @if (livePosition()!.currentComplaint) {
+    <span class="live-complaint">
+      <span class="material-icons">confirmation_number</span>
+      {{ livePosition()!.currentComplaint }}
+    </span>
+    }
+  </div>
+  <div class="live-updated">
+    <span class="live-updated-label">Last update</span>
+    <span class="live-updated-time">
+      {{ livePosition()!.lastLocationUpdate | date:'hh:mm:ss a' }}
+    </span>
+  </div>
+  <button class="maps-btn" (click)="openInMaps(livePosition()!.currentLatitude, livePosition()!.currentLongitude)">
+    <span class="material-icons">open_in_new</span> Maps
+  </button>
+</div>
+}
+
+  <!-- ═══ Summary Cards ═══ -->
+  <div class="summary-grid">
+    <!-- Total Events -->
+    <div class="sum-card">
+      <div class="sum-icon ev-blue"><span class="material-icons">timeline</span></div>
+      <div class="sum-body">
+        <span class="sum-val">{{ summary().totalEvents }}</span>
+        <span class="sum-label">Trail Events</span>
+      </div>
+    </div>
+
+    <!-- Check In -->
+    <!-- Check In -->
+<div class="sum-card">
+  <div class="sum-icon ev-green"><span class="material-icons">login</span></div>
+  <div class="sum-body">
+    <span class="sum-val">
+      {{ summary().checkInTime ? (summary().checkInTime | date:'hh:mm a') : '—' }}
+    </span>
+    <span class="sum-label">Check In</span>
+    @if (summary().checkInAddress) {
+    <span class="sum-address">{{ summary().checkInAddress }}</span>
+    }
+  </div>
+</div>
+
+<!-- Check Out -->
+<div class="sum-card">
+  <div class="sum-icon ev-red"><span class="material-icons">logout</span></div>
+  <div class="sum-body">
+    @if (summary().isActive) {
+    <span class="sum-val active-tag">
+      <span class="blink-dot"></span> Active
+    </span>
+    } @else {
+    <span class="sum-val">
+      {{ summary().checkOutTime ? (summary().checkOutTime | date:'hh:mm a') : '—' }}
+    </span>
+    }
+    <span class="sum-label">Check Out</span>
+    @if (summary().checkOutAddress) {
+    <span class="sum-address">{{ summary().checkOutAddress }}</span>
+    }
+  </div>
+</div>
+
+    <!-- Active Hours -->
+    <div class="sum-card">
+      <div class="sum-icon ev-purple"><span class="material-icons">schedule</span></div>
+      <div class="sum-body">
+        <span class="sum-val" [class.overtime]="(summary().activeHours ?? 0) > 8">
+          {{ summary().activeHours !== null ? (summary().activeHours! | number:'1.1-1') + 'h' : '—' }}
+        </span>
+        <span class="sum-label">Work Hours</span>
+      </div>
+    </div>
+
+    <!-- Site Arrivals -->
+    <div class="sum-card">
+      <div class="sum-icon ev-amber"><span class="material-icons">pin_drop</span></div>
+      <div class="sum-body">
+        <span class="sum-val">{{ summary().siteArrivals }}</span>
+        <span class="sum-label">Site Visits</span>
+      </div>
+    </div>
+
+    <!-- Distance -->
+    <div class="sum-card">
+      <div class="sum-icon ev-teal"><span class="material-icons">straighten</span></div>
+      <div class="sum-body">
+        <span class="sum-val">
+          {{ summary().distanceKm !== null ? (summary().distanceKm! | number:'1.1-1') + ' km' : '—' }}
+        </span>
+        <span class="sum-label">Distance</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Event Timeline ═══ -->
+  <div class="timeline-section">
+    <div class="timeline-header">
+      <h3>
+        <span class="material-icons">timeline</span>
+        Activity Timeline
+      </h3>
+      <span class="timeline-date">{{ selectedDate | date:'dd MMM yyyy' }}</span>
+    </div>
+
+    <div class="timeline">
+      @for (t of trail(); track t.trackingId; let i = $index; let last = $last) {
+
+      <!-- Time gap indicator -->
+      @if (getTimeBetween(i)) {
+      <div class="tl-gap">
+        <span class="material-icons">more_vert</span>
+        <span class="tl-gap-label">{{ getTimeBetween(i) }}</span>
+      </div>
+      }
+
+      <div class="tl-item">
+        <!-- Left: icon + line -->
+        <div class="tl-left">
+          <div class="tl-dot" [ngClass]="getEventColorClass(t.eventType)">
+            <span class="material-icons">{{ getIcon(t.eventType) }}</span>
+          </div>
+          @if (!last) {
+          <div class="tl-line"></div>
+          }
+        </div>
+
+        <!-- Right: content -->
+        <div class="tl-content">
+  <div class="tl-top">
+    <span class="tl-type" [ngClass]="getEventColorClass(t.eventType)">
+      {{ getEventLabel(t.eventType) }}
+    </span>
+    <span class="tl-time">
+      <span class="material-icons">access_time</span>
+      {{ t.recordedAt | date:'hh:mm:ss a' }}
+    </span>
+  </div>
+
+  <!-- Resolved address (from backend or geocoded) -->
+  @if (getResolvedAddress(t)) {
+  <div class="tl-address">
+    <span class="material-icons">location_on</span>
+    {{ getResolvedAddress(t) }}
+  </div>
+  } @else {
+  <div class="tl-address resolving">
+    <span class="material-icons">hourglass_empty</span>
+    Resolving location...
+  </div>
+  }
+
+  <div class="tl-coords-row">
+    <span class="tl-coords">
+      {{ t.latitude }}, {{ t.longitude }}
+    </span>
+    <button class="tl-map-btn"
+            (click)="openInMaps(t.latitude, t.longitude)"
+            title="Open in Google Maps">
+      <span class="material-icons">open_in_new</span>
+    </button>
+  </div>
+</div>
+      </div>
+      } @empty {
+      <div class="timeline-empty">
+        <span class="material-icons">location_off</span>
+        <h4>No Trail Events</h4>
+        <p>No GPS events were recorded for this technician on the selected date.</p>
+      </div>
+      }
+    </div>
+  </div>
+
+  } @else if (!selectedTech()) {
+  <!-- ═══ Empty: No technician selected ═══ -->
+  <div class="empty-state">
+    <span class="material-icons">explore</span>
+    <h3>Select a Technician</h3>
+    <p>Search and select a technician above, then choose a date to view their GPS trail and activity timeline.</p>
+  </div>
+  }
+
+</div>

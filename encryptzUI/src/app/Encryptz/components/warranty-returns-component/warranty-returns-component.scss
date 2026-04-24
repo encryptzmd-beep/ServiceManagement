@@ -1,0 +1,146 @@
+:host { display: block; }
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 60px;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #1B4A7A;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.table-responsive { overflow-x: auto; }
+
+.mono {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: #1B4A7A;
+  font-size: 12.5px;
+}
+
+.date-cell {
+  white-space: nowrap;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.link {
+  color: #1B4A7A;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.type-badge {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.type-1 { background: #dbeafe; color: #2563eb; }
+.type-2 { background: #fef3c7; color: #d97706; }
+.type-3 { background: #d1fae5; color: #059669; }
+
+.status-badge {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ws-1 { background: #fef3c7; color: #d97706; }
+.ws-2 { background: #d1fae5; color: #059669; }
+.ws-3 { background: #fef2f2; color: #ef4444; }
+.ws-4 { background: #dbeafe; color: #2563eb; }
+.ws-5 { background: #e5e7eb; color: #374151; }
+
+.action-btns {
+  display: flex;
+  gap: 6px;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 45, 74, .45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 22px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h2 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+  color: #1a2332;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #8a9ab0;
+}
+
+.modal-body { padding: 22px; }
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.d-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.d-field.full { grid-column: 1 / -1; }
+
+.d-field label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #8a9ab0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.d-field span {
+  font-size: 13.5px;
+  color: #1a2332;
+}
+
+@media (max-width: 768px) {
+  .detail-grid { grid-template-columns: 1fr; }
+}

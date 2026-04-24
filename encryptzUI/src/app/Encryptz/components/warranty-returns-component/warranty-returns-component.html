@@ -1,0 +1,163 @@
+<div class="fx-page">
+
+  <div class="fx-page-header">
+    <div>
+      <div class="fx-page-title">Warranty Returns</div>
+      <div class="fx-page-sub">Manage product warranty claims and returns</div>
+    </div>
+    <button class="fx-btn-new" (click)="showCreateModal = true">
+      <span class="material-icons" style="font-size:18px;">add</span>
+      New Return
+    </button>
+  </div>
+
+  <!-- STATS -->
+  <div class="fx-stats-row">
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Total Returns</div>
+      <div class="fx-stat-val">{{ totalCount() }}</div>
+      <div class="fx-stat-pill pill-navy">All pages</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Pending</div>
+      <div class="fx-stat-val is-pending">{{ pendingCount() }}</div>
+      <div class="fx-stat-pill pill-amber">Awaiting action</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Approved</div>
+      <div class="fx-stat-val is-active">{{ approvedCount() }}</div>
+      <div class="fx-stat-pill pill-green">In progress</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Completed</div>
+      <div class="fx-stat-val is-navy">{{ completedCount() }}</div>
+      <div class="fx-stat-pill pill-navy">Closed</div>
+    </div>
+  </div>
+
+  <div class="fx-table-wrap">
+    <div class="fx-table-toolbar">
+      <div class="fx-toolbar-left">
+        <span class="fx-table-title">All Returns</span>
+        <span class="fx-table-count">{{ returns().length }} of {{ totalCount() }}</span>
+      </div>
+      <div class="fx-toolbar-right">
+        <div class="fx-search-box">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <circle cx="7" cy="7" r="5" stroke="#8a9ab0" stroke-width="1.5"/>
+            <path d="M11 11l3 3" stroke="#8a9ab0" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <input
+            type="text"
+            class="fx-search-input"
+            [(ngModel)]="filter.searchTerm"
+            (input)="onSearch()"
+            placeholder="Search returns..." />
+        </div>
+        <select [(ngModel)]="filter.statusFilter" (change)="loadData()" class="fx-filter-select">
+          <option [ngValue]="undefined">All Status</option>
+          <option [ngValue]="1">Pending</option>
+          <option [ngValue]="2">Approved</option>
+          <option [ngValue]="3">Rejected</option>
+          <option [ngValue]="4">In Transit</option>
+          <option [ngValue]="5">Completed</option>
+        </select>
+        <select [(ngModel)]="filter.returnTypeFilter" (change)="loadData()" class="fx-filter-select">
+          <option [ngValue]="undefined">All Types</option>
+          <option [ngValue]="1">Replacement</option>
+          <option [ngValue]="2">Repair</option>
+          <option [ngValue]="3">Refund</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading" *ngIf="loading()"><div class="spinner"></div></div>
+
+    <!-- Table -->
+    <div class="table-responsive" *ngIf="!loading()">
+      <table class="fx-table">
+        <thead>
+          <tr>
+            <th>Return #</th>
+            <th>Complaint</th>
+            <th>Customer</th>
+            <th>Serial No</th>
+            <th>Type</th>
+            <th>Warranty End</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of returns()">
+            <td><span class="link">{{ r.returnNo }}</span></td>
+            <td>{{ r.complaintNo }}</td>
+            <td>{{ r.customerName }}</td>
+            <td class="mono">{{ r.productSerialNo }}</td>
+            <td><span class="type-badge" [class]="'type-'+r.returnType">{{ getTypeLabel(r.returnType) }}</span></td>
+            <td class="date-cell">{{ r.warrantyEndDate | date:'dd MMM yyyy' }}</td>
+            <td>
+              <span class="status-badge" [class]="'ws-'+r.statusId">{{ getWStatusLabel(r.statusId) }}</span>
+            </td>
+            <td>
+              <div class="action-btns">
+                <button class="fx-action-btn" (click)="viewReturn(r)" title="View">
+                  <span class="material-icons">visibility</span>
+                </button>
+                <button class="fx-action-btn" *ngIf="r.statusId===1" (click)="updateStatus(r, 2)" title="Approve">
+                  <span class="material-icons">check</span>
+                </button>
+                <button class="fx-action-btn is-danger" *ngIf="r.statusId===1" (click)="updateStatus(r, 3)" title="Reject">
+                  <span class="material-icons">close</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="returns().length===0">
+            <td colspan="8" class="fx-empty-row">No warranty returns found</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="fx-pagination" *ngIf="totalCount() > filter.pageSize">
+      <div class="fx-pagination-info">
+        Page {{ filter.pageNumber }} of {{ totalPages() }}
+      </div>
+      <div class="fx-pagination-actions">
+        <button [disabled]="filter.pageNumber<=1"
+                (click)="filter.pageNumber=filter.pageNumber-1; loadData()"
+                class="fx-page-btn">‹ Prev</button>
+        <button [disabled]="filter.pageNumber>=totalPages()"
+                (click)="filter.pageNumber=filter.pageNumber+1; loadData()"
+                class="fx-page-btn">Next ›</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div class="modal-overlay" *ngIf="selectedReturn()" (click)="selectedReturn.set(null)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header"><h2>Return Details</h2><button class="modal-close" (click)="selectedReturn.set(null)">✕</button></div>
+      <div class="modal-body" *ngIf="selectedReturn() as r">
+        <div class="detail-grid">
+          <div class="d-field"><label>Return No</label><span>{{ r.returnNo }}</span></div>
+          <div class="d-field"><label>Complaint</label><span>{{ r.complaintNo }}</span></div>
+          <div class="d-field"><label>Customer</label><span>{{ r.customerName }}</span></div>
+          <div class="d-field"><label>Phone</label><span>{{ r.customerPhone }}</span></div>
+          <div class="d-field"><label>Serial No</label><span>{{ r.productSerialNo }}</span></div>
+          <div class="d-field"><label>Type</label><span>{{ getTypeLabel(r.returnType) }}</span></div>
+          <div class="d-field"><label>Warranty Period</label><span>{{ r.warrantyStartDate | date:'dd/MM/yy' }} - {{ r.warrantyEndDate | date:'dd/MM/yy' }}</span></div>
+          <div class="d-field"><label>Status</label><span class="status-badge" [class]="'ws-'+r.statusId">{{ getWStatusLabel(r.statusId) }}</span></div>
+          <div class="d-field full"><label>Reason</label><span>{{ r.returnReason }}</span></div>
+          <div class="d-field full"><label>Pickup Address</label><span>{{ r.pickupAddress }}</span></div>
+          <div class="d-field" *ngIf="r.trackingNumber"><label>Tracking #</label><span>{{ r.trackingNumber }}</span></div>
+          <div class="d-field" *ngIf="r.refundAmount"><label>Refund Amount</label><span>₹{{ r.refundAmount | number:'1.2-2' }}</span></div>
+          <div class="d-field full" *ngIf="r.resolutionNotes"><label>Resolution</label><span>{{ r.resolutionNotes }}</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

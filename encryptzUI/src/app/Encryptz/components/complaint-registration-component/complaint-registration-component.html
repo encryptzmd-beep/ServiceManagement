@@ -1,0 +1,307 @@
+<div class="page">
+  <div class="page-header">
+    <div class="header-breadcrumb">
+      <a routerLink="/customer/complaints" class="back-link">
+        <span class="material-icons">arrow_back</span> My Complaints
+      </a>
+       <app-quick-complaint-registration position="floating"></app-quick-complaint-registration>
+    </div>
+    <h1 class="page-title">Register a Complaint</h1>
+    <p class="page-subtitle">Describe your issue and we'll assign a technician to help you</p>
+
+  </div>
+
+  <div class="form-card">
+    <!-- Step Indicator -->
+    <div class="steps-bar">
+      <div class="step" [class.active]="step() >= 1" [class.done]="step() > 1">
+        <span class="step-num">1</span>
+        <span class="step-label">Select Product</span>
+      </div>
+      <div class="step-line" [class.done]="step() > 1"></div>
+      <div class="step" [class.active]="step() >= 2" [class.done]="step() > 2">
+        <span class="step-num">2</span>
+        <span class="step-label">Describe Issue</span>
+      </div>
+      <div class="step-line" [class.done]="step() > 2"></div>
+      <div class="step" [class.active]="step() >= 3">
+        <span class="step-num">3</span>
+        <span class="step-label">Review & Submit</span>
+      </div>
+    </div>
+
+    <form (ngSubmit)="submit()" #complaintForm="ngForm">
+
+      <!-- STEP 1: Select Product -->
+      @if (step() === 1) {
+        <div class="step-content animate-in">
+          <h3 class="step-title">Which product has the issue?</h3>
+          @if (products().length === 0) {
+            <div class="no-products">
+              <span class="material-icons">inventory_2</span>
+              <p>You haven't registered any products yet.</p>
+              <a routerLink="/customer/products" class="btn-outline">Register a Product First</a>
+            </div>
+          } @else {
+            <div class="product-search">
+              <span class="material-icons">search</span>
+              <input type="text" [(ngModel)]="productSearch" name="psearch"
+                placeholder="Search your products by name, serial, brand..." />
+            </div>
+
+            <div class="product-select-grid">
+              @for (p of filteredProducts(); track p.productId) {
+                <div class="product-option" [class.selected]="form.productId === p.productId"
+                  (click)="form.productId = p.productId">
+                  <div class="product-option-icon">
+                    <span class="material-icons">fitness_center</span>
+                  </div>
+                  <div class="product-option-info">
+                    <strong>{{ p.productName }}</strong>
+                    <small>{{ p.serialNumber }}</small>
+                    <div class="product-tags">
+                      @if (p.brand) { <span class="brand-tag">{{ p.brand }}</span> }
+                    </div>
+                  </div>
+                  <span class="material-icons check-icon">
+                    {{ form.productId === p.productId ? 'radio_button_checked' : 'radio_button_unchecked' }}
+                  </span>
+                </div>
+              } @empty {
+                <div class="no-match">No products match "{{ productSearch }}"</div>
+              }
+            </div>
+
+            <div class="step-actions">
+              <div></div>
+              <button type="button" class="btn-primary" (click)="goToStep(2)" [disabled]="!form.productId">
+                Next <span class="material-icons">arrow_forward</span>
+              </button>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- STEP 2: Describe Issue with Location Picker -->
+      @if (step() === 2) {
+        <div class="step-content animate-in">
+          <h3 class="step-title">Tell us about the issue</h3>
+
+          <!-- Selected product summary -->
+          @if (getSelectedProduct(); as sp) {
+            <div class="selected-product-bar">
+              <span class="material-icons">fitness_center</span>
+              <span>{{ sp.productName }} ({{ sp.serialNumber }})</span>
+              <button type="button" class="change-btn" (click)="goToStep(1)">Change</button>
+            </div>
+          }
+
+          <div class="fields-group">
+            <!-- Subject -->
+            <div class="field full-width">
+              <label>Subject <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <span class="material-icons input-icon">short_text</span>
+                <input [(ngModel)]="form.subject" name="subject" class="input"
+                  placeholder="Brief summary, e.g. 'Belt not moving'" required />
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="field full-width">
+              <label>Detailed Description</label>
+              <textarea [(ngModel)]="form.description" name="description" class="textarea" rows="5"
+                placeholder="Describe the problem in detail. Include when it started, any error codes, unusual sounds, etc."></textarea>
+            </div>
+
+            <!-- Priority -->
+            <div class="field">
+              <label>Priority <span class="required">*</span></label>
+              <div class="priority-options">
+                @for (p of priorities; track p) {
+                  <button type="button" class="priority-btn" [class.selected]="form.priority === p" [attr.data-priority]="p"
+                    (click)="form.priority = p">
+                    <span class="material-icons">{{ getPriorityIcon(p) }}</span>
+                    {{ p }}
+                  </button>
+                }
+              </div>
+            </div>
+
+            <!-- Attachments -->
+            <div class="field">
+              <label>Attach Images (optional)</label>
+              <div class="upload-zone" (click)="fileInput.click()" (drop)="onDrop($event)"
+                (dragover)="$event.preventDefault()">
+                <input #fileInput type="file" accept="image/*" multiple (change)="onFilesSelected($event)" hidden />
+                <span class="material-icons upload-icon">cloud_upload</span>
+                <span class="upload-text">Click or drag images here</span>
+                <small class="upload-hint">JPG, PNG up to 5MB each</small>
+              </div>
+              @if (files.length > 0) {
+                <div class="selected-files">
+                  @for (f of files; track f.name; let i = $index) {
+                    <div class="file-chip">
+                      <span class="material-icons">image</span>
+                      <span>{{ f.name }}</span>
+                      <button type="button" (click)="removeFile(i)" class="file-remove">
+                        <span class="material-icons">close</span>
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- LOCATION PICKER SECTION -->
+          <div class="field full-width location-section">
+            <label>Service Location <span class="required">*</span></label>
+
+            <div class="location-controls">
+              <div class="search-box-wrapper">
+                <span class="material-icons search-icon">search</span>
+                <input
+                  type="text"
+                  #locationSearchInput
+                  id="locationSearch"
+                  placeholder="Search for city, area, landmark, or address..."
+                  class="location-search-input"
+                  (input)="onSearchInput($event)"
+                  (keyup.enter)="searchLocation(locationSearchInput.value)"
+                />
+                <button
+                  type="button"
+                  class="clear-search"
+                  *ngIf="locationSearchInput.value"
+                  (click)="clearSearch(locationSearchInput)">
+                  <span class="material-icons">close</span>
+                </button>
+              </div>
+
+              <button type="button" class="btn-locate" (click)="getCurrentLocation()">
+                <span class="material-icons">my_location</span>
+                Use my current location
+              </button>
+            </div>
+
+            <!-- Map Container -->
+            <div #mapContainer class="map-container"></div>
+
+            <!-- Search Results Dropdown -->
+            @if (searchResults.length > 0) {
+              <div class="search-results-dropdown">
+                @for (result of searchResults; track result.place_id) {
+                  <div class="search-result-item" (click)="selectSearchResult(result)">
+                    <span class="material-icons">place</span>
+                    <div class="result-details">
+                      <strong>{{ result.display_name.split(',')[0] }}</strong>
+                      <small>{{ getShortAddress(result.display_name) }}</small>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Selected Location Display -->
+            @if (form.latitude && form.longitude) {
+              <div class="selected-location">
+                <div class="location-info">
+                  <span class="material-icons">location_on</span>
+                  <div class="location-details">
+                    <strong>{{ form.pickedLocation || 'Selected Location' }}</strong>
+                    <p>{{ form.locationAddress || 'Address will appear here...' }}</p>
+                  </div>
+                </div>
+                <small class="location-hint">
+                  <span class="material-icons">info</span>
+                  Drag the marker or click on map to adjust location
+                </small>
+              </div>
+            }
+          </div>
+
+          <!-- Step Actions -->
+          <div class="step-actions">
+            <button type="button" class="btn-outline" (click)="goToStep(1)">
+              <span class="material-icons">arrow_back</span> Back
+            </button>
+            <button type="button" class="btn-primary" (click)="goToStep(3)" [disabled]="!form.subject">
+              Review <span class="material-icons">arrow_forward</span>
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- STEP 3: Review & Submit -->
+      @if (step() === 3) {
+        <div class="step-content animate-in">
+          <h3 class="step-title">Review your complaint</h3>
+
+          <div class="review-card">
+            <div class="review-row">
+              <span class="review-label">Product</span>
+              <span class="review-value">{{ getSelectedProductName() }}</span>
+            </div>
+            <div class="review-row">
+              <span class="review-label">Subject</span>
+              <span class="review-value">{{ form.subject }}</span>
+            </div>
+            <div class="review-row">
+              <span class="review-label">Description</span>
+              <span class="review-value">{{ form.description || 'Not provided' }}</span>
+            </div>
+            <div class="review-row">
+              <span class="review-label">Priority</span>
+              <span class="review-value">
+                <span class="priority-tag" [attr.data-priority]="form.priority">{{ form.priority }}</span>
+              </span>
+            </div>
+            <div class="review-row">
+              <span class="review-label">Service Location</span>
+              <span class="review-value">{{ form.pickedLocation || form.locationAddress || 'Not provided' }}</span>
+            </div>
+            <div class="review-row">
+              <span class="review-label">Attachments</span>
+              <span class="review-value">{{ files.length }} image(s)</span>
+            </div>
+          </div>
+
+          <div class="sla-info">
+            <span class="material-icons">schedule</span>
+            <div>
+              <strong>Expected Response Time</strong>
+              <p>{{ getSLAText() }}</p>
+            </div>
+          </div>
+
+          <div class="step-actions">
+            <button type="button" class="btn-outline" (click)="goToStep(2)">
+              <span class="material-icons">arrow_back</span> Back
+            </button>
+            <button type="submit" class="btn-primary btn-submit" [disabled]="saving()">
+              @if (saving()) { <span class="spinner"></span> }
+              {{ saving() ? 'Submitting...' : 'Submit Complaint' }}
+            </button>
+          </div>
+        </div>
+      }
+    </form>
+
+    <!-- Success/Error Messages -->
+    @if (successMsg()) {
+      <div class="alert-success">
+        <span class="material-icons">check_circle</span>
+        <div>
+          <strong>{{ successMsg() }}</strong>
+          <p>Redirecting to your complaints...</p>
+        </div>
+      </div>
+    }
+    @if (errorMsg()) {
+      <div class="alert-error">
+        <span class="material-icons">error</span> {{ errorMsg() }}
+      </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,89 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Reports</h1>
+    <p class="subtitle">Analytics and performance reports</p>
+  </div>
+
+  <div class="tabs">
+    <button [class.active]="tab==='complaint'" (click)="tab='complaint'">📊 Complaint Summary</button>
+    <button [class.active]="tab==='performance'" (click)="tab='performance'">👷 Technician Performance</button>
+  </div>
+
+  <div class="filter-bar">
+    <div class="fg"><label>Start Date</label><input type="date" [(ngModel)]="filter.startDate" class="fi" /></div>
+    <div class="fg"><label>End Date</label><input type="date" [(ngModel)]="filter.endDate" class="fi" /></div>
+    <button class="btn-primary" (click)="generateReport()">Generate Report</button>
+  </div>
+
+  <div class="loading" *ngIf="loading()">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Complaint Summary -->
+  <div *ngIf="tab==='complaint' && !loading()" class="report-section">
+    <div class="summary-cards">
+      <div class="r-card"><span class="r-val">{{getTotalComplaints()}}</span><span class="r-lbl">Total</span></div>
+      <div class="r-card"><span class="r-val">{{getTotalWarranty()}}</span><span class="r-lbl">Warranty</span></div>
+      <div class="r-card"><span class="r-val">{{getTotalSLA()}}</span><span class="r-lbl">SLA Breached</span></div>
+      <div class="r-card"><span class="r-val">{{getAvgHours() | number:'1.0-0'}}h</span><span class="r-lbl">Avg
+          Resolution</span></div>
+    </div>
+    <div class="table-card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Count</th>
+            <th>Warranty</th>
+            <th>SLA Breach</th>
+            <th>Avg Hours</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of complaintReports()">
+            <td>{{r.reportDate | date:'dd MMM yyyy'}}</td>
+            <td>{{r.complaintCount}}</td>
+            <td>{{r.warrantyCount}}</td>
+            <td><span [class.danger-text]="r.slaBreached>0">{{r.slaBreached}}</span></td>
+            <td>{{r.avgResolutionHours ? (r.avgResolutionHours | number:'1.1-1') + 'h' : '-'}}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="empty" *ngIf="complaintReports().length===0">
+        <p>No data for selected period</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Performance -->
+  <div *ngIf="tab==='performance' && !loading()" class="report-section">
+    <div class="perf-grid">
+      <div class="perf-card" *ngFor="let t of perfReports(); let i=index">
+        <div class="perf-rank">#{{i+1}}</div>
+        <div class="perf-header">
+          <div class="perf-avatar" [style.background]="getColor(t.fullName)">{{getInit(t.fullName)}}</div>
+          <div>
+            <h3>{{t.fullName}}</h3><span>{{t.employeeCode}} · {{t.specialization}}</span>
+          </div>
+        </div>
+        <div class="perf-stats">
+          <div class="ps"><span class="ps-val">{{t.totalAssigned}}</span><span class="ps-lbl">Assigned</span></div>
+          <div class="ps"><span class="ps-val">{{t.resolved}}</span><span class="ps-lbl">Resolved</span></div>
+          <div class="ps"><span class="ps-val">{{t.slaBreached}}</span><span class="ps-lbl">SLA Breach</span></div>
+          <div class="ps"><span class="ps-val">{{t.avgResolutionHours ? (t.avgResolutionHours | number:'1.0-0') + 'h' :
+              '-'}}</span><span class="ps-lbl">Avg Time</span></div>
+        </div>
+        <div class="perf-bar">
+          <div class="bar-fill" [style.width.%]="getCompletionRate(t)" [style.background]="getCompletionColor(t)"></div>
+        </div>
+        <div class="perf-footer">
+          <span>⭐ {{t.rating | number:'1.1-1'}}</span>
+          <span>{{getCompletionRate(t) | number:'1.0-0'}}% completion</span>
+        </div>
+      </div>
+    </div>
+    <div class="empty" *ngIf="perfReports().length===0">
+      <p>No performance data</p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,75 @@
+    <div class="page-container">
+      <div class="page-header">
+        <div><h1>Live Tracking</h1><p class="subtitle">Real-time technician location monitoring</p></div>
+        <div class="header-actions">
+          <button class="btn-refresh" (click)="loadLive()">🔄 Refresh</button>
+          <span class="last-update" *ngIf="lastRefresh">Last: {{lastRefresh | date:'HH:mm:ss'}}</span>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button [class.active]="tab==='live'" (click)="tab='live'">🟢 Live Positions</button>
+        <button [class.active]="tab==='history'" (click)="tab='history'">📜 History</button>
+      </div>
+
+      <!-- Live Tab -->
+      <div *ngIf="tab==='live'">
+        <div class="loading" *ngIf="loading()"><div class="spinner"></div></div>
+        <div class="tech-grid" *ngIf="!loading()">
+          <div class="track-card" *ngFor="let t of positions()" [class]="'avail-'+t.availabilityStatus">
+            <div class="tc-header">
+              <div class="tc-avatar" [style.background]="getColor(t.fullName)">{{getInit(t.fullName)}}</div>
+              <div class="tc-info">
+                <h3>{{t.fullName}}</h3>
+                <span class="tc-code">{{t.employeeCode}} · {{t.specialization}}</span>
+              </div>
+              <span class="avail-dot" [style.background]="getAvailColor(t.availabilityStatus)" [title]="getAvailLabel(t.availabilityStatus)"></span>
+            </div>
+            <div class="tc-location">
+              <div class="loc-row"><span>📍</span><strong>{{t.currentLatitude | number:'1.4-4'}}, {{t.currentLongitude | number:'1.4-4'}}</strong></div>
+              <div class="loc-row"><span>🕐</span>Last update: {{t.lastLocationUpdate | date:'HH:mm:ss'}}</div>
+              <div class="loc-row" *ngIf="t.currentComplaint"><span>📋</span>Working on: <strong class="link">{{t.currentComplaint}}</strong></div>
+            </div>
+            <div class="tc-actions">
+              <button class="btn-sm" (click)="viewHistory(t.technicianId, t.fullName)">View History →</button>
+            </div>
+          </div>
+          <div class="empty" *ngIf="positions().length===0"><p>No live positions available</p></div>
+        </div>
+      </div>
+
+      <!-- History Tab -->
+      <div *ngIf="tab==='history'">
+        <div class="history-filters">
+          <select [(ngModel)]="histTechId" class="form-select">
+            <option [ngValue]="0">Select Technician</option>
+            <option *ngFor="let t of positions()" [ngValue]="t.technicianId">{{t.fullName}}</option>
+          </select>
+          <input type="date" [(ngModel)]="histDate" class="form-input" />
+          <button class="btn-primary" (click)="loadHistory()">Load History</button>
+        </div>
+        <div class="loading" *ngIf="histLoading()"><div class="spinner"></div></div>
+        <div class="history-table" *ngIf="!histLoading() && historyData().length > 0">
+          <h3>{{histTechName}} - {{histDate}}</h3>
+          <table class="data-table">
+            <thead><tr><th>#</th><th>Time</th><th>Latitude</th><th>Longitude</th><th>Speed</th><th>Battery</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let h of historyData(); let i=index">
+                <td>{{i+1}}</td>
+                <td>{{h.logTime | date:'HH:mm:ss'}}</td>
+                <td>{{h.latitude | number:'1.6-6'}}</td>
+                <td>{{h.longitude | number:'1.6-6'}}</td>
+                <td>{{h.speed ? (h.speed | number:'1.1-1') + ' km/h' : '-'}}</td>
+                <td><span class="battery" [class.low]="h.batteryLevel && h.batteryLevel < 20">{{h.batteryLevel ? h.batteryLevel + '%' : '-'}}</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="hist-summary">
+            <span>📍 {{historyData().length}} points</span>
+            <span>🕐 {{historyData()[0]?.logTime | date:'HH:mm'}} - {{historyData()[historyData().length-1]?.logTime | date:'HH:mm'}}</span>
+          </div>
+        </div>
+        <div class="empty" *ngIf="!histLoading() && historyData().length===0 && histTechId"><p>No history data found</p></div>
+      </div>
+    </div>

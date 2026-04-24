@@ -1,0 +1,336 @@
+<div class="fx-page page">
+
+  <!-- Header -->
+  <div class="fx-page-header page-header">
+    <div>
+      <div class="fx-page-title">Spare Part Requests</div>
+      <div class="fx-page-sub">Request and track spare parts for service jobs</div>
+    </div>
+    <button class="fx-btn-new" (click)="openForm()">
+      <span class="material-icons" style="font-size:18px;">add</span> New Request
+    </button>
+  </div>
+
+  @if (selectedTech() && requests().length > 0) {
+  <div class="fx-stats-row">
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Total Requests</div>
+      <div class="fx-stat-val">{{ requests().length }}</div>
+      <div class="fx-stat-pill pill-navy">Current tech</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Pending</div>
+      <div class="fx-stat-val is-pending">{{ requestedCount() }}</div>
+      <div class="fx-stat-pill pill-amber">Awaiting approval</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Approved</div>
+      <div class="fx-stat-val is-active">{{ approvedCount() }}</div>
+      <div class="fx-stat-pill pill-green">Ready</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Dispatched</div>
+      <div class="fx-stat-val is-navy">{{ dispatchedCount() }}</div>
+      <div class="fx-stat-pill pill-navy">In transit</div>
+    </div>
+  </div>
+  }
+
+  <!-- Technician Selector -->
+  <div class="tech-selector-card">
+    <div class="ts-label"><span class="material-icons">engineering</span><strong>Select Technician</strong></div>
+    <div class="tech-autocomplete">
+      <div class="tech-input-wrap">
+        <span class="material-icons ta-ic">search</span>
+        <input type="text" [(ngModel)]="techSearch" class="tech-input"
+               placeholder="Search technician name..."
+               (input)="onTechSearch()" (focus)="showTechDropdown = true" autocomplete="off" />
+        @if (selectedTech()) {
+        <button class="ta-clear" type="button" (click)="clearTech()"><span class="material-icons">close</span></button>
+        }
+        @if (techSearchLoading()) { <div class="ta-spinner"></div> }
+      </div>
+      @if (showTechDropdown && techResults().length > 0 && !selectedTech()) {
+      <div class="ta-dropdown">
+        @for (t of techResults(); track t.technicianId) {
+        <div class="ta-item" (click)="selectTech(t)">
+          <div class="ta-avatar" [ngClass]="getTechAvailClass(t.availabilityStatus)">{{ t.fullName?.charAt(0)||'?' }}</div>
+          <div class="ta-info">
+            <strong>{{ t.fullName }}</strong>
+            <small>{{ t.specialization || 'General' }} · {{ t.mobileNumber || '' }}</small>
+          </div>
+          <span class="ta-avail-tag" [ngClass]="getTechAvailClass(t.availabilityStatus)">
+            <span class="dot"></span>{{ getTechAvailLabel(t.availabilityStatus) }}
+          </span>
+        </div>
+        }
+      </div>
+      }
+      @if (selectedTech()) {
+      <div class="selected-tech-chip">
+        <div class="stc-avatar" [ngClass]="getTechAvailClass(selectedTech().availabilityStatus)">
+          {{ selectedTech().fullName?.charAt(0) || 'T' }}
+        </div>
+        <div class="stc-info">
+          <strong>{{ selectedTech().fullName }}</strong>
+          <span>{{ selectedTech().specialization || 'General' }}</span>
+        </div>
+        <span class="stc-avail" [ngClass]="getTechAvailClass(selectedTech().availabilityStatus)">
+          <span class="dot"></span>{{ getTechAvailLabel(selectedTech().availabilityStatus) }}
+        </span>
+      </div>
+      }
+    </div>
+  </div>
+
+  <!-- ═══ NEW REQUEST FORM ══════════════════════════════ -->
+  @if (showForm()) {
+  <div class="form-card">
+    <div class="form-card-header">
+      <h3><span class="material-icons">build</span> New Spare Part Request</h3>
+      <button class="close-btn" (click)="showForm.set(false)"><span class="material-icons">close</span></button>
+    </div>
+
+    <div class="form-two-col">
+
+      <!-- LEFT: Complaint + Spare search -->
+      <div class="form-left">
+
+        <!-- Complaint Autocomplete -->
+        <div class="field">
+          <label>Complaint <span class="req">*</span></label>
+          <div class="ac-wrap">
+            <div class="ac-input-row">
+              <span class="material-icons ac-ic">confirmation_number</span>
+              <input type="text" [(ngModel)]="complaintSearch" class="ac-inp"
+                     placeholder="Search complaint no, subject, customer..."
+                     (input)="onComplaintSearch()" (focus)="showComplaintDropdown = true" autocomplete="off" />
+              @if (complaintSearchLoading()) { <div class="ta-spinner inline"></div> }
+              @if (selectedComplaint()) {
+              <button class="ta-clear inline" type="button" (click)="clearComplaint()">
+                <span class="material-icons">close</span>
+              </button>
+              }
+            </div>
+            @if (showComplaintDropdown && complaintResults().length > 0 && !selectedComplaint()) {
+            <div class="ac-dropdown">
+              @for (c of complaintResults(); track c.complaintId) {
+              <div class="ac-item" (click)="selectComplaint(c)">
+                <div class="ac-left">
+                  <span class="ac-no">{{ c.complaintNumber }}</span>
+                  <span class="ac-sub">{{ c.subject }}</span>
+                </div>
+                <div class="ac-right">
+                  <span class="ac-cust">{{ c.customerName }}</span>
+                  <span class="priority-dot sm" [ngClass]="c.priority?.toLowerCase()">{{ c.priority }}</span>
+                </div>
+              </div>
+              }
+            </div>
+            }
+            @if (selectedComplaint()) {
+            <div class="selected-complaint-card">
+              <div class="scc-row">
+                <span class="scc-no">{{ selectedComplaint().complaintNumber }}</span>
+                <span class="priority-dot" [ngClass]="selectedComplaint().priority?.toLowerCase()">{{ selectedComplaint().priority }}</span>
+              </div>
+              <div class="scc-subject">{{ selectedComplaint().subject }}</div>
+              <div class="scc-meta">
+                <span class="material-icons">person</span>{{ selectedComplaint().customerName }}
+                @if (selectedComplaint().customerPhone) {
+                <span class="material-icons">phone</span>{{ selectedComplaint().customerPhone }}
+                }
+              </div>
+            </div>
+            }
+          </div>
+        </div>
+
+        <!-- Spare Part Autocomplete -->
+        <div class="field">
+          <label>Search & Add Spare Parts <span class="req">*</span></label>
+          <div class="ac-wrap">
+            <div class="ac-input-row">
+              <span class="material-icons ac-ic">build</span>
+              <input type="text" [(ngModel)]="spareSearch" class="ac-inp"
+                     placeholder="Search part name or number..."
+                     (input)="onSpareSearch()" (focus)="showSpareDropdown = true; loadSpares()" autocomplete="off" />
+              @if (spareSearchLoading()) { <div class="ta-spinner inline"></div> }
+            </div>
+            @if (showSpareDropdown && spareResults().length > 0) {
+            <div class="ac-dropdown spare-dropdown">
+              @for (p of spareResults(); track p.sparePartId) {
+              <div class="spare-item" [class.in-cart]="isInCart(p)" (click)="addToCart(p)">
+                <div class="si-left">
+                  <span class="si-name">{{ p.partName }}</span>
+                  @if (p.partNumber) { <span class="si-num">{{ p.partNumber }}</span> }
+                </div>
+                <div class="si-right">
+                  <span class="si-stock" [class.low]="p.stockQuantity < 3">
+                    <span class="material-icons">inventory_2</span>{{ p.stockQuantity }}
+                  </span>
+                  @if (p.unitPrice) { <span class="si-price">₹{{ p.unitPrice }}</span> }
+                  <span class="si-add-icon">
+                    <span class="material-icons">{{ isInCart(p) ? 'check_circle' : 'add_circle' }}</span>
+                  </span>
+                </div>
+              </div>
+              }
+            </div>
+            }
+          </div>
+          <p class="field-hint"><span class="material-icons">info</span> Click a part to add it to the request list below</p>
+        </div>
+      </div>
+
+      <!-- RIGHT: Cart -->
+      <div class="form-right">
+        <div class="cart-header">
+          <h4><span class="material-icons">shopping_cart</span> Parts List
+            @if (cart().length > 0) { <span class="cart-badge">{{ cart().length }}</span> }
+          </h4>
+          @if (cart().length > 0) {
+          <span class="cart-total">{{ cartTotal() }} item(s) total</span>
+          }
+        </div>
+
+        @if (cart().length === 0) {
+        <div class="cart-empty">
+          <span class="material-icons">add_shopping_cart</span>
+          <p>No parts added yet.<br>Search and click a part to add.</p>
+        </div>
+        }
+
+        <div class="cart-list">
+          @for (item of cart(); track item.part.sparePartId; let i = $index) {
+          <div class="cart-item">
+            <div class="ci-top">
+              <div class="ci-part-info">
+                <strong>{{ item.part.partName }}</strong>
+                @if (item.part.partNumber) { <small>{{ item.part.partNumber }}</small> }
+              </div>
+              <button class="ci-remove" (click)="removeFromCart(i)">
+                <span class="material-icons">close</span>
+              </button>
+            </div>
+
+            <div class="ci-controls">
+              <!-- Qty -->
+              <div class="ci-qty-wrap">
+                <button class="qty-btn" (click)="updateCartQty(i, item.quantity - 1)" [disabled]="item.quantity <= 1">−</button>
+                <input type="number" [ngModel]="item.quantity"
+                       (ngModelChange)="updateCartQty(i, $event)"
+                       class="qty-input" min="1" [max]="item.part.stockQuantity" />
+                <button class="qty-btn" (click)="updateCartQty(i, item.quantity + 1)"
+                        [disabled]="item.quantity >= item.part.stockQuantity">+</button>
+                <span class="ci-stock-hint">/ {{ item.part.stockQuantity }}</span>
+              </div>
+
+              <!-- Urgency -->
+              <div class="ci-urgency">
+                @for (u of urgencyOptions; track u) {
+                <button type="button" class="urg-btn"
+                        [class.sel]="item.urgencyLevel === u"
+                        [attr.data-level]="u.toLowerCase()"
+                        (click)="updateCartUrgency(i, u)">{{ u }}</button>
+                }
+              </div>
+            </div>
+
+            <!-- Remarks per item -->
+            <input type="text" [ngModel]="item.remarks"
+                   (ngModelChange)="updateCartRemarks(i, $event)"
+                   class="ci-remarks" placeholder="Remarks (optional)" />
+          </div>
+          }
+        </div>
+      </div>
+
+    </div><!-- form-two-col -->
+
+    @if (msg()) {
+    <div class="alert" [class.ok]="!msgErr()" [class.err]="msgErr()">
+      <span class="material-icons">{{ msgErr() ? 'error' : 'check_circle' }}</span> {{ msg() }}
+    </div>
+    }
+
+    <div class="form-footer">
+      <button class="btn-cancel" (click)="showForm.set(false)">Cancel</button>
+      <button class="btn-submit" (click)="submit()" [disabled]="submitting() || cart().length === 0">
+        @if (submitting()) { <span class="mini-spin white"></span> Submitting {{ cart().length }} request(s)... }
+        @else { <span class="material-icons">send</span> Submit {{ cart().length }} Request(s) }
+      </button>
+    </div>
+  </div>
+  }
+
+  <!-- Alert outside form -->
+  @if (msg() && !showForm()) {
+  <div class="alert" [class.ok]="!msgErr()" [class.err]="msgErr()">
+    <span class="material-icons">{{ msgErr() ? 'error' : 'check_circle' }}</span> {{ msg() }}
+  </div>
+  }
+
+  <!-- Requests Table -->
+  @if (!selectedTech()) {
+  <div class="no-tech-state">
+    <span class="material-icons">build_circle</span>
+    <h3>Select a Technician</h3>
+    <p>Search and select a technician to view their spare part requests.</p>
+  </div>
+  } @else {
+  <div class="table-card">
+    <div class="table-card-header">
+      <h3>Request History</h3>
+      <button class="btn-refresh-sm" (click)="loadRequests()" [disabled]="loading()">
+        <span class="material-icons">refresh</span>
+      </button>
+    </div>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th><th>Part Name</th><th>Complaint</th>
+            <th>Qty</th><th>Urgency</th><th>Status</th><th>Requested</th><th>Approved By</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+          <tr><td colspan="8" class="empty"><div class="mini-spin blue"></div></td></tr>
+          }
+          @for (r of requests(); track r.requestId) {
+          <tr>
+            <td class="mono-id">#{{ r.requestId }}</td>
+            <td>
+              <div class="part-cell">
+                <strong>{{ r.partName }}</strong>
+                @if ($any(r).partNumber) { <small>{{ $any(r).partNumber }}</small> }
+              </div>
+            </td>
+            <td class="mono-id">#{{ $any(r).complaintId }}</td>
+            <td><span class="qty-badge">× {{ r.quantity }}</span></td>
+            <td>
+              @if ($any(r).urgencyLevel) {
+              <span class="urgency-tag" [attr.data-level]="$any(r).urgencyLevel?.toLowerCase()">
+                {{ $any(r).urgencyLevel }}
+              </span>
+              }
+            </td>
+            <td><span class="status" [class]="getStatusClass(r.status)">{{ r.status }}</span></td>
+            <td class="date">{{ r.requestedAt | date:'dd MMM, HH:mm' }}</td>
+            <td>{{ r.approvedByName || '—' }}</td>
+          </tr>
+          } @empty {
+          @if (!loading()) {
+          <tr><td colspan="8" class="empty">
+            <span class="material-icons">build</span>
+            <span>No spare part requests found</span>
+          </td></tr>
+          }
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+  }
+</div>

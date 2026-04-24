@@ -1,0 +1,22 @@
+<div class="page">
+  <div class="page-header">
+    <h1 class="page-title">Update Service Status</h1>
+  </div>
+  <div class="form-card">
+    <div class="form-grid">
+      <div class="field"><label>Assignment ID</label><input type="number" [(ngModel)]="assignmentId" class="input" />
+      </div>
+      <div class="field"><label>Status</label>
+        <select [(ngModel)]="status" class="input">
+          <option value="InProgress">In Progress</option>
+          <option value="Completed">Completed</option>
+        </select>
+      </div>
+      <div class="field full"><label>Remarks</label><textarea [(ngModel)]="remarks" class="input" rows="3"
+          placeholder="Describe work done..."></textarea></div>
+      <div class="form-actions"><button (click)="update()" class="btn-primary" [disabled]="saving()">{{ saving() ?
+          'Updating...' : 'Update Status' }}</button></div>
+    </div>
+    @if (msg()) { <div class="success"><span class="material-icons">check_circle</span> {{ msg() }}</div> }
+  </div>
+</div>

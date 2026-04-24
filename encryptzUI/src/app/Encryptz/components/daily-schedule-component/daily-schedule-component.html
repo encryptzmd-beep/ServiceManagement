@@ -1,0 +1,172 @@
+
+<div class="fx-page board-page">
+
+  <div class="fx-page-header">
+    <div>
+      <div class="fx-page-title">Technician Schedule Board</div>
+      <div class="fx-page-sub">Technician wise daily schedule report</div>
+    </div>
+
+    <div class="actions">
+      <button class="nav-btn" (click)="prevDay()">
+        <span class="material-icons">chevron_left</span>
+      </button>
+
+      <input
+        type="date"
+        [(ngModel)]="selectedDate"
+        (change)="loadBoard()"
+        class="date-input" />
+
+      <button class="nav-btn" (click)="nextDay()">
+        <span class="material-icons">chevron_right</span>
+      </button>
+
+      <select
+        [(ngModel)]="statusFilter"
+        class="fx-filter-select">
+        <option value="">All Status</option>
+        <option value="1">Scheduled</option>
+        <option value="2">In Progress</option>
+        <option value="3">Completed</option>
+      </select>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading">
+      Loading schedule board...
+    </div>
+  }
+
+  @if (!loading() && technicians().length === 0) {
+    <div class="empty-state">
+      <span class="material-icons">calendar_month</span>
+      <h3>No schedules found</h3>
+      <p>No technician schedules available for selected date.</p>
+    </div>
+  }
+
+  @if (!loading() && technicians().length > 0) {
+    <div class="board-wrapper">
+      <table class="board-table">
+        <thead>
+          <tr>
+            <th class="slot-column"></th>
+
+            @for (tech of technicians(); track tech.technicianId) {
+              <th class="tech-column">
+                <div class="tech-header">
+                  <div class="tech-name">{{ tech.technicianName }}</div>
+                  <div class="tech-count">{{ tech.items.length }} schedules</div>
+                </div>
+              </th>
+            }
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (slot of timeSlots; track slot.key) {
+            <tr>
+              <td class="slot-label">
+                {{ slot.label }}
+              </td>
+
+              @for (tech of technicians(); track tech.technicianId) {
+               <td class="schedule-cell">
+  @for (item of getItemsForSlot(tech.items, slot.key); track item.scheduleId) {
+
+    <div class="schedule-card" [ngClass]="getCardClass(item)">
+
+      @if (item.isFree) {
+
+        <div class="free-tech">
+          <span class="material-icons">check_circle</span>
+
+          <div>
+            <div class="free-title">Technician Free</div>
+            <div class="free-sub">No work assigned</div>
+          </div>
+        </div>
+
+      } @else {
+
+        <div class="card-top">
+          <span class="time">
+            {{ item.startTime || 'Not Scheduled' }}
+            @if (item.endTime) {
+              - {{ item.endTime }}
+            }
+          </span>
+
+          <span class="status">
+            {{ item.statusName }}
+          </span>
+        </div>
+
+        <div class="customer">
+          {{ item.customerName || 'No Customer' }}
+        </div>
+
+        <div class="detail">
+          {{ item.productName }}
+        </div>
+
+        <div class="location">
+          <span class="material-icons">location_on</span>
+
+          <div class="location-text">
+            @if (item.address) {
+              <div>{{ item.address }}</div>
+            }
+
+            @if (item.city) {
+              <div>{{ item.city }}</div>
+            }
+
+            @if (item.landmark) {
+              <div class="landmark">{{ item.landmark }}</div>
+            }
+          </div>
+        </div>
+
+        @if (item.latitude && item.longitude) {
+          <a
+            class="map-link"
+            [href]="'https://maps.google.com/?q=' + item.latitude + ',' + item.longitude"
+            target="_blank">
+
+            <span class="material-icons">map</span>
+            View Location
+          </a>
+
+        }
+  @if (locationNames()[item.complaintNumber]) {
+  <!-- <div class="location-name">
+    {{ locationNames()[item.complaintNumber] }}
+  </div> -->
+}
+
+        @if (item.complaintNumber) {
+          <div class="complaint">
+            Complaint: {{ item.complaintNumber }}
+          </div>
+        }
+      }
+    </div>
+  }
+
+  @if (getItemsForSlot(tech.items, slot.key).length === 0) {
+    <div class="empty-slot">
+      No schedule
+    </div>
+  }
+</td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

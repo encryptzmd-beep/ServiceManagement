@@ -1,0 +1,49 @@
+<div class="page">
+  <div class="page-header">
+    <h1 class="page-title">Complete Service</h1>
+    <p class="sub">Mark a work order as completed</p>
+  </div>
+  <div class="form-card">
+    <div class="steps">
+      <div class="step" [class.done]="step() > 1" [class.active]="step() === 1"><span class="step-num">1</span> Upload
+        After Image</div>
+      <div class="step" [class.done]="step() > 2" [class.active]="step() === 2"><span class="step-num">2</span> Add
+        Remarks</div>
+      <div class="step" [class.active]="step() === 3"><span class="step-num">3</span> Confirm</div>
+    </div>
+    @if (step() === 1) {
+    <div class="step-content">
+      <div class="field"><label>Assignment ID</label><input type="number" [(ngModel)]="assignmentId" class="input" />
+      </div>
+      <div class="upload-zone" (click)="fi.click()">
+        <input #fi type="file" accept="image/*" (change)="afterImage = ($any($event.target)).files?.[0]" hidden />
+        <span class="material-icons">{{ afterImage ? 'check_circle' : 'camera_alt' }}</span>
+        <span>{{ afterImage ? afterImage.name : 'Upload after-service photo' }}</span>
+      </div>
+      <button (click)="step.set(2)" class="btn-primary" [disabled]="!assignmentId">Next</button>
+    </div>
+    }
+    @if (step() === 2) {
+    <div class="step-content">
+      <div class="field"><label>Service Remarks</label>
+        <textarea [(ngModel)]="remarks" class="input" rows="4" placeholder="Describe the work completed..."></textarea>
+      </div>
+      <div class="btn-row"><button (click)="step.set(1)" class="btn-outline">Back</button><button (click)="step.set(3)"
+          class="btn-primary">Next</button></div>
+    </div>
+    }
+    @if (step() === 3) {
+    <div class="step-content">
+      <div class="summary">
+        <p><strong>Assignment:</strong> #{{ assignmentId }}</p>
+        <p><strong>Remarks:</strong> {{ remarks || 'None' }}</p>
+        <p><strong>Image:</strong> {{ afterImage?.name || 'None' }}</p>
+      </div>
+      <div class="btn-row"><button (click)="step.set(2)" class="btn-outline">Back</button><button (click)="complete()"
+          class="btn-primary" [disabled]="submitting()">{{ submitting() ? 'Submitting...' : 'Mark Complete' }}</button>
+      </div>
+    </div>
+    }
+    @if (msg()) { <div class="success"><span class="material-icons">check_circle</span> {{ msg() }}</div> }
+  </div>
+</div>

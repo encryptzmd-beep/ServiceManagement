@@ -1,0 +1,139 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">My Complaints</h1>
+      <p class="page-subtitle">Track your complaints and communicate with support</p>
+    </div>
+  </div>
+
+  <!-- Status Filter -->
+  <div class="filter-bar">
+    <button class="filter-btn" [class.active]="statusFilter === null" (click)="statusFilter = null; loadComplaints()">All</button>
+    <button class="filter-btn new" [class.active]="statusFilter === 1" (click)="statusFilter = 1; loadComplaints()">New</button>
+    <button class="filter-btn progress" [class.active]="statusFilter === 2" (click)="statusFilter = 2; loadComplaints()">In Progress</button>
+    <button class="filter-btn resolved" [class.active]="statusFilter === 3" (click)="statusFilter = 3; loadComplaints()">Resolved</button>
+    <button class="filter-btn closed" [class.active]="statusFilter === 4" (click)="statusFilter = 4; loadComplaints()">Closed</button>
+  </div>
+
+  <!-- Complaints List -->
+  <div class="complaints-list">
+    @for (c of complaints(); track c.complaintId) {
+    <div class="complaint-card" [class.expanded]="expandedId === c.complaintId" (click)="toggleExpand(c.complaintId)">
+      <div class="cc-header">
+        <div class="cc-left">
+          <span class="cc-no">{{ c.complaintNumber }}</span>
+          <span class="priority-tag" [attr.data-priority]="c.priority">{{ c.priority }}</span>
+          <span class="status-tag" [ngClass]="getStatusClass(c.statusId)">{{ getStatusLabel(c.statusId) }}</span>
+        </div>
+        <span class="cc-date">{{ c.createdAt | date:'dd MMM yyyy' }}</span>
+      </div>
+      <div class="cc-subject">{{ c.subject }}</div>
+      <div class="cc-product">
+        <span class="material-icons">fitness_center</span> {{ c.productName }}
+        <span class="cc-serial">{{ c.serialNumber }}</span>
+      </div>
+
+      <!-- Technician Info -->
+      @if (c.technicianName) {
+      <div class="cc-tech">
+        <span class="material-icons">engineering</span>
+        <div>
+          <strong>{{ c.technicianName }}</strong> ({{ c.assignmentRole }})
+          <div class="tech-contact">
+            <span class="material-icons">phone</span>
+            <a [href]="'tel:' + c.technicianPhone">{{ c.technicianPhone }}</a>
+            <span class="assign-status" [ngClass]="(c.assignmentStatus || '').toLowerCase()">{{ c.assignmentStatus }}</span>
+          </div>
+        </div>
+      </div>
+      }
+
+      <!-- SLA Warning -->
+      @if (c.slaDeadline && isSLABreached(c.slaDeadline)) {
+      <div class="sla-warn">
+        <span class="material-icons">warning</span> SLA breached - response overdue
+      </div>
+      }
+
+      <!-- Expanded Detail -->
+      @if (expandedId === c.complaintId) {
+      <div class="cc-detail" (click)="$event.stopPropagation()">
+
+        @if (loadingDetail()) {
+        <div class="detail-loading"><span class="spinner"></span> Loading details...</div>
+        }
+
+        @if (detail()) {
+        <!-- All Assigned Technicians -->
+        @if (detail()!.technicians.length > 0) {
+        <div class="detail-section">
+          <h4><span class="material-icons">group</span> Assigned Technicians</h4>
+          @for (t of detail()!.technicians; track t.assignmentId) {
+          <div class="tech-card">
+            <div class="tc-avatar">{{ t.technicianName?.charAt(0) }}</div>
+            <div class="tc-info">
+              <strong>{{ t.technicianName }}</strong>
+              <small>{{ t.specialization }} &bull; {{ t.assignmentRole }}</small>
+              <div class="tc-contact">
+                <a [href]="'tel:' + t.technicianPhone"><span class="material-icons">phone</span> {{ t.technicianPhone }}</a>
+                @if (t.rating > 0) { <span class="tc-rating"><span class="material-icons">star</span> {{ t.rating }}</span> }
+              </div>
+            </div>
+            <span class="status-tag sm" [ngClass]="t.status.toLowerCase()">{{ t.status }}</span>
+          </div>
+          }
+        </div>
+        }
+
+        <!-- Timeline -->
+        @if (detail()!.timeline.length > 0) {
+        <div class="detail-section">
+          <h4><span class="material-icons">timeline</span> Activity Timeline</h4>
+          <div class="timeline">
+            @for (t of detail()!.timeline; track t.auditId) {
+            <div class="tl-item" [ngClass]="t.action.toLowerCase()">
+              <div class="tl-dot"></div>
+              <div class="tl-content">
+                <div class="tl-header">
+                  <span class="tl-action">{{ t.action }}</span>
+                  <span class="tl-time">{{ t.changedAt | date:'dd MMM, hh:mm a' }}</span>
+                </div>
+                @if (t.technicianName) { <span class="tl-tech">{{ t.technicianName }} {{ t.newRole ? '(' + t.newRole + ')' : '' }}</span> }
+                @if (t.remarks) { <p class="tl-remarks">"{{ t.remarks }}"</p> }
+                @if (t.changedByName) { <span class="tl-by">by {{ t.changedByName }}</span> }
+              </div>
+            </div>
+            }
+          </div>
+        </div>
+        }
+
+        <!-- Reply Section -->
+        <div class="detail-section reply-section">
+          <h4><span class="material-icons">chat</span> Send a Message</h4>
+          <div class="reply-box">
+            <textarea [(ngModel)]="replyMessage" placeholder="Type your message to support team..." rows="3" class="reply-input"></textarea>
+            <button class="btn-reply" (click)="sendReply(c.complaintId)" [disabled]="!replyMessage.trim() || replying()">
+              @if (replying()) { <span class="spinner sm"></span> }
+              @else { <span class="material-icons">send</span> }
+              Send
+            </button>
+          </div>
+          @if (replySuccess()) { <div class="reply-ok"><span class="material-icons">check</span> {{ replySuccess() }}</div> }
+        </div>
+        }
+      </div>
+      }
+    </div>
+    } @empty {
+    <div class="empty-state">
+      <span class="material-icons">inbox</span>
+      <h3>No complaints yet</h3>
+      <p>Your registered complaints will appear here</p>
+      <a routerLink="/customer/register-complaint" class="btn-primary">
+        <span class="material-icons">add_circle</span> Register a Complaint
+      </a>
+    </div>
+    }
+  </div>
+</div>

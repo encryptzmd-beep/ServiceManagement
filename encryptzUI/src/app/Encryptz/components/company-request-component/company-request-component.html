@@ -1,0 +1,78 @@
+<div class="request-page">
+      <div class="request-card">
+        <div class="header">
+          <div class="logo-icon">E</div>
+          <h2>Join a Company</h2>
+          <p>Select a company to request access</p>
+        </div>
+
+        @if (loading()) {
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <span>Loading companies...</span>
+          </div>
+        }
+
+        <div class="company-grid">
+          @for (company of companies(); track company.companyId) {
+            <div class="company-card" [class.disabled]="company.userStatus !== 'Available'">
+              <div class="company-icon">
+                <span class="material-icons">business</span>
+              </div>
+              <h3>{{ company.companyName }}</h3>
+              <p class="city">{{ company.city }}</p>
+              <div class="status-badge" [class]="company.userStatus.toLowerCase()">
+                {{ company.userStatus }}
+              </div>
+              @if (company.userStatus === 'Available') {
+                <button class="btn-primary" (click)="openRequestModal(company)">
+                  Request to Join
+                </button>
+              } @else if (company.userStatus === 'Requested') {
+                <button class="btn-disabled" disabled>Request Pending</button>
+              } @else {
+                <button class="btn-success" disabled>Already Member</button>
+              }
+            </div>
+          }
+        </div>
+
+        @if (companies().length === 0 && !loading()) {
+          <div class="empty-state">
+            <span class="material-icons">business_off</span>
+            <p>No companies available at the moment.</p>
+          </div>
+        }
+
+        <div class="actions">
+          <button class="btn-outline" (click)="goBack()">Back</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Request Modal -->
+    @if (showModal()) {
+      <div class="modal-overlay">
+        <div class="modal-card">
+          <h3>Request to Join {{ selectedCompany()?.companyName }}</h3>
+          <div class="form-row">
+            <label>Requested Role</label>
+            <select [(ngModel)]="requestedRole">
+              <option value="Technician">Technician</option>
+              <option value="Storekeeper">Storekeeper</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Remarks (Optional)</label>
+            <textarea [(ngModel)]="remarks" rows="3" placeholder="Why do you want to join this company?"></textarea>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-secondary" (click)="showModal.set(false)">Cancel</button>
+            <button class="btn-primary" (click)="submitRequest()" [disabled]="submitting()">
+              @if (submitting()) { <span class="spinner-small"></span> }
+              Send Request
+            </button>
+          </div>
+        </div>
+      </div>
+    }

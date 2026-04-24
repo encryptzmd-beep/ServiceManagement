@@ -1,0 +1,64 @@
+<div class="page">
+  @if (complaint(); as c) {
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">{{ c.complaintNumber }}</h1>
+      <p class="page-sub">{{ c.subject }}</p>
+    </div>
+    <span class="status-badge" [style.background]="c.statusColor + '20'" [style.color]="c.statusColor">{{ c.statusName
+      }}</span>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Details</h3>
+      <div class="detail-row"><span class="lbl">Customer</span><span>{{ c.customerName }}</span></div>
+      <div class="detail-row"><span class="lbl">Product</span><span>{{ c.productName }} ({{ c.serialNumber }})</span>
+      </div>
+      <div class="detail-row"><span class="lbl">Priority</span><span class="priority" [attr.data-p]="c.priority">{{
+          c.priority }}</span></div>
+      <div class="detail-row"><span class="lbl">SLA Deadline</span>
+        <span [class.breach]="c.isSLABreached">{{ c.slaDeadline | date:'dd MMM yyyy HH:mm' }} {{ c.isSLABreached ? '⚠
+          BREACHED' : '' }}</span>
+      </div>
+      <div class="detail-row"><span class="lbl">Created</span><span>{{ c.createdAt | date:'dd MMM yyyy HH:mm' }}</span>
+      </div>
+      @if (c.description) { <div class="desc"><strong>Description:</strong>
+        <p>{{ c.description }}</p>
+      </div> }
+    </div>
+    <div class="card">
+      <h3>Update Status</h3>
+      <div class="update-form">
+        <select [(ngModel)]="newStatusId" class="sel">
+          @for (s of statuses; track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+        </select>
+        <textarea [(ngModel)]="remarks" placeholder="Add remarks..." class="textarea" rows="3"></textarea>
+        <button (click)="updateStatus(c.complaintId)" class="btn-primary">Update</button>
+      </div>
+      <h3 style="margin-top:20px">Assigned Technicians</h3>
+      @for (a of c.assignments; track a.assignmentId) {
+      <div class="tech-row">
+        <span class="material-icons">engineering</span>
+        <div><strong>{{ a.technicianName }}</strong><br /><small>{{ a.assignmentRole }} • {{ a.status }}</small></div>
+      </div>
+      } @empty { <p class="muted">No technicians assigned</p> }
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3>Timeline</h3>
+    <div class="timeline">
+      @for (t of c.timeline; track t.timelineId) {
+      <div class="tl-item">
+        <div class="tl-dot" [style.background]="t.statusColor"></div>
+        <div class="tl-content">
+          <div class="tl-header"><strong>{{ t.statusName }}</strong><span class="tl-time">{{ t.actionAt | date:'dd MMM
+              HH:mm' }}</span></div>
+          @if (t.remarks) { <p class="tl-remarks">{{ t.remarks }}</p> }
+          @if (t.actionByName) { <small class="muted">by {{ t.actionByName }}</small> }
+        </div>
+      </div>
+      }
+    </div>
+  </div>
+  } @else { <div class="loading"><span class="material-icons spin">sync</span> Loading...</div> }
+</div>

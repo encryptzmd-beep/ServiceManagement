@@ -1,0 +1,39 @@
+<div class="page">
+  <div class="page-header">
+    <h1 class="page-title">Assignment Audit Log</h1>
+  </div>
+  <div class="search-row">
+    <input type="number" [(ngModel)]="complaintId" placeholder="Enter Complaint ID" class="input" />
+    <button (click)="load()" class="btn-primary">Search</button>
+  </div>
+  <div class="table-card">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Action</th>
+            <th>Old Role</th>
+            <th>New Role</th>
+            <th>Changed By</th>
+            <th>Remarks</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of logs(); track a.auditId) {
+          <tr>
+            <td><span class="action-badge" [class]="a.action.toLowerCase()">{{ a.action }}</span></td>
+            <td>{{ a.oldRole || '-' }}</td>
+            <td>{{ a.newRole || '-' }}</td>
+            <td>{{ a.changedByName || '-' }}</td>
+            <td>{{ a.remarks || '-' }}</td>
+            <td class="date">{{ a.changedAt | date:'dd MMM HH:mm' }}</td>
+          </tr>
+          } @empty { <tr>
+            <td colspan="6" class="empty">Enter a complaint ID to view audit log</td>
+          </tr> }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

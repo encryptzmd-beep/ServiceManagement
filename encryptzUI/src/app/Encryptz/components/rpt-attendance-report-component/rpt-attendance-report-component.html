@@ -1,0 +1,38 @@
+<div class="page">
+  <div class="page-header">
+    <h1 class="page-title">Attendance Report</h1>
+  </div>
+  <div class="filter-row">
+    <input type="date" [(ngModel)]="from" class="input" placeholder="From" />
+    <input type="date" [(ngModel)]="to" class="input" placeholder="To" />
+    <button (click)="load()" class="btn-primary">Generate</button>
+  </div>
+  <div class="table-card">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Technician</th>
+            <th>Date</th>
+            <th>Check In</th>
+            <th>Check Out</th>
+            <th>Hours</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of data(); track a.attendanceId) {
+          <tr>
+            <td><strong>{{ a.technicianName }}</strong></td>
+            <td>{{ a.attendanceDate }}</td>
+            <td>{{ a.checkInTime ? (a.checkInTime | date:'HH:mm') : '-' }}</td>
+            <td>{{ a.checkOutTime ? (a.checkOutTime | date:'HH:mm') : '-' }}</td>
+            <td><strong>{{ a.totalWorkHours ? (a.totalWorkHours | number:'1.1-1') + 'h' : '-' }}</strong></td>
+          </tr>
+          } @empty { <tr>
+            <td colspan="5" class="empty">Select dates and generate report</td>
+          </tr> }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
