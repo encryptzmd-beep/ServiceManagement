@@ -1,0 +1,6 @@
+@EncryptzAPI_HostAddress = http://localhost:5092
+
+GET {{EncryptzAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

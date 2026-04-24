@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="../EncryptzBL/EncryptzBL.csproj" Id="5d4b82d8-6961-4457-b08a-1ba4dc4a6f0d" />
+  <Project Path="EncryptzAPI.csproj" />
+</Solution>
