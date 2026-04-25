@@ -197,7 +197,7 @@
       </div>
 
       <div class="customer-section">
-        <div class="customer-avatar"><span class="material-icons">person</span></div>
+        <div class="customer-avatar customer-avatar-initials">{{ wo.customerName?.charAt(0) || 'C' }}</div>
         <div class="customer-details">
           <strong>{{ wo.customerName }}</strong>
           @if (wo.customerPhone) {
@@ -209,23 +209,21 @@
         </div>
       </div>
 
-      <div class="info-row-group">
-        <div class="info-item">
-          <span class="material-icons">fitness_center</span>
-          <div><span class="info-label">Product</span><span class="info-value">{{ wo.productName }}</span></div>
-        </div>
-        <div class="info-item">
+      <div class="info-row-group info-row-compact">
+        <div class="info-item compact-item">
           <span class="material-icons">calendar_today</span>
-          <div>
-            <span class="info-label">Assigned</span>
-            <span class="info-value">{{ wo.assignedAt | date:'dd MMM yyyy, hh:mm a' }}</span>
-          </div>
+          <div><span class="info-value">{{ wo.assignedAt | date:'dd MMM yyyy, hh:mm a' }}</span></div>
+        </div>
+        <div class="meta-separator">·</div>
+        <div class="info-item compact-item">
+          <span class="material-icons">fitness_center</span>
+          <div><span class="info-value">{{ wo.productName }}</span></div>
         </div>
         @if ($any(wo).scheduledDate) {
-        <div class="info-item scheduled">
+        <div class="meta-separator">·</div>
+        <div class="info-item scheduled compact-item">
           <span class="material-icons">event</span>
           <div>
-            <span class="info-label">Scheduled</span>
             <span class="info-value">{{ $any(wo).scheduledDate | date:'dd MMM yyyy' }}
               @if ($any(wo).startTime) { · {{ $any(wo).startTime }} – {{ $any(wo).endTime }} }
             </span>
@@ -236,19 +234,19 @@
 
       <div class="order-actions">
   @if (wo.status === 'Assigned') {
-<button class="btn-action btn-start" (click)="startWork(wo)" [disabled]="!isAdmin() && !isCheckedIn()">
-  <span class="material-icons">play_arrow</span> Start Work
+<button class="btn-action btn-start icon-only-action" (click)="startWork(wo)" [disabled]="!isAdmin() && !isCheckedIn()" title="Start Work" aria-label="Start Work">
+  <span class="material-icons">play_arrow</span>
 </button>
 }
      @if (wo.status === 'InProgress') {
 <!-- <a routerLink="/technicians/image-upload" class="btn-action btn-upload">
   <span class="material-icons">camera_alt</span> Upload Images
 </a> -->
-<button class="btn-action btn-spare" (click)="openSpareDialog(wo, $event)">
-  <span class="material-icons">build</span> Request Parts
+<button class="btn-action btn-spare icon-only-action" (click)="openSpareDialog(wo, $event)" title="Request Parts" aria-label="Request Parts">
+  <span class="material-icons">build</span>
 </button>
-<button class="btn-action btn-complete" (click)="updateStatus(wo.assignmentId, 'Completed')">
-  <span class="material-icons">check</span> Complete
+<button class="btn-action btn-complete icon-only-action" (click)="updateStatus(wo.assignmentId, 'Completed')" title="Complete" aria-label="Complete">
+  <span class="material-icons">check</span>
 </button>
 }
         @if (wo.status === 'Completed') {
@@ -257,12 +255,12 @@
         <!-- <a [routerLink]="['/complaints', wo.complaintId]" class="btn-action btn-view">
           <span class="material-icons">open_in_new</span> View
         </a> -->
-        <button class="btn-action btn-details" (click)="openDetail(wo, $event)">
-          <span class="material-icons">info</span> Details
+        <button class="btn-action btn-details icon-only-action" (click)="openDetail(wo, $event)" title="Details" aria-label="Details">
+          <span class="material-icons">info</span>
         </button>
         @if (wo.status !== 'Completed') {
-        <button class="btn-action btn-unassign-action" (click)="openUnassign(wo, $event)">
-          <span class="material-icons">person_remove</span> Assign to Admin
+        <button class="btn-action btn-unassign-action icon-only-action" (click)="openUnassign(wo, $event)" title="Assign to Admin" aria-label="Assign to Admin">
+          <span class="material-icons">person_remove</span>
         </button>
         }
       </div>
