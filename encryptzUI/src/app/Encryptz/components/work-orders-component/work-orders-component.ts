@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed, DestroyRef } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, DestroyRef, HostListener, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -25,7 +25,7 @@ type SpareCartItem = {
   templateUrl: './work-orders-component.html',
   styleUrls: ['./work-orders-component.scss'],
 })
-export class WorkOrdersComponent implements OnInit {
+export class WorkOrdersComponent implements OnInit, OnDestroy {
   private api         = inject(ApiService);
   private auth        = inject(AuthService);
   private _destroyRef = inject(DestroyRef);
@@ -101,10 +101,17 @@ repairForm = {
   showDetail    = signal(false);
   detailData    = signal<any>(null);
   detailLoading = signal(false);
+  detailTab     = signal<string>('info'); // 'info' | 'spares' | 'repairs' | 'timeline' | 'images'
 
   // ── Spare parts ───────────────────────────────────────
   complaintSpares = signal<any[]>([]);
   sparesLoading   = signal(false);
+
+  // ── Repair Image Modal ──────────────────────────────
+  showRepairImagesModal = signal(false);
+  repairImagesLoading = signal(false);
+  repairImagesList = signal<any[]>([]);
+  activeRepairRequest = signal<any>(null);
 
   // ── Computed ──────────────────────────────────────────
   filteredOrders = computed(() => {
@@ -153,6 +160,44 @@ ngOnInit(): void {
     error: () => { this.spareResults.set([]); this.spareSearchLoading.set(false); }
   });
 });
+  this.refreshInterval = setInterval(() => {
+    if (!this.isAdmin()) {
+      if (this.isAnyDialogOpen()) return;
+      this.load();
+    }
+  }, 60000);
+}
+
+private refreshInterval: any;
+
+// ── Confirmation Dialog ─────────────────────────────────
+showConfirmDialog = signal(false);
+confirmData = signal<{ message: string; title: string; onConfirm: () => void } | null>(null);
+
+openConfirm(title: string, message: string, onConfirm: () => void): void {
+  this.confirmData.set({ title, message, onConfirm });
+  this.showConfirmDialog.set(true);
+}
+
+closeConfirm(): void {
+  this.showConfirmDialog.set(false);
+  this.confirmData.set(null);
+}
+
+executeConfirm(): void {
+  const data = this.confirmData();
+  if (data) data.onConfirm();
+  this.closeConfirm();
+}
+
+isAnyDialogOpen(): boolean {
+  return this.showSpareDialog() || this.showRepairDialog() || this.showCompleteDialog() || this.showDetail() || this.showConfirmDialog() || this.showUnassignDialog();
+}
+
+ngOnDestroy(): void {
+  if (this.refreshInterval) {
+    clearInterval(this.refreshInterval);
+  }
 }
 
 private loadCheckInStatus(): void {
@@ -188,62 +233,66 @@ private loadCheckInStatus(): void {
 // Update checkIn() — resolve after successful check-in:
 checkIn(): void {
   if (!this.techId) return;
-  this.checkInBusy.set(true);
-  this.checkInMsg.set('');
+  this.openConfirm('Confirm Check In', 'Are you sure you want to check in now?', () => {
+    this.checkInBusy.set(true);
+    this.checkInMsg.set('');
 
-  this.getGeo().then(pos => {
-    this.api.checkIn(this.techId, {
-      latitude: pos.latitude, longitude: pos.longitude, address: null
-    }).subscribe({
-      next: (res: any) => {
-        this.checkInBusy.set(false);
-        if (res.success) {
-          this.isCheckedIn.set(true);
-          this.checkInTime.set(new Date());
-          // Reverse geocode
-          this.geocode.reverseGeocode(pos.latitude, pos.longitude)
-            .subscribe(name => this.locationName.set(name));
-          this.showCheckInMsg('Checked in successfully!', false);
-          this.gpsService.startTracking(this.techId);
-        } else {
-          this.showCheckInMsg(res.message || 'Check-in failed', true);
-        }
-      },
-      error: () => { this.checkInBusy.set(false); this.showCheckInMsg('Check-in failed', true); }
+    this.getGeo().then(pos => {
+      this.api.checkIn(this.techId, {
+        latitude: pos.latitude, longitude: pos.longitude, address: null
+      }).subscribe({
+        next: (res: any) => {
+          this.checkInBusy.set(false);
+          if (res.success) {
+            this.isCheckedIn.set(true);
+            this.checkInTime.set(new Date());
+            // Reverse geocode
+            this.geocode.reverseGeocode(pos.latitude, pos.longitude)
+              .subscribe(name => this.locationName.set(name));
+            this.showCheckInMsg('Checked in successfully!', false);
+            this.gpsService.startTracking(this.techId);
+          } else {
+            this.showCheckInMsg(res.message || 'Check-in failed', true);
+          }
+        },
+        error: () => { this.checkInBusy.set(false); this.showCheckInMsg('Check-in failed', true); }
+      });
+    }).catch(() => {
+      this.checkInBusy.set(false);
+      this.showCheckInMsg('Unable to get GPS location.', true);
     });
-  }).catch(() => {
-    this.checkInBusy.set(false);
-    this.showCheckInMsg('Unable to get GPS location.', true);
   });
 }
 
 // ── Check Out ───────────────────────────────────────────
 checkOut(): void {
   if (!this.techId) return;
-  this.checkInBusy.set(true);
-  this.checkInMsg.set('');
+  this.openConfirm('Confirm Check Out', 'Are you sure you want to check out?', () => {
+    this.checkInBusy.set(true);
+    this.checkInMsg.set('');
 
-  this.getGeo().then(pos => {
-    this.api.checkOut(this.techId, {
-      latitude: pos.latitude, longitude: pos.longitude, address: null
-    }).subscribe({
-      next: (res: any) => {
-        this.checkInBusy.set(false);
-        if (res.success) {
-          this.isCheckedIn.set(false);
-          this.checkInTime.set(null);
-          this.currentCoords.set('');
-          this.showCheckInMsg('Checked out successfully!', false);
-          this.gpsService.stopTracking();
-        } else {
-          this.showCheckInMsg(res.message || 'Check-out failed', true);
-        }
-      },
-      error: () => { this.checkInBusy.set(false); this.showCheckInMsg('Check-out failed', true); }
+    this.getGeo().then(pos => {
+      this.api.checkOut(this.techId, {
+        latitude: pos.latitude, longitude: pos.longitude, address: null
+      }).subscribe({
+        next: (res: any) => {
+          this.checkInBusy.set(false);
+          if (res.success) {
+            this.isCheckedIn.set(false);
+            this.checkInTime.set(null);
+            this.currentCoords.set('');
+            this.showCheckInMsg('Checked out successfully!', false);
+            this.gpsService.stopTracking();
+          } else {
+            this.showCheckInMsg(res.message || 'Check-out failed', true);
+          }
+        },
+        error: () => { this.checkInBusy.set(false); this.showCheckInMsg('Check-out failed', true); }
+      });
+    }).catch(() => {
+      this.checkInBusy.set(false);
+      this.showCheckInMsg('Unable to get GPS location.', true);
     });
-  }).catch(() => {
-    this.checkInBusy.set(false);
-    this.showCheckInMsg('Unable to get GPS location.', true);
   });
 }
 
@@ -441,6 +490,7 @@ private showCheckInMsg(m: string, err: boolean): void {
     this.showDetail.set(true);
     this.detailData.set(null);
     this.detailLoading.set(true);
+    this.detailTab.set('info'); // always start on Info tab
     // load detail + spares in parallel
     this.api.getWorkOrderDetails(wo.assignmentId).subscribe({
       next: (res: any) => {
@@ -555,6 +605,14 @@ onSpareSearch(): void {
   this.showSpareDropdown = true;
   if (this.spareSearch.trim()) this.spareSubject.next(this.spareSearch);
   else this.loadSpareOptions();
+}
+
+@HostListener('document:click', ['$event'])
+onDocumentClick(event: MouseEvent) {
+  const target = event.target as HTMLElement;
+  if (!target.closest('.sp-search-wrap') && !target.closest('.sp-dropdown')) {
+    this.showSpareDropdown = false;
+  }
 }
 
 addSpareToCart(part: any): void {
@@ -814,25 +872,27 @@ submitRepairRequest(): void {
     this.repairMsgErr.set(true);
     return;
   }
-  const warrantyEnd = product.warrantyExpiryDate ? new Date(product.warrantyExpiryDate) : new Date();
-  const purchaseDate = product.purchaseDate ? new Date(product.purchaseDate) : new Date();
 
   this.repairSubmitting.set(true);
   this.repairMsg.set('');
   this.repairMsgErr.set(false);
 
-  this.api.createWarranty({
+  const payload = {
     complaintId: wo.complaintId,
+    assignmentId: wo.assignmentId,
+    technicianId: this.auth.currentUser()?.userId ?? 0,
     customerId: customer.CustomerId,
     productId: product.productId,
-    productSerialNo: this.repairForm.partSerialNumber.trim(),
-    warrantyStartDate: purchaseDate.toISOString(),
-    warrantyEndDate: warrantyEnd.toISOString(),
-    returnReason: `${this.repairForm.partName || wo.productName} - ${this.repairForm.notes || 'Repair request raised from work order'}`,
-    returnType: 1,
-    pickupAddress: customer.address || customer.customerAddress || detail.locationName || wo.customerAddress || ''
-  }).subscribe({
-    next: () => this.uploadRepairImagesSequentially(0),
+    partName: this.repairForm.partName || wo.productName,
+    partSerialNumber: this.repairForm.partSerialNumber.trim(),
+    notes: this.repairForm.notes
+  };
+
+  this.api.createRepairPartRequest(payload).subscribe({
+    next: (res: any) => {
+      const requestId = res.data || res.requestId || res;
+      this.uploadRepairImagesSequentially(0, requestId);
+    },
     error: () => {
       this.repairSubmitting.set(false);
       this.repairMsg.set('Failed to create repair request');
@@ -841,11 +901,9 @@ submitRepairRequest(): void {
   });
 }
 
-private uploadRepairImagesSequentially(index: number): void {
-  const wo = this.repairDialogWo();
+private uploadRepairImagesSequentially(index: number, requestId: any): void {
   const images = this.repairImages();
 
-  if (!wo) return;
   if (index >= images.length) {
     this.repairSubmitting.set(false);
     this.repairMsg.set('Repair request submitted successfully');
@@ -856,20 +914,17 @@ private uploadRepairImagesSequentially(index: number): void {
   }
 
   const item = images[index];
-  const formData = new FormData();
-  formData.append('file', item.file);
-  formData.append('imageType', item.tag === 'tagged' ? 'TaggedRepair' : 'BeforeRepair');
-  formData.append('complaintId', wo.complaintId.toString());
-  formData.append('assignmentId', wo.assignmentId.toString());
+  const rId = typeof requestId === 'object' ? requestId.data : requestId;
 
-  this.api.uploadServiceImage(this.techId, formData).subscribe({
-    next: () => this.uploadRepairImagesSequentially(index + 1),
-    error: () => {
-      this.repairSubmitting.set(false);
-      this.repairMsg.set('Repair request saved, but image upload failed');
-      this.repairMsgErr.set(true);
-    }
-  });
+  this.api.uploadRepairImage(rId, item.file, item.tag === 'tagged' ? 'TaggedRepair' : 'BeforeRepair')
+    .subscribe({
+      next: () => this.uploadRepairImagesSequentially(index + 1, rId),
+      error: () => {
+        this.repairSubmitting.set(false);
+        this.repairMsg.set('Repair request saved, but image upload failed');
+        this.repairMsgErr.set(true);
+      }
+    });
 }
 
 
@@ -1069,6 +1124,46 @@ private finalizeCompletion(wo: WorkOrder, updateProgress: () => void): void {
     }
   });
 }
+
+viewRepairImages(repairRequest: any): void {
+  this.activeRepairRequest.set(repairRequest);
+  this.showRepairImagesModal.set(true);
+  this.repairImagesLoading.set(true);
+  this.repairImagesList.set([]);
+
+  this.api.getRepairImagesByRequest(repairRequest.repairRequestId).subscribe({
+    next: (res: any) => {
+      const list = res.data || res || [];
+      this.repairImagesList.set(list.map((img: any) => ({ ...img, base64: null, loading: false })));
+      this.repairImagesLoading.set(false);
+    },
+    error: () => {
+      this.repairImagesLoading.set(false);
+    }
+  });
+}
+
+fetchImageBase64(image: any): void {
+  if (image.base64 || image.loading) return;
+  
+  image.loading = true;
+  this.api.getRepairImageBase64(image.imageId).subscribe({
+    next: (res: any) => {
+      image.base64 = res.data || res;
+      image.loading = false;
+    },
+    error: () => {
+      image.loading = false;
+    }
+  });
+}
+
+closeRepairImagesModal(): void {
+  this.showRepairImagesModal.set(false);
+  this.repairImagesList.set([]);
+  this.activeRepairRequest.set(null);
+}
+
 }
 // ── Add to api-service.ts if not already present ─────────
 // getSpareByComplaint(complaintId: number): Observable<any> {

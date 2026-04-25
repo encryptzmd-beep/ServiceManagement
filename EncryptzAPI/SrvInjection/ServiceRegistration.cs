@@ -1,4 +1,4 @@
-﻿
+
 
 using EncryptzBL.Common;
 using EncryptzBL.Infrastructure.Complients.Modules;
@@ -15,6 +15,7 @@ using EncryptzBL.Infrastructure.Technician.Modules;
 using EncryptzBL.Infrastructure.Tracking.Modules;
 using EncryptzBL.Infrastructure.User.Modules;
 using EncryptzBL.Infrastructure.WarrantyReturn.Modules;
+using EncryptzBL.Infrastructure.RepairPart.Modules;
 
 namespace EncryptzAPI.SrvInjection
 {
@@ -38,7 +39,8 @@ namespace EncryptzAPI.SrvInjection
             services.AddScoped<ISparePartService, SparePartService>();
             services.AddScoped<ITrackingService, TrackingService>();
             services.AddScoped<IProductMasterService, ProductMasterService>();
-
+            services.AddScoped<IRepairPartService, RepairPartService>();
+            services.AddScoped<IEmailService, EmailService>();
 
             return services;
         }

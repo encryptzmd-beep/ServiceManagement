@@ -15,10 +15,12 @@ namespace EncryptzBL.Infrastructure.User.Modules
     public class AuthService : BaseRepository, IAuthService
     {
         private readonly IConfiguration _config;
+        private readonly IEmailService _emailService;
 
-        public AuthService(DbHelper db, IConfiguration config) : base(db)
+        public AuthService(DbHelper db, IConfiguration config, IEmailService emailService) : base(db)
         {
             _config = config;
+            _emailService = emailService;
         }
 
         // ============================================
@@ -179,8 +181,30 @@ namespace EncryptzBL.Infrastructure.User.Modules
             }
 
             var otpCode = row["OtpCode"]?.ToString();
-            // Normally you would send an email here. We return the OTP for testing.
-            return ApiResponse<string>.Ok(otpCode, "OTP sent to email successfully");
+            
+            // Send Email with OTP
+            string subject = "Password Reset OTP - Encryptz";
+            string body = $@"
+                <h3>Password Reset Request</h3>
+                <p>Hello,</p>
+                <p>We received a request to reset your password. Use the following OTP to proceed:</p>
+                <div style='font-size: 24px; font-weight: bold; color: #2563eb; padding: 10px; background: #f1f5f9; border-radius: 8px; display: inline-block;'>
+                    {otpCode}
+                </div>
+                <p>This OTP is valid for 10 minutes. If you did not request this, please ignore this email.</p>
+                <br/>
+                <p>Regards,<br/>Encryptz Team</p>";
+
+            try
+            {
+                await _emailService.SendEmailAsync(dto.Email, subject, body);
+                return ApiResponse<string>.Ok(null, "OTP sent to email successfully");
+            }
+            catch (Exception ex)
+            {
+                // Log exception if needed
+                return ApiResponse<string>.Fail("Failed to send email. Please try again later.");
+            }
         }
 
         public async Task<ApiResponse<string>> ResetPasswordAsync(ResetPasswordRequestDto dto)

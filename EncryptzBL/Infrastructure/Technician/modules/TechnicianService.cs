@@ -1,4 +1,4 @@
-﻿using EncryptzBL.Common;
+using EncryptzBL.Common;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Technician.modules;
 using System.Data;
@@ -336,6 +336,10 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
             detail.Images = ds.Tables.Count > 2
                 ? ds.Tables[2].ToList<ServiceImageItemDto>()
                 : new List<ServiceImageItemDto>();
+
+            detail.RepairDetails = ds.Tables.Count > 3
+                ? ds.Tables[3].ToList<WorkOrderRepairDetailDto>()
+                : new List<WorkOrderRepairDetailDto>();
 
             return detail;
         }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
@@ -1063,6 +1063,18 @@ namespace EncryptzBL.DTO_s
         public bool IsSLABreached { get; set; }
         public List<WorkOrderTimelineDto> Timeline { get; set; } = new();
         public List<ServiceImageItemDto> Images { get; set; } = new();
+        public List<WorkOrderRepairDetailDto> RepairDetails { get; set; } = new();
+    }
+
+    public class WorkOrderRepairDetailDto
+    {
+        public int RepairRequestId { get; set; }
+        public string PartName { get; set; } = string.Empty;
+        public string? PartSerialNumber { get; set; }
+        public string? Notes { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public int ImageCount { get; set; }
     }
 
     public class WorkOrderTimelineDto
@@ -2280,6 +2292,17 @@ namespace EncryptzBL.DTO_s
             public string PartName { get; set; }
             public string PartNumber { get; set; }
             public int StockQuantity { get; set; }
+        }
+        public class RepairPartRequestCreateDto
+        {
+            public int ComplaintId { get; set; }
+            public int AssignmentId { get; set; }
+            public int TechnicianId { get; set; }
+            public int? CustomerId { get; set; }
+            public int? ProductId { get; set; }
+            public string PartName { get; set; }
+            public string PartSerialNumber { get; set; }
+            public string Notes { get; set; }
         }
     }
 }

@@ -900,6 +900,26 @@ getSparePartsDropdownmaster(): Observable<any> {
   return this.http.get(`${this.api}/spare-parts/spare/dropdown`);
 }
 
+createRepairPartRequest(dto: any): Observable<M.ApiResponse<any>> {
+  return this.http.post<M.ApiResponse<any>>(`${this.api}/RepairPart/create`, dto);
+}
+
+uploadRepairImage(repairRequestId: number, file: File, imageType: string): Observable<any> {
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('repairRequestId', repairRequestId.toString());
+  fd.append('imageType', imageType);
+  return this.http.post(`${this.api}/RepairPart/upload-image`, fd);
+}
+
+getRepairImagesByRequest(repairRequestId: number): Observable<M.ApiResponse<any[]>> {
+  return this.http.get<M.ApiResponse<any[]>>(`${this.api}/RepairPart/request/${repairRequestId}/images`);
+}
+
+getRepairImageBase64(imageId: number): Observable<M.ApiResponse<string>> {
+  return this.http.get<M.ApiResponse<string>>(`${this.api}/RepairPart/image/${imageId}`);
+}
+
 
 
 
