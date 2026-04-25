@@ -1,1552 +1,1553 @@
-﻿<div class="fx-pagepage">
-  <!--Header-->
-  <div class="fx-page-headerpage-header">
-    <div>
-      <div class="fx-page-title">MyComp let eWork Orders</div>
-      <div class="fx-page-sub">Activeserviceassignmentsandtasks</div>
+<div class="fx-pagepage">
+ <!--Header-->
+ <div class="fx-page-headerpage-header">
+ <div>
+ <div class="fx-page-title">MyComplete Work Orders</div>
+ <div class="fx-page-sub">Active service assignments and tasks</div>
+ </div>
+ <div class="header-controls">
+ @if (isAdmin()) {
+ <!--Techniciansearch:Adminonly-->
+ <div class="tech-autocomplete">
+ <div class="tech-input-wrap" [class.has-val]="!!selectedTech()">
+ <span class="material-icons ta-ic">engineering</span>
+ <input typee="text"
+ [(ngModel)]="techSearch"
+ class="tech-input"
+ placeholder="Searchtechnicianname..."
+ (input)="onTechSearch()"
+ (focus)="showTechDropdown = true"
+ autocomplete=" off"
+ />
+ @if (selectedTech()) {
+ <button class="ta-clear" type="button" (click)="clearTech()">
+ <span class="material-icons">close</span>
+ </button>
+ }
+ @if (techSearchLoading()) {
+ <div class="ta-spinner"></div>
+ }
+ </div>
+ @if (selectedTech()) {
+ <div class="selected-tech-chip">
+ <div
+ class="stc-avatar"
+ [ngClass]="getTechAvailClass(selectedTech().availabilityStatus)"
+ >
+ {{ selectedTech().fullName?.charAt(0) || 'T' }}
+ </div>
+ <div class="stc-info">
+ <strong>{{ selectedTech().fullName }}</strong>
+ <span>{{ selectedTech().specialization || 'General' }}</span>
+ </div>
+ <span
+ class="stc-avail"
+ [ngClass]="getTechAvailClass(selectedTech().availabilityStatus)"
+ >
+ <span class="dot"></span> {{ getTechAvailLabel(selectedTech().availabilityStatus) }}
+ </span>
+ </div>
+ }
+ @if (showTechDropdown && techResults().length > 0 && !selectedTech()) {
+ <div class="ta-dropdown">
+ @for (t of techResults(); track t.technicianId) {
+ <div class="ta-item" (click)="selectTech(t)">
+ <div class="ta-avatar" [ngClass]="getTechAvailClass(t.availabilityStatus)">
+ {{ t.fullName?.charAt(0) || '?' }}
+ </div>
+ <div class="ta-info">
+ <strong>{{ t.fullName }}</strong>
+ <small>{{ t.specialization || 'General' }}·{{ t.mobileNumber || '' }}</small>
+ </div>
+ <span class="ta-avail-tag" [ngClass]="getTechAvailClass(t.availabilityStatus)">
+ <span class="dot"></span> {{ getTechAvailLabel(t.availabilityStatus) }}
+ </span>
+ </div>
+ }
+ </div>
+ }
+ </div>
+ <button class="btn-primary" (click)="load()" [disabled]="!techId || loading()">
+ @if (loading()) {
+ <span class="mini-spin"></span>
+ } @else {
+ <span class="material-icons">refresh</span>
+ }
+ {{ loading() ? 'Loading...' : 'LoadOrders' }}
+ </button>
+ } @else {
+ <!--Non-admin:justarefreshbutton-->
+ <button class="btn-primary" (click)="load()" [disabled]="loading()">
+ @if (loading()) {
+ <span class="mini-spin"></span>
+ } @else {
+ <span class="material-icons">refresh</span>
+ }
+ {{ loading() ? 'Loading...' : 'Refresh' }}
+ </button>
+ }
+ </div>
+ </div>
+ <!--â•â•â•CHECK-IN/CHECK-OUTBAR (Technicianonly)â•â•â•-->
+@if (!isAdmin()) {
+<div class="checkin-bar" [class.active]="isCheckedIn()">
+  <div class="cb-status">
+    <div class="cb-pulse-wrap">
+      <div class="cb-pulse" [class.on]="isCheckedIn()"></div>
+      <span class="material-icons cb-icon">{{
+        isCheckedIn() ? 'location_on' : 'location_off'
+        }}</span>
     </div>
-    <div class="header-controls">
-      @if (isAdmin()) {
-        <!--Techniciansearch:Adminonly-->
-        <div class="tech-autocomp let e">
-          <div class="tech-input-wrap" [class.has-val]="!!selectedTech()">
-            <span class="material-iconsta-ic">engineering</span>
-            <inputtyp
-              e="text"
-              [(ngModel)]="techSearch"
-              class="tech-input"
-              p
-              laceholder="Searchtechnicianname..."
-              (input)="onTechSearch()"
-              (focus)="showTechDropdown = true"
-              autocomp
-              let
-              e=" of f"
-            />
-            @if (selectedTech()) {
-              <button class="ta-clear" type="button" (click)="clearTech()">
-                <span class="material-icons">close</span>
-              </button>
-            }
-            @if (techSearchLoading()) {
-              <div class="ta-spinner"></div>
-            }
-          </div>
-          @if (selectedTech()) {
-            <div class="selected-tech-chip">
-              <div
-                class="stc-avatar"
-                [ngClass]="getTechAvailClass(selectedTech().availabilityStatus)"
-              >
-                {{ selectedTech().fullName?.charAt(0) || 'T' }}
-              </div>
-              <div class="stc-info">
-                <strong>{{ selectedTech().fullName }}</strong>
-                <span>{{ selectedTech().specialization || 'General' }}</span>
-              </div>
-              <span
-                class="stc-avail"
-                [ngClass]="getTechAvailClass(selectedTech().availabilityStatus)"
-              >
-                <span class="dot"></span> {{ getTechAvailLabel(selectedTech().availabilityStatus) }}
-              </span>
-            </div>
-          }
-          @if (showTechDropdown && techResults().length > 0 && !selectedTech()) {
-            <div class="ta-dropdown">
-              @for (t of techResults(); track t.technicianId) {
-                <div class="ta-item" (click)="selectTech(t)">
-                  <div class="ta-avatar" [ngClass]="getTechAvailClass(t.availabilityStatus)">
-                    {{ t.fullName?.charAt(0) || '?' }}
-                  </div>
-                  <div class="ta-info">
-                    <strong>{{ t.fullName }}</strong>
-                    <small>{{ t.specialization || 'General' }}·{{ t.mobileNumber || '' }}</small>
-                  </div>
-                  <span class="ta-avail-tag" [ngClass]="getTechAvailClass(t.availabilityStatus)">
-                    <span class="dot"></span> {{ getTechAvailLabel(t.availabilityStatus) }}
-                  </span>
-                </div>
-              }
-            </div>
-          }
-        </div>
-        <button class="btn-primary" (click)="load()" [disabled]="!techId || loading()">
-          @if (loading()) {
-            <span class="mini-spin"></span>
-          } @else {
-            <span class="material-icons">refresh</span>
-          }
-          {{ loading() ? 'Loading...' : 'LoadOrders' }}
-        </button>
-      } @else {
-        <!--Non-admin:justarefreshbutton-->
-        <button class="btn-primary" (click)="load()" [disabled]="loading()">
-          @if (loading()) {
-            <span class="mini-spin"></span>
-          } @else {
-            <span class="material-icons">refresh</span>
-          }
-          {{ loading() ? 'Loading...' : 'Refresh' }}
-        </button>
+    <div class="cb-info">
+      <strong>{{ isCheckedIn() ? 'CheckedIn' : 'NotCheckedIn' }}</strong>
+      @if (isCheckedIn() && checkInTime()) {
+      <span class="cb-time">Since{{ checkInTime() | date: 'hh:mma' }}</span>
+      }
+      @if (locationName()) {
+      <span class="cb-coords">
+        <span class="material-icons">location_on</span> {{ locationName() }}
+      </span>
       }
     </div>
   </div>
-  <!--â•â•â•CHECK-IN/CHECK-OUTBAR (Technicianonly)â•â•â•-->
-  @if (!isAdmin()) {
-    <div class="checkin-bar" [class.active]="isCheckedIn()">
-      <div class="cb-status">
-        <div class="cb-pulse-wrap">
-          <div class="cb-pulse" [class.on]="isCheckedIn()"></div>
-          <span class="material-iconscb-icon">{{
-            isCheckedIn() ? 'location_on' : 'location_ of f'
-          }}</span>
-        </div>
-        <div class="cb-info">
-          <strong>{{ isCheckedIn() ? 'CheckedIn' : 'NotCheckedIn' }}</strong>
-          @if (isCheckedIn() && checkInTime()) {
-            <span class="cb-time">Since{{ checkInTime() | date: 'hh:mma' }}</span>
-          }
-          @if (locationName()) {
-            <span class="cb-coords">
-              <span class="material-icons">location_on</span> {{ locationName() }}
-            </span>
-          }
-        </div>
-      </div>
-      <div class="cb-actions">
-        @if (!isCheckedIn()) {
-          <button class="cb-btncb-in" (click)="checkIn()" [disabled]="checkInBusy()">
-            @if (checkInBusy()) {
-              <span class="mini-spinwhite"></span>
-            } @else {
-              <span class="material-icons">login</span>
-            }
-            CheckIn
-          </button>
-        } @else {
-          <button class="cb-btncb-out" (click)="checkOut()" [disabled]="checkInBusy()">
-            @if (checkInBusy()) {
-              <span class="mini-spinwhite"></span>
-            } @else {
-              <span class="material-icons">logout</span>
-            }
-            CheckOut
-          </button>
-        }
-      </div>
-    </div>
-
-    @if (checkInMsg()) {
-      <div class="cb-alert" [class.ok]="!checkInErr()" [class.err]="checkInErr()">
-        <span class="material-icons">{{ checkInErr() ? 'error' : 'check_circle' }}</span>
-        {{ checkInMsg() }}
-      </div>
-    }
-
-    <!--GPSTracker-->
-    @if (gpsService.isTracking()) {
-      <div class="gps-mini-bar">
-        <div class="gmb-dot"></div>
-        <span class="material-icons">gps_fixed</span>
-        <span>GPS track ingactive</span>
-        @if (gpsService.logCount() > 0) {
-          <span class="gmb-count">{{ gpsService.logCount() }}pts</span>
-        }
-      </div>
-    }
-  }
-  <!--Stats-->
-  @if (orders().length > 0) {
-    <div class="fx-stats-row">
-      <div class="fx-stat-card">
-        <div class="fx-stat-label">Total</div>
-        <div class="fx-stat-val">{{ orders().length }}</div>
-        <div class="fx-stat-pill pill-navy">All orders</div>
-      </div>
-      <div class="fx-stat-card">
-        <div class="fx-stat-label">Assigned</div>
-        <div class="fx-stat-val is-pending">{{ countByStatus('Assigned') }}</div>
-        <div class="fx-stat-pill pill-amber">Not started</div>
-      </div>
-      <div class="fx-stat-card">
-        <div class="fx-stat-label">InProgress</div>
-        <div class="fx-stat-val is-navy">{{ countByStatus('InProgress') }}</div>
-        <div class="fx-stat-pill pill-navy">Ongoing</div>
-      </div>
-      <div class="fx-stat-card">
-        <div class="fx-stat-label">Completed</div>
-        <div class="fx-stat-val is-active">{{ countByStatus('Completed') }}</div>
-        <div class="fx-stat-pill pill-green">Done</div>
-      </div>
-    </div>
-  }
-
-  <!--FilterTabs-->
-  @if (orders().length > 0) {
-    <div class="filter-tabs">
-      <button
-        class="tab"
-        [class.active]="activeFilter() === 'all'"
-        (click)="activeFilter.set('all')"
-      >
-        All
-      </button>
-      <button
-        class="tab"
-        [class.active]="activeFilter() === 'Assigned'"
-        (click)="activeFilter.set('Assigned')"
-      >
-        Assigned
-      </button>
-      <button
-        class="tab"
-        [class.active]="activeFilter() === 'InProgress'"
-        (click)="activeFilter.set('InProgress')"
-      >
-        InProgress
-      </button>
-      <button
-        class="tab"
-        [class.active]="activeFilter() === 'Completed'"
-        (click)="activeFilter.set('Completed')"
-      >
-        Completed
-      </button>
-    </div>
-  }
-
-  <!--Comp let eWork OrderCards-->
-  <div class="orders-list">
-    @for (wo of filteredOrders(); track wo.assignmentId) {
-      <div class="order-card" [class.urgent]="wo.assignmentRole === 'Primary'">
-        <div class="order-header">
-          <div class="order-header-left">
-            <div class="order-number-row">
-              <span class="order-number">{{ wo.complaintNumber }}</span>
-              <span
-                class="role-badge"
-                [class.primary]="wo.assignmentRole === 'Primary'"
-                [class.support]="wo.assignmentRole === 'Supporting'"
-              >
-                {{ wo.assignmentRole }}
-              </span>
-            </div>
-            <h3 class="order-subject">{{ wo.subject }}</h3>
-          </div>
-          <div class="header-right-group">
-            <span class="status-badge" [attr.data-status]="wo.status">{{ wo.status }}</span>
-            @if (isAdmin ()  &&  wo.status !===   'd') {
-              <button class="btn-unassign-sm" (click)="openUnassign(wo, $event)" title="Unassign">
-                <span class="material-icons">person_remove</span>
-              </button>
-            }
-          </div>
-
-          <!--Inorder-actions:hideunassignactionbuttonfornon-admin-->
-          @if (isAdmin ()  &&  wo.status !===   'd') {
-            <button class="btn-actionbtn-unassign-action" (click)="openUnassign(wo, $event)">
-              <span class="material-icons">person_remove</span> AssignAdmin
-            </button>
-          }
-        </div>
-
-        <div class="customer-section">
-          <div class="customer-avatarcustomer-avatar-initials">
-            {{ wo.customerName?.charAt(0) || 'C' }}
-          </div>
-          <div class="customer-details">
-            <strong>{{ wo.customerName }}</strong>
-            @if (wo.customerPhone) {
-              <span class="cust-meta">
-                <span class="material-icons">phone</span> {{ wo.customerPhone }}</span
-              >
-            }
-            @if (wo.customerAddress) {
-              <span class="cust-meta">
-                <span class="material-icons">location_on</span> {{ wo.customerAddress }}</span
-              >
-            }
-          </div>
-        </div>
-
-        <div class="info-row-groupinfo-row-compact">
-          <div class="info-itemcompact-item">
-            <span class="material-icons">calendar_today</span>
-            <div>
-              <span class="info-value">{{ wo.assignedAt | date: 'ddMMMyyyy,hh:mma' }}</span>
-            </div>
-          </div>
-          <div class="meta-separator">·</div>
-          <div class="info-itemcompact-item">
-            <span class="material-icons">fitness_center</span>
-            <div>
-              <span class="info-value">{{ wo.productName }}</span>
-            </div>
-          </div>
-          @if ($any(wo).scheduledDate) {
-            <div class="meta-separator">·</div>
-            <div class="info-itemscheduledcompact-item">
-              <span class="material-icons">event</span>
-              <div>
-                <span class="info-value"
-                  >{{ $any(wo).scheduledDate | date: 'ddMMMyyyy' }}
-                  @if ($any(wo).startTime) {
-                    ·{{ $any(wo).startTime }}–{{ $any(wo).endTime }}
-                  }
-                </span>
-              </div>
-            </div>
-          }
-        </div>
-
-        <div class="order-actions">
-          @if (wo.status === 'Assigned') {
-            <button
-              class="btn-actionbtn-starticon-only-action"
-              (click)="startWork(wo)"
-              [disabled]="!isAdmin() && !isCheckedIn()"
-              title="StartWork"
-              aria-label="StartWork"
-            >
-              <span class="material-icons">play_arrow</span>
-            </button>
-          }
-          @if (wo.status === 'InProgress') {
-            <!-- <arouterLin k="/technicians/image-upload" class="btn-actionbtn-upload">
- <span class="material-icons">camera_alt</span> UploadImages
-</a> -->
-            <button
-              class="btn-actionbtn-spareicon-only-action"
-              (click)="openSpareDialog(wo, $event)"
-              title="RequestParts"
-              aria-label="RequestParts"
-            >
-              <span class="material-icons">build</span>
-            </button>
-            <button
-              class="btn-actionbtn-repairicon-only-action"
-              title="RepairParts"
-              (click)="openRepairDialog(wo, $event)"
-            >
-              <span class="material-icons">construction</span>
-            </button>
-            <button
-              class="btn-actionbtn-comp let eicon-only-action"
-              title="Comp let eWork"
-              (click)="openComp let eDialog (wo,$event)"
-            >
-              <span class="material-icons">check</span>
-            </button>
-          }
-          @if (wo.status === 'Completed') {
-            <span class="comp let ed-badge">
-              <span class="material-icons">verified</span> Completed</span
-            >
-          }
-          <!-- <a [routerLink]=" ['/complaints',wo.complaintId]" class="btn-actionbtn-view">
- <span class="material-icons">open_in_new</span> View
-</a> -->
-          <button
-            class="btn-actionbtn-detailsicon-only-action"
-            (click)="openDetail(wo, $event)"
-            title="Details"
-            aria-label="Details"
-          >
-            <span class="material-icons">info</span>
-          </button>
-          @if (isAdmin ()  &&  wo.status !===   'd') {
-            <button class="btn-actionbtn-unassign-action" (click)="openUnassign(wo, $event)">
-              <span class="material-icons">person_remove</span> AssigntoAdmin
-            </button>
-          }
-        </div>
-      </div>
-    } @empty {
-      <div class="empty-state">
-        @if (isAdmin() && !techId && !loading()) {
-          <span class="material-iconsempty-icon">engineering</span>
-          <h3>SearchaTechnician</h3>
-          <p>Typeatechniciannameaboveandselectfromthelisttoviewtheirassignments.</p>
-        } @else if (!loading()) {
-          <span class="material-iconsempty-icon">assignment_turned_in</span>
-          <h3>NoComp let eWork Orders</h3>
-          <p>Noactiveassignmentsfound.</p>
-        }
-      </div>
+  <div class="cb-actions">
+    @if (!isCheckedIn()) {
+    <button class="cb-btn cb-in" (click)="checkIn()" [disabled]="checkInBusy()">
+      @if (checkInBusy()) {
+      <span class="mini-spinwhite"></span>
+      } @else {
+      <span class="material-icons">login</span>
+      }
+      CheckIn
+    </button>
+    } @else {
+    <button class="cb-btn cb-out" (click)="checkOut()" [disabled]="checkInBusy()">
+      @if (checkInBusy()) {
+      <span class="mini-spinwhite"></span>
+      } @else {
+      <span class="material-icons">logout</span>
+      }
+      CheckOut
+    </button>
     }
   </div>
+</div>
 
-  @if (msg()) {
-    <div class="alert" [class.alert-ok]="!msgErr()" [class.alert-err]="msgErr()">
-      <span class="material-icons">{{ msgErr() ? 'error' : 'check_circle' }}</span> {{ msg() }}
-    </div>
-  }
+ @if (checkInMsg()) {
+ <div class="cb-alert" [class.ok]="!checkInErr()" [class.err]="checkInErr()">
+ <span class="material-icons">{{ checkInErr() ? 'error' : 'check_circle' }}</span>
+ {{ checkInMsg() }}
+ </div>
+ }
+
+ <!--GPSTracker-->
+ @if (gpsService.isTracking()) {
+ <div class="gps-mini-bar">
+ <div class="gmb-dot"></div>
+ <span class="material-icons">gps_fixed</span>
+ <span>GPS track ingactive</span>
+ @if (gpsService.logCount() > 0) {
+ <span class="gmb-count">{{ gpsService.logCount() }}pts</span>
+ }
+ </div>
+ }
+ }
+ <!--Stats-->
+ @if (orders().length > 0) {
+ <div class="fx-stats-row">
+ <div class="fx-stat-card">
+ <div class="fx-stat-label">Total</div>
+ <div class="fx-stat-val">{{ orders().length }}</div>
+ <div class="fx-stat-pill pill-navy">All orders</div>
+ </div>
+ <div class="fx-stat-card">
+ <div class="fx-stat-label">Assigned</div>
+ <div class="fx-stat-val is-pending">{{ countByStatus('Assigned') }}</div>
+ <div class="fx-stat-pill pill-amber">Not started</div>
+ </div>
+ <div class="fx-stat-card">
+ <div class="fx-stat-label">InProgress</div>
+ <div class="fx-stat-val is-navy">{{ countByStatus('InProgress') }}</div>
+ <div class="fx-stat-pill pill-navy">Ongoing</div>
+ </div>
+ <div class="fx-stat-card">
+ <div class="fx-stat-label">Completed</div>
+ <div class="fx-stat-val is-active">{{ countByStatus('Completed') }}</div>
+ <div class="fx-stat-pill pill-green">Done</div>
+ </div>
+ </div>
+ }
+
+ <!--FilterTabs-->
+ @if (orders().length > 0) {
+ <div class="filter-tabs">
+ <button
+ class="tab"
+ [class.active]="activeFilter() === 'all'"
+ (click)="activeFilter.set('all')"
+ >
+ All
+ </button>
+ <button
+ class="tab"
+ [class.active]="activeFilter() === 'Assigned'"
+ (click)="activeFilter.set('Assigned')"
+ >
+ Assigned
+ </button>
+ <button
+ class="tab"
+ [class.active]="activeFilter() === 'InProgress'"
+ (click)="activeFilter.set('InProgress')"
+ >
+ InProgress
+ </button>
+ <button
+ class="tab"
+ [class.active]="activeFilter() === 'Completed'"
+ (click)="activeFilter.set('Completed')"
+ >
+ Completed
+ </button>
+ </div>
+ }
+
+ <!--Complete Work OrderCards-->
+ <div class="orders-list">
+ @for (wo of filteredOrders(); track wo.assignmentId) {
+ <div class="order-card" [class.urgent]="wo.assignmentRole === 'Primary'">
+ <div class="order-header">
+ <div class="order-header-left">
+ <div class="order-number-row">
+ <span class="order-number">{{ wo.complaintNumber }}</span>
+ <span
+ class="role-badge"
+ [class.primary]="wo.assignmentRole === 'Primary'"
+ [class.support]="wo.assignmentRole === 'Supporting'"
+ >
+ {{ wo.assignmentRole }}
+ </span>
+ </div>
+ <h3 class="order-subject">{{ wo.subject }}</h3>
+ </div>
+ <div class="header-right-group">
+ <span class="status-badge" [attr.data-status]="wo.status">{{ wo.status }}</span>
+ @if (isAdmin() && wo.status !== 'Completed') {
+ <button class="btn-unassign-sm" (click)="openUnassign(wo, $event)" title="Unassign">
+ <span class="material-icons">person_remove</span>
+ </button>
+ }
+ </div>
+
+ <!--Inorder-actions:hideunassignactionbuttonfornon-admin-->
+ @if (isAdmin() && wo.status !== 'Completed') {
+ <button class="btn-action btn-unassign-action" (click)="openUnassign(wo, $event)">
+ <span class="material-icons">person_remove</span> Unassign
+ </button>
+ }
+ </div>
+
+ <div class="customer-section">
+ <div class="customer-avatar customer-avatar-initials">
+ {{ wo.customerName?.charAt(0) || 'C' }}
+ </div>
+ <div class="customer-details">
+ <strong>{{ wo.customerName }}</strong>
+ @if (wo.customerPhone) {
+ <span class="cust-meta">
+ <span class="material-icons">phone</span> {{ wo.customerPhone }}</span
+ >
+ }
+ @if (wo.customerAddress) {
+ <span class="cust-meta">
+ <span class="material-icons">location_on</span> {{ wo.customerAddress }}</span
+ >
+ }
+ </div>
+ </div>
+
+ <div class="info-row-group info-row-compact">
+ <div class="info-item compact-item">
+ <span class="material-icons">calendar_today</span>
+ <div>
+ <span class="info-value">{{ wo.assignedAt | date: 'ddMMMyyyy,hh:mma' }}</span>
+ </div>
+ </div>
+ <div class="meta-separator">·</div>
+ <div class="info-item compact-item">
+ <span class="material-icons">fitness_center</span>
+ <div>
+ <span class="info-value">{{ wo.productName }}</span>
+ </div>
+ </div>
+ @if ($any(wo).scheduledDate) {
+ <div class="meta-separator">·</div>
+ <div class="info-item scheduled compact-item">
+ <span class="material-icons">event</span>
+ <div>
+ <span class="info-value"
+ >{{ $any(wo).scheduledDate | date: 'ddMMMyyyy' }}
+ @if ($any(wo).startTime) {
+ ·{{ $any(wo).startTime }}–{{ $any(wo).endTime }}
+ }
+ </span>
+ </div>
+ </div>
+ }
+ </div>
+
+ <div class="order-actions">
+ @if (wo.status === 'Assigned') {
+ <button
+ class="btn-action btn-start icon-only-action"
+ (click)="startWork(wo)"
+ [disabled]="!isAdmin() && !isCheckedIn()"
+ title="Start Work"
+ aria-label="Start Work"
+ >
+ <span class="material-icons">play_arrow</span>
+ </button>
+ }
+ @if (wo.status === 'InProgress') {
+ <!-- <arouterLin k="/technicians/image-upload" class="btn-action btn-upload">
+ <span class="material-icons">camera_alt</span> UploadImages
+</a> -->
+ <button
+ class="btn-action btn-spare icon-only-action"
+ (click)="openSpareDialog(wo, $event)"
+ title="Request Parts"
+ aria-label="Request Parts"
+ >
+ <span class="material-icons">build</span>
+ </button>
+ <button
+ class="btn-action btn-repair icon-only-action"
+ title="Repair Parts"
+ (click)="openRepairDialog(wo, $event)"
+ >
+ <span class="material-icons">construction</span>
+ </button>
+ <button
+ class="btn-action btn-complete icon-only-action"
+ title="Complete Work"
+ (click)="openCompleteDialog (wo,$event)"
+ >
+ <span class="material-icons">check</span>
+ </button>
+ }
+ @if (wo.status === 'Completed') {
+ <span class="completed-badge">
+ <span class="material-icons">verified</span> Completed</span
+ >
+ }
+ <!-- <a [routerLink]=" ['/complaints',wo.complaintId]" class="btn-action btn-view">
+ <span class="material-icons">open_in_new</span> View
+</a> -->
+ <button
+ class="btn-action btn-details icon-only-action"
+ (click)="openDetail(wo, $event)"
+ title="Details"
+ aria-label="Details"
+ >
+ <span class="material-icons">info</span>
+ </button>
+ @if (isAdmin() && wo.status !== 'Completed') {
+ <button class="btn-action btn-unassign-action" (click)="openUnassign(wo, $event)">
+ <span class="material-icons">person_remove</span> AssigntoAdmin
+ </button>
+ }
+ </div>
+ </div>
+ } @empty {
+ <div class="empty-state">
+ @if (isAdmin() && !techId && !loading()) {
+ <span class="material-icons empty-icon">engineering</span>
+ <h3>Search a Technician</h3>
+ <p>Type a technician name above and select from the list to view their assignments.</p>
+ } @else if (!loading()) {
+ <span class="material-icons empty-icon">assignment_turned_in</span>
+ <h3>No Complete Work Orders</h3>
+ <p>No active assignments found.</p>
+ }
+ </div>
+ }
+ </div>
+
+ @if (msg()) {
+ <div class="alert" [class.alert-ok]="!msgErr()" [class.alert-err]="msgErr()">
+ <span class="material-icons">{{ msgErr() ? 'error' : 'check_circle' }}</span> {{ msg() }}
+ </div>
+ }
 </div>
 
 <!--â•â•â•UNASSIGNDIALOGâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•-->
 @if (showUnassignDialog()) {
-  <div class="ua-overlay" (click)="closeUnassign()"></div>
-  <div class="ua-dialog">
-    <div class="ua-header">
-      <div class="ua-icon-wrap"><span class="material-icons">person_remove</span></div>
-      <div>
-        <h3>AssignAdmin</h3>
-        <p class="ua-sub">Thiswillremovethetechnicianfromthisassignment</p>
-      </div>
-      <button class="ua-close-btn" (click)="closeUnassign()">
-        <span class="material-icons">close</span>
-      </button>
-    </div>
-    @if (unassignTarget()) {
-      <div class="ua-info">
-        <div class="ua-info-row">
-          <span class="material-icons">engineering</span>
-          <span
-            ><strong>{{ selectedTech()?.fullName }}</strong>
-            <span class="role-tag">{{ unassignTarget()!.assignmentRole }}</span>
-          </span>
-        </div>
-        <div class="ua-info-row">
-          <span class="material-icons">confirmation_number</span>
-          <span>{{ unassignTarget()!.complaintNumber }}</span>
-        </div>
-        <div class="ua-info-row">
-          <span class="material-icons">assignment</span>
-          <span>{{ unassignTarget()!.subject }}</span>
-        </div>
-        @if ($any(unassignTarget()).scheduledDate) {
-          <div class="ua-info-rowwarn">
-            <span class="material-icons">event</span>
-            <span>Scheduled:{{ $any(unassignTarget()).scheduledDate | date: 'ddMMMyyyy' }}</span>
-          </div>
-        }
-      </div>
-    }
-    <div class="ua-body">
-      <label class="ua-label">Reason <span class="ua-optional">(optional)</span> </label>
-      <textarea
-        [(ngModel)]="unassignReason"
-        rows="2"
-        placeholder="e.g.Technicianunavailable,rescheduled..."
-      ></textarea>
-    </div>
-    <div class="ua-footer">
-      <button class="ua-cancel" (click)="closeUnassign()" [disabled]="unassigning()">Cancel</button>
-      <button class="ua-confirm" (click)="confirmUnassign()" [disabled]="unassigning()">
-        @if (unassigning()) {
-          <span class="mini-spinwhite"></span> AssigntoAdmin...
-        } @else {
-          <span class="material-icons">person_remove</span> ConfirmAssigntoAdmin
-        }
-      </button>
-    </div>
-  </div>
+ <div class="ua-overlay" (click)="closeUnassign()"></div>
+ <div class="ua-dialog">
+ <div class="ua-header">
+ <div class="ua-icon-wrap"><span class="material-icons">person_remove</span></div>
+ <div>
+ <h3>Unassign</h3>
+ <p class="ua-sub">Thiswillremovethetechnicianfromthisassignment</p>
+ </div>
+ <button class="ua-close-btn" (click)="closeUnassign()">
+ <span class="material-icons">close</span>
+ </button>
+ </div>
+ @if (unassignTarget()) {
+ <div class="ua-info">
+ <div class="ua-info-row">
+ <span class="material-icons">engineering</span>
+ <span
+ ><strong>{{ selectedTech().fullName }}</strong>
+ <span class="role-tag">{{ unassignTarget()!.assignmentRole }}</span>
+ </span>
+ </div>
+ <div class="ua-info-row">
+ <span class="material-icons">confirmation_number</span>
+ <span>{{ unassignTarget()!.complaintNumber }}</span>
+ </div>
+ <div class="ua-info-row">
+ <span class="material-icons">assignment</span>
+ <span>{{ unassignTarget()!.subject }}</span>
+ </div>
+ @if ($any(unassignTarget()).scheduledDate) {
+ <div class="ua-info-rowwarn">
+ <span class="material-icons">event</span>
+ <span>Scheduled:{{ $any(unassignTarget()).scheduledDate | date: 'ddMMMyyyy' }}</span>
+ </div>
+ }
+ </div>
+ }
+ <div class="ua-body">
+ <label class="ua-label">Reason <span class="ua-optional">(optional)</span> </label>
+ <textarea
+ [(ngModel)]="unassignReason"
+ rows="2"
+ placeholder="e.g.Technicianunavailable,rescheduled..."
+ ></textarea>
+ </div>
+ <div class="ua-footer">
+ <button class="ua-cancel" (click)="closeUnassign()" [disabled]="unassigning()">Cancel</button>
+ <button class="ua-confirm" (click)="confirmUnassign()" [disabled]="unassigning()">
+ @if (unassigning()) {
+ <span class="mini-spinwhite"></span> AssigntoAdmin...
+ } @else {
+ <span class="material-icons">person_remove</span> ConfirmAssigntoAdmin
+ }
+ </button>
+ </div>
+ </div>
 }
 
 <!--â•â•â•DETAILMODALâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•-->
 @if (showDetail()) {
-  <div class="detail-overlay" (click)="closeDetail()"></div>
-  <div class="detail-modal">
-    <div class="dm-header">
-      <div class="dm-icon"><span class="material-icons">assignment</span></div>
-      <div class="dm-title">
-        <h3>Work Order Details</h3>
-        @if (detailData()) {
-          <span class="dm-no">{{ detailData().complaintNumber }}</span>
-        }
-      </div>
-      <button class="dm-close" (click)="closeDetail()">
-        <span class="material-icons">close</span>
-      </button>
-    </div>
+ <div class="detail-overlay" (click)="closeDetail()"></div>
+ <div class="detail-modal">
+ <div class="dm-header">
+ <div class="dm-icon"><span class="material-icons">assignment</span></div>
+ <div class="dm-title">
+ <h3>Work Order Details</h3>
+ @if (detailData()) {
+ <span class="dm-no">{{ detailData()?.complaintNumber }}</span>
+ }
+ </div>
+ <button class="dm-close" (click)="closeDetail()">
+ <span class="material-icons">close</span>
+ </button>
+ </div>
 
-    @if (detailLoading()) {
-      <div class="dm-loading">
-        <div class="spinner-lg"></div>
-        <p>Loading details...</p>
-      </div>
-    }
+ @if (detailLoading()) {
+ <div class="dm-loading">
+ <div class="spinner-lg"></div>
+ <p>Loading details...</p>
+ </div>
+ }
 
-    @if (!detailLoading() && detailData()) {
-      <div class="dm-body">
-        <!--Statusrow-->
-        <div class="dm-status-row">
-          <span
-            class="status-pill"
-            [style.background]="
-              detailData().statusColor ? detailData().statusColor + '20' : '#f1f5f9'
-            "
-            [style.color]="detailData().statusColor || '#475569'"
-          >
-            {{ detailData().statusName || detailData().status }}
-          </span>
-          <span class="role-pill" [class.primary]="detailData().assignmentRole === 'Primary'">
-            {{ detailData().assignmentRole }}
-          </span>
-          @if (detailData().isSLA Breached) {
-            <span class="sla-breach-pill">
-              <span class="material-icons">warning</span> SLA Breached</span
-            >
-          }
-          @if (detailData().priority) {
-            <span class="priority-pill" [attr.data-priority]="detailData().priority">{{
-              detailData().priority
-            }}</span>
-          }
-        </div>
+ @if (!detailLoading() && detailData()) {
+ <div class="dm-body">
+ <!--Statusrow-->
+ <div class="dm-status-row">
+ <span
+ class="status-pill"
+ [style.background]="detailData()?.statusColor ? detailData()?.statusColor + '20' : '#f1f5f9'"
+ [style.color]="detailData()?.statusColor || '#475569'"
+ >
+ {{ detailData()?.statusName || detailData()?.status }}
+ </span>
+ <span class="role-pill" [class.primary]="detailData()?.assignmentRole === 'Primary'">
+ {{ detailData()?.assignmentRole }}
+ </span>
+ @if (detailData()?.isSLABreached) {
+ <span class="sla-breach-pill">
+ <span class="material-icons">warning</span> SLA Breached</span
+ >
+ }
+ @if (detailData()?.priority) {
+ <span class="priority-pill" [attr.data-priority]="detailData()?.priority">{{
+ detailData()?.priority
+ }}</span>
+ }
+ </div>
 
-        <!--──TabBar──-->
-        <div class="dm-tabs">
-          <button
-            class="dm-tab"
-            [class.active]="detailTab() === 'info'"
-            (click)="detailTab.set('info')"
-          >
-            <span class="material-icons">info</span> Info
-          </button>
-          <button
-            class="dm-tab"
-            [class.active]="detailTab() === 'spares'"
-            (click)="detailTab.set('spares')"
-          >
-            <span class="material-icons">build</span> SpareParts
-            @if (complaintSpares().length > 0) {
-              <span class="dm-tab-badge">{{ complaintSpares().length }}</span>
-            }
-          </button>
-          <button
-            class="dm-tab"
-            [class.active]="detailTab() === 'repairs'"
-            (click)="detailTab.set('repairs')"
-          >
-            <span class="material-icons">construction</span> Repairs
-            @if (detailData().repairDetails?.length > 0) {
-              <span class="dm-tab-badge">{{ detailData().repairDetails.length }}</span>
-            }
-          </button>
-          <button
-            class="dm-tab"
-            [class.active]="detailTab() === 'timeline'"
-            (click)="detailTab.set('timeline')"
-          >
-            <span class="material-icons">history</span> Timeline
-          </button>
-          @if (detailData().images?.length > 0) {
-            <button
-              class="dm-tab"
-              [class.active]="detailTab() === 'images'"
-              (click)="detailTab.set('images')"
-            >
-              <span class="material-icons">photo_library</span> Images
-            </button>
-          }
-        </div>
+ <div class="dm-tabs">
+ <button class="dm-tab" [class.active]="detailTab() === 'info'" (click)="detailTab.set('info')">
+ <span class="material-icons">info</span> Info
+ </button>
+ <button class="dm-tab" [class.active]="detailTab() === 'spares'" (click)="detailTab.set('spares')">
+ <span class="material-icons">build</span> Spare Parts
+ @if (complaintSpares().length > 0) {
+ <span class="dm-tab-badge">{{ complaintSpares().length }}</span>
+ }
+ </button>
+ <button class="dm-tab" [class.active]="detailTab() === 'repairs'" (click)="detailTab.set('repairs')">
+ <span class="material-icons">construction</span> Repairs
+ @if (detailData()?.repairDetails?.length) {
+ <span class="dm-tab-badge">{{ detailData()?.repairDetails?.length }}</span>
+ }
+ </button>
+ <button class="dm-tab" [class.active]="detailTab() === 'timeline'" (click)="detailTab.set('timeline')">
+ <span class="material-icons">history</span> Timeline
+ </button>
+ @if (detailData()?.images?.length) {
+ <button class="dm-tab" [class.active]="detailTab() === 'images'" (click)="detailTab.set('images')">
+ <span class="material-icons">photo_library</span> Images
+ </button>
+ }
+ </div>
 
-        <!--──INFOTAB──-->
-        @if (detailTab() === 'info') {
-          <div class="dm-tab-content">
-            <!--Subject-->
-            <div class="dm-section">
-              <h4 class="dm-section-title">{{ detailData().subject }}</h4>
-              @if (detailData().description) {
-                <p class="dm-desc">{{ detailData().description }}</p>
-              }
-            </div>
+ <!--──INFOTAB──-->
+ @if (detailTab() === 'info') {
+ <div class="dm-tab-content">
+ <!--Subject-->
+ <div class="dm-section">
+ <h4 class="dm-section-title">{{ detailData()?.subject }}</h4>
+ @if (detailData()?.description) {
+ <p class="dm-desc">{{ detailData()?.description }}</p>
+ }
+ </div>
 
-            <!--InfoGrid-->
-            <div class="dm-info-grid">
-              <div class="dm-info-item">
-                <span class="material-icons">person</span>
-                <div>
-                  <span class="dmi-label">Customer</span>
-                  <span class="dmi-val">{{ detailData().customerName }}</span>
-                </div>
-              </div>
-              @if (detailData().customerPhone) {
-                <div class="dm-info-item">
-                  <span class="material-icons">phone</span>
-                  <div>
-                    <span class="dmi-label">Phone</span>
-                    <span class="dmi-val">{{ detailData().customerPhone }}</span>
-                  </div>
-                </div>
-              }
-              @if (detailData().customerAddress) {
-                <div class="dm-info-item">
-                  <span class="material-icons">location_on</span>
-                  <div>
-                    <span class="dmi-label">Address</span>
-                    <span class="dmi-val"
-                      >{{ detailData().customerAddress
-                      }}{{ detailData().city ? ',' + detailData().city : '' }}</span
-                    >
-                  </div>
-                </div>
-              }
-              <div class="dm-info-item">
-                <span class="material-icons">fitness_center</span>
-                <div>
-                  <span class="dmi-label">Product</span>
-                  <span class="dmi-val">{{ detailData().productName }}</span>
-                </div>
-              </div>
-              @if (detailData().serialNumber) {
-                <div class="dm-info-item">
-                  <span class="material-icons">qr_code</span>
-                  <div>
-                    <span class="dmi-label">SerialNo</span>
-                    <span class="dmi-val">{{ detailData().serialNumber }}</span>
-                  </div>
-                </div>
-              }
-              <div class="dm-info-item">
-                <span class="material-icons">calendar_today</span>
-                <div>
-                  <span class="dmi-label">Assigned</span>
-                  <span class="dmi-val">{{
-                    detailData().assignedAt | date: 'ddMMMyyyy,hh:mma'
-                  }}</span>
-                </div>
-              </div>
-              @if (detailData().scheduledDate) {
-                <div class="dm-info-item">
-                  <span class="material-icons">event</span>
-                  <div>
-                    <span class="dmi-label">Scheduled</span>
-                    <span class="dmi-val">{{
-                      detailData().scheduledDate | date: 'ddMMMyyyy'
-                    }}</span>
-                  </div>
-                </div>
-              }
-              @if (detailData().comp; let edAt) {
-                <div class="dm-info-itemdone">
-                  <span class="material-icons">check_circle</span>
-                  <div>
-                    <span class="dmi-label">Completed</span>
-                    <span
-                      class="dmi-val"
-                      >{{  detailData ().comp let edAt|date:'ddMMMyyyy,hh:mma'  }}</span
-                    >
-                  </div>
-                </div>
-              }
-            </div>
+ <!--InfoGrid-->
+ <div class="dm-info-grid">
+ <div class="dm-info-item">
+ <span class="material-icons">person</span>
+ <div>
+ <span class="dmi-label">Customer</span>
+ <span class="dmi-val">{{ detailData()?.customerName }}</span>
+ </div>
+ </div>
+ @if (detailData()?.customerPhone) {
+ <div class="dm-info-item">
+ <span class="material-icons">phone</span>
+ <div>
+ <span class="dmi-label">Phone</span>
+ <span class="dmi-val">{{ detailData()?.customerPhone }}</span>
+ </div>
+ </div>
+ }
+ @if (detailData()?.customerAddress) {
+ <div class="dm-info-item">
+ <span class="material-icons">location_on</span>
+ <div>
+ <span class="dmi-label">Address</span>
+ <span class="dmi-val"
+ >{{ detailData()?.customerAddress
+ }}{{ detailData()?.city ? ',' + detailData()?.city : '' }}</span
+ >
+ </div>
+ </div>
+ }
+ <div class="dm-info-item">
+ <span class="material-icons">fitness_center</span>
+ <div>
+ <span class="dmi-label">Product</span>
+ <span class="dmi-val">{{ detailData()?.productName }}</span>
+ </div>
+ </div>
+ @if (detailData()?.serialNumber) {
+ <div class="dm-info-item">
+ <span class="material-icons">qr_code</span>
+ <div>
+ <span class="dmi-label">SerialNo</span>
+ <span class="dmi-val">{{ detailData()?.serialNumber }}</span>
+ </div>
+ </div>
+ }
+ <div class="dm-info-item">
+ <span class="material-icons">calendar_today</span>
+ <div>
+ <span class="dmi-label">Assigned</span>
+ <span class="dmi-val">{{
+ detailData()?.assignedAt | date: 'ddMMMyyyy,hh:mma'
+ }}</span>
+ </div>
+ </div>
+ @if (detailData()?.scheduledDate) {
+ <div class="dm-info-item">
+ <span class="material-icons">event</span>
+ <div>
+ <span class="dmi-label">Scheduled</span>
+ <span class="dmi-val">{{
+ detailData()?.scheduledDate | date: 'ddMMMyyyy'
+ }}</span>
+ </div>
+ </div>
+ }
+ @if (detailData()?.completedAt) {
+ <div class="dm-info-item done">
+ <span class="material-icons">check_circle</span>
+ <div>
+ <span class="dmi-label">Completed</span>
+ <span
+ class="dmi-val"
+ >{{ detailData()?.completedAt | date: 'ddMMMyyyy,hh:mma' }}</span
+ >
+ </div>
+ </div>
+ }
+ </div>
 
-            @if (detailData().notes) {
-              <div class="dm-notes">
-                <span class="material-icons">sticky_note_2</span>
-                <p>{{ detailData().notes }}</p>
-              </div>
-            }
-          </div>
-        }
+ @if (detailData()?.notes) {
+ <div class="dm-notes">
+ <span class="material-icons">sticky_note_2</span>
+ <p>{{ detailData()?.notes }}</p>
+ </div>
+ }
+ </div>
+ }
 
-        <!--──SPAREPARTSTAB──-->
-        @if (detailTab() === 'spares') {
-          <div class="dm-tab-content">
-            @if (sparesLoading()) {
-              <div class="spare-loading">
-                <div class="mini-spinblue"></div>
-                <span>Loadingspareparts...</span>
-              </div>
-            } @else if (!complaintSpares().length) {
-              <div class="dm-empty-tab">
-                <span class="material-icons">build</span>
-                <p>Nosparepartrequests</p>
-              </div>
-            } @else {
-              <div class="spare-items-list">
-                @for (s of complaintSpares(); track s.requestId) {
-                  <div class="spare-item-card" [attr.data-status]="s.status?.toLowerCase()">
-                    <div class="sic-left">
-                      <div class="sic-part-info">
-                        <strong>{{ s.partName }}</strong>
-                        @if (s.partNumber) {
-                          <small>{{ s.partNumber }}</small>
-                        }
-                      </div>
-                      <div class="sic-meta-row">
-                        <span class="sic-tech">
-                          <span class="material-icons">engineering</span>
-                          {{ s.technicianName }}</span
-                        >
-                        <span class="sic-date">{{ s.requestedAt | date: 'ddMMM,HH:mm' }}</span>
-                      </div>
-                      @if (s.remarks) {
-                        <p class="sic-remarks">"{{ s.remarks }}"</p>
-                      }
-                      @if (s.approvedByName) {
-                        <span class="sic-approved">
-                          <span class="material-icons">verified</span> Approvedby{{
-                            s.approvedByName
-                          }}
-                        </span>
-                      }
-                    </div>
-                    <div class="sic-right">
-                      <span class="sic-qty">&times;{{ s.quantity }}</span>
-                      @if (s.urgencyLevel) {
-                        <span class="urg-tag" [ngClass]="getUrgencyClass(s.urgencyLevel)">{{
-                          s.urgencyLevel
-                        }}</span>
-                      }
-                      <span class="sp-status" [ngClass]="getSpareStatusClass(s.status)">{{
-                        s.status
-                      }}</span>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-          </div>
-        }
+ <!--──Spare PartsTAB──-->
+ @if (detailTab() === 'spares') {
+ <div class="dm-tab-content">
+ @if (sparesLoading()) {
+ <div class="spare-loading">
+ <div class="mini-spinblue"></div>
+ <span>LoadingSpare Parts...</span>
+ </div>
+ } @else if (!complaintSpares().length) {
+ <div class="dm-empty-tab">
+ <span class="material-icons">build</span>
+ <p>Nosparepartrequests</p>
+ </div>
+ } @else {
+ <div class="spare-items-list">
+ @for (s of complaintSpares(); track s.requestId) {
+ <div class="spare-item-card" [attr.data-status]="s.status?.toLowerCase()">
+ <div class="sic-left">
+ <div class="sic-part-info">
+ <strong>{{ s.partName }}</strong>
+ @if (s.partNumber) {
+ <small>{{ s.partNumber }}</small>
+ }
+ </div>
+ <div class="sic-meta-row">
+ <span class="sic-tech">
+ <span class="material-icons">engineering</span>
+ {{ s.technicianName }}</span
+ >
+ <span class="sic-date">{{ s.requestedAt | date: 'ddMMM,HH:mm' }}</span>
+ </div>
+ @if (s.remarks) {
+ <p class="sic-remarks">"{{ s.remarks }}"</p>
+ }
+ @if (s.approvedByName) {
+ <span class="sic-approved">
+ <span class="material-icons">verified</span> Approvedby{{
+ s.approvedByName
+ }}
+ </span>
+ }
+ </div>
+ <div class="sic-right">
+ <span class="sic-qty">&times;{{ s.quantity }}</span>
+ @if (s.urgencyLevel) {
+ <span class="urg-tag" [ngClass]="getUrgencyClass(s.urgencyLevel)">{{
+ s.urgencyLevel
+ }}</span>
+ }
+ <span class="sp-status" [ngClass]="getSpareStatusClass(s.status)">{{
+ s.status
+ }}</span>
+ @if (s.status?.toLowerCase() === 'dispatched') {
+ <button class="btn-mark-used" (click)="markSpareAsUsed(s.requestId)">
+ <span class="material-icons">check_circle</span> Used
+ </button>
+ }
+ </div>
+ </div>
+ }
+ </div>
+ }
+ </div>
+ }
 
-        <!--──REPAIRSTAB──-->
-        @if (detailTab() === 'repairs') {
-          <div class="dm-tab-content">
-            @if (!detailData().repairDetails?.length) {
-              <div class="dm-empty-tab">
-                <span class="material-icons">construction</span>
-                <p>Norepairrequestsyet</p>
-              </div>
-            } @else {
-              <div class="repair-items-list">
-                @for (r of detailData().repairDetails; track r.repairRequestId) {
-                  <div class="repair-item-card">
-                    <div class="ric-left">
-                      <div class="ric-part-info">
-                        <strong>{{ r.partName }}</strong>
-                        @if (r.partSerialNumber) {
-                          <small>SN:{{ r.partSerialNumber }}</small>
-                        }
-                      </div>
-                      <div class="ric-meta-row">
-                        <span class="ric-date">{{ r.createdAt | date: 'ddMMM,HH:mm' }}</span>
-                        <span class="ric-status-pill">{{ r.status }}</span>
-                      </div>
-                      @if (r.notes) {
-                        <p class="ric-notes">"{{ r.notes }}"</p>
-                      }
-                    </div>
-                    <div class="ric-right">
-                      @if (r.imageCount > 0) {
-                        <button class="btn-view-images" (click)="viewRepairImages(r)">
-                          <span class="material-icons">photo_library</span>
-                          View ({{ r.imageCount }})
-                        </button>
-                      } @else {
-                        <span class="no-images-tag">Noimages</span>
-                      }
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-          </div>
-        }
+ <!--──REPAIRSTAB──-->
+ @if (detailTab() === 'repairs') {
+ <div class="dm-tab-content">
+ @if (!detailData()?.repairDetails?.length) {
+ <div class="dm-empty-tab">
+ <span class="material-icons">construction</span>
+ <p>Norepairrequestsyet</p>
+ </div>
+ } @else {
+ <div class="repair-items-list">
+ @for (r of detailData()?.repairDetails; track r.repairRequestId) {
+ <div class="repair-item-card">
+ <div class="ric-left">
+ <div class="ric-part-info">
+ <strong>{{ r.partName }}</strong>
+ @if (r.partSerialNumber) {
+ <small>SN:{{ r.partSerialNumber }}</small>
+ }
+ </div>
+ <div class="ric-meta-row">
+ <span class="ric-date">{{ r.createdAt | date: 'ddMMM,HH:mm' }}</span>
+ <span class="ric-status-pill">{{ r.status }}</span>
+ </div>
+ @if (r.notes) {
+ <p class="ric-notes">"{{ r.notes }}"</p>
+ }
+ </div>
+ <div class="ric-right">
+ @if (r.imageCount > 0) {
+ <button class="btn-view-images" (click)="viewRepairImages(r)">
+ <span class="material-icons">photo_library</span>
+ View ({{ r.imageCount }})
+ </button>
+ } @else {
+ <span class="no-images-tag">Noimages</span>
+ }
 
-        <!--──TIMELINETAB──-->
-        @if (detailTab() === 'timeline') {
-          <div class="dm-tab-content">
-            @if (!detailData().timeline?.length) {
-              <div class="dm-empty-tab">
-                <span class="material-icons">history</span>
-                <p>Noactivityrecordedyet</p>
-              </div>
-            } @else {
-              <div class="timeline-list">
-                @for (t of detailData().timeline; track t.auditId) {
-                  <div class="tl-item">
-                    <div class="tl-icon" [attr.data-action]="t.action?.toLowerCase()">
-                      <span class="material-icons">{{ getAuditIcon(t.action) }}</span>
-                    </div>
-                    <div class="tl-body">
-                      <div class="tl-top">
-                        <span class="tl-action" [attr.data-action]="t.action?.toLowerCase()">{{
-                          t.action
-                        }}</span>
-                        <span class="tl-time">{{ t.changedAt | date: 'ddMMM,hh:mma' }}</span>
-                      </div>
-                      @if (t.newTechnicianName) {
-                        <p class="tl-detail">
-                          @if (t.oldTechnicianName) {
-                            <span class="tl-old">{{ t.oldTechnicianName }}</span>
-                            <span class="material-iconstl-arr">arrow_forward</span>
-                          }
-                          <span class="tl-new">{{ t.newTechnicianName }}</span>
-                          @if (t.newRole) {
-                            <span class="tl-role">{{ t.newRole }}</span>
-                          }
-                        </p>
-                      }
-                      @if (t.remarks) {
-                        <p class="tl-remarks">"{{ t.remarks }}"</p>
-                      }
-                      @if (t.changedByName) {
-                        <span class="tl-by">
-                          <span class="material-icons">person</span> {{ t.changedByName }}</span
-                        >
-                      }
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-          </div>
-        }
+ @if (r.status?.toLowerCase() === 'dispatched') {
+ <button class="btn-mark-used" (click)="markRepairAsUsed(r.repairRequestId)">
+ <span class="material-icons">check_circle</span> Used
+ </button>
+ }
+ </div>
+ </div>
+ }
+ </div>
+ }
+ </div>
+ }
 
-        <!--──IMAGESTAB──-->
-        @if (detailTab() === 'images') {
-          <div class="dm-tab-content">
-            <div class="image-grid">
-              @for (img of detailData().images; track img.imageId) {
-                <div class="img-thumb">
-                  <img [src]="img.imagePath" [alt]="img.imageType" l oading="lazy" />
-                  <span class="img-type-tag">{{ img.imageType }}</span>
-                </div>
-              }
-            </div>
-          </div>
-        }
-      </div>
-    }
-  </div>
+ <!--──TIMELINETAB──-->
+ @if (detailTab() === 'timeline') {
+ <div class="dm-tab-content">
+ @if (!detailData()?.timeline?.length) {
+ <div class="dm-empty-tab">
+ <span class="material-icons">history</span>
+ <p>Noactivityrecordedyet</p>
+ </div>
+ } @else {
+ <div class="timeline-list">
+ @for (t of detailData()?.timeline; track t.auditId) {
+ <div class="tl-item">
+ <div class="tl-icon" [attr.data-action]="t.action?.toLowerCase()">
+ <span class="material-icons">{{ getAuditIcon(t.action) }}</span>
+ </div>
+ <div class="tl-body">
+ <div class="tl-top">
+ <span class="tl-action" [attr.data-action]="t.action?.toLowerCase()">{{
+ t.action
+ }}</span>
+ <span class="tl-time">{{ t.changedAt | date: 'ddMMM,hh:mma' }}</span>
+ </div>
+ @if (t.newTechnicianName) {
+ <p class="tl-detail">
+ @if (t.oldTechnicianName) {
+ <span class="tl-old">{{ t.oldTechnicianName }}</span>
+ <span class="material-icons tl-arr">arrow_forward</span>
+ }
+ <span class="tl-new">{{ t.newTechnicianName }}</span>
+ @if (t.newRole) {
+ <span class="tl-role">{{ t.newRole }}</span>
+ }
+ </p>
+ }
+ @if (t.remarks) {
+ <p class="tl-remarks">"{{ t.remarks }}"</p>
+ }
+ @if (t.changedByName) {
+ <span class="tl-by">
+ <span class="material-icons">person</span> {{ t.changedByName }}</span
+ >
+ }
+ </div>
+ </div>
+ }
+ </div>
+ }
+ </div>
+ }
+
+ <!--──IMAGES TAB──-->
+ @if (detailTab() === 'images') {
+ <div class="dm-tab-content">
+ <div class="image-grid">
+ @for (img of detailData()?.images; track img.imageId) {
+ <div class="img-thumb">
+ <img [src]="img.imagePath" [alt]="img.imageType" loading="lazy" />
+ <span class="img-type-tag">{{ img.imageType }}</span>
+ </div>
+ }
+ </div>
+ </div>
+ }
+
+ <!-- ── ACTION FOOTER ── -->
+ <div class="dm-footer">
+ @if (detailData()?.status === 'Assigned') {
+ <button class="btn-action btn-start" (click)="startWork(detailData())">
+ <span class="material-icons">play_arrow</span> Start Work
+ </button>
+ }
+
+ @if (detailData()?.status === 'InProgress') {
+ <!-- <button class="btn-action btn-spare" (click)="openSpareDialog(detailData())">
+ <span class="material-icons">shopping_cart</span> Spare Request
+ </button>
+ <button class="btn-action btn-repair" (click)="openRepairDialog(detailData())">
+ <span class="material-icons">construction</span> Repair Request
+ </button> -->
+ <!-- <button class="btn-action btn-complete" (click)="openCompleteDialog(detailData())">
+ <span class="material-icons">check_circle</span> Complete
+ </button> -->
+ }
+
+ @if (isAdmin() && detailData()?.status !== 'Completed') {
+ <button class="btn-action btn-danger" (click)="openUnassign(detailData())">
+ <span class="material-icons">person_remove</span> Unassign
+ </button>
+ }
+
+ <button class="btn-action btn-secondary" (click)="closeDetail()">Close</button>
+ </div>
+ </div>
+ }
+ </div>
 }
 
 <!--â•â•â•SPAREREQUESTDIALOGâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•-->
 @if (showSpareDialog()) {
-  <div class="sp-overlay" (click)="closeSpareDialog()"></div>
-  <div class="sp-dialog">
-    <div class="sp-header">
-      <div class="sp-header-icon"><span class="material-icons">build</span></div>
-      <div class="sp-header-text">
-        <h3>RequestSpareParts</h3>
-        @if (spareDialogWo()) {
-          <span class="sp-complaint-tag">
-            <span class="material-icons">confirmation_number</span>
-            {{ spareDialogWo()!.complaintNumber }}-{{ spareDialogWo()!.subject }}
-          </span>
-        }
-      </div>
-      <button class="sp-close" type="button" (click)="closeSpareDialog()">
-        <span class="material-icons">close</span>
-      </button>
-    </div>
+ <div class="sp-overlay" (click)="closeSpareDialog()"></div>
+ <div class="sp-dialog">
+ <div class="sp-header">
+ <div class="sp-header-icon"><span class="material-icons">build</span></div>
+ <div class="sp-header-text">
+ <h3>RequestSpare Parts</h3>
+ @if (spareDialogWo()) {
+ <span class="sp-complaint-tag">
+ <span class="material-icons">confirmation_number</span>
+ {{ spareDialogWo()?.complaintNumber }}-{{ spareDialogWo()?.subject }}
+ </span>
+ }
+ </div>
+ <button class="sp-close" type="button" (click)="closeSpareDialog()">
+ <span class="material-icons">close</span>
+ </button>
+ </div>
 
-    <div class="sp-body">
-      @if (spareDialogWo()) {
-        <div class="sp-wo-info">
-          <div class="sp-wo-row">
-            <span class="material-icons">person</span>
-            <span>{{ spareDialogWo()!.customerName }}</span>
-          </div>
-          <div class="sp-wo-row">
-            <span class="material-icons">fitness_center</span>
-            <span>{{ spareDialogWo()!.productName }}</span>
-          </div>
-        </div>
-      }
+ <div class="sp-body">
+ @if (spareDialogWo()) {
+ <div class="sp-wo-info">
+ <div class="sp-wo-row">
+ <span class="material-icons">person</span>
+ <span>{{ spareDialogWo()?.customerName }}</span>
+ </div>
+ <div class="sp-wo-row">
+ <span class="material-icons">fitness_center</span>
+ <span>{{ spareDialogWo()?.productName }}</span>
+ </div>
+ </div>
+ }
 
-      <div class="sp-grid">
-        <div class="sp-search-section">
-          <div class="sp-section-head">
-            <div>
-              <label>SearchFromMasterList</label>
-              <p>Pickanexistingpartoraddacustomonewhenitismissingfromthemasterlist.</p>
-            </div>
-            <button class="sp-add-custom" type="button" (click)="addCustomPart()">
-              <span class="material-icons">add</span>
-              CustomPart
-            </button>
-          </div>
+ <div class="sp-grid">
+ <div class="sp-search-section">
+ <div class="sp-section-head">
+ <div>
+ <label>SearchFromMasterList</label>
+ <p>Pick an existing part or add a custom one when it is missing from the master list.</p>
+ </div>
+ <button class="sp-add-custom" type="button" (click)="addCustomPart()">
+ <span class="material-icons">add</span>
+ CustomPart
+ </button>
+ </div>
 
-          <div class="sp-search-wrap">
-            <span class="material-iconssp-search-ic">search</span>
-            <inputtyp
-              e="text"
-              [(ngModel)]="spareSearch"
-              c
-              lass="sp-search-input"
-              p
-              laceholder="Searchpartnameornumber..."
-              (input)="onSpareSearch()"
-              (focus)="showSpareDropdown = true"
-              autocomp
-              let
-              e=" of f"
-            />
-            @if (spareSearchLoading()) {
-              <div class="ta-spinner"></div>
-            }
-          </div>
+ <div class="sp-search-wrap">
+ <span class="material-icons sp-search-ic">search</span>
+ <input typee="text"
+ [(ngModel)]="spareSearch"
+ class="sp-search-input"
+ placeholder="Searchpartnameornumber..."
+ (input)="onSpareSearch()"
+ (focus)="showSpareDropdown = true"
+ autocomplete=" off"
+ />
+ @if (spareSearchLoading()) {
+ <div class="ta-spinner"></div>
+ }
+ </div>
 
-          <div class="sp-helper-row">
-            <span class="material-icons">info</span>
-            Clickanyresulttoadditintotherequest.
-          </div>
+ <div class="sp-helper-row">
+ <span class="material-icons">info</span>
+ Clickanyresulttoadditintotherequest.
+ </div>
 
-          @if (showSpareDropdown && spareResults().length > 0) {
-            <div class="sp-dropdown">
-              @for (p of spareResults(); track p.sparePartId) {
-                <div
-                  class="sp-dd-item"
-                  [class.in-cart]="isSpareInCart(p)"
-                  (click)="addSpareToCart(p)"
-                >
-                  <div class="sp-dd-left">
-                    <span class="sp-dd-name">{{ p.partName }}</span>
-                    @if (p.partNumber) {
-                      <span class="sp-dd-num">{{ p.partNumber }}</span>
-                    }
-                  </div>
-                  <div class="sp-dd-right">
-                    <span class="sp-dd-stock" [class.low]="p.stockQuantity < 3">
-                      <span class="material-icons">inventory_2</span> {{ p.stockQuantity }}
-                    </span>
-                    @if (p.unitPrice) {
-                      <span class="sp-dd-price">Rs{{ p.unitPrice }}</span>
-                    }
-                    <span class="material-iconssp-dd-add">{{
-                      isSpareInCart(p) ? 'check_circle' : 'add_circle'
-                    }}</span>
-                  </div>
-                </div>
-              }
-            </div>
-          } @else if (showSpareDropdown && !spareSearchLoading()) {
-            <div class="sp-empty-search">
-              <span class="material-icons">inventory_2</span>
-              <span>Nomatchingmasterpartfound.UseCustomParttoenteritmanually.</span>
-            </div>
-          }
-        </div>
+ @if (showSpareDropdown && spareResults().length > 0) {
+ <div class="sp-dropdown">
+ @for (p of spareResults(); track p.sparePartId) {
+ <div
+ class="sp-dd-item"
+ [class.in-cart]="isSpareInCart(p)"
+ (click)="addSpareToCart(p)"
+ >
+ <div class="sp-dd-left">
+ <span class="sp-dd-name">{{ p.partName }}</span>
+ @if (p.partNumber) {
+ <span class="sp-dd-num">{{ p.partNumber }}</span>
+ }
+ </div>
+ <div class="sp-dd-right">
+ <span class="sp-dd-stock" [class.low]="p.stockQuantity < 3">
+ <span class="material-icons">inventory_2</span> {{ p.stockQuantity }}
+ </span>
+ @if (p.unitPrice) {
+ <span class="sp-dd-price">Rs{{ p.unitPrice }}</span>
+ }
+ <span class="material-icons sp-dd-add">{{
+ isSpareInCart(p) ? 'check_circle' : 'add_circle'
+ }}</span>
+ </div>
+ </div>
+ }
+ </div>
+ } @else if (showSpareDropdown && !spareSearchLoading()) {
+ <div class="sp-empty-search">
+ <span class="material-icons">inventory_2</span>
+ <span>Nomatchingmasterpartfound.UseCustomParttoenteritmanually.</span>
+ </div>
+ }
+ </div>
 
-        <div class="sp-cart">
-          <div class="sp-cart-header">
-            <div>
-              <h4>
-                <span class="material-icons">shopping_cart</span>
-                PartsList
-                @if (spareCartCount() > 0) {
-                  <span class="sp-cart-badge">{{ spareCartCount() }}</span>
-                }
-              </h4>
-              @if (spareCartCount() > 0) {
-                <span class="sp-cart-total">{{ spareCartTotal() }}item (s)total</span>
-              } @else {
-                <span class="sp-cart-subtitle">Addoneormorepartsforthiscomplaint.</span>
-              }
-            </div>
-            @if (hasInvalidCustomParts()) {
-              <span class="sp-inline-warning">
-                <span class="material-icons">error</span>
-                Custompartnamerequired
-              </span>
-            }
-          </div>
+ <div class="sp-cart">
+ <div class="sp-cart-header">
+ <div>
+ <h4>
+ <span class="material-icons">shopping_cart</span>
+ PartsList
+ @if (spareCartCount() > 0) {
+ <span class="sp-cart-badge">{{ spareCartCount() }}</span>
+ }
+ </h4>
+ @if (spareCartCount() > 0) {
+ <span class="sp-cart-total">{{ spareCartTotal() }}item (s)total</span>
+ } @else {
+ <span class="sp-cart-subtitle">Addoneormorepartsforthiscomplaint.</span>
+ }
+ </div>
+ @if (hasInvalidCustomParts()) {
+ <span class="sp-inline-warning">
+ <span class="material-icons">error</span>
+ Custompartnamerequired
+ </span>
+ }
+ </div>
 
-          @if (spareCart().length === 0) {
-            <div class="sp-cart-empty">
-              <span class="material-icons">add_shopping_cart</span>
-              <p>Nopartsaddedyet.</p>
-              <small>Choosefromthemasterlistoraddacustompart.</small>
-            </div>
-          }
+ @if (spareCart().length === 0) {
+ <div class="sp-cart-empty">
+ <span class="material-icons">add_shopping_cart</span>
+ <p>Nopartsaddedyet.</p>
+ <small>Choosefromthemasterlistoraddacustompart.</small>
+ </div>
+ }
 
-          <div class="sp-cart-list">
-            @for (item of spareCart(); track i; let i = $index) {
-              <div class="sp-cart-item" [class.is-custom]="item.isCustom">
-                <div class="sp-ci-top">
-                  <div class="sp-ci-info">
-                    @if (!item.isCustom) {
-                      <span class="sp-type-chip">MasterPart</span>
-                      <strong>{{ item.part.partName }}</strong>
-                      @if (item.part.partNumber) {
-                        <small>{{ item.part.partNumber }}</small>
-                      }
-                    }
+ <div class="sp-cart-list">
+ @for (item of spareCart(); track i; let i = $index) {
+ <div class="sp-cart-item" [class.is-custom]="item.isCustom">
+ <div class="sp-ci-top">
+ <div class="sp-ci-info">
+ @if (!item.isCustom) {
+ <span class="sp-type-chip">MasterPart</span>
+ <strong>{{ item.part.partName }}</strong>
+ @if (item.part.partNumber) {
+ <small>{{ item.part.partNumber }}</small>
+ }
+ }
 
-                    @if (item.isCustom) {
-                      <span class="sp-type-chipcustom">CustomPart</span>
-                      <div class="sp-custom-box">
-                        <inputtyp
-                          e="text"
-                          [(ngModel)]="item.customPartName"
-                          p
-                          laceholder="Enterpartname"
-                          c
-                          lass="sp-custom-input"
-                          [class.invalid]="!item.customPartName?.trim()"
-                        />
-                        <inputtyp
-                          e="text"
-                          [(ngModel)]="item.customPartNumber"
-                          p
-                          laceholder="Partnumber (optional)"
-                          c
-                          lass="sp-custom-input"
-                        />
-                      </div>
-                      @if (!item.customPartName?.trim()) {
-                        <div class="sp-field-error">Partnameisrequiredforcustomitems.</div>
-                      }
-                    }
-                  </div>
+ @if (item.isCustom) {
+ <span class="sp-type-chipcustom">CustomPart</span>
+ <div class="sp-custom-box">
+ <input typee="text"
+ [(ngModel)]="item.customPartName"
+ placeholder="Enter part name"
+ class="sp-custom-input"
+ [class.invalid]="!item.customPartName?.trim()"
+ />
+ <input typee="text"
+ [(ngModel)]="item.customPartNumber"
+ placeholder="Partnumber (optional)"
+ class="sp-custom-input"
+ />
+ </div>
+ @if (!item.customPartName?.trim()) {
+ <div class="sp-field-error">Partnameisrequiredforcustomitems.</div>
+ }
+ }
+ </div>
 
-                  <button class="sp-ci-remove" type="button" (click)="removeSpareFromCart(i)">
-                    <span class="material-icons">close</span>
-                  </button>
-                </div>
+ <button class="sp-ci-remove" type="button" (click)="removeSpareFromCart(i)">
+ <span class="material-icons">close</span>
+ </button>
+ </div>
 
-                <div class="sp-ci-controls">
-                  <div class="sp-ci-qty">
-                    <button
-                      class="qty-btn"
-                      t
-                      ype="button"
-                      (click)="updateSpareQty(i, item.quantity - 1)"
-                      [disabled]="item.quantity <= 1"
-                    >
-                      -
-                    </button>
-                    <inputtyp
-                      e="number"
-                      [ngModel]="item.quantity"
-                      (ngModelChange)="updateSpareQty(i, $event)"
-                      c
-                      lass="qty-input"
-                      m
-                      in="1"
-                      [max]="getSpareItemMaxQty(item)"
-                    />
-                    <button
-                      class="qty-btn"
-                      t
-                      ype="button"
-                      (click)="updateSpareQty(i, item.quantity + 1)"
-                      [disabled]="!item.isCustom && item.quantity >= getSpareItemMaxQty(item)"
-                    >
-                      +
-                    </button>
+ <div class="sp-ci-controls">
+ <div class="sp-ci-qty">
+ <button
+ class="qty-btn"
+ type="button"
+ (click)="updateSpareQty(i, item.quantity - 1)"
+ [disabled]="item.quantity <= 1"
+ >
+ -
+ </button>
+ <input typee="number"
+ [ngModel]="item.quantity"
+ (ngModelChange)="updateSpareQty(i, $event)"
+ class="qty-input"
+ min="1"
+ [max]="getSpareItemMaxQty(item)"
+ />
+ <button
+ class="qty-btn"
+ type="button"
+ (click)="updateSpareQty(i, item.quantity + 1)"
+ [disabled]="!item.isCustom && item.quantity >= getSpareItemMaxQty(item)"
+ >
+ +
+ </button>
 
-                    @if (!item.isCustom) {
-                      <span class="sp-stock-hint">/{{ item.part.stockQuantity }}instock</span>
-                    } @else {
-                      <span class="sp-stock-hint">manualqty</span>
-                    }
-                  </div>
+ @if (!item.isCustom) {
+ <span class="sp-stock-hint">/{{ item.part.stockQuantity }}instock</span>
+ } @else {
+ <span class="sp-stock-hint">manualqty</span>
+ }
+ </div>
 
-                  <div class="sp-ci-urgency">
-                    @for (u of urgencyOptions; track u) {
-                      <button
-                        class="urg-btn"
-                        t
-                        ype="button"
-                        [class.sel]="item.urgencyLevel === u"
-                        [attr.data-level]="u.toLowerCase()"
-                        (click)="updateSpareUrgency(i, u)"
-                      >
-                        {{ u }}
-                      </button>
-                    }
-                  </div>
-                </div>
+ <div class="sp-ci-urgency">
+ @for (u of urgencyOptions; track u) {
+ <button
+ class="urg-btn"
+ type="button"
+ [class.sel]="item.urgencyLevel === u"
+ [attr.data-level]="u.toLowerCase()"
+ (click)="updateSpareUrgency(i, u)"
+ >
+ {{ u }}
+ </button>
+ }
+ </div>
+ </div>
 
-                <inputtyp
-                  e="text"
-                  [ngModel]="item.remarks"
-                  (ngModelChange)="updateSpareRemarks(i, $event)"
-                  c
-                  lass="sp-ci-remarks"
-                  p
-                  laceholder="Remarks (optional)"
-                />
-              </div>
-            }
-          </div>
-        </div>
-      </div>
+ <input typee="text"
+ [ngModel]="item.remarks"
+ (ngModelChange)="updateSpareRemarks(i, $event)"
+ class="sp-ci-remarks"
+ placeholder="Remarks (optional)"
+ />
+ </div>
+ }
+ </div>
+ </div>
+ </div>
 
-      @if (spareMsg()) {
-        <div class="sp-alert" [class.ok]="!spareMsgErr()" [class.err]="spareMsgErr()">
-          <span class="material-icons">{{ spareMsgErr() ? 'error' : 'check_circle' }}</span>
-          {{ spareMsg() }}
-        </div>
-      }
-    </div>
+ @if (spareMsg()) {
+ <div class="sp-alert" [class.ok]="!spareMsgErr()" [class.err]="spareMsgErr()">
+ <span class="material-icons">{{ spareMsgErr() ? 'error' : 'check_circle' }}</span>
+ {{ spareMsg() }}
+ </div>
+ }
+ </div>
 
-    <div class="sp-footer">
-      <button class="sp-cancel" type="button" (click)="closeSpareDialog()">Cancel</button>
-      <button
-        class="sp-submit"
-        t
-        ype="button"
-        (click)="submitSpareRequest()"
-        [disabled]="spareSubmitting() || spareCart().length === 0 || hasInvalidCustomParts()"
-      >
-        @if (spareSubmitting()) {
-          <span class="mini-spinwhite"></span> Submitting...
-        } @else {
-          <span class="material-icons">send</span> {{ getSpareSubmitLabel() }}
-        }
-      </button>
-    </div>
-  </div>
+ <div class="sp-footer">
+ <button class="sp-cancel" type="button" (click)="closeSpareDialog()">Cancel</button>
+ <button
+ class="sp-submit"
+ type="button"
+ (click)="submitSpareRequest()"
+ [disabled]="spareSubmitting() || spareCart().length === 0 || hasInvalidCustomParts()"
+ >
+ @if (spareSubmitting()) {
+ <span class="mini-spinwhite"></span> Submitting...
+ } @else {
+ <span class="material-icons">send</span> {{ getSpareSubmitLabel() }}
+ }
+ </button>
+ </div>
+ </div>
 }
 <!--â•â•â•COMPLETIONDIALOGâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•-->
 @if (showRepairDialog()) {
-  <div class="rp-overlay" (click)="closeRepairDialog()"></div>
-  <div class="rp-dialog">
-    <div class="rp-header">
-      <div class="rp-header-icon"><span class="material-icons">construction</span></div>
-      <div class="rp-header-text">
-        <h3>SendForRepair</h3>
-        @if (repairDialogWo()) {
-          <span class="rp-wo-tag"
-            >{{ repairDialogWo()!.complaintNumber }}-{{ repairDialogWo()!.subject }}</span
-          >
-        }
-      </div>
-      <button class="rp-close" type="button" (click)="closeRepairDialog()">
-        <span class="material-icons">close</span>
-      </button>
-    </div>
+ <div class="rp-overlay" (click)="closeRepairDialog()"></div>
+ <div class="rp-dialog">
+ <div class="rp-header">
+ <div class="rp-header-icon"><span class="material-icons">construction</span></div>
+ <div class="rp-header-text">
+ <h3>SendForRepair</h3>
+ @if (repairDialogWo()) {
+ <span class="rp-wo-tag"
+ >{{ repairDialogWo()!.complaintNumber }}-{{ repairDialogWo()!.subject }}</span
+ >
+ }
+ </div>
+ <button class="rp-close" type="button" (click)="closeRepairDialog()">
+ <span class="material-icons">close</span>
+ </button>
+ </div>
 
-    <div class="rp-body">
-      @if (repairLoading()) {
-        <div class="rp-loading">
-          <span class="spinner-lg"></span>
-          <span>Loadingrepairdetails...</span>
-        </div>
-      } @else {
-        <div class="rp-summary">
-          <div class="rp-summary-card">
-            <span class="rp-summary-label">CustomerCode</span>
-            <strong>{{ repairForm.customerCode || repairDialogWo()?.complaintNumber }}</strong>
-            <small>{{
-              repairDialogWo()?.customerName || repairMeta()?.customer?.customerName
-            }}</small>
-          </div>
-          <div class="rp-summary-card">
-            <span class="rp-summary-label">Work Order</span>
-            <strong>{{ repairDialogWo()?.complaintNumber }}</strong>
-            <small>{{ repairDialogWo()?.productName }}</small>
-          </div>
-        </div>
+ <div class="rp-body">
+ @if (repairLoading()) {
+ <div class="rp-loading">
+ <span class="spinner-lg"></span>
+ <span>Loadingrepairdetails...</span>
+ </div>
+ } @else {
+ <div class="rp-summary">
+ <div class="rp-summary-card">
+ <span class="rp-summary-label">CustomerCode</span>
+ <strong>{{ repairForm.customerCode || repairDialogWo()?.complaintNumber }}</strong>
+ <small>{{
+ repairDialogWo()?.customerName || repairMeta()?.customer?.customerName
+ }}</small>
+ </div>
+ <div class="rp-summary-card">
+ <span class="rp-summary-label">Work Order</span>
+ <strong>{{ repairDialogWo()?.complaintNumber }}</strong>
+ <small>{{ repairDialogWo()?.productName }}</small>
+ </div>
+ </div>
 
-        <div class="rp-section">
-          <div class="rp-section-title">
-            <span class="material-icons">inventory_2</span>
-            <span>PartDetails</span>
-          </div>
+ <div class="rp-section">
+ <div class="rp-section-title">
+ <span class="material-icons">inventory_2</span>
+ <span>PartDetails</span>
+ </div>
 
-          <div class="rp-field-grid">
-            <label class="rp-field">
-              <span>PartName</span>
-              <input [(ngModel)]="repairForm.partName" type="text" placeholder="Enterpartname" />
-            </label>
-            <label class="rp-field">
-              <span>ProductSerialNumber</span>
-              <input
-                [(ngModel)]="repairForm.partSerialNumber"
-                type="text"
-                placeholder="Scanorenterserialnumber"
-              />
-            </label>
-          </div>
+ <div class="rp-field-grid">
+ <label class="rp-field">
+ <span>PartName</span>
+ <input [(ngModel)]="repairForm.partName" type="text" placeholder="Enter part name" />
+ </label>
+ <label class="rp-field">
+ <span>ProductSerialNumber</span>
+ <input
+ [(ngModel)]="repairForm.partSerialNumber"
+ type="text"
+ placeholder="Scan or enter serial number"
+ />
+ </label>
+ </div>
 
-          <label class="rp-fieldfull">
-            <span>RepairNotes</span>
-            <textarea
-              [(ngModel)]="repairForm.notes"
-              rows="3"
-              placeholder="Describeissue,observeddamage,orrepairreason"
-            ></textarea>
-          </label>
-        </div>
+ <label class="rp-field full">
+ <span>Repair Notes</span>
+ <textarea
+ [(ngModel)]="repairForm.notes"
+ rows="3"
+ placeholder="Describe issue, observed damage, or repair reason"
+ ></textarea>
+ </label>
+ </div>
 
-        <div class="rp-section">
-          <div class="rp-section-title">
-            <span class="material-icons">photo_camera</span>
-            <span>CaptureImages</span>
-          </div>
+ <div class="rp-section">
+ <div class="rp-section-title">
+ <span class="material-icons">photo_camera</span>
+ <span>Capture Images</span>
+ </div>
 
-          <div class="rp-upload-card">
-            <div class="rp-upload-copy">
-              <strong>1.CapturePartImage</strong>
-              <small>Showcurrentpartconditionbeforerepair.</small>
-            </div>
-            <div class="rp-upload-grid">
-              @if (getRepairImages('before').length > 0) {
-                <div class="rp-preview">
-                  <img [src]="getRepairImages('before')[0].preview" alt="Beforerepairimage" />
-                  <button type="button" class="rp-remove" (click)="removeRepairImage('before')">
-                    <span class="material-icons">close</span>
-                  </button>
-                </div>
-              }
-              <label class="rp-uploader">
-                <inputtyp
-                  e="file"
-                  accept="image/*"
-                  hidden
-                  (change)="onRepairFilesSelected($event, 'before')"
-                />
-                <span class="material-icons">photo_camera</span>
-                <span>CaptureImage</span>
-              </label>
-            </div>
-          </div>
+ <div class="rp-upload-card">
+ <div class="rp-upload-copy">
+ <strong>1.Capture Part Image</strong>
+ <small>Show current part condition before repair.</small>
+ </div>
+ <div class="rp-upload-grid">
+ @if (getRepairImages('before').length > 0) {
+ <div class="rp-preview">
+ <img [src]="getRepairImages('before')[0].preview" alt="Beforerepairimage" />
+ <button type="button" class="rp-remove" (click)="removeRepairImage('before')">
+ <span class="material-icons">close</span>
+ </button>
+ </div>
+ }
+ <label class="rp-uploader">
+ <input type="file"
+ accept="image/*"
+ hidden
+ (change)="onRepairFilesSelected($event, 'before')"
+ />
+ <span class="material-icons">photo_camera</span>
+ <span>Capture Image</span>
+ </label>
+ </div>
+ </div>
 
-          <div class="rp-upload-card">
-            <div class="rp-upload-copy">
-              <strong>2.CaptureTaggedImage</strong>
-              <small>Ensurecustomercodeorserialisvisibleonthepart.</small>
-            </div>
-            <div class="rp-upload-grid">
-              @if (getRepairImages('tagged').length > 0) {
-                <div class="rp-preview">
-                  <img [src]="getRepairImages('tagged')[0].preview" alt="Taggedrepairimage" />
-                  <button type="button" class="rp-remove" (click)="removeRepairImage('tagged')">
-                    <span class="material-icons">close</span>
-                  </button>
-                </div>
-              }
-              <label class="rp-uploadersecondary">
-                <inputtyp
-                  e="file"
-                  accept="image/*"
-                  hidden
-                  (change)="onRepairFilesSelected($event, 'tagged')"
-                />
-                <span class="material-icons">add_a_photo</span>
-                <span>CaptureTaggedImage</span>
-              </label>
-            </div>
-          </div>
+ <div class="rp-upload-card">
+ <div class="rp-upload-copy">
+ <strong>2.Capture Tagged Image</strong>
+ <small>Ensure customer code or serial is visible on the part.</small>
+ </div>
+ <div class="rp-upload-grid">
+ @if (getRepairImages('tagged').length > 0) {
+ <div class="rp-preview">
+ <img [src]="getRepairImages('tagged')[0].preview" alt="Taggedrepairimage" />
+ <button type="button" class="rp-remove" (click)="removeRepairImage('tagged')">
+ <span class="material-icons">close</span>
+ </button>
+ </div>
+ }
+ <label class="rp-uploader secondary">
+ <input type="file"
+ accept="image/*"
+ hidden
+ (change)="onRepairFilesSelected($event, 'tagged')"
+ />
+ <span class="material-icons">add_a_photo</span>
+ <span>Capture Tagged Image</span>
+ </label>
+ </div>
+ </div>
 
-          <div class="rp-tip">
-            <span class="material-icons">info</span>
-            Pleaseuploadbothimagesclearly,andkeeptheserialorcustomercodevisibleinthetaggedphoto.
-          </div>
-        </div>
+ <div class="rp-tip">
+ <span class="material-icons">info</span>
+ Please upload both images clearly, and keep the serial or customer code visible in the tagged photo.
+ </div>
+ </div>
 
-        @if (repairMsg()) {
-          <div class="sp-alert" [class.ok]="!repairMsgErr()" [class.err]="repairMsgErr()">
-            <span class="material-icons">{{ repairMsgErr() ? 'error' : 'check_circle' }}</span>
-            {{ repairMsg() }}
-          </div>
-        }
-      }
-    </div>
+ @if (repairMsg()) {
+ <div class="sp-alert" [class.ok]="!repairMsgErr()" [class.err]="repairMsgErr()">
+ <span class="material-icons">{{ repairMsgErr() ? 'error' : 'check_circle' }}</span>
+ {{ repairMsg() }}
+ </div>
+ }
+ }
+ </div>
 
-    <div class="rp-footer">
-      <button class="rp-cancel" type="button" (click)="closeRepairDialog()">Cancel</button>
-      <button
-        class="rp-submit"
-        t
-        ype="button"
-        (click)="submitRepairRequest()"
-        [disabled]="repairSubmitting() || repairLoading()"
-      >
-        @if (repairSubmitting()) {
-          <span class="mini-spinwhite"></span> Submitting...
-        } @else {
-          <span class="material-icons">send</span> Submit/SendForRepair
-        }
-      </button>
-    </div>
-  </div>
+ <div class="rp-footer">
+ <button class="rp-cancel" type="button" (click)="closeRepairDialog()">Cancel</button>
+ <button
+ class="rp-submit"
+ type="button"
+ (click)="submitRepairRequest()"
+ [disabled]="repairSubmitting() || repairLoading()"
+ >
+ @if (repairSubmitting()) {
+ <span class="mini-spinwhite"></span> Submitting...
+ } @else {
+ <span class="material-icons">send</span> Submit / Send For Repair
+ }
+ </button>
+ </div>
+ </div>
 }
-@if (showComp let eDialog ()) {
-  <div class="cmp-overlay" (click)="closeComp let eDialog ()"></div>
-  <div class="cmp-dialog">
-    <!--Header-->
-    <div class="cmp-header">
-      <div class="cmp-header-icon"><span class="material-icons">check_circle</span></div>
-      <div class="cmp-header-text">
-        <h3>Comp let eWork Order</h3>
-        @if (comp let eWo ()) {
-          <span class="cmp-wo-tag">
-            {{  comp let eWo ()!.complaintNumber  }}â€”{{  comp let eWo ()!.subject  }}
-          </span>
-        }
-      </div>
-      <button class="cmp-close" (click)="closeComp let eDialog ()">
-        <span class="material-icons">close</span>
-      </button>
-    </div>
+@if (showCompleteDialog()) {
+ <div class="cmp-overlay" (click)="closeCompleteDialog()"></div>
+ <div class="cmp-dialog">
+ <!--Header-->
+ <div class="cmp-header">
+ <div class="cmp-header-icon"><span class="material-icons">check_circle</span></div>
+ <div class="cmp-header-text">
+ <h3>Complete Work Order</h3>
+ @if (completeWo()) {
+ <span class="cmp-wo-tag">
+ {{ completeWo()?.complaintNumber }}-{{ completeWo()?.subject }}
+ </span>
+ }
+ </div>
+ <button class="cmp-close" (click)="closeCompleteDialog()">
+ <span class="material-icons">close</span>
+ </button>
+ </div>
 
-    <div class="cmp-body">
-      <!--Comp let eWork OrderSummary-->
-      @if (comp let eWo ()) {
-        <div class="cmp-wo-summary">
-          <div class="cmp-wo-row">
-            <span class="material-icons">person</span>
-            <span>{{  comp let eWo ()!.customerName  }}</span>
-          </div>
-          <div class="cmp-wo-row">
-            <span class="material-icons">fitness_center</span>
-            <span>{{  comp let eWo ()!.productName  }}</span>
-          </div>
-          @if (comp let eWo ()!.customerAddress) {
-            <div class="cmp-wo-row">
-              <span class="material-icons">location_on</span>
-              <span>{{  comp let eWo ()!.customerAddress  }}</span>
-            </div>
-          }
-        </div>
-      }
+ <div class="cmp-body">
+ <!--Complete Work OrderSummary-->
+ @if (completeWo()) {
+ <div class="cmp-wo-summary">
+ <div class="cmp-wo-row">
+ <span class="material-icons">person</span>
+ <span>{{ completeWo()?.customerName }}</span>
+ </div>
+ <div class="cmp-wo-row">
+ <span class="material-icons">fitness_center</span>
+ <span>{{ completeWo()?.productName }}</span>
+ </div>
+ @if (completeWo()?.customerAddress) {
+ <div class="cmp-wo-row">
+ <span class="material-icons">location_on</span>
+ <span>{{ completeWo()?.customerAddress }}</span>
+ </div>
+ }
+ </div>
+ }
 
-      <!--WorkDone (required)-->
-      <div class="cmp-field">
-        <label>WorkPerformed <span class="cmp-req">*</span> </label>
-        <textarea
-          [(ngModel)]="comp let eForm.workDone"
-          rows="3"
-          class="cmp-textarea"
-          p
-          laceholder="Describetheserviceworkperformed..."
-        ></textarea>
-      </div>
+ <!--WorkDone (required)-->
+ <div class="cmp-field">
+ <label>WorkPerformed <span class="cmp-req">*</span> </label>
+ <textarea
+ [(ngModel)]="completeForm.workDone"
+ rows="3"
+ class="cmp-textarea"
+ placeholder="Describetheserviceworkperformed..."
+ ></textarea>
+ </div>
 
-      <!--PartsUsed-->
-      <div class="cmp-field">
-        <label>PartsUsed/Replaced</label>
-        <textarea
-          [(ngModel)]="comp let eForm.partsUsed"
-          rows="2"
-          class="cmp-textarea"
-          p
-          laceholder="e.g.Compressorbeltreplaced,filtercleaned..."
-        ></textarea>
-      </div>
+ <!--PartsUsed-->
+ <div class="cmp-field">
+ <label>PartsUsed/Replaced</label>
+ <textarea
+ [(ngModel)]="completeForm.partsUsed"
+ rows="2"
+ class="cmp-textarea"
+ placeholder="e.g.Compressorbeltreplaced,filtercleaned..."
+ ></textarea>
+ </div>
 
-      <!--AdditionalRemarks-->
-      <div class="cmp-field">
-        <label>AdditionalRemarks</label>
-        <textarea
-          [(ngModel)]="comp let eForm.remarks"
-          rows="2"
-          class="cmp-textarea"
-          p
-          laceholder="Anyfollow-upneeded,customernotes..."
-        ></textarea>
-      </div>
+ <!--AdditionalRemarks-->
+ <div class="cmp-field">
+ <label>AdditionalRemarks</label>
+ <textarea
+ [(ngModel)]="completeForm.remarks"
+ rows="2"
+ class="cmp-textarea"
+ placeholder="Anyfollow-upneeded,customernotes..."
+ ></textarea>
+ </div>
 
-      <!--CustomerFeedback-->
-      <div class="cmp-field">
-        <label>CustomerFeedback</label>
-        <textarea
-          [(ngModel)]="comp let eForm.customerFeedback"
-          rows="2"
-          class="cmp-textarea"
-          p
-          laceholder="Customersatisfaction,comments..."
-        ></textarea>
-      </div>
+ <!--CustomerFeedback-->
+ <div class="cmp-field">
+ <label>CustomerFeedback</label>
+ <textarea
+ [(ngModel)]="completeForm.customerFeedback"
+ rows="2"
+ class="cmp-textarea"
+ placeholder="Customersatisfaction,comments..."
+ ></textarea>
+ </div>
 
-      <!--â•â•â•IMAGEUPLOADSECTIONâ•â•â•-->
-      <div class="cmp-upload-section">
-        <label>ServiceImages</label>
-        <p class="cmp-upload-hint">Uploadbefore/afterphotos,parts,orcustomersignature</p>
+ <!--â•â•â•IMAGEUPLOADSECTIONâ•â•â•-->
+ <div class="cmp-upload-section">
+ <label>ServiceImages</label>
+ <p class="cmp-upload-hint">Uploadbefore/afterphotos,parts,orcustomersignature</p>
 
-        <!--Dropzone-->
-        <div
-          class="cmp-dropzone"
-          (drop)="onDrop($event)"
-          (dragover)="onDragOver($event)"
-          (click)="fileInput.click()"
-        >
-          <input#f
-            ileInputtype="file"
-            accept="image/*"
-            multiplehidden
-            (change)="onFilesSelected($event)"
-          />
-          <span class="material-iconscmp-dz-icon">add_a_photo</span>
-          <p class="cmp-dz-text">Dropimagesor<strong>clicktobrowse</strong></p>
-          <p class="cmp-dz-sub">JPG,PNGupto10MBeach</p>
-        </div>
+ <!--Dropzone-->
+ <div
+ class="cmp-dropzone"
+ (drop)="onDrop($event)"
+ (dragover)="onDragOver($event)"
+ (click)="fileInput.click()"
+ >
+ <input #fileInput
+ type="file"
+ accept="image/*"
+ multiple
+ hidden
+ (change)="onFilesSelected($event)"
+ />
+ <span class="material-icons cmp-dz-icon">add_a_photo</span>
+ <p class="cmp-dz-text">Drop images or<strong>click to browse</strong></p>
+ <p class="cmp-dz-sub">JPG,PNG upto 10MB each</p>
+ </div>
 
-        <!--ImageQueue-->
-        @if (uploadQueue().length > 0) {
-          <div class="cmp-img-list">
-            @for (img of uploadQueue(); track $index; let i = $index) {
-              <div class="cmp-img-item" [attr.data-status]="img.status">
-                <!--Thumbnail-->
-                <div class="cmp-img-thumb">
-                  <img [src]="img.preview" alt="preview" />
-                  <div class="cmp-img-overlay">
-                    @if (img.status === 'done') {
-                      <span class="material-iconscmp-ok-ic">check_circle</span>
-                    } @else if (img.status === 'error') {
-                      <span class="material-iconscmp-err-ic">error</span>
-                    } @else if (img.status === 'uploading') {
-                      <div class="mini-spinwhite"></div>
-                    }
-                  </div>
-                </div>
+ <!--ImageQueue-->
+ @if (uploadQueue().length > 0) {
+ <div class="cmp-img-list">
+ @for (img of uploadQueue(); track $index; let i = $index) {
+ <div class="cmp-img-item" [attr.data-status]="img.status">
+ <!--Thumbnail-->
+ <div class="cmp-img-thumb">
+ <img [src]="img.preview" alt="preview" />
+ <div class="cmp-img-overlay">
+ @if (img.status === 'done') {
+ <span class="material-icons cmp-ok-ic">check_circle</span>
+ } @else if (img.status === 'error') {
+ <span class="material-icons cmp-err-ic">error</span>
+ } @else if (img.status === 'uploading') {
+ <div class="mini-spinwhite"></div>
+ }
+ </div>
+ </div>
 
-                <!--Info-->
-                <div class="cmp-img-info">
-                  <span class="cmp-img-name">{{ img.file.name }}</span>
-                  <span class="cmp-img-size">{{ formatSize(img.file.size) }}</span>
-                  @if (img.error) {
-                    <span class="cmp-img-error">{{ img.error }}</span>
-                  }
-                </div>
+ <!--Info-->
+ <div class="cmp-img-info">
+ <span class="cmp-img-name">{{ img.file.name }}</span>
+ <span class="cmp-img-size">{{ formatSize(img.file.size) }}</span>
+ @if (img.error) {
+ <span class="cmp-img-error">{{ img.error }}</span>
+ }
+ </div>
 
-                <!--Typeselector-->
-                <select
-                  class="cmp-img-type"
-                  [ngModel]="img.type"
-                  (ngModelChange)="updateImageType(i, $event)"
-                  [disabled]="img.status === 'uploading' || img.status === 'done'"
-                >
-                  @for (t of imageTypes; track t) {
-                    <option [value]="t">{{ t }}</option>
-                  }
-                </select>
+ <!--Typeselector-->
+ <select
+ class="cmp-img-type"
+ [ngModel]="img.type"
+ (ngModelChange)="updateImageType(i, $event)"
+ [disabled]="img.status === 'uploading' || img.status === 'done'"
+ >
+ @for (t of imageTypes; track t) {
+ <option [value]="t">{{ t }}</option>
+ }
+ </select>
 
-                <!--Remove-->
-                <button
-                  class="cmp-img-remove"
-                  (click)="removeFromQueue(i)"
-                  [disabled]="img.status === 'uploading'"
-                >
-                  <span class="material-icons">close</span>
-                </button>
-              </div>
-            }
-          </div>
-        }
-      </div>
+ <!--Remove-->
+ <button
+ class="cmp-img-remove"
+ (click)="removeFromQueue(i)"
+ [disabled]="img.status === 'uploading'"
+ >
+ <span class="material-icons">close</span>
+ </button>
+ </div>
+ }
+ </div>
+ }
+ </div>
 
-      <!--Progressbar-->
-      @if (comp let eBusy ()  &&  uploadProgress ()>0) {
-        <div class="cmp-progress-wrap">
-          <div class="cmp-progress-bar">
-            <div class="cmp-progress-fill" [style.width.%]="uploadProgress()"></div>
-          </div>
-          <span class="cmp-progress-label">{{ uploadProgress() }}%</span>
-        </div>
-      }
+ <!--Progressbar-->
+ @if (completeBusy() && uploadProgress()>0) {
+ <div class="cmp-progress-wrap">
+ <div class="cmp-progress-bar">
+ <div class="cmp-progress-fill" [style.width.%]="uploadProgress()"></div>
+ </div>
+ <span class="cmp-progress-label">{{ uploadProgress() }}%</span>
+ </div>
+ }
 
-      <!--Messages-->
-      @if (comp let eMsg ()) {
-        <div class="cmp-alert" [class.ok]="!comp let eMsgErr ()" [class.err]="comp let eMsgErr ()">
-          <span class="material-icons">{{  comp let eMsgErr ()?'error':'check_circle'  }}</span>
-          {{  comp let eMsg ()  }}
-        </div>
-      }
-    </div>
+ <!--Messages-->
+ @if (completeMsg()) {
+ <div class="cmp-alert" [class.ok]="!completeMsgErr()" [class.err]="completeMsgErr()">
+ <span class="material-icons">{{ completeMsgErr()?'error':'check_circle' }}</span>
+ {{ completeMsg() }}
+ </div>
+ }
+ </div>
 
-    <!--Footer-->
-    <div class="cmp-footer">
-      <button class="cmp-cancel" (click)="closeComp let eDialog ()" [disabled]="comp let eBusy ()">
-        Cancel
-      </button>
-      <button
-        class="cmp-submit"
-        (click)="submitComp let ion ()"
-        [disabled]="comp let eBusy ()  ||  !comp let eForm.workDone.trim ()"
-      >
-        @if (comp let eBusy ()) {
-          <span class="mini-spinwhite"></span>
-          {{ uploadQueue().length > 0 ? 'Uploading&Comp let ing...' : 'Comp let ing...' }}
-        } @else {
-          <span class="material-icons">check_circle</span>
-          Comp let eWork Order
-          @if (uploadQueue().length > 0) {
-            <span class="cmp-img-count">({{ uploadQueue().length }}images)</span>
-          }
-        }
-      </button>
-    </div>
-  </div>
+ <!--Footer-->
+ <div class="cmp-footer">
+ <button class="cmp-cancel" (click)="closeCompleteDialog()" [disabled]="completeBusy()">
+ Cancel
+ </button>
+ <button
+ class="cmp-submit"
+ (click)="submitCompletion()"
+ [disabled]="completeBusy() || !completeForm.workDone.trim()"
+ >
+ @if (completeBusy()) {
+ <span class="mini-spinwhite"></span>
+ {{ uploadQueue().length > 0 ? 'Uploading&Completing...' : 'Completing...' }}
+ } @else {
+ <span class="material-icons">check_circle</span>
+ Complete Work Order
+ @if (uploadQueue().length > 0) {
+ <span class="cmp-img-count">({{ uploadQueue().length }}images)</span>
+ }
+ }
+ </button>
+ </div>
+ </div>
 }
 
 <!--â•â•â•CONFIRMDIALOGâ•â•â•-->
 @if (showConfirmDialog()) {
-  <div class="confirm-overlay" (click)="closeConfirm()"></div>
-  <div class="confirm-dialog">
-    <div class="confirm-header">
-      <div class="confirm-icon"><span class="material-icons">help_outline</span></div>
-      <h3>{{ confirmData()?.title }}</h3>
-    </div>
-    <div class="confirm-body">
-      <p>{{ confirmData()?.message }}</p>
-    </div>
-    <div class="confirm-footer">
-      <button class="confirm-cancel" (click)="closeConfirm()">Cancel</button>
-      <button class="confirm-submit" (click)="executeConfirm()">Yes,Continue</button>
-    </div>
-  </div>
+ <div class="confirm-overlay" (click)="closeConfirm()"></div>
+ <div class="confirm-dialog">
+ <div class="confirm-header">
+ <div class="confirm-icon"><span class="material-icons">help_outline</span></div>
+ <h3>{{ confirmData()?.title }}</h3>
+ </div>
+ <div class="confirm-body">
+ <p>{{ confirmData()?.message }}</p>
+ </div>
+ <div class="confirm-footer">
+ <button class="confirm-cancel" (click)="closeConfirm()">Cancel</button>
+ <button class="confirm-submit" (click)="executeConfirm()">Yes,Continue</button>
+ </div>
+ </div>
 }
 
 <!--â•â•â•REPAIRIMAGESMODALâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•-->
 @if (showRepairImagesModal()) {
-  <div class="ri-overlay" (click)="closeRepairImagesModal()"></div>
-  <div class="ri-modal">
-    <div class="ri-header">
-      <div class="ri-icon"><span class="material-icons">photo_library</span></div>
-      <div class="ri-title">
-        <h3>RepairImages</h3>
-        @if (activeRepairRequest()) {
-          <span>{{ activeRepairRequest().partName }}</span>
-        }
-      </div>
-      <button class="ri-close" (click)="closeRepairImagesModal()">
-        <span class="material-icons">close</span>
-      </button>
-    </div>
+ <div class="ri-overlay" (click)="closeRepairImagesModal()"></div>
+ <div class="ri-modal">
+ <div class="ri-header">
+ <div class="ri-icon"><span class="material-icons">photo_library</span></div>
+ <div class="ri-title">
+ <h3>RepairImages</h3>
+ @if (activeRepairRequest()) {
+ <span>{{ activeRepairRequest().partName }}</span>
+ }
+ </div>
+ <button class="ri-close" (click)="closeRepairImagesModal()">
+ <span class="material-icons">close</span>
+ </button>
+ </div>
 
-    <div class="ri-body">
-      @if (repairImagesLoading()) {
-        <div class="ri-loading">
-          <div class="spinner-lg"></div>
-          <p>Fetchingimages...</p>
-        </div>
-      }
+ <div class="ri-body">
+ @if (repairImagesLoading()) {
+ <div class="ri-loading">
+ <div class="spinner-lg"></div>
+ <p>Fetchingimages...</p>
+ </div>
+ }
 
-      @if (!repairImagesLoading() && repairImagesList().length > 0) {
-        <div class="ri-grid">
-          @for (img of repairImagesList(); track img.imageId) {
-            <div class="ri-item-card">
-              <div class="ri-item-header">
-                <span class="ri-tag" [class.before]="img.imageType === 'BeforeRepair'">{{
-                  img.imageType
-                }}</span>
-                <span class="ri-date">{{ img.createdAt | date: 'ddMMM,HH:mm' }}</span>
-              </div>
-              <div class="ri-image-placeholder" (click)="fetchImageBase64(img)">
-                @if (img.base64) {
-                  <img [src]="img.base64" [alt]="img.imageType" />
-                } @else if (img.loading) {
-                  <div class="ri-mini-loading"><div class="mini-spinblue"></div></div>
-                } @else {
-                  <div class="ri-tap-to-view">
-                    <span class="material-icons">image</span>
-                    <span>TaptoViewImage</span>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-        </div>
-      } @else if (!repairImagesLoading()) {
-        <div class="ri-empty">
-          <span class="material-icons">image_not_supported</span>
-          <p>Noimagesfoundforthisrepairrequest.</p>
-        </div>
-      }
-    </div>
+ @if (!repairImagesLoading() && repairImagesList().length > 0) {
+ <div class="ri-grid">
+ @for (img of repairImagesList(); track img.imageId) {
+ <div class="ri-item-card">
+ <div class="ri-item-header">
+ <span class="ri-tag" [class.before]="img.imageType === 'BeforeRepair'">{{
+ img.imageType
+ }}</span>
+ <span class="ri-date">{{ img.createdAt | date: 'ddMMM,HH:mm' }}</span>
+ </div>
+ <div class="ri-image-placeholder" (click)="fetchImageBase64(img)">
+ @if (img.base64) {
+ <img [src]="img.base64" [alt]="img.imageType" />
+ } @else if (img.loading) {
+ <div class="ri-mini-loading"><div class="mini-spinblue"></div></div>
+ } @else {
+ <div class="ri-tap-to-view">
+ <span class="material-icons">image</span>
+ <span>TaptoViewImage</span>
+ </div>
+ }
+ </div>
+ </div>
+ }
+ </div>
+ } @else if (!repairImagesLoading()) {
+ <div class="ri-empty">
+ <span class="material-icons">image_not_supported</span>
+ <p>Noimagesfoundforthisrepairrequest.</p>
+ </div>
+ }
+ </div>
 
-    <div class="ri-footer">
-      <button class="ri-done" (click)="closeRepairImagesModal()">Done</button>
-    </div>
-  </div>
+ <div class="ri-footer">
+ <button class="ri-done" (click)="closeRepairImagesModal()">Done</button>
+ </div>
+ </div>
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

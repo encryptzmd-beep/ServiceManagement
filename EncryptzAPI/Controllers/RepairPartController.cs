@@ -84,5 +84,18 @@ namespace EncryptzAPI.Controllers
             var result = await _service.GetImageBase64(imageId);
             return Ok(result);
         }
+
+        [HttpPatch("request/{id}/status")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateRepairStatusDto dto)
+        {
+            var result = await _service.UpdateStatus(id, dto.Status, dto.Notes);
+            return Ok(result);
+        }
+    }
+
+    public class UpdateRepairStatusDto
+    {
+        public string Status { get; set; } = string.Empty;
+        public string? Notes { get; set; }
     }
 }

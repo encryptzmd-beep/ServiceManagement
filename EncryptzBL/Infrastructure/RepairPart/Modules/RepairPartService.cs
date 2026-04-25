@@ -99,5 +99,31 @@ namespace EncryptzBL.Infrastructure.RepairPart.Modules
                 return ApiResponse<string>.Fail(ex.Message);
             }
         }
+        public async Task<ApiResponse<bool>> UpdateStatus(int repairRequestId, string status, string? notes)
+        {
+            try
+            {
+                var p = new[]
+                {
+                    SqlParameterHelper.Input("@RepairRequestId", repairRequestId),
+                    SqlParameterHelper.Input("@Status", status),
+                    SqlParameterHelper.Input("@Notes", (object?)notes ?? DBNull.Value)
+                };
+
+                var dt = await GetDataTableAsync("sp_RepairPartRequest_UpdateStatus", p);
+
+                if (dt == null || dt.Rows.Count == 0)
+                    return ApiResponse<bool>.Fail("Update failed");
+
+                var success = Convert.ToInt32(dt.Rows[0]["Success"]) == 1;
+                var msg = dt.Rows[0]["Message"]?.ToString() ?? "Status updated";
+
+                return success ? ApiResponse<bool>.Ok(true, msg) : ApiResponse<bool>.Fail(msg);
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<bool>.Fail(ex.Message);
+            }
+        }
     }
 }

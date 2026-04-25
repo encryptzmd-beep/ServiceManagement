@@ -534,6 +534,41 @@ private showCheckInMsg(m: string, err: boolean): void {
     } as any)[u?.toLowerCase()] || 'u-normal';
   }
 
+  markSpareAsUsed(requestId: number): void {
+    if (!confirm('Are you sure you want to mark this part as used?')) return;
+    this.api.updateSpareStatus(requestId, 'Used').subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.show('Part marked as used', false);
+          this.loadComplaintSpares(this.detailData().complaintId);
+        } else {
+          this.show(res.message || 'Failed to update status', true);
+        }
+      },
+      error: () => this.show('Error updating status', true)
+    });
+  }
+
+  markRepairAsUsed(repairRequestId: number): void {
+    if (!confirm('Are you sure you want to mark this repair part as used?')) return;
+    this.api.updateRepairStatus(repairRequestId, 'Used').subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.show('Repair part marked as used', false);
+          // Refresh detail data to see updated repair status
+          this.api.getWorkOrderDetails(this.detailData().assignmentId).subscribe({
+            next: (res: any) => {
+              this.detailData.set(Array.isArray(res) ? res[0] : (res?.data ?? res));
+            }
+          });
+        } else {
+          this.show(res.message || 'Failed to update status', true);
+        }
+      },
+      error: () => this.show('Error updating status', true)
+    });
+  }
+
   // ── Helpers ───────────────────────────────────────────
   getAuditIcon(action: string): string {
     const map: Record<string, string> = {

@@ -439,6 +439,7 @@
           <div class="assign-list">
             @for (a of pagedAssignments(); track a.AssignmentId) {
               <div class="assign-card" [class.completed]="a.Status==='Completed'">
+                
                 <div class="ac-header">
                   <div class="ac-avatar" [ngClass]="assignStatusClass(a.Status)">
                     {{ (a.TechnicianName || 'T').charAt(0) }}
@@ -451,19 +452,24 @@
                     </div>
                   </div>
                   <div class="ac-actions">
-                      @if (!viewOnly) {
-                    <!-- @if (isAssignmentActive(a) && completingAssignmentId !== a.AssignmentId) {
-                      <button class="btn-complete" (click)="startMarkComplete(a)">
-                        <span class="material-icons">check_circle</span> Mark Complete
+                    @if (!viewOnly) {
+                      @if (a.Status?.toLowerCase() === 'assigned') {
+                        <button class="btn-start" (click)="startAssignment(a)">
+                          <span class="material-icons">play_arrow</span> Start
+                        </button>
+                      }
+                      @if ((a.Status?.toLowerCase() === 'inprogress' || a.Status?.toLowerCase() === 'assigned') && completingAssignmentId !== a.AssignmentId) {
+                        <button class="btn-complete" (click)="startMarkComplete(a)">
+                          <span class="material-icons">check_circle</span> Complete
+                        </button>
+                      }
+                      <button class="btn-reassign" (click)="requestReassign(a)">
+                        <span class="material-icons">swap_horiz</span> Reassign
                       </button>
-                    } -->
-                    <button class="btn-reassign" (click)="requestReassign(a)">
-                      <span class="material-icons">swap_horiz</span> Reassign
-                    </button>
-                    <button class="btn-unassign" (click)="requestUnassign(a)" [disabled]="a.Status==='Completed'">
-                      <span class="material-icons">person_remove</span>
-                    </button>
-                  }
+                      <button class="btn-unassign" (click)="requestUnassign(a)" [disabled]="a.Status?.toLowerCase() === 'completed'">
+                        <span class="material-icons">person_remove</span>
+                      </button>
+                    }
                   </div>
                 </div>
 
@@ -761,5 +767,10 @@
     <button class="cd-btn-save primary" (click)="refresh()">
       <span class="material-icons">refresh</span> Refresh
     </button>
-  </div>
+  
+    @if (!viewOnly && complaintData()?.StatusId !== 5) {
+      <button class="cd-btn-save green" (click)="markComplaintResolved()" [disabled]="saving()">
+        <span class="material-icons">task_alt</span> Mark Resolved
+      </button>
+    }</div>
 </div>

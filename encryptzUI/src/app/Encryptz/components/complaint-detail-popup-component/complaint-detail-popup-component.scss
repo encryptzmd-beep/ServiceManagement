@@ -524,6 +524,18 @@
   &:hover:not(:disabled) { background: #dc2626; color: #fff; }
   &:disabled { opacity: .4; cursor: not-allowed; }
 }
+.btn-start {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 12px;
+  border: none; border-radius: 8px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+  font-size: 11.5px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, .25);
+  .material-icons { font-size: 15px; }
+  &:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(37, 99, 235, .35); }
+}
 .btn-complete {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 6px 12px;

@@ -23,6 +23,11 @@ export class ApiService {
     }
     return this.http.get<T>(`${this.api}/${endpoint}`, { params: httpParams });
   }
+
+  updateRepairStatus(repairRequestId: number, status: string, notes?: string): Observable<any> {
+    return this.http.patch(`${this.api}/RepairPart/request/${repairRequestId}/status`, { status, notes });
+  }
+
  post<T>(endpoint: string, body: any): Observable<T> {
     return this.http.post<T>(`${this.api}/${endpoint}`, body);
   }

@@ -16,6 +16,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../Services/API/api-service';
+import { AuthService } from '../../Auth/auth-service';
 
 declare var L: any;
 
@@ -457,6 +458,40 @@ nextImage()   { if (this.imagePage()   < this.imageTotalPages())   this.imagePag
       complaintSubject: this.complaintData()?.Subject
     });
     this.close();
+  }
+
+  startAssignment(a: any) {
+    this.api.updateAssignment(a.AssignmentId, { status: 'InProgress' }).subscribe({
+      next: (r: any) => {
+        if (r?.Success ?? r?.success) {
+          this.showMessage('Work started', 'success');
+          this.loadAllData();
+          this.refreshed.emit();
+        } else {
+          this.showMessage(r?.Message || r?.message || 'Failed to start work', 'error');
+        }
+      },
+      error: () => this.showMessage('Error starting work', 'error')
+    });
+  }
+
+  markComplaintResolved() {
+    if (!confirm('Mark this complaint as completed/resolved?')) return;
+    this.saving.set(true);
+    // 5 is WorkCompleted in COMPLAINT_STATUSES
+    this.api.updateComplaintStatus(this.complaintId, 5, 'Manually resolved via detail popup').subscribe({
+      next: (r: any) => {
+        this.saving.set(false);
+        if (r?.Success ?? r?.success) {
+          this.showMessage('Complaint resolved', 'success');
+          this.loadAllData();
+          this.refreshed.emit();
+        } else {
+          this.showMessage(r?.Message || r?.message || 'Failed to resolve', 'error');
+        }
+      },
+      error: () => { this.saving.set(false); this.showMessage('Error resolving complaint', 'error'); }
+    });
   }
 
   // ═══════════════ MARK COMPLETE ═══════════════
