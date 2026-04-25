@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { RouterModule, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../Auth/auth-service';
 
 @Component({
   selector: 'app-no-company-component',
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './no-company-component.html',
   styleUrl: './no-company-component.scss',
 })
@@ -24,6 +25,15 @@ export class NoCompanyComponent implements OnInit {
   userEmail = signal('');
   userFullName = signal('');
   userId = signal(0);
+
+  // Change Password States
+  showChangePasswordModal = signal(false);
+  changePasswordOld = '';
+  changePasswordNew = '';
+  changePasswordConfirm = '';
+  changePasswordLoading = signal(false);
+  changePasswordError = signal('');
+  changePasswordSuccess = signal('');
 
   ngOnInit() {
     this.loadUserInfo();
@@ -191,6 +201,63 @@ I would like to request access to join your company on ENCRYPTZ ERP Platform.
 
 Please add me to your company or send me an invitation.
 
-Thank you!`;
+    Thank you!`;
+  }
+
+  // ============================================
+  // CHANGE PASSWORD METHODS
+  // ============================================
+
+  openChangePassword(): void {
+    this.showChangePasswordModal.set(true);
+    this.changePasswordOld = '';
+    this.changePasswordNew = '';
+    this.changePasswordConfirm = '';
+    this.changePasswordError.set('');
+    this.changePasswordSuccess.set('');
+  }
+
+  closeChangePassword(): void {
+    this.showChangePasswordModal.set(false);
+  }
+
+  submitChangePassword(): void {
+    if (!this.changePasswordOld || !this.changePasswordNew || !this.changePasswordConfirm) {
+      this.changePasswordError.set('Please fill all fields');
+      return;
+    }
+
+    if (this.changePasswordNew !== this.changePasswordConfirm) {
+      this.changePasswordError.set('New password and confirm password do not match');
+      return;
+    }
+
+    this.changePasswordLoading.set(true);
+    this.changePasswordError.set('');
+    this.changePasswordSuccess.set('');
+
+    this.auth.changePassword({
+      oldPassword: this.changePasswordOld,
+      newPassword: this.changePasswordNew,
+      userId: this.userId(),
+      Username: this.userFullName()
+    }).subscribe({
+      next: (res) => {
+        this.changePasswordLoading.set(false);
+        if (res.success) {
+          this.changePasswordSuccess.set('Password changed successfully! You will be logged out.');
+          setTimeout(() => {
+            this.closeChangePassword();
+            this.logout();
+          }, 2500);
+        } else {
+          this.changePasswordError.set(res.message || 'Failed to change password');
+        }
+      },
+      error: () => {
+        this.changePasswordLoading.set(false);
+        this.changePasswordError.set('Network error occurred. Please try again.');
+      }
+    });
   }
 }

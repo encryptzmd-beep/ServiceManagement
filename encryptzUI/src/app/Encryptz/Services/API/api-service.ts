@@ -493,8 +493,8 @@ getSparePartRequests(technicianId?: number, complaintId?: number): Observable<an
   return this.http.get(`${this.api}/spare-parts/requests`, { params });
 }
 
-createSpareRequest(payload: any[]): Observable<any> {
-  return this.http.post(`${this.api}/spare-parts/requestspare`, payload);
+createSpareRequest(payload: M.SparePartRequestCreate[]): Observable<M.ApiResponse<{ requestIds: number[] }>> {
+  return this.http.post<M.ApiResponse<{ requestIds: number[] }>>(`${this.api}/spare-parts/requestspare`, payload);
 }
 requestSparePart(techId: number, payload: any): Observable<any> {
   return this.http.post(`${this.api}/spare-parts/request`,

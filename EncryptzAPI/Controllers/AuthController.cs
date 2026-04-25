@@ -1,4 +1,4 @@
-﻿using EncryptzBL.DTO_s;
+using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.User.Modules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -29,6 +29,30 @@ namespace EncryptzAPI.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
             => Ok(await _authService.Register(dto));
+
+        [AllowAnonymous]
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto dto)
+            => Ok(await _authService.ForgotPasswordAsync(dto));
+
+        [AllowAnonymous]
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequestDto dto)
+            => Ok(await _authService.ResetPasswordAsync(dto));
+
+        [AllowAnonymous]
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDto dto)
+        {
+            // Try to extract user ID from token
+          
+         if (string.IsNullOrEmpty(dto.Username))
+            {
+                return Unauthorized(ApiResponse<string>.Fail("Unauthorized or Username missing"));
+            }
+            
+            return Ok(await _authService.ChangePasswordAsync(dto));
+        }
 
         [HttpGet("menus/{roleId}")]
         [Authorize]

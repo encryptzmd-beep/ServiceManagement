@@ -24,6 +24,16 @@ export class LoginComponent {
   locationError = signal('');
   locationLogoutMsg = signal('');
 
+  // Forgot Password States
+  showForgotPasswordModal = signal(false);
+  forgotPasswordStep = signal<'email' | 'otp'>('email');
+  forgotPasswordEmail = '';
+  forgotPasswordOtp = '';
+  forgotPasswordNewPwd = '';
+  forgotPasswordLoading = signal(false);
+  forgotPasswordError = signal('');
+  forgotPasswordSuccess = signal('');
+
   email = '';
   password = '';
   mobile = '';
@@ -191,5 +201,84 @@ private handlePostLogin(data: any): void {
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
+  }
+
+  // ============================================
+  // FORGOT PASSWORD METHODS
+  // ============================================
+
+  openForgotPassword(): void {
+    this.showForgotPasswordModal.set(true);
+    this.forgotPasswordStep.set('email');
+    this.forgotPasswordEmail = '';
+    this.forgotPasswordOtp = '';
+    this.forgotPasswordNewPwd = '';
+    this.forgotPasswordError.set('');
+    this.forgotPasswordSuccess.set('');
+  }
+
+  closeForgotPassword(): void {
+    this.showForgotPasswordModal.set(false);
+  }
+
+  submitForgotPasswordEmail(): void {
+    if (!this.forgotPasswordEmail) {
+      this.forgotPasswordError.set('Please enter your email address');
+      return;
+    }
+
+    this.forgotPasswordLoading.set(true);
+    this.forgotPasswordError.set('');
+    
+    this.auth.forgotPassword(this.forgotPasswordEmail).subscribe({
+      next: (res) => {
+        this.forgotPasswordLoading.set(false);
+        if (res.success) {
+          this.forgotPasswordStep.set('otp');
+          // For testing, backend returns OTP in data. In production, this would be hidden.
+          // Optional: this.forgotPasswordSuccess.set(`OTP sent! (Test OTP: ${res.data})`);
+          this.forgotPasswordSuccess.set('OTP has been sent to your email.');
+        } else {
+          this.forgotPasswordError.set(res.message || 'Failed to send OTP');
+        }
+      },
+      error: () => {
+        this.forgotPasswordLoading.set(false);
+        this.forgotPasswordError.set('Network error occurred. Please try again.');
+      }
+    });
+  }
+
+  submitForgotPasswordReset(): void {
+    if (!this.forgotPasswordOtp || !this.forgotPasswordNewPwd) {
+      this.forgotPasswordError.set('Please fill all fields');
+      return;
+    }
+
+    this.forgotPasswordLoading.set(true);
+    this.forgotPasswordError.set('');
+    this.forgotPasswordSuccess.set('');
+
+    this.auth.resetPassword({
+      email: this.forgotPasswordEmail,
+      otpCode: this.forgotPasswordOtp,
+      newPassword: this.forgotPasswordNewPwd
+    }).subscribe({
+      next: (res) => {
+        this.forgotPasswordLoading.set(false);
+        if (res.success) {
+          this.forgotPasswordSuccess.set('Password reset successfully! You can now login.');
+          setTimeout(() => {
+            this.closeForgotPassword();
+          }, 3000);
+        } else {
+          this.forgotPasswordError.set(res.message || 'Failed to reset password');
+        }
+      },
+      error: () => {
+        this.forgotPasswordLoading.set(false);
+        this.forgotPasswordError.set('Network error occurred. Please try again.');
+      }
+    });
   }
 }

@@ -188,8 +188,10 @@
           </div>
         }
 
-        <div class="register-row">
-          <a (click)="logout()" class="register-link">Logout</a>
+        <div class="register-row" style="display: flex; justify-content: center; gap: 20px;">
+          <a (click)="openChangePassword()" class="register-link" style="cursor: pointer;">Change Password</a>
+          <span style="color: rgba(255,255,255,0.2);">|</span>
+          <a (click)="logout()" class="register-link" style="cursor: pointer;">Logout</a>
         </div>
       </div>
 
@@ -202,3 +204,88 @@
     </div>
   </div>
 </div>
+
+<!-- Change Password Modal -->
+@if (showChangePasswordModal()) {
+  <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+    <div style="background: rgba(10, 25, 50, 0.95); border: 1px solid rgba(58, 114, 176, 0.3); border-radius: 12px; padding: 30px; width: 400px; color: #fff;">
+      <h2 style="margin: 0 0 5px 0; font-size: 1.5rem;">Change Password</h2>
+      <p style="margin: 0 0 20px 0; font-size: 0.9rem; color: #8ba3c0;">Update your account password securely.</p>
+
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-size: 0.85rem; color: #8ba3c0; margin-bottom: 8px;">Old Password</label>
+        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 0 12px; height: 44px; display: flex; align-items: center;">
+          <input
+            type="password"
+            [(ngModel)]="changePasswordOld"
+            placeholder="Enter old password"
+            required
+            [disabled]="changePasswordLoading()"
+            style="background: transparent; border: none; color: #fff; width: 100%; outline: none;"
+          />
+        </div>
+      </div>
+
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-size: 0.85rem; color: #8ba3c0; margin-bottom: 8px;">New Password</label>
+        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 0 12px; height: 44px; display: flex; align-items: center;">
+          <input
+            type="password"
+            [(ngModel)]="changePasswordNew"
+            placeholder="Enter new password"
+            required
+            [disabled]="changePasswordLoading()"
+            style="background: transparent; border: none; color: #fff; width: 100%; outline: none;"
+          />
+        </div>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; font-size: 0.85rem; color: #8ba3c0; margin-bottom: 8px;">Confirm New Password</label>
+        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 0 12px; height: 44px; display: flex; align-items: center;">
+          <input
+            type="password"
+            [(ngModel)]="changePasswordConfirm"
+            placeholder="Confirm new password"
+            required
+            [disabled]="changePasswordLoading()"
+            style="background: transparent; border: none; color: #fff; width: 100%; outline: none;"
+          />
+        </div>
+      </div>
+
+      <button 
+        style="width: 100%; height: 44px; border-radius: 8px; border: none; background: linear-gradient(135deg, #3a72b0 0%, #1b3a6e 100%); color: white; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center;"
+        (click)="submitChangePassword()" 
+        [disabled]="changePasswordLoading()">
+        @if (changePasswordLoading()) { <div style="width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite;"></div> }
+        @else { Update Password }
+      </button>
+
+      @if (changePasswordError()) {
+        <div style="margin-top: 15px; padding: 10px; background: rgba(212, 43, 43, 0.1); border: 1px solid rgba(212, 43, 43, 0.3); border-radius: 6px; color: #ff6b6b; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+          <span class="material-icons">error_outline</span>
+          {{ changePasswordError() }}
+        </div>
+      }
+      
+      @if (changePasswordSuccess()) {
+        <div style="margin-top: 15px; padding: 10px; background: rgba(50, 200, 100, 0.1); border: 1px solid rgba(50, 200, 100, 0.3); border-radius: 6px; color: #32c864; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+          <span class="material-icons">check_circle</span>
+          {{ changePasswordSuccess() }}
+        </div>
+      }
+
+      <button 
+        style="width: 100%; margin-top: 15px; background: transparent; border: none; color: #8ba3c0; cursor: pointer; padding: 8px;"
+        (click)="closeChangePassword()">
+        Cancel
+      </button>
+    </div>
+  </div>
+}
+<style>
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+</style>

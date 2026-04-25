@@ -442,4 +442,20 @@ searchUsers(searchTerm: string): Observable<any> {
 rejectInvitation(invitationId: number): Observable<any> {
   return this.http.delete(`${this.apiUrl}/invitations/${invitationId}/reject`);
 }
+
+// ============================================
+// PASSWORD MANAGEMENT
+// ============================================
+
+forgotPassword(email: string): Observable<ApiResponse<string>> {
+  return this.http.post<ApiResponse<string>>(`${this.apiUrl}/forgot-password`, { email });
+}
+
+resetPassword(data: { email: string; otpCode: string; newPassword: string }): Observable<ApiResponse<string>> {
+  return this.http.post<ApiResponse<string>>(`${this.apiUrl}/reset-password`, data);
+}
+
+changePassword(data: { oldPassword: string; newPassword: string ; userId : number, Username: string }): Observable<ApiResponse<string>> {
+  return this.http.post<ApiResponse<string>>(`${this.apiUrl}/change-password`, data);
+}
 }

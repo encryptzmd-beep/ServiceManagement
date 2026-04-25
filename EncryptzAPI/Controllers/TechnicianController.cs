@@ -2,6 +2,7 @@
 using EncryptzBL.Infrastructure.Technician.modules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IO;
 using System.Security.Claims;
 
 
@@ -14,7 +15,12 @@ namespace EncryptzAPI.Controllers
     public class TechnicianController : ControllerBase
     {
         private readonly ITechnicianService _service;
-        public TechnicianController(ITechnicianService service) => _service = service;
+        private readonly IWebHostEnvironment _env;
+        public TechnicianController(ITechnicianService service, IWebHostEnvironment env)
+        {
+            _service = service;
+            _env = env;
+        }
         private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
         [HttpGet]
@@ -149,6 +155,57 @@ namespace EncryptzAPI.Controllers
                 return NotFound(new { success = false, message = "Assignment not found" });
 
             return Ok(new { success = true, data = detail });
+        }
+
+        [HttpPost("{technicianId}/upload-image")]
+        [RequestSizeLimit(10 * 1024 * 1024)]
+        public async Task<IActionResult> UploadImage(
+            int technicianId,
+            [FromForm] IFormFile file,
+            [FromForm] int complaintId,
+            [FromForm] string imageType = "Other")
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { success = false, message = "No file provided" });
+
+            var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!allowed.Contains(ext))
+                return BadRequest(new { success = false, message = "Only JPG, PNG, and WEBP files are allowed" });
+
+            var root = string.IsNullOrWhiteSpace(_env.WebRootPath)
+                ? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot")
+                : _env.WebRootPath;
+            var folder = Path.Combine(root, "uploads", "service-images");
+            Directory.CreateDirectory(folder);
+
+            var fileName = $"{complaintId}_{technicianId}_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid():N}{ext}";
+            var fullPath = Path.Combine(folder, fileName);
+
+            await using (var stream = new FileStream(fullPath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var relativePath = $"/uploads/service-images/{fileName}";
+            var result = await _service.SaveServiceImage(new ServiceImageSaveDto
+            {
+                ComplaintId = complaintId,
+                TechnicianId = technicianId,
+                ImageType = imageType,
+                ImagePath = relativePath
+            });
+
+            if (!result.Success)
+                return BadRequest(new { success = false, message = result.Message });
+
+            return Ok(new
+            {
+                success = true,
+                message = result.Message,
+                imageId = result.Data,
+                imagePath = relativePath
+            });
         }
 
     }

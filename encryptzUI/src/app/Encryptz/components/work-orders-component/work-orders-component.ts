@@ -56,6 +56,25 @@ spareMsgErr = signal(false);
 spareCartTotal = computed(() =>
   this.spareCart().reduce((sum, i) => sum + i.quantity, 0)
 );
+spareCartCount = computed(() => this.spareCart().length);
+hasInvalidCustomParts = computed(() =>
+  this.spareCart().some(item => item.isCustom && !item.customPartName?.trim())
+);
+
+showRepairDialog = signal(false);
+repairDialogWo = signal<WorkOrder | null>(null);
+repairMeta = signal<any>(null);
+repairLoading = signal(false);
+repairSubmitting = signal(false);
+repairMsg = signal('');
+repairMsgErr = signal(false);
+repairImages = signal<{ file: File; preview: string; tag: string }[]>([]);
+repairForm = {
+  partName: '',
+  partSerialNumber: '',
+  customerCode: '',
+  notes: ''
+};
 
   // ── Orders ────────────────────────────────────────────
   orders       = signal<WorkOrder[]>([]);
@@ -517,29 +536,25 @@ openSpareDialog(wo: WorkOrder, event?: Event): void {
   this.spareSearch = '';
   this.spareResults.set([]);
   this.spareMsg.set('');
+  this.spareMsgErr.set(false);
+  this.showSpareDropdown = false;
   this.showSpareDialog.set(true);
-  // Pre-load spare parts list
-  this.api.searchSpareParts('').subscribe({
-    next: (d: any) => this.spareResults.set(Array.isArray(d) ? d : (d?.data ?? [])),
-    error: () => {}
-  });
+  this.loadSpareOptions();
 }
 
 closeSpareDialog(): void {
   this.showSpareDialog.set(false);
   this.spareDialogWo.set(null);
   this.spareCart.set([]);
+  this.spareSearch = '';
+  this.spareResults.set([]);
+  this.showSpareDropdown = false;
 }
 
 onSpareSearch(): void {
   this.showSpareDropdown = true;
   if (this.spareSearch.trim()) this.spareSubject.next(this.spareSearch);
-  else {
-    this.api.searchSpareParts('').subscribe({
-      next: (d: any) => this.spareResults.set(Array.isArray(d) ? d : (d?.data ?? [])),
-      error: () => {}
-    });
-  }
+  else this.loadSpareOptions();
 }
 
 addSpareToCart(part: any): void {
@@ -559,6 +574,8 @@ addSpareToCart(part: any): void {
       remarks: ''
     }
   ]);
+  this.spareSearch = '';
+  this.showSpareDropdown = false;
 }
 addCustomPart(): void {
   this.spareCart.update(list => [
@@ -572,6 +589,8 @@ addCustomPart(): void {
       remarks: ''
     }
   ]);
+  this.spareMsg.set('');
+  this.spareMsgErr.set(false);
 }
 
 
@@ -596,20 +615,52 @@ isSpareInCart(part: any): boolean {
   );
 }
 updateSpareQty(index: number, qty: number): void {
-  if (qty < 1) return;
+  const parsedQty = Number(qty);
+  if (!Number.isFinite(parsedQty) || parsedQty < 1) return;
 
   this.spareCart.update(list => {
     const updated = [...list];
-    updated[index].quantity = qty;
+    const item = updated[index];
+    if (!item) return list;
+
+    const maxQty = item.isCustom
+      ? parsedQty
+      : Math.max(1, Number(item.part?.stockQuantity ?? 1));
+
+    item.quantity = Math.min(parsedQty, maxQty);
     return updated;
+  });
+}
+getSpareItemMaxQty(item: SpareCartItem): number {
+  return item.isCustom ? 999 : Math.max(1, Number(item.part?.stockQuantity ?? 1));
+}
+getSpareSubmitLabel(): string {
+  const count = this.spareCartCount();
+  return count === 1 ? 'Submit 1 Request' : `Submit ${count} Requests`;
+}
+private loadSpareOptions(searchTerm: string = ''): void {
+  this.spareSearchLoading.set(true);
+  this.api.searchSpareParts(searchTerm).subscribe({
+    next: (d: any) => {
+      this.spareResults.set(Array.isArray(d) ? d : (d?.data ?? []));
+      this.spareSearchLoading.set(false);
+    },
+    error: () => {
+      this.spareResults.set([]);
+      this.spareSearchLoading.set(false);
+    }
   });
 }
 submitSpareRequest(): void {
   const wo = this.spareDialogWo();
 
   if (!wo) return;
+  if (this.spareCart().length === 0) {
+    this.spareMsg.set('Add at least one part to continue');
+    this.spareMsgErr.set(true);
+    return;
+  }
 
-  // 🔴 Validation only for custom (optional but recommended)
   for (const item of this.spareCart()) {
     if (item.isCustom && !item.customPartName?.trim()) {
       this.spareMsg.set('Custom part name is required');
@@ -625,17 +676,18 @@ submitSpareRequest(): void {
     quantity: item.quantity,
     urgencyLevel: item.urgencyLevel,
     remarks: item.remarks,
-    customPartName: item.isCustom ? item.customPartName : null,
-    customPartNumber: item.isCustom ? item.customPartNumber : null
+    customPartName: item.isCustom ? item.customPartName?.trim() || null : null,
+    customPartNumber: item.isCustom ? item.customPartNumber?.trim() || null : null
   }));
 
   this.spareSubmitting.set(true);
   this.spareMsg.set('');
+  this.spareMsgErr.set(false);
 
   this.api.createSpareRequest(payload).subscribe({
-    next: () => {
+    next: (response: any) => {
       this.spareSubmitting.set(false);
-      this.spareMsg.set('Request submitted successfully');
+      this.spareMsg.set(response?.message || 'Request submitted successfully');
       this.spareMsgErr.set(false);
 
       // reset
@@ -646,6 +698,176 @@ submitSpareRequest(): void {
       this.spareSubmitting.set(false);
       this.spareMsg.set('Failed to submit request');
       this.spareMsgErr.set(true);
+    }
+  });
+}
+
+openRepairDialog(wo: WorkOrder, event?: Event): void {
+  event?.stopPropagation();
+  this.repairDialogWo.set(wo);
+  this.showRepairDialog.set(true);
+  this.repairLoading.set(true);
+  this.repairSubmitting.set(false);
+  this.repairMsg.set('');
+  this.repairMsgErr.set(false);
+  this.repairMeta.set(null);
+  this.repairImages().forEach(item => URL.revokeObjectURL(item.preview));
+  this.repairImages.set([]);
+  this.repairForm = {
+    partName: '',
+    partSerialNumber: '',
+    customerCode: '',
+    notes: ''
+  };
+
+  this.api.getCompleteComplaintDetails(wo.complaintId).subscribe({
+    next: (response: any) => {
+      const detail = response?.data ?? response;
+      const customerId = (detail?.[1]?.[0] as any)?.CustomerId;
+      this.repairMeta.set(detail);
+      this.repairForm = {
+        partName: wo.productName || '',
+        partSerialNumber: detail[2]?.[0]?.serialNumber || '',
+        customerCode: customerId ? `CUST-${String(customerId).padStart(4, '0')}` : (wo.complaintNumber || ''),
+        notes: ''
+      };
+      this.repairLoading.set(false);
+    },
+    error: () => {
+      this.repairLoading.set(false);
+      this.repairMsg.set('Unable to load complaint details for repair request');
+      this.repairMsgErr.set(true);
+    }
+  });
+}
+
+closeRepairDialog(): void {
+  this.showRepairDialog.set(false);
+  this.repairDialogWo.set(null);
+  this.repairMeta.set(null);
+  this.repairImages().forEach(item => URL.revokeObjectURL(item.preview));
+  this.repairImages.set([]);
+  this.repairMsg.set('');
+  this.repairMsgErr.set(false);
+}
+
+onRepairFilesSelected(event: Event, tag: string): void {
+  const input = event.target as HTMLInputElement;
+  if (!input.files?.length) return;
+  this.addRepairFiles(Array.from(input.files), tag);
+  input.value = '';
+}
+
+private addRepairFiles(files: File[], tag: string): void {
+  const valid = files
+    .filter(file => file.type.startsWith('image/'))
+    .slice(0, 3);
+
+  const items = valid.map(file => ({
+    file,
+    preview: URL.createObjectURL(file),
+    tag
+  }));
+
+  this.repairImages.update(list => [...list.filter(item => item.tag !== tag), ...items]);
+}
+
+removeRepairImage(tag: string, index: number = 0): void {
+  this.repairImages.update(list => {
+    const matches = list.filter(item => item.tag === tag);
+    const target = matches[index];
+    if (target) URL.revokeObjectURL(target.preview);
+
+    let seen = -1;
+    return list.filter(item => {
+      if (item.tag !== tag) return true;
+      seen++;
+      return seen !== index;
+    });
+  });
+}
+
+getRepairImages(tag: string): { file: File; preview: string; tag: string }[] {
+  return this.repairImages().filter(item => item.tag === tag);
+}
+
+submitRepairRequest(): void {
+  const wo = this.repairDialogWo();
+  const detail = this.repairMeta();
+
+  if (!wo || !detail) return;
+  if (!this.repairForm.partSerialNumber.trim()) {
+    this.repairMsg.set('Part serial number is required');
+    this.repairMsgErr.set(true);
+    return;
+  }
+  if (this.getRepairImages('before').length === 0 || this.getRepairImages('tagged').length === 0) {
+    this.repairMsg.set('Please upload both part and tagged images');
+    this.repairMsgErr.set(true);
+    return;
+  }
+
+  const customer = detail[1]?.[0] ?? {};
+  const product = detail[2]?.[0] ?? {};
+  if (!customer.CustomerId ) {
+    this.repairMsg.set('Repair request needs customer and product details');
+    this.repairMsgErr.set(true);
+    return;
+  }
+  const warrantyEnd = product.warrantyExpiryDate ? new Date(product.warrantyExpiryDate) : new Date();
+  const purchaseDate = product.purchaseDate ? new Date(product.purchaseDate) : new Date();
+
+  this.repairSubmitting.set(true);
+  this.repairMsg.set('');
+  this.repairMsgErr.set(false);
+
+  this.api.createWarranty({
+    complaintId: wo.complaintId,
+    customerId: customer.CustomerId,
+    productId: product.productId,
+    productSerialNo: this.repairForm.partSerialNumber.trim(),
+    warrantyStartDate: purchaseDate.toISOString(),
+    warrantyEndDate: warrantyEnd.toISOString(),
+    returnReason: `${this.repairForm.partName || wo.productName} - ${this.repairForm.notes || 'Repair request raised from work order'}`,
+    returnType: 1,
+    pickupAddress: customer.address || customer.customerAddress || detail.locationName || wo.customerAddress || ''
+  }).subscribe({
+    next: () => this.uploadRepairImagesSequentially(0),
+    error: () => {
+      this.repairSubmitting.set(false);
+      this.repairMsg.set('Failed to create repair request');
+      this.repairMsgErr.set(true);
+    }
+  });
+}
+
+private uploadRepairImagesSequentially(index: number): void {
+  const wo = this.repairDialogWo();
+  const images = this.repairImages();
+
+  if (!wo) return;
+  if (index >= images.length) {
+    this.repairSubmitting.set(false);
+    this.repairMsg.set('Repair request submitted successfully');
+    this.repairMsgErr.set(false);
+    this.load();
+    setTimeout(() => this.closeRepairDialog(), 900);
+    return;
+  }
+
+  const item = images[index];
+  const formData = new FormData();
+  formData.append('file', item.file);
+  formData.append('imageType', item.tag === 'tagged' ? 'TaggedRepair' : 'BeforeRepair');
+  formData.append('complaintId', wo.complaintId.toString());
+  formData.append('assignmentId', wo.assignmentId.toString());
+
+  this.api.uploadServiceImage(this.techId, formData).subscribe({
+    next: () => this.uploadRepairImagesSequentially(index + 1),
+    error: () => {
+      this.repairSubmitting.set(false);
+      this.repairMsg.set('Repair request saved, but image upload failed');
+      this.repairMsgErr.set(true);
     }
   });
 }

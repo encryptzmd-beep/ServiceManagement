@@ -160,8 +160,9 @@ using System.Security.Claims;
     public async Task<IActionResult> CreateRequest([FromBody] SparePartRequestCreateDto dto)
     {
         if (dto.ComplaintId <= 0) return BadRequest(new { success = false, message = "Invalid complaint ID" });
-        if (dto.SparePartId <= 0) return BadRequest(new { success = false, message = "Invalid spare part" });
         if (dto.Quantity <= 0) return BadRequest(new { success = false, message = "Quantity must be > 0" });
+        if ((dto.SparePartId == null || dto.SparePartId <= 0) && string.IsNullOrWhiteSpace(dto.CustomPartName))
+            return BadRequest(new { success = false, message = "Part name required" });
 
         // Inject logged-in user as technician if not provided
         if (dto.TechnicianId <= 0) dto.TechnicianId = UserId;

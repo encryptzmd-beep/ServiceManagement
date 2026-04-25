@@ -376,6 +376,17 @@ export interface SparePartRequest {
   complaintId : number;
 }
 
+export interface SparePartRequestCreate {
+  complaintId: number;
+  technicianId: number;
+  sparePartId?: number | null;
+  quantity: number;
+  urgencyLevel?: string;
+  remarks?: string | null;
+  customPartName?: string | null;
+  customPartNumber?: string | null;
+}
+
 // --- Warranty ---
 export interface WarrantyReturn {
   returnId: number;

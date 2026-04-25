@@ -1,4 +1,4 @@
-﻿using EncryptzBL.DTO_s;
+using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using System;
 using System.Collections.Generic;
@@ -12,6 +12,9 @@ namespace EncryptzBL.Infrastructure.User.Modules
         Task<ApiResponse<LoginResponseDto>> ValidateOtp(string mobileNumber, string otpCode);
         Task<ApiResponse<LoginResponseDto>> Login(string email, string password);
         Task<ApiResponse> Register(RegisterDto dto);
+        Task<ApiResponse<string>> ForgotPasswordAsync(ForgotPasswordRequestDto dto);
+        Task<ApiResponse<string>> ResetPasswordAsync(ResetPasswordRequestDto dto);
+        Task<ApiResponse<string>> ChangePasswordAsync(ChangePasswordRequestDto dto);
         Task<List<MenuDto>> GetMenusByRole(int roleId);
         // management
         Task<ApiResponse<List<UserDto>>> GetUsers();

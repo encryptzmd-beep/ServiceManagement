@@ -255,7 +255,7 @@
           </div>
 
           <div class="forgot-row">
-            <a href="#" class="forgot-link">Forgot password?</a>
+            <a href="javascript:void(0)" class="forgot-link" (click)="openForgotPassword()">Forgot password?</a>
           </div>
 
           <button type="submit" class="btn-signin" [disabled]="loading()">
@@ -320,6 +320,87 @@
       }
 
       <button class="btn-text" (click)="locationPrompt.set(false)">Skip for now</button>
+    </div>
+  </div>
+}
+
+<!-- Forgot Password Modal -->
+@if (showForgotPasswordModal()) {
+  <div class="location-overlay">
+    <div class="location-card" style="width: 400px; text-align: left;">
+      <h2 style="margin-bottom: 5px;">Reset Password</h2>
+      <p style="margin-bottom: 20px; font-size: 0.9rem; color: #8ba3c0;">
+        {{ forgotPasswordStep() === 'email' ? 'Enter your email address to receive an OTP.' : 'Enter the OTP sent to your email and your new password.' }}
+      </p>
+
+      @if (forgotPasswordStep() === 'email') {
+        <div class="form-group" style="text-align: left;">
+          <label class="form-label">Email Address</label>
+          <div class="input-wrap">
+            <input
+              type="email"
+              [(ngModel)]="forgotPasswordEmail"
+              placeholder="you@company.com"
+              required
+              [disabled]="forgotPasswordLoading()"
+              style="width: 100%; box-sizing: border-box;"
+            />
+          </div>
+        </div>
+        <button class="btn-signin" style="margin-top: 15px;" (click)="submitForgotPasswordEmail()" [disabled]="forgotPasswordLoading()">
+          @if (forgotPasswordLoading()) { <span class="spinner"></span> }
+          @else { Send OTP }
+        </button>
+      }
+
+      @if (forgotPasswordStep() === 'otp') {
+        <div class="form-group" style="text-align: left;">
+          <label class="form-label">OTP Code</label>
+          <div class="input-wrap">
+            <input
+              type="text"
+              [(ngModel)]="forgotPasswordOtp"
+              placeholder="123456"
+              required
+              [disabled]="forgotPasswordLoading()"
+              style="width: 100%; box-sizing: border-box;"
+            />
+          </div>
+        </div>
+        <div class="form-group" style="text-align: left; margin-top: 15px;">
+          <label class="form-label">New Password</label>
+          <div class="input-wrap">
+            <input
+              type="password"
+              [(ngModel)]="forgotPasswordNewPwd"
+              placeholder="Enter new password"
+              required
+              [disabled]="forgotPasswordLoading()"
+              style="width: 100%; box-sizing: border-box;"
+            />
+          </div>
+        </div>
+        <button class="btn-signin" style="margin-top: 15px;" (click)="submitForgotPasswordReset()" [disabled]="forgotPasswordLoading()">
+          @if (forgotPasswordLoading()) { <span class="spinner"></span> }
+          @else { Reset Password }
+        </button>
+      }
+
+      @if (forgotPasswordError()) {
+        <div class="error-msg" style="margin-top: 15px;">
+          <span class="material-icons">error_outline</span>
+          {{ forgotPasswordError() }}
+        </div>
+      }
+      
+      @if (forgotPasswordSuccess()) {
+        <div style="margin-top: 15px; padding: 10px; background: rgba(50, 200, 100, 0.1); border: 1px solid rgba(50, 200, 100, 0.3); border-radius: 6px; color: #32c864; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+          <span class="material-icons">check_circle</span>
+          {{ forgotPasswordSuccess() }}
+        </div>
+      }
+
+      <button class="btn-text" style="margin-top: 15px; display: block; width: 100%;" (click)="closeForgotPassword()">Cancel</button>
     </div>
   </div>
 }

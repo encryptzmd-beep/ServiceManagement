@@ -1,4 +1,4 @@
-﻿using EncryptzBL.Common;
+using EncryptzBL.Common;
 using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using Microsoft.Data.SqlClient;
@@ -155,6 +155,117 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
             return new ApiResponse(true, "Registration successful");
         }
+
+        public async Task<ApiResponse<string>> ForgotPasswordAsync(ForgotPasswordRequestDto dto)
+        {
+            var parameters = new[]
+            {
+                SqlParameterHelper.Input("@Email", dto.Email)
+            };
+
+            var ds = await GetDataSetAsync("sp_User_ForgotPassword", parameters);
+
+            if (ds == null || ds.Tables.Count == 0 || ds.Tables[0].Rows.Count == 0)
+            {
+                return ApiResponse<string>.Fail("Email not found");
+            }
+
+            var row = ds.Tables[0].Rows[0];
+            var success = Convert.ToInt32(row["Success"]) == 1;
+
+            if (!success)
+            {
+                return ApiResponse<string>.Fail(row["Message"]?.ToString());
+            }
+
+            var otpCode = row["OtpCode"]?.ToString();
+            // Normally you would send an email here. We return the OTP for testing.
+            return ApiResponse<string>.Ok(otpCode, "OTP sent to email successfully");
+        }
+
+        public async Task<ApiResponse<string>> ResetPasswordAsync(ResetPasswordRequestDto dto)
+        {
+            var newPasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+
+            var parameters = new[]
+            {
+                SqlParameterHelper.Input("@Email", dto.Email),
+                SqlParameterHelper.Input("@OtpCode", dto.OtpCode),
+                SqlParameterHelper.Input("@NewPasswordHash", newPasswordHash)
+            };
+
+            var ds = await GetDataSetAsync("sp_User_ResetPassword", parameters);
+
+            if (ds == null || ds.Tables.Count == 0 || ds.Tables[0].Rows.Count == 0)
+            {
+                return ApiResponse<string>.Fail("Failed to reset password");
+            }
+
+            var row = ds.Tables[0].Rows[0];
+            var success = Convert.ToInt32(row["Success"]) == 1;
+
+            if (!success)
+            {
+                return ApiResponse<string>.Fail(row["Message"]?.ToString());
+            }
+
+            return ApiResponse<string>.Ok(null, row["Message"]?.ToString());
+        }
+
+        public async Task<ApiResponse<string>> ChangePasswordAsync(ChangePasswordRequestDto dto)
+        {
+            DataTable dt = null;
+            if (dto.UserId > 0)
+            {
+                var parametersCheck = new[] { SqlParameterHelper.Input("@UserId", dto.UserId) };
+                dt = await GetDataTableByQueryAsync("SELECT UserId, PasswordHash FROM Users WHERE UserId = @UserId", parametersCheck);
+            }
+            else if (!string.IsNullOrEmpty(dto.Username))
+            {
+                var parametersCheck = new[] { SqlParameterHelper.Input("@Username", dto.Username) };
+                dt = await GetDataTableByQueryAsync("SELECT UserId, PasswordHash FROM Users WHERE Email = @Username OR MobileNumber = @Username", parametersCheck);
+            }
+
+            if (dt == null || dt.Rows.Count == 0)
+            {
+                return ApiResponse<string>.Fail("User not found");
+            }
+            
+            var currentHash = dt.Rows[0]["PasswordHash"]?.ToString();
+            dto.UserId = Convert.ToInt32(dt.Rows[0]["UserId"]);
+
+            
+            if (string.IsNullOrEmpty(currentHash) || !BCrypt.Net.BCrypt.Verify(dto.OldPassword, currentHash))
+            {
+                return ApiResponse<string>.Fail("Incorrect old password");
+            }
+            
+            var newPasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            
+            var parameters = new[]
+            {
+                SqlParameterHelper.Input("@UserId", dto.UserId),
+                SqlParameterHelper.Input("@NewPasswordHash", newPasswordHash)
+            };
+
+            var ds = await GetDataSetAsync("sp_User_ChangePassword", parameters);
+
+            if (ds == null || ds.Tables.Count == 0 || ds.Tables[0].Rows.Count == 0)
+            {
+                return ApiResponse<string>.Fail("Failed to change password");
+            }
+
+            var row = ds.Tables[0].Rows[0];
+            var success = Convert.ToInt32(row["Success"]) == 1;
+
+            if (!success)
+            {
+                return ApiResponse<string>.Fail(row["Message"]?.ToString());
+            }
+
+            return ApiResponse<string>.Ok(null, row["Message"]?.ToString());
+        }
+
 
         public async Task<List<MenuDto>> GetMenusByRole(int roleId)
         {

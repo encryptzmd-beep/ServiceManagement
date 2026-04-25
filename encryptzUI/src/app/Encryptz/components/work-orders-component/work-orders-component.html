@@ -247,7 +247,10 @@
 <button class="btn-action btn-spare" (click)="openSpareDialog(wo, $event)">
   <span class="material-icons">build</span> Request Parts
 </button>
-<button class="btn-action btn-complete" (click)="updateStatus(wo.assignmentId, 'Completed')">
+<button class="btn-action btn-repair" (click)="openRepairDialog(wo, $event)">
+  <span class="material-icons">construction</span> Repair Parts
+</button>
+<button class="btn-action btn-complete" (click)="openCompleteDialog(wo, $event)">
   <span class="material-icons">check</span> Complete
 </button>
 }
@@ -260,7 +263,7 @@
         <button class="btn-action btn-details" (click)="openDetail(wo, $event)">
           <span class="material-icons">info</span> Details
         </button>
-        @if (wo.status !== 'Completed') {
+        @if (isAdmin() && wo.status !== 'Completed') {
         <button class="btn-action btn-unassign-action" (click)="openUnassign(wo, $event)">
           <span class="material-icons">person_remove</span> Assign to Admin
         </button>
@@ -573,7 +576,6 @@
 @if (showSpareDialog()) {
 <div class="sp-overlay" (click)="closeSpareDialog()"></div>
 <div class="sp-dialog">
-
   <div class="sp-header">
     <div class="sp-header-icon"><span class="material-icons">build</span></div>
     <div class="sp-header-text">
@@ -581,18 +583,16 @@
       @if (spareDialogWo()) {
       <span class="sp-complaint-tag">
         <span class="material-icons">confirmation_number</span>
-        {{ spareDialogWo()!.complaintNumber }} — {{ spareDialogWo()!.subject }}
+        {{ spareDialogWo()!.complaintNumber }} - {{ spareDialogWo()!.subject }}
       </span>
       }
     </div>
-    <button class="sp-close" (click)="closeSpareDialog()">
+    <button class="sp-close" type="button" (click)="closeSpareDialog()">
       <span class="material-icons">close</span>
     </button>
   </div>
 
   <div class="sp-body">
-
-    <!-- Complaint info card -->
     @if (spareDialogWo()) {
     <div class="sp-wo-info">
       <div class="sp-wo-row">
@@ -606,149 +606,176 @@
     </div>
     }
 
-    <!-- Spare part search -->
-    <div class="sp-search-section">
-      <label>Search & Add Parts</label>
-      <div class="sp-search-wrap">
-        <span class="material-icons sp-search-ic">search</span>
-        <input type="text" [(ngModel)]="spareSearch" class="sp-search-input"
-               placeholder="Search part name or number..."
-               (input)="onSpareSearch()" (focus)="showSpareDropdown = true" autocomplete="off" />
-        @if (spareSearchLoading()) { <div class="ta-spinner"></div> }
-      </div>
+    <div class="sp-grid">
+      <div class="sp-search-section">
+        <div class="sp-section-head">
+          <div>
+            <label>Search From Master List</label>
+            <p>Pick an existing part or add a custom one when it is missing from the master list.</p>
+          </div>
+          <button class="sp-add-custom" type="button" (click)="addCustomPart()">
+            <span class="material-icons">add</span>
+            Custom Part
+          </button>
+        </div>
 
-      @if (showSpareDropdown && spareResults().length > 0) {
-      <div class="sp-dropdown">
-        @for (p of spareResults(); track p.sparePartId) {
-        <div class="sp-dd-item" [class.in-cart]="isSpareInCart(p)" (click)="addSpareToCart(p)">
-          <div class="sp-dd-left">
-            <span class="sp-dd-name">{{ p.partName }}</span>
-            @if (p.partNumber) { <span class="sp-dd-num">{{ p.partNumber }}</span> }
+        <div class="sp-search-wrap">
+          <span class="material-icons sp-search-ic">search</span>
+          <input type="text"
+                 [(ngModel)]="spareSearch"
+                 class="sp-search-input"
+                 placeholder="Search part name or number..."
+                 (input)="onSpareSearch()"
+                 (focus)="showSpareDropdown = true"
+                 autocomplete="off" />
+          @if (spareSearchLoading()) { <div class="ta-spinner"></div> }
+        </div>
+
+        <div class="sp-helper-row">
+          <span class="material-icons">info</span>
+          Click any result to add it into the request.
+        </div>
+
+        @if (showSpareDropdown && spareResults().length > 0) {
+        <div class="sp-dropdown">
+          @for (p of spareResults(); track p.sparePartId) {
+          <div class="sp-dd-item" [class.in-cart]="isSpareInCart(p)" (click)="addSpareToCart(p)">
+            <div class="sp-dd-left">
+              <span class="sp-dd-name">{{ p.partName }}</span>
+              @if (p.partNumber) { <span class="sp-dd-num">{{ p.partNumber }}</span> }
+            </div>
+            <div class="sp-dd-right">
+              <span class="sp-dd-stock" [class.low]="p.stockQuantity < 3">
+                <span class="material-icons">inventory_2</span>{{ p.stockQuantity }}
+              </span>
+              @if (p.unitPrice) { <span class="sp-dd-price">Rs {{ p.unitPrice }}</span> }
+              <span class="material-icons sp-dd-add">{{ isSpareInCart(p) ? 'check_circle' : 'add_circle' }}</span>
+            </div>
           </div>
-          <div class="sp-dd-right">
-            <span class="sp-dd-stock" [class.low]="p.stockQuantity < 3">
-              <span class="material-icons">inventory_2</span>{{ p.stockQuantity }}
-            </span>
-            @if (p.unitPrice) { <span class="sp-dd-price">₹{{ p.unitPrice }}</span> }
-            <span class="material-icons sp-dd-add">{{ isSpareInCart(p) ? 'check_circle' : 'add_circle' }}</span>
-          </div>
+          }
+        </div>
+        } @else if (showSpareDropdown && !spareSearchLoading()) {
+        <div class="sp-empty-search">
+          <span class="material-icons">inventory_2</span>
+          <span>No matching master part found. Use Custom Part to enter it manually.</span>
         </div>
         }
       </div>
-      }
-    </div>
 
-    <!-- Cart -->
-    <div class="sp-cart">
-     <div class="sp-cart-header">
-  <h4>
-    <span class="material-icons">shopping_cart</span>
-    Parts List
-    @if (spareCart().length > 0) {
-      <span class="sp-cart-badge">{{ spareCart().length }}</span>
-    }
-  </h4>
-
-  <button class="sp-add-custom" (click)="addCustomPart()">
-    + Custom Part
-  </button>
-
-  @if (spareCart().length > 0) {
-    <span class="sp-cart-total">{{ spareCartTotal() }} item(s)</span>
-  }
-</div>
-
-      @if (spareCart().length === 0) {
-      <div class="sp-cart-empty">
-        <span class="material-icons">add_shopping_cart</span>
-        <p>Search and click a part to add</p>
-      </div>
-      }
-
-      <div class="sp-cart-list">
-       @for (item of spareCart(); track i; let i = $index){
-       <div class="sp-cart-item">
-
-  <!-- HEADER -->
-  <div class="sp-ci-top">
-    <div class="sp-ci-info">
-
-      <!-- NORMAL PART -->
-      @if (!item.isCustom) {
-        <strong>{{ item.part.partName }}</strong>
-        @if (item.part.partNumber) {
-          <small>{{ item.part.partNumber }}</small>
-        }
-      }
-
-      <!-- CUSTOM PART -->
-      @if (item.isCustom) {
-        <div class="sp-custom-box">
-          <input type="text"
-                 [(ngModel)]="item.customPartName"
-                 placeholder="Enter part name"
-                 class="sp-custom-input" />
-
-          <input type="text"
-                 [(ngModel)]="item.customPartNumber"
-                 placeholder="Part number (optional)"
-                 class="sp-custom-input" />
+      <div class="sp-cart">
+        <div class="sp-cart-header">
+          <div>
+            <h4>
+              <span class="material-icons">shopping_cart</span>
+              Parts List
+              @if (spareCartCount() > 0) {
+              <span class="sp-cart-badge">{{ spareCartCount() }}</span>
+              }
+            </h4>
+            @if (spareCartCount() > 0) {
+            <span class="sp-cart-total">{{ spareCartTotal() }} item(s) total</span>
+            } @else {
+            <span class="sp-cart-subtitle">Add one or more parts for this complaint.</span>
+            }
+          </div>
+          @if (hasInvalidCustomParts()) {
+          <span class="sp-inline-warning">
+            <span class="material-icons">error</span>
+            Custom part name required
+          </span>
+          }
         </div>
-      }
 
-    </div>
-
-    <button class="sp-ci-remove" (click)="removeSpareFromCart(i)">
-      <span class="material-icons">close</span>
-    </button>
-  </div>
-
-  <!-- CONTROLS -->
-  <div class="sp-ci-controls">
-
-    <!-- QTY -->
-    <div class="sp-ci-qty">
-      <button class="qty-btn"
-              (click)="updateSpareQty(i, item.quantity - 1)"
-              [disabled]="item.quantity <= 1">−</button>
-
-      <input type="number"
-             [ngModel]="item.quantity"
-             (ngModelChange)="updateSpareQty(i, $event)"
-             class="qty-input"
-             min="1" />
-
-      <button class="qty-btn"
-              (click)="updateSpareQty(i, item.quantity + 1)">+</button>
-
-      @if (!item.isCustom) {
-        <span class="sp-stock-hint">/ {{ item.part.stockQuantity }}</span>
-      }
-    </div>
-
-    <!-- URGENCY -->
-    <div class="sp-ci-urgency">
-      @for (u of urgencyOptions; track u) {
-        <button class="urg-btn"
-                [class.sel]="item.urgencyLevel === u"
-                [attr.data-level]="u.toLowerCase()"
-                (click)="updateSpareUrgency(i, u)">
-          {{ u }}
-        </button>
-      }
-    </div>
-
-  </div>
-
-  <!-- REMARKS -->
-  <input type="text"
-         [ngModel]="item.remarks"
-         (ngModelChange)="updateSpareRemarks(i, $event)"
-         class="sp-ci-remarks"
-         placeholder="Remarks (optional)" />
-
-</div>
+        @if (spareCart().length === 0) {
+        <div class="sp-cart-empty">
+          <span class="material-icons">add_shopping_cart</span>
+          <p>No parts added yet.</p>
+          <small>Choose from the master list or add a custom part.</small>
+        </div>
         }
+
+        <div class="sp-cart-list">
+          @for (item of spareCart(); track i; let i = $index) {
+          <div class="sp-cart-item" [class.is-custom]="item.isCustom">
+            <div class="sp-ci-top">
+              <div class="sp-ci-info">
+                @if (!item.isCustom) {
+                <span class="sp-type-chip">Master Part</span>
+                <strong>{{ item.part.partName }}</strong>
+                @if (item.part.partNumber) {
+                <small>{{ item.part.partNumber }}</small>
+                }
+                }
+
+                @if (item.isCustom) {
+                <span class="sp-type-chip custom">Custom Part</span>
+                <div class="sp-custom-box">
+                  <input type="text"
+                         [(ngModel)]="item.customPartName"
+                         placeholder="Enter part name"
+                         class="sp-custom-input"
+                         [class.invalid]="!item.customPartName?.trim()" />
+                  <input type="text"
+                         [(ngModel)]="item.customPartNumber"
+                         placeholder="Part number (optional)"
+                         class="sp-custom-input" />
+                </div>
+                @if (!item.customPartName?.trim()) {
+                <div class="sp-field-error">Part name is required for custom items.</div>
+                }
+                }
+              </div>
+
+              <button class="sp-ci-remove" type="button" (click)="removeSpareFromCart(i)">
+                <span class="material-icons">close</span>
+              </button>
+            </div>
+
+            <div class="sp-ci-controls">
+              <div class="sp-ci-qty">
+                <button class="qty-btn"
+                        type="button"
+                        (click)="updateSpareQty(i, item.quantity - 1)"
+                        [disabled]="item.quantity <= 1">-</button>
+                <input type="number"
+                       [ngModel]="item.quantity"
+                       (ngModelChange)="updateSpareQty(i, $event)"
+                       class="qty-input"
+                       min="1"
+                       [max]="getSpareItemMaxQty(item)" />
+                <button class="qty-btn"
+                        type="button"
+                        (click)="updateSpareQty(i, item.quantity + 1)"
+                        [disabled]="!item.isCustom && item.quantity >= getSpareItemMaxQty(item)">+</button>
+
+                @if (!item.isCustom) {
+                <span class="sp-stock-hint">/ {{ item.part.stockQuantity }} in stock</span>
+                } @else {
+                <span class="sp-stock-hint">manual qty</span>
+                }
+              </div>
+
+              <div class="sp-ci-urgency">
+                @for (u of urgencyOptions; track u) {
+                <button class="urg-btn"
+                        type="button"
+                        [class.sel]="item.urgencyLevel === u"
+                        [attr.data-level]="u.toLowerCase()"
+                        (click)="updateSpareUrgency(i, u)">
+                  {{ u }}
+                </button>
+                }
+              </div>
+            </div>
+
+            <input type="text"
+                   [ngModel]="item.remarks"
+                   (ngModelChange)="updateSpareRemarks(i, $event)"
+                   class="sp-ci-remarks"
+                   placeholder="Remarks (optional)" />
+          </div>
+          }
+        </div>
       </div>
     </div>
 
@@ -760,16 +787,153 @@
   </div>
 
   <div class="sp-footer">
-    <button class="sp-cancel" (click)="closeSpareDialog()">Cancel</button>
-    <button class="sp-submit" (click)="submitSpareRequest()" [disabled]="spareSubmitting() || spareCart().length === 0">
+    <button class="sp-cancel" type="button" (click)="closeSpareDialog()">Cancel</button>
+    <button class="sp-submit"
+            type="button"
+            (click)="submitSpareRequest()"
+            [disabled]="spareSubmitting() || spareCart().length === 0 || hasInvalidCustomParts()">
       @if (spareSubmitting()) { <span class="mini-spin white"></span> Submitting... }
-      @else { <span class="material-icons">send</span> Submit {{ spareCart().length }} Request(s) }
+      @else { <span class="material-icons">send</span> {{ getSpareSubmitLabel() }} }
     </button>
   </div>
-
 </div>
 }
 <!-- ═══ COMPLETION DIALOG ══════════════════════════════════ -->
+@if (showRepairDialog()) {
+<div class="rp-overlay" (click)="closeRepairDialog()"></div>
+<div class="rp-dialog">
+  <div class="rp-header">
+    <div class="rp-header-icon"><span class="material-icons">construction</span></div>
+    <div class="rp-header-text">
+      <h3>Send For Repair</h3>
+      @if (repairDialogWo()) {
+      <span class="rp-wo-tag">{{ repairDialogWo()!.complaintNumber }} - {{ repairDialogWo()!.subject }}</span>
+      }
+    </div>
+    <button class="rp-close" type="button" (click)="closeRepairDialog()">
+      <span class="material-icons">close</span>
+    </button>
+  </div>
+
+  <div class="rp-body">
+    @if (repairLoading()) {
+    <div class="rp-loading">
+      <span class="spinner-lg"></span>
+      <span>Loading repair details...</span>
+    </div>
+    } @else {
+    <div class="rp-summary">
+      <div class="rp-summary-card">
+        <span class="rp-summary-label">Customer Code</span>
+        <strong>{{ repairForm.customerCode || repairDialogWo()?.complaintNumber }}</strong>
+        <small>{{ repairDialogWo()?.customerName || repairMeta()?.customer?.customerName }}</small>
+      </div>
+      <div class="rp-summary-card">
+        <span class="rp-summary-label">Work Order</span>
+        <strong>{{ repairDialogWo()?.complaintNumber }}</strong>
+        <small>{{ repairDialogWo()?.productName }}</small>
+      </div>
+    </div>
+
+    <div class="rp-section">
+      <div class="rp-section-title">
+        <span class="material-icons">inventory_2</span>
+        <span>Part Details</span>
+      </div>
+
+      <div class="rp-field-grid">
+        <label class="rp-field">
+          <span>Part Name</span>
+          <input [(ngModel)]="repairForm.partName" type="text" placeholder="Enter part name" />
+        </label>
+        <label class="rp-field">
+          <span>Product Serial Number</span>
+          <input [(ngModel)]="repairForm.partSerialNumber" type="text" placeholder="Scan or enter serial number" />
+        </label>
+      </div>
+
+      <label class="rp-field full">
+        <span>Repair Notes</span>
+        <textarea [(ngModel)]="repairForm.notes" rows="3" placeholder="Describe issue, observed damage, or repair reason"></textarea>
+      </label>
+    </div>
+
+    <div class="rp-section">
+      <div class="rp-section-title">
+        <span class="material-icons">photo_camera</span>
+        <span>Capture Images</span>
+      </div>
+
+      <div class="rp-upload-card">
+        <div class="rp-upload-copy">
+          <strong>1. Capture Part Image</strong>
+          <small>Show current part condition before repair.</small>
+        </div>
+        <div class="rp-upload-grid">
+          @if (getRepairImages('before').length > 0) {
+          <div class="rp-preview">
+            <img [src]="getRepairImages('before')[0].preview" alt="Before repair image" />
+            <button type="button" class="rp-remove" (click)="removeRepairImage('before')">
+              <span class="material-icons">close</span>
+            </button>
+          </div>
+          }
+          <label class="rp-uploader">
+            <input type="file" accept="image/*" hidden (change)="onRepairFilesSelected($event, 'before')" />
+            <span class="material-icons">photo_camera</span>
+            <span>Capture Image</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="rp-upload-card">
+        <div class="rp-upload-copy">
+          <strong>2. Capture Tagged Image</strong>
+          <small>Ensure customer code or serial is visible on the part.</small>
+        </div>
+        <div class="rp-upload-grid">
+          @if (getRepairImages('tagged').length > 0) {
+          <div class="rp-preview">
+            <img [src]="getRepairImages('tagged')[0].preview" alt="Tagged repair image" />
+            <button type="button" class="rp-remove" (click)="removeRepairImage('tagged')">
+              <span class="material-icons">close</span>
+            </button>
+          </div>
+          }
+          <label class="rp-uploader secondary">
+            <input type="file" accept="image/*" hidden (change)="onRepairFilesSelected($event, 'tagged')" />
+            <span class="material-icons">add_a_photo</span>
+            <span>Capture Tagged Image</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="rp-tip">
+        <span class="material-icons">info</span>
+        Please upload both images clearly, and keep the serial or customer code visible in the tagged photo.
+      </div>
+    </div>
+
+    @if (repairMsg()) {
+    <div class="sp-alert" [class.ok]="!repairMsgErr()" [class.err]="repairMsgErr()">
+      <span class="material-icons">{{ repairMsgErr() ? 'error' : 'check_circle' }}</span> {{ repairMsg() }}
+    </div>
+    }
+    }
+  </div>
+
+  <div class="rp-footer">
+    <button class="rp-cancel" type="button" (click)="closeRepairDialog()">Cancel</button>
+    <button class="rp-submit"
+            type="button"
+            (click)="submitRepairRequest()"
+            [disabled]="repairSubmitting() || repairLoading()">
+      @if (repairSubmitting()) { <span class="mini-spin white"></span> Submitting... }
+      @else { <span class="material-icons">send</span> Submit / Send For Repair }
+    </button>
+  </div>
+</div>
+}
 @if (showCompleteDialog()) {
 <div class="cmp-overlay" (click)="closeCompleteDialog()"></div>
 <div class="cmp-dialog">
