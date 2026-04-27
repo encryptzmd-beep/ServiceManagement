@@ -189,32 +189,32 @@ namespace EncryptzAPI.Controllers
 
 
 
-     //   [HttpPost("complaints/{id}/images")]
-     //   public async Task<IActionResult> UploadComplaintImage(
-     //int id,
-     //[FromForm] IFormFile file,
-     //[FromForm] string imageType = "complaint")
-     //   {
-     //       if (file == null || file.Length == 0)
-     //           return BadRequest("No file");
+        [HttpPost("complaints/{id}/images")]
+        public async Task<IActionResult> UploadComplaintImage(
+     int id,
+     [FromForm] IFormFile file,
+     [FromForm] string imageType = "complaint")
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("No file");
 
-     //       // 🔥 Convert to Base64
-     //       using var ms = new MemoryStream();
-     //       await file.CopyToAsync(ms);
-     //       var bytes = ms.ToArray();
-     //       var base64 = Convert.ToBase64String(bytes);
+            // 🔥 Convert to Base64
+            using var ms = new MemoryStream();
+            await file.CopyToAsync(ms);
+            var bytes = ms.ToArray();
+            var base64 = Convert.ToBase64String(bytes);
 
-     //       var result = await _svc.UploadComplaintImage(
-     //           id,
-     //           null, // no need path
-     //           imageType,
-     //           GetUserId(),
-     //           base64,
-     //           file.FileName,
-     //           file.ContentType
-     //       );
+            var result = await _svc.UploadComplaintImage(
+                id,
+                null, // no need path
+                imageType,
+                GetUserId(),
+                base64,
+                file.FileName,
+                file.ContentType
+            );
 
-     //       return Ok(result);
-     //   }
+            return Ok(result);
+        }
     }
 }

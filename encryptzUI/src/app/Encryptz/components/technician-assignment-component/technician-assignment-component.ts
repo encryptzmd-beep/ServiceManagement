@@ -34,7 +34,7 @@ export class TechnicianAssignmentComponent implements OnInit {
   showComplaintDropdown = false;
   selectedComplaint: ComplaintLookup | null = null;
   assignmentSearch = '';
-  today = new Date().toISOString().split('T')[0];
+  today = this.formatDate(new Date());
 
   priorities = [
     { value: 'Low', label: 'Low', icon: 'arrow_downward', color: '#10b981' },
@@ -53,7 +53,6 @@ export class TechnicianAssignmentComponent implements OnInit {
     technicianId: null as number | null,
     assignmentRole: 'Primary',
     priority: 'Medium',
-    isScheduled: false,
     scheduledDate: '',
     timeSlot: '',
     startTime: '',
@@ -93,7 +92,10 @@ export class TechnicianAssignmentComponent implements OnInit {
     this.api.getTechnicians().subscribe({ next: (data: any) => this.technicians.set(data.items || data || []), error: () => {} });
   }
   loadActiveAssignments(): void {
-    this.api.getActiveAssignments().subscribe({ next: (data: any) => this.activeAssignments.set(Array.isArray(data) ? data : []), error: () => this.activeAssignments.set([]) });
+    this.api.getActiveAssignments().subscribe({
+      next: (data: any) => this.activeAssignments.set((Array.isArray(data) ? data : []).filter((a: any) => this.isActiveAssignmentStatus(a?.status))),
+      error: () => this.activeAssignments.set([])
+    });
   }
 
   onComplaintSearch(): void { this.showComplaintDropdown = true; this.searchSubject.next(this.complaintSearch); }
@@ -106,17 +108,22 @@ export class TechnicianAssignmentComponent implements OnInit {
 
   assign(): void {
     if (!this.form.complaintId || !this.form.technicianId) return;
+    const scheduleError = this.getScheduleValidationError();
+    if (scheduleError) {
+      this.errorMsg.set(scheduleError);
+      return;
+    }
     this.saving.set(true); this.successMsg.set(''); this.errorMsg.set('');
 
     const payload: any = {
       complaintId: this.form.complaintId, technicianId: this.form.technicianId,
       assignmentRole: this.form.assignmentRole, priority: this.form.priority, notes: this.form.notes,
+      scheduledDate: this.form.scheduledDate || null,
+      startTime: this.form.startTime || null,
+      endTime: this.form.endTime || null,
+      estimatedDuration: this.form.estimatedDuration || null,
+      timeSlot: this.form.timeSlot || null,
     };
-    if (this.form.isScheduled) {
-      payload.scheduledDate = this.form.scheduledDate; payload.startTime = this.form.startTime;
-      payload.endTime = this.form.endTime; payload.estimatedDuration = this.form.estimatedDuration;
-      payload.timeSlot = this.form.timeSlot;
-    }
 
     this.api.assignTechnician(payload).subscribe({
       next: (res: any) => {
@@ -154,13 +161,69 @@ export class TechnicianAssignmentComponent implements OnInit {
   editAssignment(a: any): void {
     this.editingAssignment = a; this.activeTab = 'assign'; this.form.complaintId = a.complaintId;
     this.form.technicianId = null; this.form.assignmentRole = a.assignmentRole;
-    if (a.scheduledDate) { this.form.isScheduled = true; this.form.scheduledDate = a.scheduledDate; this.form.startTime = a.startTime || ''; this.form.endTime = a.endTime || ''; }
+    if (a.scheduledDate) { this.form.scheduledDate = a.scheduledDate; this.form.startTime = a.startTime || ''; this.form.endTime = a.endTime || ''; }
   }
   cancelEdit(): void { this.editingAssignment = null; this.resetForm(); }
 
   resetForm(): void {
-    this.form = { complaintId: null, technicianId: null, assignmentRole: 'Primary', priority: 'Medium', isScheduled: false, scheduledDate: '', timeSlot: '', startTime: '', endTime: '', estimatedDuration: null, notes: '' };
+    this.form = { complaintId: null, technicianId: null, assignmentRole: 'Primary', priority: 'Medium', scheduledDate: '', timeSlot: '', startTime: '', endTime: '', estimatedDuration: null, notes: '' };
     this.editingAssignment = null; this.selectedComplaint = null; this.complaintSearch = '';
+  }
+
+  getScheduleValidationError(): string {
+    if (!this.form.scheduledDate) return 'Visit date is required.';
+
+    const selectedDate = this.parseDate(this.form.scheduledDate);
+    const todayDate = this.parseDate(this.today);
+    if (selectedDate < todayDate) return 'Visit date cannot be in the past.';
+
+    if (this.form.startTime && this.form.endTime && this.form.endTime <= this.form.startTime) {
+      return 'End time must be after start time.';
+    }
+
+    if (this.form.scheduledDate === this.today) {
+      const nowMinutes = this.getCurrentMinutes();
+      const startMinutes = this.form.startTime
+        ? this.timeToMinutes(this.form.startTime)
+        : this.getSlotStartMinutes(this.form.timeSlot);
+      if (startMinutes !== null && startMinutes <= nowMinutes) {
+        return 'Selected time cannot be in the past.';
+      }
+    }
+
+    return '';
+  }
+
+  isScheduleInvalid(): boolean {
+    return !!this.getScheduleValidationError();
+  }
+
+  private parseDate(value: string): Date {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  private formatDate(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
+  private getCurrentMinutes(): number {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  }
+
+  private timeToMinutes(value: string): number {
+    const [hours, minutes] = value.split(':').map(Number);
+    return hours * 60 + minutes;
+  }
+
+  private getSlotStartMinutes(slot: string): number | null {
+    const starts: Record<string, string> = {
+      morning: '09:00',
+      afternoon: '12:00',
+      evening: '16:00',
+    };
+    return starts[slot] ? this.timeToMinutes(starts[slot]) : null;
   }
 
   loadAuditLog(): void {
@@ -170,5 +233,10 @@ export class TechnicianAssignmentComponent implements OnInit {
 
   getAuditIcon(action: string): string {
     return ({ Created: 'person_add', Modified: 'edit', Removed: 'person_remove', Completed: 'check_circle' } as any)[action] || 'history';
+  }
+
+  private isActiveAssignmentStatus(status?: string | null): boolean {
+    const normalized = (status || '').toLowerCase();
+    return !['removed', 'cancelled', 'canceled', 'unassigned', 'unassign'].includes(normalized);
   }
 }

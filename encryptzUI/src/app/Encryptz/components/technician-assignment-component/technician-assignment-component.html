@@ -73,7 +73,7 @@
               <div class="sc-subject">{{ selectedComplaint.subject }}</div>
               <div class="sc-customer">
                 <span class="material-icons">person</span> {{ selectedComplaint.customerName }}
-                <span class="material-icons">phone</span> {{ selectedComplaint.customerPhone }}
+                <span class="material-icons">phone</span> <a [href]="'tel:' + selectedComplaint.customerPhone" style="color:#2563eb;text-decoration:none">{{ selectedComplaint.customerPhone }}</a>
                 @if (selectedComplaint.customerPlace) {
                 <span class="material-icons">location_on</span> {{ selectedComplaint.customerPlace }}
                 }
@@ -168,25 +168,21 @@
           </div>
         </div>
 
-        <!-- Schedule Section -->
+        <!-- Schedule Section (Always Visible, Date Mandatory) -->
         <div class="schedule-section">
-          <div class="schedule-toggle">
-            <label class="toggle-label">
-              <input type="checkbox" [(ngModel)]="form.isScheduled" name="isScheduled" />
-              <span class="toggle-switch"></span>
-              <span class="toggle-text">
-                <span class="material-icons">schedule</span> Schedule for specific time
-              </span>
-            </label>
-            <small class="toggle-hint">Set visit date &amp; time window</small>
+          <div class="schedule-header">
+            <span class="material-icons">event</span>
+            <div>
+              <strong>Schedule Visit</strong>
+              <small>Date is mandatory for assignment</small>
+            </div>
           </div>
-          @if (form.isScheduled) {
           <div class="schedule-fields">
             <div class="field-row">
               <div class="field half">
                 <label>Visit Date <span class="req">*</span></label>
                 <div class="iw"><span class="material-icons ic">calendar_today</span>
-                  <input type="date" [(ngModel)]="form.scheduledDate" name="sdate" class="inp" [min]="today" />
+                  <input type="date" [(ngModel)]="form.scheduledDate" name="sdate" class="inp" [min]="today" required />
                 </div>
               </div>
               <div class="field half">
@@ -221,8 +217,10 @@
                 <input type="number" [(ngModel)]="form.estimatedDuration" name="dur" class="inp" placeholder="e.g. 60" />
               </div>
             </div>
+            @if (getScheduleValidationError()) {
+            <div class="alert err"><span class="material-icons">error</span> {{ getScheduleValidationError() }}</div>
+            }
           </div>
-          }
         </div>
 
         <!-- Notes -->
@@ -234,7 +232,7 @@
         </div>
 
         <button type="submit" class="btn-primary fw"
-          [disabled]="!form.complaintId || !form.technicianId || saving() || (form.isScheduled && !form.scheduledDate)">
+          [disabled]="!form.complaintId || !form.technicianId || isScheduleInvalid() || saving()">
           @if (saving()) { <span class="spinner"></span> }
           @else { <span class="material-icons">{{ editingAssignment ? 'edit' : 'person_add' }}</span> }
           {{ saving() ? 'Assigning...' : (editingAssignment ? 'Update Assignment' : 'Assign Technician') }}
@@ -265,7 +263,10 @@
             <div class="ac-meta">
               <span><span class="material-icons">engineering</span> {{ a.technicianName }} ({{ a.assignmentRole }})</span>
               <span><span class="material-icons">person</span> {{ a.customerName }}</span>
-              <span><span class="material-icons">phone</span> {{ a.customerPhone }}</span>
+              <span><span class="material-icons">phone</span> <a [href]="'tel:' + a.customerPhone" style="color:#2563eb;text-decoration:none">{{ a.customerPhone }}</a></span>
+              @if (a.customerPlace || a.customerAddress || a.locationName || a.locationAddress) {
+              <span><span class="material-icons">location_on</span> {{ a.customerPlace || a.customerAddress || a.locationName || a.locationAddress }}</span>
+              }
             </div>
             @if (a.scheduledDate) {
             <div class="ac-schedule">

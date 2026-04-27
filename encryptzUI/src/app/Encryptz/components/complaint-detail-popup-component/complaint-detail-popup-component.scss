@@ -870,3 +870,146 @@
     min-width: 180px; text-align: center;
   }
 }
+
+/* ═══════════════ OVERVIEW SUMMARY CARDS ═══════════════ */
+
+.ov-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  transition: border-color .15s, box-shadow .15s;
+
+  &:hover {
+    border-color: #c7d2fe;
+    box-shadow: 0 4px 12px rgba(99,102,241,.08);
+  }
+
+  &.ov-customer {
+    border-left: 4px solid #6366f1;
+    .ov-card-icon { background: #eef2ff; color: #6366f1; }
+  }
+
+  &.ov-product {
+    border-left: 4px solid #0891b2;
+    .ov-card-icon { background: #ecfeff; color: #0891b2; }
+  }
+}
+
+.ov-card-icon {
+  width: 42px; height: 42px;
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  .material-icons { font-size: 22px; }
+}
+
+.ov-card-body {
+  flex: 1; min-width: 0;
+}
+
+.ov-card-title {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .6px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.ov-no-master {
+  font-size: 10px; font-weight: 500;
+  color: #d97706;
+  text-transform: none; letter-spacing: 0;
+  margin-left: 6px;
+}
+
+.ov-card-row {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ov-tag {
+  display: inline-flex; align-items: center;
+  padding: 3px 10px;
+  background: #f1f5f9;
+  border-radius: 7px;
+  font-size: 12px; color: #374151;
+  strong { font-weight: 700; }
+}
+
+.ov-name {
+  font-size: 15px; font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.ov-card-sub {
+  display: flex; align-items: center; gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: 12px; color: #64748b;
+
+  .material-icons { font-size: 14px; color: #9ca3af; }
+
+  a {
+    color: #0891b2; text-decoration: none;
+    &:hover { text-decoration: underline; }
+  }
+}
+
+.ov-sep { color: #cbd5e1; }
+
+.ov-card-link {
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  border: none; border-radius: 8px;
+  background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: #94a3b8;
+  transition: all .15s;
+  padding: 0;
+
+  .material-icons { font-size: 18px; }
+
+  &:hover {
+    background: #eef2ff;
+    color: #6366f1;
+  }
+}
+
+/* ── Product grid inside overview card ── */
+.ov-prod-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin-top: 4px;
+}
+
+.ov-prod-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 100px;
+}
+
+.ov-prod-lbl {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .4px;
+  color: #94a3b8;
+}
+
+.ov-prod-val {
+  font-size: 13px; font-weight: 600;
+  color: #1e293b;
+
+  &.mono {
+    font-family: 'Courier New', monospace;
+    font-size: 12.5px;
+  }
+}
+

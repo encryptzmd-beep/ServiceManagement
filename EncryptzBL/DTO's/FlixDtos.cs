@@ -179,8 +179,13 @@ namespace EncryptzBL.DTO_s
         public string Subject { get; set; } = string.Empty;
         public string? Description { get; set; }
         public string Priority { get; set; } = string.Empty;
-    }
 
+        // ✅ Add these
+        public decimal? Latitude { get; set; }
+        public decimal? Longitude { get; set; }
+        public string? LocationAddress { get; set; }
+        public string? PickedLocation { get; set; }
+    }
     public class ComplaintUpdateStatusDto
     {
         public int StatusId { get; set; }
@@ -364,11 +369,21 @@ namespace EncryptzBL.DTO_s
         public string Subject { get; set; } = string.Empty;
         public string CustomerName { get; set; } = string.Empty;
         public string? CustomerAddress { get; set; }
+        public string? CustomerPlace { get; set; }
+        public string? LocationName { get; set; }
+        public string? LocationAddress { get; set; }
         public string? CustomerPhone { get; set; }
         public string ProductName { get; set; } = string.Empty;
         public string AssignmentRole { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public DateTime AssignedAt { get; set; }
+        public DateTime? ScheduledDate { get; set; }
+        public string? StartTime { get; set; }
+        public string? EndTime { get; set; }
+        public string? Priority { get; set; }
+        public string? Notes { get; set; }
+        public decimal latitude { get; set; }
+        public decimal longitude { get; set; }
     }
 
     public class ServiceUpdateDto
@@ -975,7 +990,7 @@ namespace EncryptzBL.DTO_s
     public class SpareRequestByComplaintDto
     {
         public int RequestId { get; set; }
-        public int SparePartId { get; set; }
+        public int? SparePartId { get; set; }
         public string PartName { get; set; } = string.Empty;
         public string? PartNumber { get; set; }
         public decimal? UnitPrice { get; set; }
@@ -985,6 +1000,7 @@ namespace EncryptzBL.DTO_s
         public string? Remarks { get; set; }
         public DateTime RequestedAt { get; set; }
         public DateTime? ApprovedAt { get; set; }
+        public DateTime? DispatchedAt { get; set; }
         public string TechnicianName { get; set; } = string.Empty;
         public string? ApprovedByName { get; set; }
     }
@@ -1061,6 +1077,8 @@ namespace EncryptzBL.DTO_s
         public string? Brand { get; set; }
         public DateTime? WarrantyExpiryDate { get; set; }
         public bool IsSLABreached { get; set; }
+        public decimal? Latitude { get; set; }
+        public decimal? Longitude { get; set; }
         public List<WorkOrderTimelineDto> Timeline { get; set; } = new();
         public List<ServiceImageItemDto> Images { get; set; } = new();
         public List<WorkOrderRepairDetailDto> RepairDetails { get; set; } = new();
@@ -1094,7 +1112,10 @@ namespace EncryptzBL.DTO_s
     {
         public int ImageId { get; set; }
         public string ImageType { get; set; } = string.Empty;
-        public string ImagePath { get; set; } = string.Empty;
+        public string? ImagePath { get; set; }
+        public string? ImageData { get; set; }  // base64
+        public string? ImageName { get; set; }
+        public string? ContentType { get; set; }
         public DateTime UploadedAt { get; set; }
     }
 
@@ -1103,7 +1124,10 @@ namespace EncryptzBL.DTO_s
         public int ComplaintId { get; set; }
         public int TechnicianId { get; set; }
         public string ImageType { get; set; } = "Other";
-        public string ImagePath { get; set; } = string.Empty;
+        public string? ImagePath { get; set; }
+        public string? ImageData { get; set; }  // base64
+        public string? ImageName { get; set; }
+        public string? ContentType { get; set; }
     }
 
 
@@ -1311,6 +1335,15 @@ namespace EncryptzBL.DTO_s
         public DateTime AssignedAt { get; set; }
         public string CustomerName { get; set; }
         public string CustomerPhone { get; set; }
+        public string? CustomerPlace { get; set; }
+        public string? CustomerAddress { get; set; }
+        public string? LocationName { get; set; }
+        public string? LocationAddress { get; set; }
+        public DateTime? ScheduledDate { get; set; }
+        public string? StartTime { get; set; }
+        public string? EndTime { get; set; }
+        public string? Notes { get; set; }
+        public string? Priority { get; set; }
     }
 
     public class ProductMasterDto
@@ -1710,6 +1743,8 @@ namespace EncryptzBL.DTO_s
             public int? CompanyId { get; set; }
             public DateTime CreatedAt { get; set; }
             public string PasswordHash { get; set; }
+            public string? alternatePhone { get; set; }
+            public string? landmark { get; set; }
         }
 
         public class CustomerMenu_Dto
@@ -1736,6 +1771,8 @@ namespace EncryptzBL.DTO_s
             public string PinCode { get; set; }
             public decimal? Latitude { get; set; }
             public decimal? Longitude { get; set; }
+            public string? alternatePhone { get; set; }
+            public string? landmark { get; set; }
         }
 
         public class DashboardStats_Dto
@@ -2194,7 +2231,7 @@ namespace EncryptzBL.DTO_s
             public class SparePartResponseModel
             {
                 public int RequestId { get; set; }
-                public int SparePartId { get; set; }
+                public int? SparePartId { get; set; }
                 public string PartName { get; set; }
                 public string PartNumber { get; set; }
                 public decimal? UnitPrice { get; set; }

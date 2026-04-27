@@ -851,7 +851,7 @@ export class CustomerRegisterComponent {
       next: (res: any) => {
         this.isLoading.set(false);
 
-        if (res.success === 1 && res.data.message != 'UserAlreadyExists') {
+        if (res.success && res.data.message != 'UserAlreadyExists') {
           this.successMessage.set('Registration successful');
           this.router.navigate(['/customer/login']);
         }

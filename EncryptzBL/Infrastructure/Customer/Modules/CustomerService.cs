@@ -1,4 +1,4 @@
-﻿using EncryptzBL.Common;
+using EncryptzBL.Common;
 using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using Microsoft.Extensions.Configuration;
@@ -154,7 +154,9 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
             SqlParameterHelper.Input("@State", dto.State),
             SqlParameterHelper.Input("@PinCode", dto.PinCode),
             SqlParameterHelper.Input("@Latitude", dto.Latitude),
-            SqlParameterHelper.Input("@Longitude", dto.Longitude)
+            SqlParameterHelper.Input("@Longitude", dto.Longitude),
+             SqlParameterHelper.Input("@alternatePhone", dto.alternatePhone),
+            SqlParameterHelper.Input("@landmark", dto.landmark)
         };
 
                 var dt = await GetDataTableAsync("sp_Customer_UpdateProfile", parameters);
@@ -267,7 +269,7 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
                     new Claim(ClaimTypes.Role, "Customer"),
                     new Claim("CustomerId", customer.CustomerId.ToString())
                 }),
-                Expires = DateTime.UtcNow.AddDays(7),
+                Expires = TimeHelper.IndianNow.AddDays(7),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
@@ -518,12 +520,21 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
 
             var p = new[]
             {
-        SqlParameterHelper.Input("@CustomerId", customerId),
-        SqlParameterHelper.Input("@ProductId", dto.ProductId),
-        SqlParameterHelper.Input("@Subject", dto.Subject),
-        SqlParameterHelper.Input("@Description", dto.Description ?? (object)DBNull.Value),
-        SqlParameterHelper.Input("@Priority", dto.Priority)
-    };
+
+
+    SqlParameterHelper.Input("@CustomerId", customerId),
+    SqlParameterHelper.Input("@ProductId", dto.ProductId),
+    SqlParameterHelper.Input("@Subject", dto.Subject),
+    SqlParameterHelper.Input("@Description", dto.Description ?? (object)DBNull.Value),
+    SqlParameterHelper.Input("@Priority", dto.Priority),
+
+    // ✅ new params
+    SqlParameterHelper.Input("@Latitude", dto.Latitude ?? (object)DBNull.Value),
+    SqlParameterHelper.Input("@Longitude", dto.Longitude ?? (object)DBNull.Value),
+    SqlParameterHelper.Input("@LocationAddress", dto.LocationAddress ?? (object)DBNull.Value),
+    SqlParameterHelper.Input("@PickedLocation", dto.PickedLocation ?? (object)DBNull.Value)
+
+        };
 
             var dt = await GetDataTableAsync("sp_Complaint_Create", p);
 

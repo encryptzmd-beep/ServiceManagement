@@ -1,4 +1,4 @@
-﻿using EncryptzBL.Common;
+using EncryptzBL.Common;
 using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.User.Modules;
@@ -8,7 +8,8 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Text;
-
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace EncryptzBL.Infrastructure.Dashboard.Modules
 {
@@ -73,8 +74,6 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
             return result;
         }
 
-        
-
         // ============================================
         // GET: Get Complete Complaint Details
         // ============================================
@@ -99,7 +98,6 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
 
                 var response = new ComplaintDetailResponseModel();
 
-                // Table 0: Complaint details
                 if (ds.Tables[0].Rows.Count > 0)
                 {
                     response.Complaint = MapComplaint(ds.Tables[0].Rows[0]);
@@ -109,19 +107,16 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
                     return ApiResponse<ComplaintDetailResponseModel>.Fail("Complaint not found");
                 }
 
-                // Table 1: Customer details
                 if (ds.Tables[1].Rows.Count > 0)
                 {
                     response.Customer = MapCustomer(ds.Tables[1].Rows[0]);
                 }
 
-                // Table 2: Product details
                 if (ds.Tables[2].Rows.Count > 0)
                 {
                     response.Product = MapProduct(ds.Tables[2].Rows[0]);
                 }
 
-                // Table 3: Assignments
                 if (ds.Tables[3].Rows.Count > 0)
                 {
                     response.Assignments = ds.Tables[3].Rows.Cast<DataRow>().Select(MapAssignment).ToList();
@@ -131,7 +126,6 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
                     response.Assignments = new List<AssignmentResponseModel>();
                 }
 
-                // Table 4: Spare Parts
                 if (ds.Tables[4].Rows.Count > 0)
                 {
                     response.SpareParts = ds.Tables[4].Rows.Cast<DataRow>().Select(MapSparePart).ToList();
@@ -141,7 +135,6 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
                     response.SpareParts = new List<SparePartResponseModel>();
                 }
 
-                // Table 5: Comments
                 if (ds.Tables[5].Rows.Count > 0)
                 {
                     response.Comments = ds.Tables[5].Rows.Cast<DataRow>().Select(MapComment).ToList();
@@ -151,7 +144,6 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
                     response.Comments = new List<CommentResponseModel>();
                 }
 
-                // Table 6: Spare Parts Dropdown
                 if (ds.Tables[6].Rows.Count > 0)
                 {
                     response.SparePartsDropdown = ds.Tables[6].Rows.Cast<DataRow>().Select(MapSparePartDropdown).ToList();
@@ -161,7 +153,6 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
                     response.SparePartsDropdown = new List<SparePartDropdownModel>();
                 }
 
-                // Table 7: Technicians Dropdown
                 if (ds.Tables[7].Rows.Count > 0)
                 {
                     response.TechniciansDropdown = ds.Tables[7].Rows.Cast<DataRow>().Select(MapTechnicianDropdown).ToList();
@@ -179,25 +170,14 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
             }
         }
 
-        // ============================================
-        // POST: Manage Complaint Details (All Operations)
-        // ============================================
-        // ═════════════════════════════════════════════════════════════════════════
-        //  CORRECTED ManageComplaintDetails  (service method)
-        //
-        //  ONLY CHANGE vs your existing file is marked with "// ← FIX".
-        //  The DBNull → null conversion in the GET path is what stops the popup
-        //  from rendering "[object Object]" on fields that are NULL in the DB.
-        // ═════════════════════════════════════════════════════════════════════════
-
         public async Task<ApiResponse<dynamic>> ManageComplaintDetails(ManageComplaintRequestModel request)
         {
             try
             {
                 var parameters = new List<SqlParameter>
-        {
-            SqlParameterHelper.Input("@OperationType", request.OperationType)
-        };
+                {
+                    SqlParameterHelper.Input("@OperationType", request.OperationType)
+                };
 
                 // Common parameters
                 if (request.ComplaintId.HasValue)
@@ -324,60 +304,38 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
                 if (request.OperationType == "GET")
                 {
                     var ds = await GetDataSetAsync("sp_ManageComplaintDetails", parameters.ToArray());
-
                     if (ds != null && ds.Tables.Count > 0)
                     {
                         var result = new List<object>();
-
                         foreach (DataTable table in ds.Tables)
                         {
                             var tableData = table.AsEnumerable()
                                 .Select(row => table.Columns.Cast<DataColumn>()
-                                    .ToDictionary(
-                                        col => col.ColumnName,
-                                        col => row[col] is DBNull ? null : row[col]   // ← FIX: was `col => row[col]`
-                                    ))
+                                    .ToDictionary(col => col.ColumnName, col => row[col] is DBNull ? null : row[col]))
                                 .ToList();
-
                             result.Add(tableData);
                         }
-
                         return ApiResponse<object>.Ok(result, "Success");
                     }
-
                     return ApiResponse<object>.Fail("No data found");
                 }
                 else
                 {
-                    // For UPDATE/INSERT/DELETE operations, use GetDataTableAsync
                     var dt = await GetDataTableAsync("sp_ManageComplaintDetails", parameters.ToArray());
-
                     if (dt != null && dt.Rows.Count > 0)
                     {
-                        // ── Defensive reads — every branch of the SP now returns
-                        // Success, Message, AssignmentId, CommentId, RequestId
-                        // columns, but if an older SP version is still deployed the
-                        // extra columns may be missing. Guard against it so we never
-                        // throw "Column X does not belong to table".
                         var row = dt.Rows[0];
                         var cols = dt.Columns;
-
                         var result = new OperationResultModel
                         {
                             Success = cols.Contains("Success") && Convert.ToBoolean(row["Success"]),
                             Message = cols.Contains("Message") ? row["Message"]?.ToString() : null,
-                            AssignmentId = (cols.Contains("AssignmentId") && row["AssignmentId"] != DBNull.Value)
-                                ? Convert.ToInt32(row["AssignmentId"]) : (int?)null,
-                            CommentId = (cols.Contains("CommentId") && row["CommentId"] != DBNull.Value)
-                                ? Convert.ToInt32(row["CommentId"]) : (int?)null,
-                            RequestId = (cols.Contains("RequestId") && row["RequestId"] != DBNull.Value)
-                                ? Convert.ToInt32(row["RequestId"]) : (int?)null
+                            AssignmentId = (cols.Contains("AssignmentId") && row["AssignmentId"] != DBNull.Value) ? Convert.ToInt32(row["AssignmentId"]) : (int?)null,
+                            CommentId = (cols.Contains("CommentId") && row["CommentId"] != DBNull.Value) ? Convert.ToInt32(row["CommentId"]) : (int?)null,
+                            RequestId = (cols.Contains("RequestId") && row["RequestId"] != DBNull.Value) ? Convert.ToInt32(row["RequestId"]) : (int?)null
                         };
-
-                        if (result.Success)
-                            return ApiResponse<dynamic>.Ok(result, result.Message);
-                        else
-                            return ApiResponse<dynamic>.Fail(result.Message);
+                        if (result.Success) return ApiResponse<dynamic>.Ok(result, result.Message);
+                        else return ApiResponse<dynamic>.Fail(result.Message);
                     }
                     return ApiResponse<dynamic>.Fail("Operation failed");
                 }
@@ -388,62 +346,31 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
             }
         }
 
-        // ============================================
-        // Dropdown Helpers
-        // ============================================
         public async Task<ApiResponse<List<SparePartDropdownModel>>> GetSparePartsDropdown()
         {
             try
             {
-                var parameters = new[]
-                {
-                    SqlParameterHelper.Input("@OperationType", "GET_SPARE_PARTS_DROPDOWN")
-                };
-
+                var parameters = new[] { SqlParameterHelper.Input("@OperationType", "GET_SPARE_PARTS_DROPDOWN") };
                 var dt = await GetDataTableAsync("sp_ManageComplaintDetails", parameters);
-
-                if (dt == null || dt.Rows.Count == 0)
-                {
-                    return ApiResponse<List<SparePartDropdownModel>>.Ok(new List<SparePartDropdownModel>(), "No spare parts found");
-                }
-
+                if (dt == null || dt.Rows.Count == 0) return ApiResponse<List<SparePartDropdownModel>>.Ok(new List<SparePartDropdownModel>(), "No spare parts found");
                 var spareParts = dt.Rows.Cast<DataRow>().Select(MapSparePartDropdown).ToList();
                 return ApiResponse<List<SparePartDropdownModel>>.Ok(spareParts, "Success");
             }
-            catch (Exception ex)
-            {
-                return ApiResponse<List<SparePartDropdownModel>>.Fail($"Error fetching spare parts: {ex.Message}");
-            }
+            catch (Exception ex) { return ApiResponse<List<SparePartDropdownModel>>.Fail($"Error fetching spare parts: {ex.Message}"); }
         }
 
         public async Task<ApiResponse<List<TechnicianDropdownModel>>> GetTechniciansDropdown()
         {
             try
             {
-                var parameters = new[]
-                {
-                    SqlParameterHelper.Input("@OperationType", "GET_TECHNICIANS_DROPDOWN")
-                };
-
+                var parameters = new[] { SqlParameterHelper.Input("@OperationType", "GET_TECHNICIANS_DROPDOWN") };
                 var dt = await GetDataTableAsync("sp_ManageComplaintDetails", parameters);
-
-                if (dt == null || dt.Rows.Count == 0)
-                {
-                    return ApiResponse<List<TechnicianDropdownModel>>.Ok(new List<TechnicianDropdownModel>(), "No technicians found");
-                }
-
+                if (dt == null || dt.Rows.Count == 0) return ApiResponse<List<TechnicianDropdownModel>>.Ok(new List<TechnicianDropdownModel>(), "No technicians found");
                 var technicians = dt.Rows.Cast<DataRow>().Select(MapTechnicianDropdown).ToList();
                 return ApiResponse<List<TechnicianDropdownModel>>.Ok(technicians, "Success");
             }
-            catch (Exception ex)
-            {
-                return ApiResponse<List<TechnicianDropdownModel>>.Fail($"Error fetching technicians: {ex.Message}");
-            }
+            catch (Exception ex) { return ApiResponse<List<TechnicianDropdownModel>>.Fail($"Error fetching technicians: {ex.Message}"); }
         }
-
-        // ============================================
-        // Mapping Methods
-        // ============================================
 
         private ComplaintResponseModel MapComplaint(DataRow row)
         {
@@ -547,7 +474,7 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
             return new SparePartResponseModel
             {
                 RequestId = Convert.ToInt32(row["RequestId"]),
-                SparePartId = Convert.ToInt32(row["SparePartId"]),
+                SparePartId = row["SparePartId"] != DBNull.Value ? Convert.ToInt32(row["SparePartId"]) : (int?)null,
                 PartName = row["PartName"]?.ToString(),
                 PartNumber = row["PartNumber"]?.ToString(),
                 UnitPrice = row["UnitPrice"] != DBNull.Value ? Convert.ToDecimal(row["UnitPrice"]) : (decimal?)null,
@@ -599,12 +526,5 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
                 EmployeeCode = row["EmployeeCode"]?.ToString()
             };
         }
-
-        // ============================================
-        // Database Helper Methods
-        // ============================================
-
-       
     }
 }
-

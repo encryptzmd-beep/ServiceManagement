@@ -327,6 +327,13 @@
      color: #94a3b8
    }
 
+   .phone-link {
+     color: #2563eb;
+     text-decoration: none;
+     font-weight: 500;
+     &:hover { text-decoration: underline; }
+   }
+
    /* Info Row */
    .info-row-group {
      display: flex;

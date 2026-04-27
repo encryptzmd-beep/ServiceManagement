@@ -1,9 +1,10 @@
-﻿using EncryptzBL.DTO_s;
+using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Technician.modules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.IO;
 using System.Security.Claims;
+using EncryptzBL.Common;
 
 
 
@@ -173,27 +174,22 @@ namespace EncryptzAPI.Controllers
             if (!allowed.Contains(ext))
                 return BadRequest(new { success = false, message = "Only JPG, PNG, and WEBP files are allowed" });
 
-            var root = string.IsNullOrWhiteSpace(_env.WebRootPath)
-                ? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot")
-                : _env.WebRootPath;
-            var folder = Path.Combine(root, "uploads", "service-images");
-            Directory.CreateDirectory(folder);
+            // Convert file to base64 data URI
+            using var ms = new MemoryStream();
+            await file.CopyToAsync(ms);
+            var bytes = ms.ToArray();
+            var base64 = Convert.ToBase64String(bytes);
+            var contentType = file.ContentType ?? "image/jpeg";
+            var dataUri = $"data:{contentType};base64,{base64}";
 
-            var fileName = $"{complaintId}_{technicianId}_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid():N}{ext}";
-            var fullPath = Path.Combine(folder, fileName);
-
-            await using (var stream = new FileStream(fullPath, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            var relativePath = $"/uploads/service-images/{fileName}";
             var result = await _service.SaveServiceImage(new ServiceImageSaveDto
             {
                 ComplaintId = complaintId,
                 TechnicianId = technicianId,
                 ImageType = imageType,
-                ImagePath = relativePath
+                ImageData = dataUri,
+                ImageName = file.FileName,
+                ContentType = contentType
             });
 
             if (!result.Success)
@@ -203,8 +199,7 @@ namespace EncryptzAPI.Controllers
             {
                 success = true,
                 message = result.Message,
-                imageId = result.Data,
-                imagePath = relativePath
+                imageId = result.Data
             });
         }
 

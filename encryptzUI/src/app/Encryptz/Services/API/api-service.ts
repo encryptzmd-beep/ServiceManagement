@@ -155,7 +155,7 @@ getTechnicians(filter?: any): Observable<M.ApiResponse<M.PagedResponse<M.Technic
   //   return this.http.post<M.ApiResponse<string>>(`${this.api}/technician/${techId}/service-images`, fd);
   // }
 uploadServiceImage(technicianId: number, formData: FormData): Observable<any> {
-  return this.http.post(`${this.api}/technicians/${technicianId}/upload-image`, formData);
+  return this.http.post(`${this.api}/technician/${technicianId}/upload-image`, formData);
 }
 
   // --- Warranty ---
@@ -650,8 +650,20 @@ getScheduleBoardReport(date: string) {
 }): Observable<any> {
   return this.post<any>('Tracking/log', dto);
 }
-submitQuickComplaint(formData: FormData): Observable<any> {
-  return this.http.post(`${this.api}/Customer/quick-complaint`, formData);
+submitQuickComplaint(data: {
+  subject: string;
+  category?: string;
+  brandName?: string;
+  modelNumber?: string;
+  description?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  locationName?: string;
+  imageBase64?: string;
+  imageName?: string;
+  contentType?: string;
+}): Observable<any> {
+  return this.http.post<any>(`${this.api}/Customer/quick-complaint`, data);
 }
 
 // Services/API/api-service.ts - Add these methods

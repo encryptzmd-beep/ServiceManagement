@@ -352,7 +352,10 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
         SqlParameterHelper.Input("@ComplaintId",  dto.ComplaintId),
         SqlParameterHelper.Input("@TechnicianId", dto.TechnicianId),
         SqlParameterHelper.Input("@ImageType",    dto.ImageType),
-        SqlParameterHelper.Input("@ImagePath",    dto.ImagePath)
+        SqlParameterHelper.Input("@ImagePath",    (object?)dto.ImagePath ?? DBNull.Value),
+        SqlParameterHelper.Input("@ImageData",    (object?)dto.ImageData ?? DBNull.Value),
+        SqlParameterHelper.Input("@ImageName",    (object?)dto.ImageName ?? DBNull.Value),
+        SqlParameterHelper.Input("@ContentType",  (object?)dto.ContentType ?? DBNull.Value)
     };
 
             var dt = await GetDataTableAsync("sp_ServiceImage_Save", p);

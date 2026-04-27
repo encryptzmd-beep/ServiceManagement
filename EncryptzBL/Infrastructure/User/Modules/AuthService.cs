@@ -35,7 +35,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             {
                 SqlParameterHelper.Input("@MobileNumber", mobileNumber),
                 SqlParameterHelper.Input("@OtpCode", otp),
-                SqlParameterHelper.Input("@ExpiresAt", DateTime.UtcNow.AddMinutes(5))
+                SqlParameterHelper.Input("@ExpiresAt", TimeHelper.IndianNow.AddMinutes(5))
             };
 
             await ExecuteAsync("sp_Auth_GenerateOtp", parameters);
@@ -949,7 +949,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddHours(24),
+                expires: TimeHelper.IndianNow.AddHours(24),
                 signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
             );
 
@@ -978,7 +978,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddHours(24),
+                expires: TimeHelper.IndianNow.AddHours(24),
                 signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
             );
 
@@ -1002,7 +1002,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddDays(7),
+                expires: TimeHelper.IndianNow.AddDays(7),
                 signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
             );
 

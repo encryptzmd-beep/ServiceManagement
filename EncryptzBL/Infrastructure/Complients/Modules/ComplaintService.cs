@@ -1,4 +1,4 @@
-﻿using EncryptzBL.Common;
+using EncryptzBL.Common;
 using EncryptzBL.DTO_s;
 using System.Data;
 
@@ -11,14 +11,15 @@ namespace EncryptzBL.Infrastructure.Complients.Modules
         // 🔥 CREATE
         public async Task<ApiResponse<ComplaintDto>> Create(int customerId, ComplaintCreateDto dto)
         {
-            var complaintNumber = $"CMP-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..4]}";
+            var now = TimeHelper.IndianNow;
+            var complaintNumber = $"CMP-{now:yyyyMMdd}-{Guid.NewGuid().ToString()[..4]}";
 
             var slaDeadline = dto.Priority switch
             {
-                "Critical" => DateTime.UtcNow.AddHours(4),
-                "High" => DateTime.UtcNow.AddHours(12),
-                "Medium" => DateTime.UtcNow.AddHours(24),
-                _ => DateTime.UtcNow.AddHours(48)
+                "Critical" => now.AddHours(4),
+                "High" => now.AddHours(12),
+                "Medium" => now.AddHours(24),
+                _ => now.AddHours(48)
             };
 
             var outputId = SqlParameterHelper.Output("@NewId", SqlDbType.Int);

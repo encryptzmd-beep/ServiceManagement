@@ -9,6 +9,7 @@ import { WorkOrder } from '../../Models/ApiModels';
 import { AuthService } from '../../Auth/auth-service';
 import { GpsTracking } from '../../Services/gps-tracking';
 import { GeocodeService } from '../../Services/API/geocode-service';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 type SpareCartItem = {
   part?: any;                 // for master item
   isCustom: boolean;          // flag
@@ -30,7 +31,7 @@ export class WorkOrdersComponent implements OnInit, OnDestroy {
   private auth        = inject(AuthService);
   private _destroyRef = inject(DestroyRef);
   private techSearchSubject = new Subject<string>();
-
+constructor(private sanitizer: DomSanitizer) {}
   // ── Role-based visibility ─────────────────────────────
   isAdmin = computed(() => this.auth.userRole() === 'Admin');
   readonly gpsService = inject(GpsTracking);
@@ -309,6 +310,7 @@ startWork(wo: WorkOrder): void {
 
         // 2. Auto-record site arrival for this complaint
         this.recordSiteArrival(wo.complaintId, wo.complaintNumber);
+        this.showDetail.set(false);
       } else {
         this.show(r.message, true);
       }
@@ -415,7 +417,8 @@ private showCheckInMsg(m: string, err: boolean): void {
     this.msg.set('');
     this.api.getWorkOrders(this.techId).subscribe({
       next: (res: any) => {
-        const list: WorkOrder[] = Array.isArray(res) ? res : (res?.data ?? []);
+        const list: WorkOrder[] = (Array.isArray(res) ? res : (res?.data ?? []))
+          .filter((o: any) => this.isActiveAssignmentStatus(o?.status));
         this.orders.set(list);
         this.loading.set(false);
       },
@@ -436,7 +439,7 @@ private showCheckInMsg(m: string, err: boolean): void {
     this.api.updateServiceStatus({ AssignmentId, Status }).subscribe({
       next: (r: any) => {
         if (r.success) {
-          this.show(`Status updated to ${status}`, false);
+          this.show(`Status updated to ${Status}`, false);
           this.load();
         } else {
           this.show(r.message, true);
@@ -471,6 +474,7 @@ private showCheckInMsg(m: string, err: boolean): void {
         this.unassigning.set(false);
         if (r.success) {
           this.show('Technician unassigned successfully', false);
+          this.orders.update(list => list.filter(order => order.assignmentId !== target.assignmentId));
           this.closeUnassign();
           this.load();
         } else {
@@ -514,7 +518,8 @@ private showCheckInMsg(m: string, err: boolean): void {
     this.complaintSpares.set([]);
     this.api.getSpareByComplaint(complaintId).subscribe({
       next: (r: any) => {
-        this.complaintSpares.set(r?.data ?? (Array.isArray(r) ? r : []));
+        const spares = r?.data ?? (Array.isArray(r) ? r : []);
+        this.complaintSpares.set(spares);
         this.sparesLoading.set(false);
       },
       error: () => this.sparesLoading.set(false)
@@ -526,6 +531,11 @@ private showCheckInMsg(m: string, err: boolean): void {
       requested: 's-requested', approved: 's-approved',
       dispatched: 's-dispatched', used: 's-used', rejected: 's-rejected'
     } as any)[s?.toLowerCase()] || 's-requested';
+  }
+
+  private isActiveAssignmentStatus(status?: string | null): boolean {
+    const normalized = (status || '').toLowerCase();
+    return !['removed', 'cancelled', 'canceled', 'unassigned', 'unassign'].includes(normalized);
   }
 
   getUrgencyClass(u: string): string {
@@ -1159,7 +1169,10 @@ private finalizeCompletion(wo: WorkOrder, updateProgress: () => void): void {
     }
   });
 }
-
+getMapUrl(lat: number, lng: number): SafeResourceUrl {
+  const url = `https://www.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+  return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+}
 viewRepairImages(repairRequest: any): void {
   this.activeRepairRequest.set(repairRequest);
   this.showRepairImagesModal.set(true);
@@ -1180,7 +1193,7 @@ viewRepairImages(repairRequest: any): void {
 
 fetchImageBase64(image: any): void {
   if (image.base64 || image.loading) return;
-  
+
   image.loading = true;
   this.api.getRepairImageBase64(image.imageId).subscribe({
     next: (res: any) => {

@@ -292,6 +292,10 @@ export interface ActiveAssignment {
   assignedAt: string;
   customerName: string;
   customerPhone: string;
+  customerPlace?: string;
+  customerAddress?: string;
+  locationName?: string;
+  locationAddress?: string;
   scheduledDate?: string;
   startTime?: string;
   endTime?: string;
@@ -326,6 +330,9 @@ export interface WorkOrder {
   subject: string;
   customerName: string;
   customerAddress: string | null;
+  customerPlace?: string | null;
+  locationName?: string | null;
+  locationAddress?: string | null;
   customerPhone: string | null;
   productName: string;
   assignmentRole: string;
@@ -337,6 +344,9 @@ export interface WorkOrder {
   endTime?: string | null;
   priority?: string | null;
   notes?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  technicianName?: string | null;
 }
 
 export interface WorkOrderResponse {

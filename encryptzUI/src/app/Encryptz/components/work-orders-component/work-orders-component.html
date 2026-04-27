@@ -2,7 +2,7 @@
  <!--Header-->
  <div class="fx-page-headerpage-header">
  <div>
- <div class="fx-page-title">MyComplete Work Orders</div>
+ <div class="fx-page-title">My Work Orders</div>
  <div class="fx-page-sub">Active service assignments and tasks</div>
  </div>
  <div class="header-controls">
@@ -73,7 +73,7 @@
  } @else {
  <span class="material-icons">refresh</span>
  }
- {{ loading() ? 'Loading...' : 'LoadOrders' }}
+ {{ loading() ? 'Loading...' : 'Load Orders' }}
  </button>
  } @else {
  <!--Non-admin:justarefreshbutton-->
@@ -99,9 +99,9 @@
         }}</span>
     </div>
     <div class="cb-info">
-      <strong>{{ isCheckedIn() ? 'CheckedIn' : 'NotCheckedIn' }}</strong>
+      <strong>{{ isCheckedIn() ? 'Checked In' : 'Not Checked In' }}</strong>
       @if (isCheckedIn() && checkInTime()) {
-      <span class="cb-time">Since{{ checkInTime() | date: 'hh:mma' }}</span>
+      <span class="cb-time">Since {{ checkInTime() | date: 'hh:mm a' }}</span>
       }
       @if (locationName()) {
       <span class="cb-coords">
@@ -145,7 +145,7 @@
  <div class="gps-mini-bar">
  <div class="gmb-dot"></div>
  <span class="material-icons">gps_fixed</span>
- <span>GPS track ingactive</span>
+ <span>GPS tracking active</span>
  @if (gpsService.logCount() > 0) {
  <span class="gmb-count">{{ gpsService.logCount() }}pts</span>
  }
@@ -247,30 +247,51 @@
  }
  </div>
 
- <div class="customer-section">
- <div class="customer-avatar customer-avatar-initials">
- {{ wo.customerName?.charAt(0) || 'C' }}
- </div>
- <div class="customer-details">
- <strong>{{ wo.customerName }}</strong>
- @if (wo.customerPhone) {
- <span class="cust-meta">
- <span class="material-icons">phone</span> {{ wo.customerPhone }}</span
- >
- }
- @if (wo.customerAddress) {
- <span class="cust-meta">
- <span class="material-icons">location_on</span> {{ wo.customerAddress }}</span
- >
- }
- </div>
- </div>
+<div class="customer-section">
+  <div class="customer-avatar customer-avatar-initials">
+    {{ wo.customerName?.charAt(0) || 'C' }}
+  </div>
+
+  <div class="customer-details">
+    <strong>{{ wo.customerName }}</strong>
+
+    @if (wo.customerPhone) {
+      <span class="cust-meta">
+        <span class="material-icons">phone</span>
+        <a [href]="'tel:' + wo.customerPhone" class="phone-link">
+          {{ wo.customerPhone }}
+        </a>
+      </span>
+    }
+
+    @if (wo.customerAddress || $any(wo).customerPlace || $any(wo).locationName || $any(wo).locationAddress) {
+      <span class="cust-meta">
+        <span class="material-icons">location_on</span>
+        {{ wo.customerAddress || $any(wo).customerPlace || $any(wo).locationName || $any(wo).locationAddress }}
+      </span>
+    }
+
+    <!-- ✅ MAP BELOW -->
+    @if (wo.latitude && wo.longitude) {
+      <div style="margin-top:10px;">
+        <iframe
+          width="100%"
+          height="200"
+          style="border:0; border-radius:8px;"
+          loading="lazy"
+          allowfullscreen
+          [src]="getMapUrl(wo.latitude, wo.longitude)">
+        </iframe>
+      </div>
+    }
+  </div>
+</div>
 
  <div class="info-row-group info-row-compact">
  <div class="info-item compact-item">
  <span class="material-icons">calendar_today</span>
  <div>
- <span class="info-value">{{ wo.assignedAt | date: 'ddMMMyyyy,hh:mma' }}</span>
+ <span class="info-value">{{ wo.assignedAt | date: 'dd MMM yyyy, hh:mm a' }}</span>
  </div>
  </div>
  <div class="meta-separator">·</div>
@@ -286,7 +307,7 @@
  <span class="material-icons">event</span>
  <div>
  <span class="info-value"
- >{{ $any(wo).scheduledDate | date: 'ddMMMyyyy' }}
+ >{{ $any(wo).scheduledDate | date: 'dd MMM yyyy' }}
  @if ($any(wo).startTime) {
  ·{{ $any(wo).startTime }}–{{ $any(wo).endTime }}
  }
@@ -366,7 +387,7 @@
  <p>Type a technician name above and select from the list to view their assignments.</p>
  } @else if (!loading()) {
  <span class="material-icons empty-icon">assignment_turned_in</span>
- <h3>No Complete Work Orders</h3>
+ <h3>No Work Orders</h3>
  <p>No active assignments found.</p>
  }
  </div>
@@ -388,7 +409,7 @@
  <div class="ua-icon-wrap"><span class="material-icons">person_remove</span></div>
  <div>
  <h3>Unassign</h3>
- <p class="ua-sub">Thiswillremovethetechnicianfromthisassignment</p>
+ <p class="ua-sub">This will remove the technician from this assignment</p>
  </div>
  <button class="ua-close-btn" (click)="closeUnassign()">
  <span class="material-icons">close</span>
@@ -414,7 +435,7 @@
  @if ($any(unassignTarget()).scheduledDate) {
  <div class="ua-info-rowwarn">
  <span class="material-icons">event</span>
- <span>Scheduled:{{ $any(unassignTarget()).scheduledDate | date: 'ddMMMyyyy' }}</span>
+ <span>Scheduled: {{ $any(unassignTarget()).scheduledDate | date: 'dd MMM yyyy' }}</span>
  </div>
  }
  </div>
@@ -541,19 +562,26 @@
  <span class="material-icons">phone</span>
  <div>
  <span class="dmi-label">Phone</span>
- <span class="dmi-val">{{ detailData()?.customerPhone }}</span>
+ <span class="dmi-val"><a [href]="'tel:' + detailData()?.customerPhone" class="phone-link">{{ detailData()?.customerPhone }}</a></span>
  </div>
  </div>
  }
- @if (detailData()?.customerAddress) {
+ @if (detailData()?.customerAddress || detailData()?.customerPlace || detailData()?.locationName || detailData()?.locationAddress) {
  <div class="dm-info-item">
  <span class="material-icons">location_on</span>
  <div>
  <span class="dmi-label">Address</span>
  <span class="dmi-val"
- >{{ detailData()?.customerAddress
+ >{{ detailData()?.customerAddress || detailData()?.customerPlace || detailData()?.locationName || detailData()?.locationAddress
  }}{{ detailData()?.city ? ',' + detailData()?.city : '' }}</span
  >
+ @if (detailData()?.latitude && detailData()?.longitude) {
+ <div style="margin-top: 4px;">
+ <a [href]="'https://www.google.com/maps/search/?api=1&query=' + detailData()?.latitude + ',' + detailData()?.longitude" target="_blank" style="color: #2563eb; text-decoration: none; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
+ <span class="material-icons" style="font-size: 16px;">directions</span> View on Map
+ </a>
+ </div>
+ }
  </div>
  </div>
  }
@@ -577,9 +605,7 @@
  <span class="material-icons">calendar_today</span>
  <div>
  <span class="dmi-label">Assigned</span>
- <span class="dmi-val">{{
- detailData()?.assignedAt | date: 'ddMMMyyyy,hh:mma'
- }}</span>
+ <span class="dmi-val">{{ detailData()?.assignedAt | date: 'dd MMM yyyy, hh:mm a' }}</span>
  </div>
  </div>
  @if (detailData()?.scheduledDate) {
@@ -587,9 +613,7 @@
  <span class="material-icons">event</span>
  <div>
  <span class="dmi-label">Scheduled</span>
- <span class="dmi-val">{{
- detailData()?.scheduledDate | date: 'ddMMMyyyy'
- }}</span>
+ <span class="dmi-val">{{ detailData()?.scheduledDate | date: 'dd MMM yyyy' }}</span>
  </div>
  </div>
  }
@@ -600,7 +624,7 @@
  <span class="dmi-label">Completed</span>
  <span
  class="dmi-val"
- >{{ detailData()?.completedAt | date: 'ddMMMyyyy,hh:mma' }}</span
+ >{{ detailData()?.completedAt | date: 'dd MMM yyyy, hh:mm a' }}</span
  >
  </div>
  </div>
@@ -645,16 +669,14 @@
  <span class="material-icons">engineering</span>
  {{ s.technicianName }}</span
  >
- <span class="sic-date">{{ s.requestedAt | date: 'ddMMM,HH:mm' }}</span>
+ <span class="sic-date">{{ s.requestedAt | date: 'dd MMM, HH:mm' }}</span>
  </div>
  @if (s.remarks) {
  <p class="sic-remarks">"{{ s.remarks }}"</p>
  }
  @if (s.approvedByName) {
  <span class="sic-approved">
- <span class="material-icons">verified</span> Approvedby{{
- s.approvedByName
- }}
+ <span class="material-icons">verified</span> Approved by {{ s.approvedByName }}
  </span>
  }
  </div>
@@ -701,7 +723,7 @@
  }
  </div>
  <div class="ric-meta-row">
- <span class="ric-date">{{ r.createdAt | date: 'ddMMM,HH:mm' }}</span>
+ <span class="ric-date">{{ r.createdAt | date: 'dd MMM, HH:mm' }}</span>
  <span class="ric-status-pill">{{ r.status }}</span>
  </div>
  @if (r.notes) {
@@ -751,7 +773,7 @@
  <span class="tl-action" [attr.data-action]="t.action?.toLowerCase()">{{
  t.action
  }}</span>
- <span class="tl-time">{{ t.changedAt | date: 'ddMMM,hh:mma' }}</span>
+ <span class="tl-time">{{ t.changedAt | date: 'dd MMM, hh:mm a' }}</span>
  </div>
  @if (t.newTechnicianName) {
  <p class="tl-detail">
@@ -787,7 +809,7 @@
  <div class="image-grid">
  @for (img of detailData()?.images; track img.imageId) {
  <div class="img-thumb">
- <img [src]="img.imagePath" [alt]="img.imageType" loading="lazy" />
+ <img [src]="img.imageData || img.imagePath" [alt]="img.imageType" loading="lazy" />
  <span class="img-type-tag">{{ img.imageType }}</span>
  </div>
  }
@@ -1280,10 +1302,10 @@
  <span class="material-icons">fitness_center</span>
  <span>{{ completeWo()?.productName }}</span>
  </div>
- @if (completeWo()?.customerAddress) {
+ @if (completeWo()?.customerAddress || $any(completeWo()).customerPlace || $any(completeWo()).locationName || $any(completeWo()).locationAddress) {
  <div class="cmp-wo-row">
  <span class="material-icons">location_on</span>
- <span>{{ completeWo()?.customerAddress }}</span>
+ <span>{{ completeWo()?.customerAddress || $any(completeWo()).customerPlace || $any(completeWo()).locationName || $any(completeWo()).locationAddress }}</span>
  </div>
  }
  </div>
@@ -1291,7 +1313,7 @@
 
  <!--WorkDone (required)-->
  <div class="cmp-field">
- <label>WorkPerformed <span class="cmp-req">*</span> </label>
+ <label>Work Performed <span class="cmp-req">*</span> </label>
  <textarea
  [(ngModel)]="completeForm.workDone"
  rows="3"
@@ -1302,7 +1324,7 @@
 
  <!--PartsUsed-->
  <div class="cmp-field">
- <label>PartsUsed/Replaced</label>
+ <label>Parts Used / Replaced</label>
  <textarea
  [(ngModel)]="completeForm.partsUsed"
  rows="2"
@@ -1313,7 +1335,7 @@
 
  <!--AdditionalRemarks-->
  <div class="cmp-field">
- <label>AdditionalRemarks</label>
+ <label>Additional Remarks</label>
  <textarea
  [(ngModel)]="completeForm.remarks"
  rows="2"
@@ -1324,7 +1346,7 @@
 
  <!--CustomerFeedback-->
  <div class="cmp-field">
- <label>CustomerFeedback</label>
+ <label>Customer Feedback</label>
  <textarea
  [(ngModel)]="completeForm.customerFeedback"
  rows="2"
@@ -1335,8 +1357,8 @@
 
  <!--â•â•â•IMAGEUPLOADSECTIONâ•â•â•-->
  <div class="cmp-upload-section">
- <label>ServiceImages</label>
- <p class="cmp-upload-hint">Uploadbefore/afterphotos,parts,orcustomersignature</p>
+ <label>Service Images</label>
+ <p class="cmp-upload-hint">Upload before/after photos, parts, or customer signature</p>
 
  <!--Dropzone-->
  <div
@@ -1506,7 +1528,7 @@
  <span class="ri-tag" [class.before]="img.imageType === 'BeforeRepair'">{{
  img.imageType
  }}</span>
- <span class="ri-date">{{ img.createdAt | date: 'ddMMM,HH:mm' }}</span>
+ <span class="ri-date">{{ img.createdAt | date: 'dd MMM, HH:mm' }}</span>
  </div>
  <div class="ri-image-placeholder" (click)="fetchImageBase64(img)">
  @if (img.base64) {
@@ -1536,7 +1558,6 @@
  </div>
  </div>
 }
-
 
 
 

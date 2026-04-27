@@ -121,13 +121,115 @@
               <div class="cd-detail"><span class="cd-lbl">Priority</span>
                 <span class="cd-val"><span class="priority-badge" [ngClass]="priorityClass(complaintData()?.Priority)">{{ display(complaintData()?.Priority) }}</span></span></div>
               <div class="cd-detail"><span class="cd-lbl">Created</span><span class="cd-val">{{ formatDateTime(complaintData()?.CreatedAt) }}</span></div>
-              <div class="cd-detail"><span class="cd-lbl">Category</span><span class="cd-val">{{ display(complaintData()?.Category) }}</span></div>
-              <div class="cd-detail"><span class="cd-lbl">Brand / Model</span><span class="cd-val">{{ display(complaintData()?.BrandName) }} / {{ display(complaintData()?.ModelNumber) }}</span></div>
+              <div class="cd-detail"><span class="cd-lbl">Category</span><span class="cd-val">{{ display(complaintData()?.Category || productData()?.ProductCategory) }}</span></div>
+              <div class="cd-detail"><span class="cd-lbl">Brand / Model</span><span class="cd-val">{{ display(complaintData()?.BrandName || productData()?.Brand) }} / {{ display(complaintData()?.ModelNumber || productData()?.ModelNumber) }}</span></div>
               <div class="cd-detail"><span class="cd-lbl">Preferred</span><span class="cd-val">{{ formatDate(complaintData()?.PreferredDate) }} · {{ display(complaintData()?.PreferredTimeSlot, 'Any') }}</span></div>
               <div class="cd-detail"><span class="cd-lbl">SLA Deadline</span><span class="cd-val">{{ formatDateTime(complaintData()?.SLADeadline) }}</span></div>
               <div class="cd-detail full"><span class="cd-lbl">Subject</span><span class="cd-val">{{ display(complaintData()?.Subject) }}</span></div>
               <div class="cd-detail full"><span class="cd-lbl">Description</span><p class="cd-desc">{{ display(complaintData()?.Description, 'No description') }}</p></div>
             </div>
+
+            <!-- ── Customer Summary Card ─────────────────────────── -->
+            @if (customerData()) {
+              <div class="ov-card ov-customer">
+                <div class="ov-card-icon"><span class="material-icons">person</span></div>
+                <div class="ov-card-body">
+                  <div class="ov-card-title">Customer</div>
+                  <div class="ov-card-row">
+                    <span class="ov-tag">Code&nbsp;<strong>#{{ display(customerData()?.CustomerId) }}</strong></span>
+                    <span class="ov-name">{{ display(customerData()?.CustomerName) }}</span>
+                  </div>
+                  <div class="ov-card-sub">
+                    @if (customerData()?.MobileNumber) {
+                      <span class="material-icons">phone</span>
+                      <a [href]="'tel:' + customerData()?.MobileNumber">{{ display(customerData()?.MobileNumber) }}</a>
+                    }
+                    @if (customerData()?.AlternatePhone) {
+                      <span class="ov-sep">·</span>
+                      <span class="material-icons">phone_forwarded</span>
+                      <a [href]="'tel:' + customerData()?.AlternatePhone">{{ display(customerData()?.AlternatePhone) }}</a>
+                    }
+                    @if (customerData()?.Email) {
+                      <span class="ov-sep">·</span>
+                      <span class="material-icons">email</span>
+                      <span>{{ display(customerData()?.Email) }}</span>
+                    }
+                  </div>
+                </div>
+                <button class="ov-card-link cd-btn-view" (click)="activeTab.set('customer')" title="Go to Customer tab">
+                  <span class="material-icons">open_in_new</span>
+                </button>
+              </div>
+            }
+
+            <!-- ── Product / Equipment Summary Card ─────────────── -->
+            <div class="ov-card ov-product">
+              <div class="ov-card-icon"><span class="material-icons">devices</span></div>
+              <div class="ov-card-body">
+                <div class="ov-card-title">
+                  Product / Equipment
+                  @if (!hasProduct()) {
+                    <span class="ov-no-master">(from complaint — no master record)</span>
+                  }
+                </div>
+
+                @if (hasProduct()) {
+                  <!-- Linked product master record -->
+                  <div class="ov-prod-grid">
+                    <div class="ov-prod-item">
+                      <span class="ov-prod-lbl">Name</span>
+                      <span class="ov-prod-val">{{ display(productData()?.ProductName) }}</span>
+                    </div>
+                    <div class="ov-prod-item">
+                      <span class="ov-prod-lbl">Category</span>
+                      <span class="ov-prod-val">{{ display(productData()?.ProductCategory ?? complaintData()?.Category) }}</span>
+                    </div>
+                    <div class="ov-prod-item">
+                      <span class="ov-prod-lbl">Brand</span>
+                      <span class="ov-prod-val">{{ display(productData()?.Brand ?? complaintData()?.BrandName) }}</span>
+                    </div>
+                    <div class="ov-prod-item">
+                      <span class="ov-prod-lbl">Model</span>
+                      <span class="ov-prod-val mono">{{ display(productData()?.ModelNumber ?? complaintData()?.ModelNumber) }}</span>
+                    </div>
+                    @if (productData()?.SerialNumber) {
+                      <div class="ov-prod-item">
+                        <span class="ov-prod-lbl">Serial</span>
+                        <span class="ov-prod-val mono">{{ display(productData()?.SerialNumber) }}</span>
+                      </div>
+                    }
+                    <div class="ov-prod-item">
+                      <span class="ov-prod-lbl">Warranty</span>
+                      <span class="ov-prod-val">
+                        <span class="warranty-badge" [class.expired]="isWarrantyExpired()">
+                          {{ display(productData()?.WarrantyStatus, 'No Warranty') }}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                } @else {
+                  <!-- No master product — show quick-complaint fields from complaint row -->
+                  <div class="ov-prod-grid">
+                    <div class="ov-prod-item">
+                      <span class="ov-prod-lbl">Category</span>
+                      <span class="ov-prod-val">{{ display(complaintData()?.Category) }}</span>
+                    </div>
+                    <div class="ov-prod-item">
+                      <span class="ov-prod-lbl">Brand</span>
+                      <span class="ov-prod-val">{{ display(complaintData()?.BrandName) }}</span>
+                    </div>
+                    <div class="ov-prod-item">
+                      <span class="ov-prod-lbl">Model</span>
+                      <span class="ov-prod-val mono">{{ display(complaintData()?.ModelNumber) }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+              <button class="ov-card-link cd-btn-view" (click)="activeTab.set('product')" title="Go to Product tab">
+                <span class="material-icons">open_in_new</span>
+              </button>
+            </div>
+
           }
         </div>
       }
@@ -417,7 +519,17 @@
             <div class="cd-detail-grid">
               <div class="cd-detail full"><span class="cd-lbl">Location Name</span><span class="cd-val">{{ display(complaintData()?.LocationName) }}</span></div>
               <div class="cd-detail full"><span class="cd-lbl">Address</span><span class="cd-val">{{ display(complaintData()?.LocationAddress) }}</span></div>
-              <div class="cd-detail"><span class="cd-lbl">Latitude</span><span class="cd-val mono">{{ display(complaintData()?.Latitude) }}</span></div>
+              <div class="cd-detail">
+                <span class="cd-lbl">Latitude</span>
+                <span class="cd-val mono">
+                  {{ display(complaintData()?.Latitude) }}
+                  @if (complaintData()?.Latitude && complaintData()?.Longitude) {
+                    <a [href]="'https://www.google.com/maps/search/?api=1&query=' + complaintData()?.Latitude + ',' + complaintData()?.Longitude" target="_blank" style="margin-left: 8px; color: #2563eb; vertical-align: middle;">
+                      <span class="material-icons" style="font-size: 18px;">map</span>
+                    </a>
+                  }
+                </span>
+              </div>
               <div class="cd-detail"><span class="cd-lbl">Longitude</span><span class="cd-val mono">{{ display(complaintData()?.Longitude) }}</span></div>
             </div>
           }
