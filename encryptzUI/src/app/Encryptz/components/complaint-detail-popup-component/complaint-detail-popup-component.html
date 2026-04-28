@@ -85,6 +85,19 @@
               <div class="cd-field"><label>Description</label>
                 <textarea class="cd-textarea" rows="4" [(ngModel)]="editData.complaint.Description"></textarea>
               </div>
+              <div class="cd-field">
+                <label>
+                  Nature of the job
+                  <span class="cd-char-count">{{ (editData.complaint.NatureOfJob || '').length }}/50</span>
+                </label>
+                <textarea
+                  class="cd-textarea cd-nature-input"
+                  rows="2"
+                  maxlength="50"
+                  placeholder="Enter nature of the job"
+                  [(ngModel)]="editData.complaint.NatureOfJob"
+                ></textarea>
+              </div>
               <div class="cd-form-row">
                 <div class="cd-field"><label>Category</label>
                   <input class="cd-inp bare" [(ngModel)]="editData.complaint.Category"></div>
@@ -126,6 +139,7 @@
               <div class="cd-detail"><span class="cd-lbl">Preferred</span><span class="cd-val">{{ formatDate(complaintData()?.PreferredDate) }} · {{ display(complaintData()?.PreferredTimeSlot, 'Any') }}</span></div>
               <div class="cd-detail"><span class="cd-lbl">SLA Deadline</span><span class="cd-val">{{ formatDateTime(complaintData()?.SLADeadline) }}</span></div>
               <div class="cd-detail full"><span class="cd-lbl">Subject</span><span class="cd-val">{{ display(complaintData()?.Subject) }}</span></div>
+              <div class="cd-detail full"><span class="cd-lbl">Nature of the job</span><span class="cd-val">{{ display(complaintData()?.NatureOfJob, 'Not set') }}</span></div>
               <div class="cd-detail full"><span class="cd-lbl">Description</span><p class="cd-desc">{{ display(complaintData()?.Description, 'No description') }}</p></div>
             </div>
 

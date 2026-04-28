@@ -367,6 +367,7 @@ namespace EncryptzBL.DTO_s
         public int ComplaintId { get; set; }
         public string ComplaintNumber { get; set; } = string.Empty;
         public string Subject { get; set; } = string.Empty;
+        public string? NatureOfJob { get; set; }
         public string CustomerName { get; set; } = string.Empty;
         public string? CustomerAddress { get; set; }
         public string? CustomerPlace { get; set; }
@@ -1053,6 +1054,7 @@ namespace EncryptzBL.DTO_s
         public string ComplaintNumber { get; set; } = string.Empty;
         public string Subject { get; set; } = string.Empty;
         public string? Description { get; set; }
+        public string? NatureOfJob { get; set; }
         public string? Priority { get; set; }
         public DateTime? SLADeadline { get; set; }
         public DateTime ComplaintCreatedAt { get; set; }
@@ -1954,6 +1956,7 @@ namespace EncryptzBL.DTO_s
                 // Complaint fields (all nullable)
                 public string Subject { get; set; }
                 public string Description { get; set; }
+                public string NatureOfJob { get; set; }
                 public string Priority { get; set; }
                 public string Category { get; set; }
                 public string BrandName { get; set; }
@@ -2020,6 +2023,7 @@ namespace EncryptzBL.DTO_s
             {
                 public string Subject { get; set; }
                 public string Description { get; set; }
+                public string NatureOfJob { get; set; }
                 public string Priority { get; set; }
                 public string Category { get; set; }
                 public string BrandName { get; set; }
@@ -2149,6 +2153,7 @@ namespace EncryptzBL.DTO_s
                 public string ComplaintNumber { get; set; }
                 public string Subject { get; set; }
                 public string Description { get; set; }
+                public string NatureOfJob { get; set; }
                 public DateTime CreatedAt { get; set; }
                 public DateTime? UpdatedAt { get; set; }
                 public string Priority { get; set; }

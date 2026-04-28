@@ -281,6 +281,7 @@ onImgError(ev: Event) {
     this.saving.set(true);
     this.api.updateComplaintDetails(this.complaintId, {
       subject: e.Subject, description: e.Description,
+      natureOfJob: String(e.NatureOfJob || '').slice(0, 50),
       priority: e.Priority, category: e.Category,
       brandName: e.BrandName, modelNumber: e.ModelNumber,
       preferredDate: e.PreferredDate || null,

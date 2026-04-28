@@ -933,6 +933,11 @@ getRepairImages(tag: string): { file: File; preview: string; tag: string }[] {
   return this.repairImages().filter(item => item.tag === tag);
 }
 
+getNatureOfJob(source: any): string {
+  const value = source?.natureOfJob ?? source?.NatureOfJob ?? '';
+  return typeof value === 'string' ? value.trim() : String(value || '').trim();
+}
+
 hasDetailLocation(): boolean {
   const detail = this.detailData();
   const workOrder = this.detailWorkOrder();

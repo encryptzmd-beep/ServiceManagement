@@ -271,10 +271,19 @@
   margin-bottom: 14px;
   &:last-child { margin-bottom: 0; }
   label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     font-size: 12px; font-weight: 600;
     color: #374151; margin-bottom: 6px;
   }
   .req { color: #ef4444; }
+}
+.cd-char-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
 }
 .cd-form-row .cd-field { margin-bottom: 0; }
 .cd-iw {
@@ -320,6 +329,10 @@
   resize: vertical; outline: none;
   background: #fff;
   &:focus { border-color: #6366f1; }
+}
+.cd-nature-input {
+  min-height: 62px;
+  resize: none;
 }
 .cd-form-actions {
   display: flex; justify-content: flex-end; gap: 10px;

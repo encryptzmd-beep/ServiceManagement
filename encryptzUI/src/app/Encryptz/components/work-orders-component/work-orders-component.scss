@@ -365,6 +365,29 @@
      font-weight: 500
    }
 
+   .product-nature-line {
+     display: inline-flex;
+     align-items: center;
+     gap: 6px;
+     min-width: 0;
+     max-width: 100%;
+   }
+
+   .nature-job-chip {
+     display: inline-flex;
+     align-items: center;
+     max-width: 150px;
+     padding: 2px 7px;
+     border-radius: 999px;
+     background: #eef2ff;
+     color: #3730a3;
+     font-size: 11px;
+     font-weight: 700;
+     overflow: hidden;
+     text-overflow: ellipsis;
+     white-space: nowrap;
+   }
+
    /* Actions */
    .order-actions {
      display: flex;
@@ -1197,6 +1220,7 @@
 }
 .dmi-label { display: block; font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase; margin-bottom: 2px; }
 .dmi-val { display: block; font-size: 13px; color: #1e293b; font-weight: 500; }
+.dmi-subval { display: block; margin-top: 4px; font-size: 12px; color: #475569; line-height: 1.35; }
 .dm-notes {
   display: flex; gap: 10px; padding: 12px 14px;
   background: #fefce8; border: 1px solid #fef08a; border-radius: 10px;
@@ -3404,6 +3428,16 @@
   .dm-info-item {
     padding: 12px !important;
     min-width: 0;
+  }
+
+  .order-card .product-nature-line {
+    gap: 4px !important;
+  }
+
+  .order-card .nature-job-chip {
+    max-width: 82px;
+    padding: 1px 5px;
+    font-size: 8.5px;
   }
 
   .dm-footer {

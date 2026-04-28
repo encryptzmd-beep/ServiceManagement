@@ -88,6 +88,7 @@ namespace EncryptzAPI.Controllers
                 ComplaintId = complaintId,
                 Subject = request.Subject,
                 Description = request.Description,
+                NatureOfJob = request.NatureOfJob,
                 Priority = request.Priority,
                 Category = request.Category,
                 BrandName = request.BrandName,

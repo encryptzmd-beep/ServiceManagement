@@ -328,6 +328,7 @@ export interface WorkOrder {
   complaintId: number;
   complaintNumber: string;
   subject: string;
+  natureOfJob?: string | null;
   customerName: string;
   customerAddress: string | null;
   customerPlace?: string | null;
@@ -1313,6 +1314,7 @@ export interface ComplaintCompleteDetail {
   complaintNumber: string;
   subject: string;
   description: string;
+  natureOfJob?: string;
   createdAt: string;
   updatedAt?: string;
   priority: string;
