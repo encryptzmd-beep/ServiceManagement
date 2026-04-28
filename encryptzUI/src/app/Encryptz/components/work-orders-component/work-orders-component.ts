@@ -9,7 +9,6 @@ import { WorkOrder } from '../../Models/ApiModels';
 import { AuthService } from '../../Auth/auth-service';
 import { GpsTracking } from '../../Services/gps-tracking';
 import { GeocodeService } from '../../Services/API/geocode-service';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 type SpareCartItem = {
   part?: any;                 // for master item
   isCustom: boolean;          // flag
@@ -31,7 +30,7 @@ export class WorkOrdersComponent implements OnInit, OnDestroy {
   private auth        = inject(AuthService);
   private _destroyRef = inject(DestroyRef);
   private techSearchSubject = new Subject<string>();
-constructor(private sanitizer: DomSanitizer) {}
+constructor() {}
   // ── Role-based visibility ─────────────────────────────
   isAdmin = computed(() => this.auth.userRole() === 'Admin');
   readonly gpsService = inject(GpsTracking);
@@ -101,8 +100,9 @@ repairForm = {
   // ── Detail popup ──────────────────────────────────────
   showDetail    = signal(false);
   detailData    = signal<any>(null);
+  detailWorkOrder = signal<WorkOrder | null>(null);
   detailLoading = signal(false);
-  detailTab     = signal<string>('info'); // 'info' | 'spares' | 'repairs' | 'timeline' | 'images'
+  detailTab     = signal<string>('info'); // 'info' | 'map' | 'spares' | 'repairs' | 'timeline' | 'images'
 
   // ── Spare parts ───────────────────────────────────────
   complaintSpares = signal<any[]>([]);
@@ -460,6 +460,7 @@ private showCheckInMsg(m: string, err: boolean): void {
   closeUnassign(): void {
     this.showUnassignDialog.set(false);
     this.unassignTarget.set(null);
+    this.unassignReason = '';
   }
 
   confirmUnassign(): void {
@@ -488,17 +489,31 @@ private showCheckInMsg(m: string, err: boolean): void {
     });
   }
 
+  canUnassign(wo: WorkOrder): boolean {
+    return this.isActiveAssignmentStatus(wo?.status) && wo.status !== 'Completed';
+  }
+
+  getUnassignTechnicianName(wo: WorkOrder | null): string {
+    if (!wo) return '';
+    return wo.technicianName || this.selectedTech()?.fullName || this.auth.currentUser()?.fullName || 'Assigned Technician';
+  }
+
   // ── Detail popup ──────────────────────────────────────
   openDetail(wo: WorkOrder, event?: Event): void {
     event?.stopPropagation();
     this.showDetail.set(true);
-    this.detailData.set(null);
+    this.detailWorkOrder.set(wo);
+    this.detailData.set(wo as any);
     this.detailLoading.set(true);
     this.detailTab.set('info'); // always start on Info tab
     // load detail + spares in parallel
     this.api.getWorkOrderDetails(wo.assignmentId).subscribe({
       next: (res: any) => {
-        this.detailData.set(Array.isArray(res) ? res[0] : (res?.data ?? res));
+        const detail = Array.isArray(res) ? res[0] : (res?.data ?? res);
+        this.detailData.set({
+          ...(wo as any),
+          ...(detail || {})
+        });
         this.detailLoading.set(false);
       },
       error: () => this.detailLoading.set(false)
@@ -509,6 +524,7 @@ private showCheckInMsg(m: string, err: boolean): void {
   closeDetail(): void {
     this.showDetail.set(false);
     this.detailData.set(null);
+    this.detailWorkOrder.set(null);
     this.complaintSpares.set([]);
   }
 
@@ -862,17 +878,40 @@ onRepairFilesSelected(event: Event, tag: string): void {
 }
 
 private addRepairFiles(files: File[], tag: string): void {
-  const valid = files
-    .filter(file => file.type.startsWith('image/'))
-    .slice(0, 3);
+  const filtered = files.filter(file => file.type.startsWith('image/'));
+  const limit = tag === 'before' ? 1 : 3;
+  const existing = this.getRepairImages(tag);
+  const allowed = tag === 'before'
+    ? filtered.slice(0, 1)
+    : filtered.slice(0, Math.max(0, limit - existing.length));
 
-  const items = valid.map(file => ({
+  if (allowed.length === 0) {
+    this.repairMsg.set(tag === 'before'
+      ? 'Only 1 part image can be uploaded'
+      : 'Maximum 3 tagged images can be uploaded');
+    this.repairMsgErr.set(true);
+    return;
+  }
+
+  const items = allowed.map(file => ({
     file,
     preview: URL.createObjectURL(file),
     tag
   }));
 
-  this.repairImages.update(list => [...list.filter(item => item.tag !== tag), ...items]);
+  this.repairMsg.set('');
+  this.repairMsgErr.set(false);
+
+  this.repairImages.update(list => {
+    if (tag === 'before') {
+      list
+        .filter(item => item.tag === 'before')
+        .forEach(item => URL.revokeObjectURL(item.preview));
+      return [...list.filter(item => item.tag !== 'before'), ...items];
+    }
+
+    return [...list, ...items];
+  });
 }
 
 removeRepairImage(tag: string, index: number = 0): void {
@@ -892,6 +931,77 @@ removeRepairImage(tag: string, index: number = 0): void {
 
 getRepairImages(tag: string): { file: File; preview: string; tag: string }[] {
   return this.repairImages().filter(item => item.tag === tag);
+}
+
+hasDetailLocation(): boolean {
+  const detail = this.detailData();
+  const workOrder = this.detailWorkOrder();
+  return !!(
+    detail?.locationName
+    || detail?.locationAddress
+    || detail?.customerAddress
+    || detail?.customerPlace
+    || workOrder?.locationName
+    || workOrder?.locationAddress
+    || workOrder?.customerAddress
+    || workOrder?.customerPlace
+    || (detail?.latitude && detail?.longitude)
+    || (workOrder?.latitude && workOrder?.longitude)
+  );
+}
+
+getDetailLocationName(): string {
+  const detail = this.detailData();
+  const workOrder = this.detailWorkOrder();
+  return detail?.locationName
+    || detail?.locationAddress
+    || detail?.customerAddress
+    || detail?.customerPlace
+    || workOrder?.locationName
+    || workOrder?.locationAddress
+    || workOrder?.customerAddress
+    || workOrder?.customerPlace
+    || 'Location not available';
+}
+
+openDetailMap(): void {
+  const lat = this.detailData()?.latitude ?? this.detailWorkOrder()?.latitude;
+  const lng = this.detailData()?.longitude ?? this.detailWorkOrder()?.longitude;
+  const locationText = this.getDetailLocationName();
+  const query = (lat && lng)
+    ? `${lat},${lng}`
+    : locationText;
+
+  if (!query || query === 'Location not available') return;
+
+  window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank', 'noopener,noreferrer');
+}
+
+openSpareFromDetail(event?: Event): void {
+  event?.stopPropagation();
+  const wo = this.detailData() as WorkOrder | null;
+  if (!wo) return;
+
+  this.closeDetail();
+  this.openSpareDialog(wo, event);
+}
+
+openRepairFromDetail(event?: Event): void {
+  event?.stopPropagation();
+  const wo = this.detailData() as WorkOrder | null;
+  if (!wo) return;
+
+  this.closeDetail();
+  this.openRepairDialog(wo, event);
+}
+
+openCompleteFromDetail(event?: Event): void {
+  event?.stopPropagation();
+  const wo = this.detailData() as WorkOrder | null;
+  if (!wo) return;
+
+  this.closeDetail();
+  this.openCompleteDialog(wo, event);
 }
 
 submitRepairRequest(): void {
@@ -1168,10 +1278,6 @@ private finalizeCompletion(wo: WorkOrder, updateProgress: () => void): void {
       this.completeMsgErr.set(true);
     }
   });
-}
-getMapUrl(lat: number, lng: number): SafeResourceUrl {
-  const url = `https://www.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
-  return this.sanitizer.bypassSecurityTrustResourceUrl(url);
 }
 viewRepairImages(repairRequest: any): void {
   this.activeRepairRequest.set(repairRequest);

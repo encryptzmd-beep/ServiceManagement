@@ -232,19 +232,18 @@
  </div>
  <div class="header-right-group">
  <span class="status-badge" [attr.data-status]="wo.status">{{ wo.status }}</span>
- @if (isAdmin() && wo.status !== 'Completed') {
+ <!-- @if (canUnassign(wo)) {
  <button class="btn-unassign-sm" (click)="openUnassign(wo, $event)" title="Unassign">
  <span class="material-icons">person_remove</span>
  </button>
- }
+ } -->
  </div>
-
- <!--Inorder-actions:hideunassignactionbuttonfornon-admin-->
- @if (isAdmin() && wo.status !== 'Completed') {
+<!--
+ @if (canUnassign(wo)) {
  <button class="btn-action btn-unassign-action" (click)="openUnassign(wo, $event)">
  <span class="material-icons">person_remove</span> Unassign
  </button>
- }
+ } -->
  </div>
 
 <div class="customer-section">
@@ -271,19 +270,6 @@
       </span>
     }
 
-    <!-- ✅ MAP BELOW -->
-    @if (wo.latitude && wo.longitude) {
-      <div style="margin-top:10px;">
-        <iframe
-          width="100%"
-          height="200"
-          style="border:0; border-radius:8px;"
-          loading="lazy"
-          allowfullscreen
-          [src]="getMapUrl(wo.latitude, wo.longitude)">
-        </iframe>
-      </div>
-    }
   </div>
 </div>
 
@@ -372,9 +358,9 @@
  >
  <span class="material-icons">info</span>
  </button>
- @if (isAdmin() && wo.status !== 'Completed') {
+ @if (canUnassign(wo)) {
  <button class="btn-action btn-unassign-action" (click)="openUnassign(wo, $event)">
- <span class="material-icons">person_remove</span> AssigntoAdmin
+ <span class="material-icons">person_remove</span>
  </button>
  }
  </div>
@@ -420,7 +406,7 @@
  <div class="ua-info-row">
  <span class="material-icons">engineering</span>
  <span
- ><strong>{{ selectedTech().fullName }}</strong>
+ ><strong>{{ getUnassignTechnicianName(unassignTarget()) }}</strong>
  <span class="role-tag">{{ unassignTarget()!.assignmentRole }}</span>
  </span>
  </div>
@@ -511,12 +497,15 @@
  }
  </div>
 
- <div class="dm-tabs">
- <button class="dm-tab" [class.active]="detailTab() === 'info'" (click)="detailTab.set('info')">
- <span class="material-icons">info</span> Info
+<div class="dm-tabs">
+<button class="dm-tab" [class.active]="detailTab() === 'info'" (click)="detailTab.set('info')">
+<span class="material-icons">info</span> Info
+</button>
+ <button class="dm-tab" [class.active]="detailTab() === 'map'" (click)="detailTab.set('map')">
+ <span class="material-icons">location_on</span> Location
  </button>
- <button class="dm-tab" [class.active]="detailTab() === 'spares'" (click)="detailTab.set('spares')">
- <span class="material-icons">build</span> Spare Parts
+<button class="dm-tab" [class.active]="detailTab() === 'spares'" (click)="detailTab.set('spares')">
+<span class="material-icons">build</span> Spare Parts
  @if (complaintSpares().length > 0) {
  <span class="dm-tab-badge">{{ complaintSpares().length }}</span>
  }
@@ -573,15 +562,7 @@
  <span class="dmi-label">Address</span>
  <span class="dmi-val"
  >{{ detailData()?.customerAddress || detailData()?.customerPlace || detailData()?.locationName || detailData()?.locationAddress
- }}{{ detailData()?.city ? ',' + detailData()?.city : '' }}</span
- >
- @if (detailData()?.latitude && detailData()?.longitude) {
- <div style="margin-top: 4px;">
- <a [href]="'https://www.google.com/maps/search/?api=1&query=' + detailData()?.latitude + ',' + detailData()?.longitude" target="_blank" style="color: #2563eb; text-decoration: none; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
- <span class="material-icons" style="font-size: 16px;">directions</span> View on Map
- </a>
- </div>
- }
+ }}{{ detailData()?.city ? ',' + detailData()?.city : '' }}</span>
  </div>
  </div>
  }
@@ -635,6 +616,34 @@
  <div class="dm-notes">
  <span class="material-icons">sticky_note_2</span>
  <p>{{ detailData()?.notes }}</p>
+ </div>
+ }
+ </div>
+ }
+
+ <!--──MAP TAB──-->
+ @if (detailTab() === 'map') {
+ <div class="dm-tab-content">
+ @if (hasDetailLocation()) {
+ <div class="dm-location-card">
+ <div class="dm-location-copy">
+ <span class="material-icons">location_on</span>
+ <div>
+ <h4 class="dm-section-title">Complaint Location</h4>
+ <p class="dm-desc">{{ getDetailLocationName() }}</p>
+ @if (detailData()?.latitude && detailData()?.longitude) {
+ <span class="dmi-val">Lat: {{ detailData()?.latitude }} | Lng: {{ detailData()?.longitude }}</span>
+ }
+ </div>
+ </div>
+ <button class="btn-action btn-view dm-map-launch" type="button" (click)="openDetailMap()">
+ <span class="material-icons">map</span> Open Map
+ </button>
+ </div>
+ } @else {
+ <div class="dm-empty-tab">
+ <span class="material-icons">location_off</span>
+ <p>Location details are not available for this complaint.</p>
  </div>
  }
  </div>
@@ -820,26 +829,45 @@
  <!-- ── ACTION FOOTER ── -->
  <div class="dm-footer">
  @if (detailData()?.status === 'Assigned') {
- <button class="btn-action btn-start" (click)="startWork(detailData())">
+ <button
+ class="btn-action btn-start"
+ type="button"
+ title="Start Work"
+ aria-label="Start Work"
+ [disabled]="!isAdmin() && !isCheckedIn()"
+ (click)="startWork(detailData())"
+ >
  <span class="material-icons">play_arrow</span> Start Work
  </button>
  }
 
  @if (detailData()?.status === 'InProgress') {
- <!-- <button class="btn-action btn-spare" (click)="openSpareDialog(detailData())">
+ <button
+ class="btn-action btn-spare"
+ type="button"
+ title="Spare Request"
+ aria-label="Spare Request"
+ (click)="openSpareFromDetail($event)"
+ >
  <span class="material-icons">shopping_cart</span> Spare Request
  </button>
- <button class="btn-action btn-repair" (click)="openRepairDialog(detailData())">
+ <button
+ class="btn-action btn-repair"
+ type="button"
+ title="Repair Request"
+ aria-label="Repair Request"
+ (click)="openRepairFromDetail($event)"
+ >
  <span class="material-icons">construction</span> Repair Request
- </button> -->
- <!-- <button class="btn-action btn-complete" (click)="openCompleteDialog(detailData())">
+ </button>
+ <button
+ class="btn-action btn-complete"
+ type="button"
+ title="Complete Work"
+ aria-label="Complete Work"
+ (click)="openCompleteFromDetail($event)"
+ >
  <span class="material-icons">check_circle</span> Complete
- </button> -->
- }
-
- @if (isAdmin() && detailData()?.status !== 'Completed') {
- <button class="btn-action btn-danger" (click)="openUnassign(detailData())">
- <span class="material-icons">person_remove</span> Unassign
  </button>
  }
 
@@ -1129,6 +1157,15 @@
  </div>
 
  <div class="rp-body">
+ @if (repairSubmitting()) {
+ <div class="rp-upload-blocker">
+ <div class="rp-upload-loader">
+ <div class="spinner-lg"></div>
+ <strong>Uploading repair request</strong>
+ <span>Please wait while images are being uploaded.</span>
+ </div>
+ </div>
+ }
  @if (repairLoading()) {
  <div class="rp-loading">
  <span class="spinner-lg"></span>
@@ -1190,7 +1227,7 @@
  <div class="rp-upload-card">
  <div class="rp-upload-copy">
  <strong>1.Capture Part Image</strong>
- <small>Show current part condition before repair.</small>
+ <small>Show current part condition before repair. Maximum 1 image.</small>
  </div>
  <div class="rp-upload-grid">
  @if (getRepairImages('before').length > 0) {
@@ -1216,20 +1253,23 @@
  <div class="rp-upload-card">
  <div class="rp-upload-copy">
  <strong>2.Capture Tagged Image</strong>
- <small>Ensure customer code or serial is visible on the part.</small>
+ <small>Ensure customer code or serial is visible on the part. Maximum 3 images.</small>
  </div>
  <div class="rp-upload-grid">
  @if (getRepairImages('tagged').length > 0) {
+ @for (img of getRepairImages('tagged'); track $index; let i = $index) {
  <div class="rp-preview">
- <img [src]="getRepairImages('tagged')[0].preview" alt="Taggedrepairimage" />
- <button type="button" class="rp-remove" (click)="removeRepairImage('tagged')">
+ <img [src]="img.preview" alt="Taggedrepairimage" />
+ <button type="button" class="rp-remove" (click)="removeRepairImage('tagged', i)">
  <span class="material-icons">close</span>
  </button>
  </div>
  }
+ }
  <label class="rp-uploader secondary">
  <input type="file"
  accept="image/*"
+ multiple
  hidden
  (change)="onRepairFilesSelected($event, 'tagged')"
  />
@@ -1237,11 +1277,11 @@
  <span>Capture Tagged Image</span>
  </label>
  </div>
- </div>
+</div>
 
- <div class="rp-tip">
- <span class="material-icons">info</span>
- Please upload both images clearly, and keep the serial or customer code visible in the tagged photo.
+<div class="rp-tip">
+<span class="material-icons">info</span>
+ Upload 1 part image and up to 3 tagged images. Keep the serial or customer code visible in every tagged photo.
  </div>
  </div>
 
@@ -1558,11 +1598,6 @@
  </div>
  </div>
 }
-
-
-
-
-
 
 
 
