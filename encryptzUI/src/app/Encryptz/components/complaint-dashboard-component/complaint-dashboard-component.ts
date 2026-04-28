@@ -181,6 +181,7 @@ private _scrollTileTop(): void {
   loadData(): void {
     this.loadSpareSummary()
     this.loading.set(true);
+    this.dashboardData.set(null);
     this.api.getStats().subscribe({
       next: d => { this.dashboardData.set(d); this.loading.set(false); },
       error: () => { this.loadDemoData(); this.loading.set(false); },
@@ -189,6 +190,7 @@ private _scrollTileTop(): void {
   }
 
   loadChartData(): void {
+    this.chartData.set(null);
     this.api.getChartData(this.chartDays).subscribe({
       next: d => this.chartData.set(d),
       error: () => this.chartData.set({ complaintsByDate:this.demoDates(), complaintsByStatus:[], complaintsByPriority:[] }),
@@ -196,6 +198,7 @@ private _scrollTileTop(): void {
   }
 
   loadActiveAssignments(): void {
+    this.activeAssignments.set([]);
     this.api.getActiveAssignments().subscribe({
       next: (d: any) => this.activeAssignments.set(Array.isArray(d) ? d : []),
       error: () => this.activeAssignments.set([]),
@@ -242,6 +245,7 @@ loadTile(): void {
   const tile = this.activeTile();
   if (!tile) return;
   this.tileLoading.set(true);
+  this.tileItems.set([]);
 
   const totalFromTile = this._getTotalForTile(tile);
 
@@ -368,6 +372,7 @@ get pagedItems(): any[] {
 
   loadTechs(): void {
     this.techErr.set(false);
+    this.technicians.set([]);
     this.api.getTechnicians().subscribe({
       next: (d: any) => this.technicians.set(d.items || d || []),
       error: () => this.techErr.set(true),
@@ -410,6 +415,7 @@ get pagedItems(): any[] {
   loadAuditLog(): void {
     if (!this.auditCId) return;
     this.auditLoading.set(true);
+    this.auditLogs.set([]);
     this.api.getAuditLog(this.auditCId).subscribe({
       next: (d: any) => { this.auditLogs.set(Array.isArray(d)?d:d.data||[]); this.auditLoading.set(false); },
       error: () => { this.auditLogs.set([]); this.auditLoading.set(false); },
@@ -520,6 +526,7 @@ spareActioning    = signal(false);
 // ── ngOnInit / loadData ───────────────────────────────────
 // Add after loadActiveAssignments():
 loadSpareSummary(): void {
+  this.spareSummary.set(null);
   this.api.getSpareDashboardSummary().subscribe({
     next: (r: any) => this.spareSummary.set(r?.data ?? r),
     error: () => {}
@@ -548,6 +555,7 @@ closeSparePanel(): void {
 
 loadSpareRequests(): void {
   this.spareLoading.set(true);
+  this.spareRequests.set([]);
   this.api.getSpareAdminRequests(this.spareFilter).subscribe({
     next: (r: any) => {
       const items = r?.data ?? (Array.isArray(r) ? r : []);
