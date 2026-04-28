@@ -1,6 +1,6 @@
-<div class="fx-pagepage">
+<div class="fx-page page">
  <!--Header-->
- <div class="fx-page-headerpage-header">
+ <div class="fx-page-header page-header">
  <div>
  <div class="fx-page-title">My Work Orders</div>
  <div class="fx-page-sub">Active service assignments and tasks</div>
@@ -419,7 +419,7 @@
  <span>{{ unassignTarget()!.subject }}</span>
  </div>
  @if ($any(unassignTarget()).scheduledDate) {
- <div class="ua-info-rowwarn">
+ <div class="ua-info-row warn">
  <span class="material-icons">event</span>
  <span>Scheduled: {{ $any(unassignTarget()).scheduledDate | date: 'dd MMM yyyy' }}</span>
  </div>
@@ -431,16 +431,16 @@
  <textarea
  [(ngModel)]="unassignReason"
  rows="2"
- placeholder="e.g.Technicianunavailable,rescheduled..."
+ placeholder="e.g. Technician unavailable, rescheduled..."
  ></textarea>
  </div>
  <div class="ua-footer">
  <button class="ua-cancel" (click)="closeUnassign()" [disabled]="unassigning()">Cancel</button>
  <button class="ua-confirm" (click)="confirmUnassign()" [disabled]="unassigning()">
  @if (unassigning()) {
- <span class="mini-spinwhite"></span> AssigntoAdmin...
+ <span class="mini-spinwhite"></span> Assign to Admin...
  } @else {
- <span class="material-icons">person_remove</span> ConfirmAssigntoAdmin
+ <span class="material-icons">person_remove</span> Confirm Assign to Admin
  }
  </button>
  </div>
@@ -577,7 +577,7 @@
  <div class="dm-info-item">
  <span class="material-icons">qr_code</span>
  <div>
- <span class="dmi-label">SerialNo</span>
+ <span class="dmi-label">Serial No</span>
  <span class="dmi-val">{{ detailData()?.serialNumber }}</span>
  </div>
  </div>
@@ -655,12 +655,12 @@
  @if (sparesLoading()) {
  <div class="spare-loading">
  <div class="mini-spinblue"></div>
- <span>LoadingSpare Parts...</span>
+ <span>Loading Spare Parts...</span>
  </div>
  } @else if (!complaintSpares().length) {
  <div class="dm-empty-tab">
  <span class="material-icons">build</span>
- <p>Nosparepartrequests</p>
+ <p>No spare part requests</p>
  </div>
  } @else {
  <div class="spare-items-list">
@@ -718,7 +718,7 @@
  @if (!detailData()?.repairDetails?.length) {
  <div class="dm-empty-tab">
  <span class="material-icons">construction</span>
- <p>Norepairrequestsyet</p>
+ <p>No repair requests yet</p>
  </div>
  } @else {
  <div class="repair-items-list">
@@ -728,7 +728,7 @@
  <div class="ric-part-info">
  <strong>{{ r.partName }}</strong>
  @if (r.partSerialNumber) {
- <small>SN:{{ r.partSerialNumber }}</small>
+ <small>SN: {{ r.partSerialNumber }}</small>
  }
  </div>
  <div class="ric-meta-row">
@@ -746,7 +746,7 @@
  View ({{ r.imageCount }})
  </button>
  } @else {
- <span class="no-images-tag">Noimages</span>
+ <span class="no-images-tag">No images</span>
  }
 
  @if (r.status?.toLowerCase() === 'dispatched') {
@@ -768,7 +768,7 @@
  @if (!detailData()?.timeline?.length) {
  <div class="dm-empty-tab">
  <span class="material-icons">history</span>
- <p>Noactivityrecordedyet</p>
+ <p>No activity recorded yet</p>
  </div>
  } @else {
  <div class="timeline-list">
@@ -885,11 +885,11 @@
  <div class="sp-header">
  <div class="sp-header-icon"><span class="material-icons">build</span></div>
  <div class="sp-header-text">
- <h3>RequestSpare Parts</h3>
+ <h3>Request Spare Parts</h3>
  @if (spareDialogWo()) {
  <span class="sp-complaint-tag">
  <span class="material-icons">confirmation_number</span>
- {{ spareDialogWo()?.complaintNumber }}-{{ spareDialogWo()?.subject }}
+ {{ spareDialogWo()?.complaintNumber }} - {{ spareDialogWo()?.subject }}
  </span>
  }
  </div>
@@ -916,12 +916,12 @@
  <div class="sp-search-section">
  <div class="sp-section-head">
  <div>
- <label>SearchFromMasterList</label>
+ <label>Search From Master List</label>
  <p>Pick an existing part or add a custom one when it is missing from the master list.</p>
  </div>
  <button class="sp-add-custom" type="button" (click)="addCustomPart()">
  <span class="material-icons">add</span>
- CustomPart
+ Custom Part
  </button>
  </div>
 
@@ -930,7 +930,7 @@
  <input typee="text"
  [(ngModel)]="spareSearch"
  class="sp-search-input"
- placeholder="Searchpartnameornumber..."
+ placeholder="Search part name or number..."
  (input)="onSpareSearch()"
  (focus)="showSpareDropdown = true"
  autocomplete=" off"
@@ -942,7 +942,7 @@
 
  <div class="sp-helper-row">
  <span class="material-icons">info</span>
- Clickanyresulttoadditintotherequest.
+ Click any result to add it to the request.
  </div>
 
  @if (showSpareDropdown && spareResults().length > 0) {
@@ -964,7 +964,7 @@
  <span class="material-icons">inventory_2</span> {{ p.stockQuantity }}
  </span>
  @if (p.unitPrice) {
- <span class="sp-dd-price">Rs{{ p.unitPrice }}</span>
+ <span class="sp-dd-price">Rs {{ p.unitPrice }}</span>
  }
  <span class="material-icons sp-dd-add">{{
  isSpareInCart(p) ? 'check_circle' : 'add_circle'
@@ -976,7 +976,7 @@
  } @else if (showSpareDropdown && !spareSearchLoading()) {
  <div class="sp-empty-search">
  <span class="material-icons">inventory_2</span>
- <span>Nomatchingmasterpartfound.UseCustomParttoenteritmanually.</span>
+ <span>No matching master part found. Use Custom Part to enter it manually.</span>
  </div>
  }
  </div>
@@ -986,21 +986,21 @@
  <div>
  <h4>
  <span class="material-icons">shopping_cart</span>
- PartsList
+ Parts List
  @if (spareCartCount() > 0) {
  <span class="sp-cart-badge">{{ spareCartCount() }}</span>
  }
  </h4>
  @if (spareCartCount() > 0) {
- <span class="sp-cart-total">{{ spareCartTotal() }}item (s)total</span>
+ <span class="sp-cart-total">{{ spareCartTotal() }} item(s) total</span>
  } @else {
- <span class="sp-cart-subtitle">Addoneormorepartsforthiscomplaint.</span>
+ <span class="sp-cart-subtitle">Add one or more parts for this complaint.</span>
  }
  </div>
  @if (hasInvalidCustomParts()) {
  <span class="sp-inline-warning">
  <span class="material-icons">error</span>
- Custompartnamerequired
+ Custom part name required
  </span>
  }
  </div>
@@ -1008,8 +1008,8 @@
  @if (spareCart().length === 0) {
  <div class="sp-cart-empty">
  <span class="material-icons">add_shopping_cart</span>
- <p>Nopartsaddedyet.</p>
- <small>Choosefromthemasterlistoraddacustompart.</small>
+ <p>No parts added yet.</p>
+ <small>Choose from the master list or add a custom part.</small>
  </div>
  }
 
@@ -1019,7 +1019,7 @@
  <div class="sp-ci-top">
  <div class="sp-ci-info">
  @if (!item.isCustom) {
- <span class="sp-type-chip">MasterPart</span>
+ <span class="sp-type-chip">Master Part</span>
  <strong>{{ item.part.partName }}</strong>
  @if (item.part.partNumber) {
  <small>{{ item.part.partNumber }}</small>
@@ -1027,7 +1027,7 @@
  }
 
  @if (item.isCustom) {
- <span class="sp-type-chipcustom">CustomPart</span>
+ <span class="sp-type-chip custom">Custom Part</span>
  <div class="sp-custom-box">
  <input typee="text"
  [(ngModel)]="item.customPartName"
@@ -1037,12 +1037,12 @@
  />
  <input typee="text"
  [(ngModel)]="item.customPartNumber"
- placeholder="Partnumber (optional)"
+ placeholder="Part number (optional)"
  class="sp-custom-input"
  />
  </div>
  @if (!item.customPartName?.trim()) {
- <div class="sp-field-error">Partnameisrequiredforcustomitems.</div>
+ <div class="sp-field-error">Part name is required for custom items.</div>
  }
  }
  </div>
@@ -1079,9 +1079,9 @@
  </button>
 
  @if (!item.isCustom) {
- <span class="sp-stock-hint">/{{ item.part.stockQuantity }}instock</span>
+ <span class="sp-stock-hint">/ {{ item.part.stockQuantity }} in stock</span>
  } @else {
- <span class="sp-stock-hint">manualqty</span>
+ <span class="sp-stock-hint">manual qty</span>
  }
  </div>
 
@@ -1144,10 +1144,10 @@
  <div class="rp-header">
  <div class="rp-header-icon"><span class="material-icons">construction</span></div>
  <div class="rp-header-text">
- <h3>SendForRepair</h3>
+ <h3>Send For Repair</h3>
  @if (repairDialogWo()) {
  <span class="rp-wo-tag"
- >{{ repairDialogWo()!.complaintNumber }}-{{ repairDialogWo()!.subject }}</span
+ >{{ repairDialogWo()!.complaintNumber }} - {{ repairDialogWo()!.subject }}</span
  >
  }
  </div>
@@ -1169,12 +1169,12 @@
  @if (repairLoading()) {
  <div class="rp-loading">
  <span class="spinner-lg"></span>
- <span>Loadingrepairdetails...</span>
+ <span>Loading repair details...</span>
  </div>
  } @else {
  <div class="rp-summary">
  <div class="rp-summary-card">
- <span class="rp-summary-label">CustomerCode</span>
+ <span class="rp-summary-label">Customer Code</span>
  <strong>{{ repairForm.customerCode || repairDialogWo()?.complaintNumber }}</strong>
  <small>{{
  repairDialogWo()?.customerName || repairMeta()?.customer?.customerName
@@ -1190,16 +1190,16 @@
  <div class="rp-section">
  <div class="rp-section-title">
  <span class="material-icons">inventory_2</span>
- <span>PartDetails</span>
+ <span>Part Details</span>
  </div>
 
  <div class="rp-field-grid">
  <label class="rp-field">
- <span>PartName</span>
+ <span>Part Name</span>
  <input [(ngModel)]="repairForm.partName" type="text" placeholder="Enter part name" />
  </label>
  <label class="rp-field">
- <span>ProductSerialNumber</span>
+ <span>Product Serial Number</span>
  <input
  [(ngModel)]="repairForm.partSerialNumber"
  type="text"
@@ -1226,13 +1226,13 @@
 
  <div class="rp-upload-card">
  <div class="rp-upload-copy">
- <strong>1.Capture Part Image</strong>
+ <strong>1. Capture Part Image</strong>
  <small>Show current part condition before repair. Maximum 1 image.</small>
  </div>
  <div class="rp-upload-grid">
  @if (getRepairImages('before').length > 0) {
  <div class="rp-preview">
- <img [src]="getRepairImages('before')[0].preview" alt="Beforerepairimage" />
+ <img [src]="getRepairImages('before')[0].preview" alt="Before repair image" />
  <button type="button" class="rp-remove" (click)="removeRepairImage('before')">
  <span class="material-icons">close</span>
  </button>
@@ -1252,14 +1252,14 @@
 
  <div class="rp-upload-card">
  <div class="rp-upload-copy">
- <strong>2.Capture Tagged Image</strong>
+ <strong>2. Capture Tagged Image</strong>
  <small>Ensure customer code or serial is visible on the part. Maximum 3 images.</small>
  </div>
  <div class="rp-upload-grid">
  @if (getRepairImages('tagged').length > 0) {
  @for (img of getRepairImages('tagged'); track $index; let i = $index) {
  <div class="rp-preview">
- <img [src]="img.preview" alt="Taggedrepairimage" />
+ <img [src]="img.preview" alt="Tagged repair image" />
  <button type="button" class="rp-remove" (click)="removeRepairImage('tagged', i)">
  <span class="material-icons">close</span>
  </button>
@@ -1321,7 +1321,7 @@
  <h3>Complete Work Order</h3>
  @if (completeWo()) {
  <span class="cmp-wo-tag">
- {{ completeWo()?.complaintNumber }}-{{ completeWo()?.subject }}
+ {{ completeWo()?.complaintNumber }} - {{ completeWo()?.subject }}
  </span>
  }
  </div>
@@ -1358,7 +1358,7 @@
  [(ngModel)]="completeForm.workDone"
  rows="3"
  class="cmp-textarea"
- placeholder="Describetheserviceworkperformed..."
+ placeholder="Describe the service work performed..."
  ></textarea>
  </div>
 
@@ -1369,7 +1369,7 @@
  [(ngModel)]="completeForm.partsUsed"
  rows="2"
  class="cmp-textarea"
- placeholder="e.g.Compressorbeltreplaced,filtercleaned..."
+ placeholder="e.g. Compressor belt replaced, filter cleaned..."
  ></textarea>
  </div>
 
@@ -1380,7 +1380,7 @@
  [(ngModel)]="completeForm.remarks"
  rows="2"
  class="cmp-textarea"
- placeholder="Anyfollow-upneeded,customernotes..."
+ placeholder="Any follow-up needed, customer notes..."
  ></textarea>
  </div>
 
@@ -1391,7 +1391,7 @@
  [(ngModel)]="completeForm.customerFeedback"
  rows="2"
  class="cmp-textarea"
- placeholder="Customersatisfaction,comments..."
+ placeholder="Customer satisfaction, comments..."
  ></textarea>
  </div>
 
@@ -1415,8 +1415,8 @@
  (change)="onFilesSelected($event)"
  />
  <span class="material-icons cmp-dz-icon">add_a_photo</span>
- <p class="cmp-dz-text">Drop images or<strong>click to browse</strong></p>
- <p class="cmp-dz-sub">JPG,PNG upto 10MB each</p>
+ <p class="cmp-dz-text">Drop images or <strong>click to browse</strong></p>
+ <p class="cmp-dz-sub">JPG, PNG up to 10MB each</p>
  </div>
 
  <!--ImageQueue-->
@@ -1504,12 +1504,12 @@
  >
  @if (completeBusy()) {
  <span class="mini-spinwhite"></span>
- {{ uploadQueue().length > 0 ? 'Uploading&Completing...' : 'Completing...' }}
+ {{ uploadQueue().length > 0 ? 'Uploading & Completing...' : 'Completing...' }}
  } @else {
  <span class="material-icons">check_circle</span>
  Complete Work Order
  @if (uploadQueue().length > 0) {
- <span class="cmp-img-count">({{ uploadQueue().length }}images)</span>
+ <span class="cmp-img-count">({{ uploadQueue().length }} images)</span>
  }
  }
  </button>
@@ -1530,7 +1530,7 @@
  </div>
  <div class="confirm-footer">
  <button class="confirm-cancel" (click)="closeConfirm()">Cancel</button>
- <button class="confirm-submit" (click)="executeConfirm()">Yes,Continue</button>
+ <button class="confirm-submit" (click)="executeConfirm()">Yes, Continue</button>
  </div>
  </div>
 }
@@ -1542,7 +1542,7 @@
  <div class="ri-header">
  <div class="ri-icon"><span class="material-icons">photo_library</span></div>
  <div class="ri-title">
- <h3>RepairImages</h3>
+ <h3>Repair Images</h3>
  @if (activeRepairRequest()) {
  <span>{{ activeRepairRequest().partName }}</span>
  }
@@ -1556,7 +1556,7 @@
  @if (repairImagesLoading()) {
  <div class="ri-loading">
  <div class="spinner-lg"></div>
- <p>Fetchingimages...</p>
+ <p>Fetching images...</p>
  </div>
  }
 
@@ -1578,7 +1578,7 @@
  } @else {
  <div class="ri-tap-to-view">
  <span class="material-icons">image</span>
- <span>TaptoViewImage</span>
+ <span>Tap to View Image</span>
  </div>
  }
  </div>
@@ -1588,7 +1588,7 @@
  } @else if (!repairImagesLoading()) {
  <div class="ri-empty">
  <span class="material-icons">image_not_supported</span>
- <p>Noimagesfoundforthisrepairrequest.</p>
+ <p>No images found for this repair request.</p>
  </div>
  }
  </div>
