@@ -577,8 +577,8 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
                 TotalCount = x.TotalCount,
 
                 // Optional if your SP returns them
-                StatusName = "",
-                StatusColor = null,
+                StatusName = x.StatusName,
+                StatusColor = x.StatusColor,
                 CustomerName = ""
             }).ToList();
 
@@ -591,6 +591,99 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
             );
 
             return ApiResponse<PagedResult<ComplaintListDto>>.Ok(result);
+        }
+        public async Task<ApiResponse> UpdateComplaint(int userId, int complaintId, ComplaintUpdateDto dto)
+        {
+            try
+            {
+                var p = new[]
+                {
+            SqlParameterHelper.Input("@OperationType", "UPDATE_COMPLAINT"),
+            SqlParameterHelper.Input("@ComplaintId", complaintId),
+            SqlParameterHelper.Input("@UserId", userId),
+            SqlParameterHelper.Input("@Subject", dto.Subject ?? (object)DBNull.Value),
+            SqlParameterHelper.Input("@Description", dto.Description ?? (object)DBNull.Value),
+            SqlParameterHelper.Input("@Priority", dto.Priority ?? (object)DBNull.Value)
+        };
+
+                var dt = await GetDataTableAsync("sp_ManageComplaintDetails", p);
+
+                if (dt != null && dt.Rows.Count > 0)
+                {
+                    var success = Convert.ToBoolean(dt.Rows[0]["Success"]);
+                    var message = dt.Rows[0]["Message"]?.ToString();
+
+                    return new ApiResponse(success, message);
+                }
+
+                return new ApiResponse(false, "Operation failed");
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse(false, ex.Message);
+            }
+        }
+        public async Task<ApiResponse> DeleteComplaint(int userId, int complaintId)
+        {
+            try
+            {
+                var p = new[]
+                {
+            SqlParameterHelper.Input("@OperationType", "DELETE_COMPLAINT"),
+            SqlParameterHelper.Input("@ComplaintId", complaintId),
+            SqlParameterHelper.Input("@UserId", userId)
+        };
+
+                var dt = await GetDataTableAsync("sp_ManageComplaintDetails", p);
+
+                if (dt != null && dt.Rows.Count > 0)
+                {
+                    var success = Convert.ToBoolean(dt.Rows[0]["Success"]);
+                    var message = dt.Rows[0]["Message"]?.ToString();
+
+                    return new ApiResponse(success, message);
+                }
+
+                return new ApiResponse(false, "Operation failed");
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse(false, ex.Message);
+            }
+        }
+
+        public async Task<ApiResponse> ConfirmClosure(int userId, int complaintId)
+        {
+            try
+            {
+                var customerId = await GetCustomerId(userId);
+                if (customerId == null)
+                    return new ApiResponse(false, "Customer not found");
+
+                var p = new[]
+                {
+            SqlParameterHelper.Input("@OperationType", "CONFIRM_CLOSURE"),
+            SqlParameterHelper.Input("@ComplaintId", complaintId),
+            SqlParameterHelper.Input("@UserId", userId),
+            SqlParameterHelper.Input("@CustomerId", customerId.Value)
+        };
+
+                var dt = await GetDataTableAsync("sp_ManageComplaintDetails", p);
+
+                if (dt != null && dt.Rows.Count > 0)
+                {
+                    var success = Convert.ToBoolean(dt.Rows[0]["Success"]);
+                    var message = dt.Rows[0]["Message"]?.ToString();
+
+                    return new ApiResponse(success, message);
+                }
+
+                return new ApiResponse(false, "Operation failed");
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse(false, ex.Message);
+            }
         }
 
         public async Task<ApiResponse<ComplaintDetailDto>> GetComplaintDetail(int complaintId, int userId)

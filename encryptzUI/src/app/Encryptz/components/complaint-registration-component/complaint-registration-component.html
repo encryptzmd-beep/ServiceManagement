@@ -131,20 +131,72 @@
             <!-- Attachments -->
             <div class="field">
               <label>Attach Images (optional)</label>
-              <div class="upload-zone" (click)="fileInput.click()" (drop)="onDrop($event)"
-                (dragover)="$event.preventDefault()">
-                <input #fileInput type="file" accept="image/*" multiple (change)="onFilesSelected($event)" hidden />
-                <span class="material-icons upload-icon">cloud_upload</span>
-                <span class="upload-text">Click or drag images here</span>
-                <small class="upload-hint">JPG, PNG up to 5MB each</small>
+              <div class="upload-zone" [class.disabled]="isUploading()" (click)="!isUploading() && fileInput.click()" (drop)="!isUploading() && onDrop($event)"
+                (dragover)="!isUploading() && $event.preventDefault()">
+                <input #fileInput type="file" accept="image/*" multiple (change)="onFilesSelected($event)" hidden [disabled]="isUploading()" />
+                @if (isUploading()) {
+                  <span class="material-icons upload-icon spinner-icon">cloud_upload</span>
+                  <span class="upload-text">Uploading images...</span>
+                } @else {
+                  <span class="material-icons upload-icon">cloud_upload</span>
+                  <span class="upload-text">Click or drag images here</span>
+                  <small class="upload-hint">JPG, PNG up to 5MB each</small>
+                }
               </div>
               @if (files.length > 0) {
-                <div class="selected-files">
+                <div class="selected-files" [class.uploading]="isUploading()">
                   @for (f of files; track f.name; let i = $index) {
-                    <div class="file-chip">
-                      <span class="material-icons">image</span>
-                      <span>{{ f.name }}</span>
-                      <button type="button" (click)="removeFile(i)" class="file-remove">
+                    <div class="file-card" [class.uploading]="fileUploadStatus()[i]?.uploading" [class.success]="fileUploadStatus()[i]?.status === 'success'" [class.error]="fileUploadStatus()[i]?.status === 'error'">
+                      <div class="file-card-header">
+                        <div class="file-info">
+                          <span class="material-icons file-icon">image</span>
+                          <div class="file-details">
+                            <span class="file-name">{{ f.name }}</span>
+                            <span class="file-size">{{ (f.size / 1024 / 1024).toFixed(2) }}MB</span>
+                          </div>
+                        </div>
+                        <div class="file-status">
+                          @switch(fileUploadStatus()[i]?.status) {
+                            @case('pending') {
+                              <span class="status-badge status-pending">
+                                <span class="material-icons">schedule</span>
+                                Pending
+                              </span>
+                            }
+                            @case('uploading') {
+                              <span class="status-badge status-uploading">
+                                <span class="material-icons spinner-icon">cloud_upload</span>
+                                {{ fileUploadStatus()[i]?.progress }}%
+                              </span>
+                            }
+                            @case('success') {
+                              <span class="status-badge status-success">
+                                <span class="material-icons">check_circle</span>
+                                Success
+                              </span>
+                            }
+                            @case('error') {
+                              <span class="status-badge status-error">
+                                <span class="material-icons">error</span>
+                                Error
+                              </span>
+                            }
+                          }
+                        </div>
+                      </div>
+                      <div class="progress-container">
+                        <div class="progress-bar">
+                          <div class="progress-fill" [style.width.%]="fileUploadStatus()[i]?.progress || 0"></div>
+                        </div>
+                        <span class="progress-text">{{ fileUploadStatus()[i]?.progress || 0 }}%</span>
+                      </div>
+                      @if (fileUploadStatus()[i]?.status === 'error') {
+                        <button type="button" (click)="retryUploadFile(selectedComplaintId, i)" class="file-retry" 
+                                [disabled]="(fileUploadStatus()[i]?.retries || 0) >= 3" title="Retry upload">
+                          <span class="material-icons">refresh</span>
+                        </button>
+                      }
+                      <button type="button" (click)="removeFile(i)" class="file-remove" [disabled]="isUploading()">
                         <span class="material-icons">close</span>
                       </button>
                     </div>

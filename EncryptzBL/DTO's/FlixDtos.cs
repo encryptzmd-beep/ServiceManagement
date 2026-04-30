@@ -233,6 +233,7 @@ namespace EncryptzBL.DTO_s
         public bool IsSLABreached { get; set; }
         public DateTime CreatedAt { get; set; }
         public string? AssignedTechnicians { get; set; }
+        public string? TechnicianName { get; set; }
         public int TotalCount { get; set; }
     }
 
@@ -367,6 +368,7 @@ namespace EncryptzBL.DTO_s
         public int ComplaintId { get; set; }
         public string ComplaintNumber { get; set; } = string.Empty;
         public string Subject { get; set; } = string.Empty;
+        public string? NatureOfJob { get; set; }
         public string CustomerName { get; set; } = string.Empty;
         public string? CustomerAddress { get; set; }
         public string? CustomerPlace { get; set; }
@@ -1053,6 +1055,7 @@ namespace EncryptzBL.DTO_s
         public string ComplaintNumber { get; set; } = string.Empty;
         public string Subject { get; set; } = string.Empty;
         public string? Description { get; set; }
+        public string? NatureOfJob { get; set; }
         public string? Priority { get; set; }
         public DateTime? SLADeadline { get; set; }
         public DateTime ComplaintCreatedAt { get; set; }
@@ -1375,8 +1378,18 @@ namespace EncryptzBL.DTO_s
         public string TechnicianPhone { get; set; }
         public string AssignmentRole { get; set; }
         public string AssignmentStatus { get; set; }
+        public string StatusName { get; set; } = string.Empty;
+        public string? StatusColor { get; set; }
         public DateTime? AssignedAt { get; set; }
         public int TotalCount { get; set; }
+    }
+
+
+    public class ComplaintUpdateDto
+    {
+        public string Subject { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Priority { get; set; } = string.Empty;
     }
 
     public class ComplaintDetailDto
@@ -1954,6 +1967,7 @@ namespace EncryptzBL.DTO_s
                 // Complaint fields (all nullable)
                 public string Subject { get; set; }
                 public string Description { get; set; }
+                public string NatureOfJob { get; set; }
                 public string Priority { get; set; }
                 public string Category { get; set; }
                 public string BrandName { get; set; }
@@ -2020,6 +2034,7 @@ namespace EncryptzBL.DTO_s
             {
                 public string Subject { get; set; }
                 public string Description { get; set; }
+                public string NatureOfJob { get; set; }
                 public string Priority { get; set; }
                 public string Category { get; set; }
                 public string BrandName { get; set; }
@@ -2149,6 +2164,7 @@ namespace EncryptzBL.DTO_s
                 public string ComplaintNumber { get; set; }
                 public string Subject { get; set; }
                 public string Description { get; set; }
+                public string NatureOfJob { get; set; }
                 public DateTime CreatedAt { get; set; }
                 public DateTime? UpdatedAt { get; set; }
                 public string Priority { get; set; }

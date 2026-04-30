@@ -328,6 +328,7 @@ export interface WorkOrder {
   complaintId: number;
   complaintNumber: string;
   subject: string;
+  natureOfJob?: string | null;
   customerName: string;
   customerAddress: string | null;
   customerPlace?: string | null;
@@ -505,7 +506,8 @@ export const COMPLAINT_STATUSES = [
   { id: 8, name: 'Reopened', color: '#DC2626' },
 ];
 
-export const PRIORITIES = ['Low',  'High'];
+export const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
+
 
 export const ROLES = [
   { id: 1, name: 'Admin' },
@@ -1313,6 +1315,7 @@ export interface ComplaintCompleteDetail {
   complaintNumber: string;
   subject: string;
   description: string;
+  natureOfJob?: string;
   createdAt: string;
   updatedAt?: string;
   priority: string;

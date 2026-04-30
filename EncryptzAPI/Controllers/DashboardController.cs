@@ -1,4 +1,4 @@
-﻿using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
+using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Dashboard.Modules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -41,7 +41,7 @@ namespace EncryptzAPI.Controllers
         // ═════════════════════════════════════════════════════════════════════════
 
         [HttpPost("manage")]
-        [Authorize(Roles = "Admin,CompanyAdmin")]
+        [Authorize(Roles = "Admin,CompanyAdmin,Customer")]
         public async Task<IActionResult> ManageComplaintDetails([FromBody] ManageComplaintRequestModel request)
         {
             // Stamp the user on every master-endpoint call too
@@ -79,7 +79,7 @@ namespace EncryptzAPI.Controllers
         // ============================================
 
         [HttpPut("complaints/{complaintId}")]
-        [Authorize(Roles = "Admin,CompanyAdmin")]
+        [Authorize(Roles = "Admin,CompanyAdmin,Customer")]
         public async Task<IActionResult> UpdateComplaint(int complaintId, [FromBody] UpdateComplaintRequestModel request)
         {
             var manageRequest = new ManageComplaintRequestModel
@@ -88,6 +88,7 @@ namespace EncryptzAPI.Controllers
                 ComplaintId = complaintId,
                 Subject = request.Subject,
                 Description = request.Description,
+                NatureOfJob = request.NatureOfJob,
                 Priority = request.Priority,
                 Category = request.Category,
                 BrandName = request.BrandName,
@@ -95,6 +96,22 @@ namespace EncryptzAPI.Controllers
                 PreferredDate = request.PreferredDate,
                 PreferredTimeSlot = request.PreferredTimeSlot,
                 UserId = GetUserId()    // ← audit who made the edit
+            };
+            var result = await _service.ManageComplaintDetails(manageRequest);
+            if (!result.Success)
+                return BadRequest(result);
+            return Ok(result);
+        }
+
+        [HttpDelete("complaints/{complaintId}")]
+        [Authorize(Roles = "Admin,CompanyAdmin,Customer")]
+        public async Task<IActionResult> DeleteComplaint(int complaintId)
+        {
+            var manageRequest = new ManageComplaintRequestModel
+            {
+                OperationType = "DELETE_COMPLAINT",
+                ComplaintId = complaintId,
+                UserId = GetUserId()
             };
             var result = await _service.ManageComplaintDetails(manageRequest);
             if (!result.Success)

@@ -284,7 +284,12 @@
  <div class="info-item compact-item">
  <span class="material-icons">fitness_center</span>
  <div>
- <span class="info-value">{{ wo.productName }}</span>
+ <span class="info-value product-nature-line">
+ {{ wo.productName }}
+ @if (getNatureOfJob(wo)) {
+ <span class="nature-job-chip">{{ getNatureOfJob(wo) }}</span>
+ }
+ </span>
  </div>
  </div>
  @if ($any(wo).scheduledDate) {
@@ -568,11 +573,14 @@
  }
  <div class="dm-info-item">
  <span class="material-icons">fitness_center</span>
- <div>
- <span class="dmi-label">Product</span>
- <span class="dmi-val">{{ detailData()?.productName }}</span>
- </div>
- </div>
+<div>
+<span class="dmi-label">Product</span>
+<span class="dmi-val">{{ detailData()?.productName }}</span>
+ @if (getNatureOfJob(detailData())) {
+ <span class="dmi-subval">Nature of the job: {{ getNatureOfJob(detailData()) }}</span>
+ }
+</div>
+</div>
  @if (detailData()?.serialNumber) {
  <div class="dm-info-item">
  <span class="material-icons">qr_code</span>
@@ -1227,6 +1235,7 @@
  <div class="rp-upload-card">
  <div class="rp-upload-copy">
  <strong>1. Capture Part Image</strong>
+ <strong>1.Capture Serial Number Image</strong>
  <small>Show current part condition before repair. Maximum 1 image.</small>
  </div>
  <div class="rp-upload-grid">
@@ -1598,7 +1607,6 @@
  </div>
  </div>
 }
-
 
 
 

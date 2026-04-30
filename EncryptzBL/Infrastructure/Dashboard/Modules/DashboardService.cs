@@ -190,6 +190,8 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
                     parameters.Add(SqlParameterHelper.Input("@Subject", request.Subject));
                 if (request.Description != null)
                     parameters.Add(SqlParameterHelper.Input("@Description", request.Description));
+                if (request.NatureOfJob != null)
+                    parameters.Add(SqlParameterHelper.Input("@NatureOfJob", request.NatureOfJob));
                 if (request.Priority != null)
                     parameters.Add(SqlParameterHelper.Input("@Priority", request.Priority));
                 if (request.Category != null)
@@ -380,6 +382,7 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
                 ComplaintNumber = row["ComplaintNumber"]?.ToString(),
                 Subject = row["Subject"]?.ToString(),
                 Description = row["Description"]?.ToString(),
+                NatureOfJob = row.Table.Columns.Contains("NatureOfJob") && row["NatureOfJob"] != DBNull.Value ? row["NatureOfJob"]?.ToString() : null,
                 CreatedAt = Convert.ToDateTime(row["CreatedAt"]),
                 UpdatedAt = row["UpdatedAt"] != DBNull.Value ? Convert.ToDateTime(row["UpdatedAt"]) : (DateTime?)null,
                 Priority = row["Priority"]?.ToString(),

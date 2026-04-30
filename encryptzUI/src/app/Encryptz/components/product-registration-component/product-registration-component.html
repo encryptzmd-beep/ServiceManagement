@@ -6,7 +6,7 @@
     </div>
     <button class="btn-primary" (click)="toggleForm()">
       <span class="material-icons">{{ showForm() ? 'close' : 'add_circle' }}</span>
-      {{ showForm() ? 'Cancel' : 'Register Product' }}
+      {{ showForm() ? 'Cancel' : (isEditMode() ? 'Editing Product' : 'Register Product') }}
     </button>
   </div>
 
@@ -16,8 +16,8 @@
     <div class="form-header">
       <span class="material-icons form-icon">inventory_2</span>
       <div>
-        <h3>Register New Product</h3>
-        <p>Select from product catalog or enter manually</p>
+        <h3>{{ isEditMode() ? 'Edit Product' : 'Register New Product' }}</h3>
+        <p>{{ isEditMode() ? 'Update your product details' : 'Select from product catalog or enter manually' }}</p>
       </div>
     </div>
 
@@ -126,10 +126,10 @@
       </div> -->
 
       <div class="form-actions">
-        <button type="button" class="btn-outline" (click)="showForm.set(false)">Cancel</button>
+        <button type="button" class="btn-outline" (click)="toggleForm()">Cancel</button>
         <button type="submit" class="btn-primary" [disabled]="saving() || !form.productName || !form.serialNumber">
           @if (saving()) { <span class="spinner"></span> }
-          {{ saving() ? 'Saving...' : 'Save Product' }}
+          {{ saving() ? 'Saving...' : (isEditMode() ? 'Update Product' : 'Save Product') }}
         </button>
       </div>
     </form>
@@ -154,6 +154,14 @@
         <div class="product-title-area">
           <h4>{{ product.productName }}</h4>
           <span class="serial-badge">{{ product.serialNumber }}</span>
+        </div>
+        <div class="product-card-actions">
+          <button class="action-btn" (click)="editProduct(product)" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-btn danger" (click)="deleteProduct(product)" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
         </div>
         <!-- @if (product.warrantyExpiryDate) {
         <span class="warranty-badge" [class.active]="isWarrantyActive(product.warrantyExpiryDate)"
@@ -210,15 +218,27 @@
         </label>
       </div> -->
     </div>
-    } @empty {
-    <div class="empty-state">
-      <span class="material-icons empty-icon">inventory_2</span>
-      <h3>No Products Registered</h3>
-      <p>Click "Register Product" to add your fitness equipment.</p>
-      <button class="btn-primary" (click)="showForm.set(true)">
-        <span class="material-icons">add_circle</span> Register Your First Product
-      </button>
-    </div>
     }
   </div>
+
+  <!-- Confirmation Dialog -->
+  @if (confirmVisible()) {
+  <div class="confirm-overlay">
+    <div class="confirm-dialog">
+      <div class="confirm-header">
+        <div class="confirm-title">Confirm Action</div>
+        <button class="confirm-close" (click)="cancelConfirm()" aria-label="Close confirmation">×</button>
+      </div>
+      <div class="confirm-body">{{ confirmMessage() }}</div>
+      <div class="confirm-actions">
+        <button class="confirm-btn confirm-cancel-btn" (click)="cancelConfirm()">
+          Cancel
+        </button>
+        <button class="confirm-btn confirm-danger-btn" (click)="proceedConfirm()">
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+  }
 </div>

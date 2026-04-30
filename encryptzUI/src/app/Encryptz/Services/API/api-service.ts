@@ -431,6 +431,14 @@ addProduct(dto: M.ProductCreate): Observable<M.ApiResponse<number>> {
   return this.http.post<M.ApiResponse<number>>(`${this.api}/customer/products`, dto);
 }
 
+updateProduct(id: number, dto: M.ProductCreate): Observable<M.ApiResponse<number>> {
+  return this.http.put<M.ApiResponse<number>>(`${this.api}/customer/products/${id}`, dto);
+}
+
+deleteProduct(id: number): Observable<M.ApiResponse<number>> {
+  return this.http.delete<M.ApiResponse<number>>(`${this.api}/customer/products/${id}`);
+}
+
 uploadProductImage(productId: number, file: File, imageType: string): Observable<any> {
   const fd = new FormData();
   fd.append('file', file);
@@ -693,6 +701,15 @@ submitQuickComplaint(data: {
       complaintId: complaintId,
       userId: this.auth.currentUser()?.userId ?? 0,
       ...data
+    });
+  }
+
+  // Delete Complaint
+  deleteComplaint(complaintId: number): Observable<any> {
+    return this.manageComplaintDetails({
+      operationType: 'DELETE_COMPLAINT',
+      complaintId: complaintId,
+      userId: this.auth.currentUser()?.userId ?? 0
     });
   }
 

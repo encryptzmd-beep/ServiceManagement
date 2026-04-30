@@ -1,4 +1,4 @@
-﻿using EncryptzBL.Common;
+using EncryptzBL.Common;
 using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Customer.Modules;
@@ -153,6 +153,18 @@ namespace EncryptzAPI.Controllers
         [HttpPost("complaints")]
         public async Task<IActionResult> CreateComplaint([FromBody] ComplaintCreateDto dto)
             => Ok(await _svc.CreateComplaint(GetUserId(), dto));
+
+        [HttpPut("complaints/{id}")]
+        public async Task<IActionResult> UpdateComplaint(int id, [FromBody] ComplaintUpdateDto dto)
+            => Ok(await _svc.UpdateComplaint(GetUserId(), id, dto));
+
+        [HttpDelete("complaints/{id}")]
+        public async Task<IActionResult> DeleteComplaint(int id)
+            => Ok(await _svc.DeleteComplaint(GetUserId(), id));
+
+        [HttpPost("complaints/{id}/confirm-closure")]
+        public async Task<IActionResult> ConfirmClosure(int id)
+            => Ok(await _svc.ConfirmClosure(GetUserId(), id));
 
 
         [HttpPost("quick-complaint")]
