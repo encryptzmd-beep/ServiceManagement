@@ -28,6 +28,7 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
   saving = signal(false);
   successMsg = signal('');
   errorMsg = signal('');
+  selectedComplaintId = 0;
 
   productSearch = '';
   searchResults: any[] = [];
@@ -46,11 +47,14 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
   };
 
   files: File[] = [];
+  isUploading = signal(false);
+  fileUploadStatus = signal<Array<{status: string, progress: number, uploading: boolean, retries?: number}>>([]);
 
   private map: any;
   private marker: any;
   private searchTimeout: any;
   private mapInitialized = false;
+  private readonly MAX_RETRIES = 3;
 
   // Kochi coordinates (default location)
   private readonly KOCHI_LAT = 9.9312;
@@ -378,6 +382,12 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
         return;
       }
       this.files = [...this.files, ...newFiles];
+      // Initialize upload status for new files
+      const currentStatus = this.fileUploadStatus();
+      this.fileUploadStatus.set([
+        ...currentStatus,
+        ...newFiles.map(() => ({status: 'pending', progress: 0, uploading: false, retries: 0}))
+      ]);
     }
   }
 
@@ -399,11 +409,62 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
         return;
       }
       this.files = [...this.files, ...newFiles];
+      // Initialize upload status for new files
+      const currentStatus = this.fileUploadStatus();
+      this.fileUploadStatus.set([
+        ...currentStatus,
+        ...newFiles.map(() => ({status: 'pending', progress: 0, uploading: false, retries: 0}))
+      ]);
     }
   }
 
   removeFile(index: number): void {
     this.files = this.files.filter((_, i) => i !== index);
+    const currentStatus = this.fileUploadStatus();
+    this.fileUploadStatus.set(currentStatus.filter((_, i) => i !== index));
+  }
+
+  isFileUploading(index: number): boolean {
+    return this.fileUploadStatus()[index]?.uploading === true;
+  }
+
+  retryUploadFile(complaintId: number, fileIndex: number): void {
+    if (fileIndex < 0 || fileIndex >= this.files.length) return;
+
+    const currentStatus = this.fileUploadStatus()[fileIndex];
+    if ((currentStatus.retries || 0) >= this.MAX_RETRIES) {
+      alert(`Maximum retry attempts (${this.MAX_RETRIES}) reached for this file`);
+      return;
+    }
+
+    const status = this.fileUploadStatus();
+    status[fileIndex] = {
+      status: 'uploading',
+      progress: 0,
+      uploading: true,
+      retries: (status[fileIndex].retries || 0) + 1
+    };
+    this.fileUploadStatus.set([...status]);
+
+    this.api.uploadComplaintImage(complaintId, this.files[fileIndex]).subscribe({
+      next: (uploadRes) => {
+        console.log('Image upload retry successful:', uploadRes);
+        const status = this.fileUploadStatus();
+        status[fileIndex] = { status: 'success', progress: 100, uploading: false, retries: status[fileIndex].retries };
+        this.fileUploadStatus.set([...status]);
+      },
+      error: (uploadErr) => {
+        console.error('Image upload retry failed:', uploadErr);
+        const status = this.fileUploadStatus();
+        status[fileIndex] = {
+          status: 'error',
+          progress: 0,
+          uploading: false,
+          retries: status[fileIndex].retries
+        };
+        this.fileUploadStatus.set([...status]);
+      }
+    });
   }
 
   getSelectedProductName(): string {
@@ -448,25 +509,63 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
     this.api.createComplaint(this.form).subscribe({
       next: (res: any) => {
         console.log('Complaint creation response:', res);
-        this.saving.set(false);
 
         if (res.success && res.data) {
           const cmpId = res.data.complaintId || res.data.ComplaintId || res.data;
           const cmpNo = res.data.complaintNumber || res.data.ComplaintNumber;
+          this.selectedComplaintId = cmpId;
 
           if (cmpId && this.files.length > 0) {
             console.log('Uploading images...');
-            this.files.forEach((file) => {
+            this.isUploading.set(true);
+            let uploadCount = 0;
+            const totalFiles = this.files.length;
+
+            this.files.forEach((file, fileIndex) => {
+              const status = this.fileUploadStatus();
+              status[fileIndex] = { status: 'uploading', progress: 0, uploading: true };
+              this.fileUploadStatus.set([...status]);
+
               this.api.uploadComplaintImage(cmpId, file).subscribe({
-                next: (uploadRes) => console.log('Image uploaded:', uploadRes),
-                error: (uploadErr) => console.error('Image upload failed:', uploadErr)
+                next: (uploadRes) => {
+                  console.log('Image uploaded:', uploadRes);
+                  uploadCount++;
+                  const status = this.fileUploadStatus();
+                  status[fileIndex] = { status: 'success', progress: 100, uploading: false };
+                  this.fileUploadStatus.set([...status]);
+
+                  // Check if all uploads are complete
+                  if (uploadCount === totalFiles) {
+                    this.isUploading.set(false);
+                    this.saving.set(false);
+                    this.successMsg.set('Complaint ' + cmpNo + ' registered successfully!');
+                    setTimeout(() => this.router.navigate(['/customer/complaints']), 2500);
+                  }
+                },
+                error: (uploadErr) => {
+                  console.error('Image upload failed:', uploadErr);
+                  uploadCount++;
+                  const status = this.fileUploadStatus();
+                  status[fileIndex] = { status: 'error', progress: 0, uploading: false };
+                  this.fileUploadStatus.set([...status]);
+
+                  // Check if all uploads are complete (some may have failed)
+                  if (uploadCount === totalFiles) {
+                    this.isUploading.set(false);
+                    this.saving.set(false);
+                    this.successMsg.set('Complaint ' + cmpNo + ' registered. Some images failed to upload.');
+                    setTimeout(() => this.router.navigate(['/customer/complaints']), 3000);
+                  }
+                }
               });
             });
+          } else {
+            this.saving.set(false);
+            this.successMsg.set('Complaint ' + cmpNo + ' registered successfully!');
+            setTimeout(() => this.router.navigate(['/customer/complaints']), 2500);
           }
-
-          this.successMsg.set('Complaint ' + cmpNo + ' registered successfully!');
-          setTimeout(() => this.router.navigate(['/customer/complaints']), 2500);
         } else {
+          this.saving.set(false);
           this.errorMsg.set(res.message || 'Failed to register complaint');
         }
       },

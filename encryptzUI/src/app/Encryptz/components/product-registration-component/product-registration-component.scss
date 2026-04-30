@@ -307,6 +307,42 @@
   }
 }
 
+.product-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+
+  .action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: 1px solid var(--line-strong);
+    color: var(--ink-500);
+    cursor: pointer;
+    transition: all 0.2s;
+
+    .material-icons { font-size: 18px; }
+
+    &:hover {
+      border-color: var(--ink-900);
+      color: var(--ink-900);
+      background: var(--surface);
+    }
+
+    &.danger {
+      color: var(--red);
+      &:hover {
+        background: var(--red-soft);
+        border-color: var(--red);
+      }
+    }
+  }
+}
+
 .product-title-area {
   flex: 1;
   min-width: 0;
@@ -659,6 +695,137 @@
   .form-actions .btn-outline {
     width: 100%;
   }
+
+.product-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+
+  .action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: 1px solid var(--line-strong);
+    color: var(--ink-500);
+    cursor: pointer;
+    transition: all 0.2s;
+
+    .material-icons { font-size: 18px; }
+
+    &:hover {
+      border-color: var(--ink-900);
+      color: var(--ink-900);
+      background: var(--surface);
+    }
+
+    &.danger {
+      color: var(--red);
+      &:hover {
+        background: var(--red-soft);
+        border-color: var(--red);
+      }
+    }
+  }
+}
+
+/* ——— Confirmation Overlay ——— */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.confirm-dialog {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+  overflow: hidden;
+  animation: scaleUp 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.confirm-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.confirm-title {
+  font-weight: 700;
+  color: var(--ink-900);
+  font-size: 1rem;
+}
+
+.confirm-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--ink-400);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.confirm-body {
+  padding: 24px 20px;
+  color: var(--ink-700);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  padding: 16px 20px;
+  background: var(--surface);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.confirm-btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.confirm-cancel-btn {
+  background: #fff;
+  border: 1px solid var(--line-strong);
+  color: var(--ink-700);
+  &:hover { background: var(--surface); border-color: var(--ink-400); }
+}
+
+.confirm-danger-btn {
+  background: var(--red);
+  color: #fff;
+  &:hover { background: var(--red-deep); }
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 
   .products-grid {
     grid-template-columns: 1fr;

@@ -21,6 +21,15 @@ export class ProductRegistrationComponent implements OnInit {
   successMsg = signal('');
   errorMsg = signal('');
 
+  // Edit Mode
+  isEditMode = signal(false);
+  editingProductId: number | null = null;
+
+  // Confirmation dialog signals
+  confirmVisible = signal(false);
+  confirmMessage = signal('');
+  confirmAction: (() => void) | null = null;
+
   // Autocomplete
   masterSearch = '';
   showMasterDropdown = false;
@@ -39,8 +48,14 @@ export class ProductRegistrationComponent implements OnInit {
   }
 
   toggleForm(): void {
-    this.showForm.set(!this.showForm());
-    if (this.showForm()) this.resetForm();
+    if (this.showForm()) {
+      this.showForm.set(false);
+      this.isEditMode.set(false);
+      this.editingProductId = null;
+    } else {
+      this.resetForm();
+      this.showForm.set(true);
+    }
   }
 
   loadProducts(): void {
@@ -110,19 +125,82 @@ export class ProductRegistrationComponent implements OnInit {
     this.successMsg.set('');
     this.errorMsg.set('');
 
-    this.api.addProduct(this.form).subscribe({
+    const request = this.isEditMode() && this.editingProductId
+      ? this.api.updateProduct(this.editingProductId, this.form)
+      : this.api.addProduct(this.form);
+
+    request.subscribe({
       next: (res: any) => {
         this.saving.set(false);
         if (res.success) {
-          this.successMsg.set('Product registered successfully!');
+          this.successMsg.set(this.isEditMode() ? 'Product updated successfully!' : 'Product registered successfully!');
           this.loadProducts();
-          setTimeout(() => { this.showForm.set(false); this.successMsg.set(''); }, 1500);
+          setTimeout(() => {
+            this.showForm.set(false);
+            this.isEditMode.set(false);
+            this.editingProductId = null;
+            this.successMsg.set('');
+          }, 1500);
         } else {
-          this.errorMsg.set(res.message || 'Failed to register product');
+          this.errorMsg.set(res.message || 'Failed to save product');
         }
       },
       error: () => { this.saving.set(false); this.errorMsg.set('An error occurred.'); },
     });
+  }
+
+  editProduct(product: Product): void {
+    this.isEditMode.set(true);
+    this.editingProductId = product.productId;
+    this.form = {
+      productName: product.productName,
+      serialNumber: product.serialNumber,
+      brand: product.brand,
+      model: product.model,
+      purchaseDate: product.purchaseDate ? new Date(product.purchaseDate).toISOString().split('T')[0] : undefined,
+      warrantyExpiryDate: product.warrantyExpiryDate ? new Date(product.warrantyExpiryDate).toISOString().split('T')[0] : undefined,
+    };
+    this.masterSearch = product.productName;
+    this.showForm.set(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  deleteProduct(product: Product): void {
+    this.openConfirm(
+      `Are you sure you want to delete product "${product.productName}" (${product.serialNumber})?`,
+      () => {
+        this.api.deleteProduct(product.productId).subscribe({
+          next: (res) => {
+            if (res.success) {
+              this.loadProducts();
+            } else {
+              this.errorMsg.set(res.message || 'Failed to delete product');
+            }
+          },
+          error: () => this.errorMsg.set('Error deleting product'),
+        });
+      }
+    );
+  }
+
+  openConfirm(message: string, action: () => void): void {
+    this.confirmMessage.set(message);
+    this.confirmAction = action;
+    this.confirmVisible.set(true);
+  }
+
+  cancelConfirm(): void {
+    this.confirmVisible.set(false);
+    this.confirmMessage.set('');
+    this.confirmAction = null;
+  }
+
+  proceedConfirm(): void {
+    const action = this.confirmAction;
+    this.cancelConfirm();
+    if (action) {
+      action();
+    }
   }
 
   uploadImage(productId: number, event: Event, type: string): void {
@@ -146,6 +224,8 @@ export class ProductRegistrationComponent implements OnInit {
     this.masterSearch = '';
     this.successMsg.set('');
     this.errorMsg.set('');
+    this.isEditMode.set(false);
+    this.editingProductId = null;
   }
 }
 

@@ -993,7 +993,8 @@ openSpareFromDetail(event?: Event): void {
 
 openRepairFromDetail(event?: Event): void {
   event?.stopPropagation();
-  const wo = this.detailData() as WorkOrder | null;
+
+  const wo = this.detailWorkOrder(); // ✅ CORRECT SOURCE
   if (!wo) return;
 
   this.closeDetail();

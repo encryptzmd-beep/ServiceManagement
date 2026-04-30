@@ -1152,7 +1152,7 @@
  <div class="rp-header">
  <div class="rp-header-icon"><span class="material-icons">construction</span></div>
  <div class="rp-header-text">
- <h3>SendForRepair</h3>
+ <h3>Send For Repair</h3>
  @if (repairDialogWo()) {
  <span class="rp-wo-tag"
  >{{ repairDialogWo()!.complaintNumber }}-{{ repairDialogWo()!.subject }}</span
@@ -1177,12 +1177,12 @@
  @if (repairLoading()) {
  <div class="rp-loading">
  <span class="spinner-lg"></span>
- <span>Loadingrepairdetails...</span>
+ <span>Loading repair details...</span>
  </div>
  } @else {
  <div class="rp-summary">
  <div class="rp-summary-card">
- <span class="rp-summary-label">CustomerCode</span>
+ <span class="rp-summary-label">Customer Code</span>
  <strong>{{ repairForm.customerCode || repairDialogWo()?.complaintNumber }}</strong>
  <small>{{
  repairDialogWo()?.customerName || repairMeta()?.customer?.customerName
@@ -1198,16 +1198,16 @@
  <div class="rp-section">
  <div class="rp-section-title">
  <span class="material-icons">inventory_2</span>
- <span>PartDetails</span>
+ <span>Part Details</span>
  </div>
 
  <div class="rp-field-grid">
  <label class="rp-field">
- <span>PartName</span>
+ <span>Part Name</span>
  <input [(ngModel)]="repairForm.partName" type="text" placeholder="Enter part name" />
  </label>
  <label class="rp-field">
- <span>ProductSerialNumber</span>
+ <span>Product Serial Number</span>
  <input
  [(ngModel)]="repairForm.partSerialNumber"
  type="text"
@@ -1234,7 +1234,7 @@
 
  <div class="rp-upload-card">
  <div class="rp-upload-copy">
- <strong>1.Capture Part Image</strong>
+ <strong>1.Capture Serial Number Image</strong>
  <small>Show current part condition before repair. Maximum 1 image.</small>
  </div>
  <div class="rp-upload-grid">

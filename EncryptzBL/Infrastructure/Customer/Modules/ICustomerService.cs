@@ -1,4 +1,4 @@
-﻿using EncryptzBL.DTO_s;
+using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using System;
 using System.Collections.Generic;
@@ -16,6 +16,9 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
         Task<ApiResponse<List<ProductMasterDto>>> GetProductMaster(string search, string category);
         Task<ApiResponse<dynamic>> CreateComplaint(int userId, ComplaintCreateDto dto);
         Task<ApiResponse<PagedResult<ComplaintListDto>>> GetMyComplaints(int userId, int? statusFilter, int page, int size);
+        Task<ApiResponse> UpdateComplaint(int userId, int complaintId, ComplaintUpdateDto dto);
+        Task<ApiResponse> DeleteComplaint(int userId, int complaintId);
+        Task<ApiResponse> ConfirmClosure(int userId, int complaintId);
         Task<ApiResponse<ComplaintDetailDto>> GetComplaintDetail(int id, int userId);
         // Task<ApiResponse<dynamic>> ReplyToComplaint(int complaintId, int userId, string message);
         Task<ApiResponse<CustomerDto>> GetOrCreateProfile(int userId);

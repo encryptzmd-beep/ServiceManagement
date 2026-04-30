@@ -233,6 +233,7 @@ namespace EncryptzBL.DTO_s
         public bool IsSLABreached { get; set; }
         public DateTime CreatedAt { get; set; }
         public string? AssignedTechnicians { get; set; }
+        public string? TechnicianName { get; set; }
         public int TotalCount { get; set; }
     }
 
@@ -1377,8 +1378,18 @@ namespace EncryptzBL.DTO_s
         public string TechnicianPhone { get; set; }
         public string AssignmentRole { get; set; }
         public string AssignmentStatus { get; set; }
+        public string StatusName { get; set; } = string.Empty;
+        public string? StatusColor { get; set; }
         public DateTime? AssignedAt { get; set; }
         public int TotalCount { get; set; }
+    }
+
+
+    public class ComplaintUpdateDto
+    {
+        public string Subject { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Priority { get; set; } = string.Empty;
     }
 
     public class ComplaintDetailDto

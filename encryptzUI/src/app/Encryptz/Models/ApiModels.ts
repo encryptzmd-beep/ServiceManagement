@@ -506,7 +506,8 @@ export const COMPLAINT_STATUSES = [
   { id: 8, name: 'Reopened', color: '#DC2626' },
 ];
 
-export const PRIORITIES = ['Low',  'High'];
+export const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
+
 
 export const ROLES = [
   { id: 1, name: 'Admin' },
