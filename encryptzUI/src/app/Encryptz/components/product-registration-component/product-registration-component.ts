@@ -44,7 +44,7 @@ export class ProductRegistrationComponent implements OnInit {
     this.loadProducts();
     this.loadProductMaster();
     // Auto-create customer profile if not exists
-    this.api.getOrCreateProfile().subscribe();
+   // this.api.getOrCreateProfile().subscribe();
   }
 
   toggleForm(): void {

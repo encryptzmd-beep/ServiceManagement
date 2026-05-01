@@ -979,9 +979,9 @@
   width: 36px; height: 36px; border: 3px solid #e2e8f0;
   border-top-color: #2563eb; border-radius: 50%; animation: spin .8s linear infinite;
 }
-.dm-body { flex: 1; overflow-y: auto; padding: 0; display: flex; flex-direction: column; gap: 0; }
+.dm-body { flex: 1; overflow: hidden; padding: 0; display: flex; flex-direction: column; gap: 0; min-height: 0; }
 
-.dm-status-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 18px 20px; }
+.dm-status-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 18px 20px; flex-shrink: 0; }
 
 /* ── Tab Bar ── */
 .dm-tabs {
@@ -1041,6 +1041,9 @@
   flex-direction: column;
   gap: 18px;
   padding: 20px;
+  overflow-y: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
   animation: tabFadeIn .3s ease;
 }
 
@@ -3395,40 +3398,124 @@
   }
 
   .dm-body {
+    overflow: hidden;
     min-height: 0;
+  }
+
+  .dm-status-row {
+    padding: 10px 14px !important;
+    gap: 5px !important;
   }
 
   .dm-tabs {
     padding: 8px 10px !important;
-    gap: 6px !important;
+    gap: 5px !important;
     overflow-x: auto;
+    flex-shrink: 0;
   }
 
+  /* Icon-only tabs on mobile — hide text labels */
   .dm-tab {
     flex: 0 0 auto;
-    min-width: max-content;
-    padding: 8px 10px !important;
+    padding: 8px 11px !important;
     border-radius: 9px !important;
-    font-size: 12px !important;
+    font-size: 0 !important; /* hide label text */
+    gap: 0 !important;
   }
 
   .dm-tab .material-icons {
-    font-size: 17px !important;
+    font-size: 19px !important;
+    opacity: 1 !important;
+  }
+
+  /* Keep badge visible */
+  .dm-tab-badge {
+    font-size: 9px !important;
+    padding: 1px 5px !important;
+    margin-left: 3px !important;
   }
 
   .dm-tab-content {
-    padding: 16px !important;
-    gap: 14px !important;
+    padding: 14px !important;
+    gap: 12px !important;
+    overflow-y: auto;
+    min-height: 0;
+    flex: 1;
   }
 
   .dm-info-grid {
     grid-template-columns: 1fr !important;
-    gap: 10px !important;
+    gap: 8px !important;
   }
 
   .dm-info-item {
-    padding: 12px !important;
+    padding: 10px 12px !important;
     min-width: 0;
+    gap: 10px !important;
+  }
+
+  .dm-section-title {
+    font-size: 13px !important;
+  }
+
+  .dm-desc {
+    font-size: 13px !important;
+  }
+
+  .dm-notes {
+    padding: 10px 12px !important;
+    gap: 8px !important;
+  }
+
+  /* Spare item cards — stack on mobile */
+  .spare-item-card {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .sic-right {
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  /* Repair item cards — stack on mobile */
+  .repair-item-card {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .ric-right {
+    margin-left: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  /* Timeline */
+  .tl-item {
+    gap: 8px !important;
+    padding: 10px 0 !important;
+  }
+
+  /* Image grid — 2 cols on mobile */
+  .image-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Location tab */
+  .dm-location-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 14px !important;
+    gap: 12px !important;
+  }
+
+  .dm-map-launch {
+    width: 100% !important;
   }
 
   .order-card .product-nature-line {
@@ -3444,34 +3531,43 @@
   .dm-footer {
     position: sticky;
     bottom: 0;
-    display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
-    gap: 8px !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
     padding: 10px 12px !important;
     background: #fff !important;
+    border-top: 1px solid #e2e8f0 !important;
     z-index: 2;
+    flex-shrink: 0;
   }
 
   .dm-footer .btn-action {
-    min-width: 0 !important;
+    flex: 1 1 auto;
+    min-width: 44px !important;
     justify-content: center !important;
     padding: 10px 8px !important;
     white-space: nowrap;
   }
 
-  .dm-footer .btn-action:not(.btn-secondary) {
+  .dm-footer .btn-action:not(.btn-secondary):not(.btn-unassign-action) {
     font-size: 0 !important;
     gap: 0 !important;
   }
 
-  .dm-footer .btn-action:not(.btn-secondary) .material-icons {
+  .dm-footer .btn-action:not(.btn-secondary):not(.btn-unassign-action) .material-icons {
     font-size: 20px !important;
     margin: 0 !important;
   }
 
   .dm-footer .btn-secondary {
     font-size: 12px !important;
-    padding-inline: 10px !important;
+    padding-inline: 16px !important;
+    flex: 0 0 auto !important;
+  }
+
+  .dm-footer .btn-unassign-action {
+    font-size: 12px !important;
+    flex: 0 0 auto !important;
   }
 
   /* On mobile the card itself is tappable — hide action buttons to declutter */

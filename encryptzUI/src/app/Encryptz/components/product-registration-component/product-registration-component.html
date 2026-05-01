@@ -155,14 +155,14 @@
           <h4>{{ product.productName }}</h4>
           <span class="serial-badge">{{ product.serialNumber }}</span>
         </div>
-        <div class="product-card-actions">
+        <!-- <div class="product-card-actions">
           <button class="action-btn" (click)="editProduct(product)" title="Edit">
             <span class="material-icons">edit</span>
           </button>
           <button class="action-btn danger" (click)="deleteProduct(product)" title="Delete">
             <span class="material-icons">delete</span>
           </button>
-        </div>
+        </div> -->
         <!-- @if (product.warrantyExpiryDate) {
         <span class="warranty-badge" [class.active]="isWarrantyActive(product.warrantyExpiryDate)"
           [class.expired]="!isWarrantyActive(product.warrantyExpiryDate)">
