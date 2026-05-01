@@ -296,34 +296,6 @@
   </div>
 </div>
 
-<!-- Location Prompt Modal -->
-@if (locationPrompt()) {
-  <div class="location-overlay">
-    <div class="location-card">
-      <span class="material-icons location-icon">gps_fixed</span>
-      <h2>Enable Location</h2>
-      <p>Location access is required for technician check-in, job tracking, and attendance marking.</p>
-
-      @if (locationError()) {
-        <div class="location-error">
-          <span class="material-icons">warning</span>
-          {{ locationError() }}
-        </div>
-        <button class="btn-signin" (click)="requestLocation()">
-          <span class="material-icons">refresh</span> Try Again
-        </button>
-      } @else {
-        <div class="location-loading">
-          <div class="spinner"></div>
-          <span>Requesting location access...</span>
-        </div>
-      }
-
-      <button class="btn-text" (click)="locationPrompt.set(false)">Skip for now</button>
-    </div>
-  </div>
-}
-
 <!-- Forgot Password Modal -->
 @if (showForgotPasswordModal()) {
   <div class="location-overlay">

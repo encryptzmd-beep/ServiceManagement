@@ -33,9 +33,11 @@
     </div>
     @if (showDropdown) {
     <div class="dropdown" (click)="showDropdown = false">
+      @if( auth.userRole() !== "Technician"){
       <a routerLink="/customer/profile" class="dropdown-item">
         <span class="material-icons">person</span> Profile
       </a>
+      }
       <a class="dropdown-item" (click)="auth.logout()">
         <span class="material-icons">logout</span> Logout
       </a>

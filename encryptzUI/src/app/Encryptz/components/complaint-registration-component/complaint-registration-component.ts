@@ -61,7 +61,7 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
   private readonly KOCHI_LNG = 76.2673;
 
   ngOnInit(): void {
-    this.api.getOrCreateProfile().subscribe();
+   // this.api.getOrCreateProfile().subscribe();
     this.api.getProducts().subscribe({
       next: (res: any) => {
         if (res.data) this.products.set(res.data);

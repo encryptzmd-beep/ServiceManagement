@@ -99,16 +99,23 @@ export class AuthService {
     return this.http.post(`${this.apiUrl}/menu-access/save-bulk`, { roleId, items });
   }
  logout(): void {
+    this.clearSession();
+    this.router.navigate(['/login']);
+  }
+
+  /** Clear auth state without triggering navigation. Safe to call from /login. */
+  clearSession(): void {
     localStorage.removeItem('felix_token');
     localStorage.removeItem('felix_user');
     localStorage.removeItem('selected_company_id');
     localStorage.removeItem('selected_company_role');
+    localStorage.removeItem('felix_menus');
+    localStorage.removeItem('temp_login');
     this._currentUser.set(null);
     this._menus.set([]);
     this._companies.set([]);
     this._selectedCompanyId.set(null);
     this._selectedCompanyRole.set(null);
-    this.router.navigate(['/login']);
   }
 
   getToken(): string | null {
