@@ -20,8 +20,6 @@ export class LoginComponent {
   loading = signal(false);
   error = signal('');
   otpSent = signal(false);
-  locationPrompt = signal(false);
-  locationError = signal('');
   locationLogoutMsg = signal('');
 
   // Forgot Password States
@@ -40,9 +38,15 @@ export class LoginComponent {
   otpCode = '';
 
   constructor() {
-    const msg = sessionStorage.getItem('encryptz_location_logout');
+    // Clear any existing session so pressing back+forward can't skip login
+    this.auth.clearSession();
+
+    // Show location-error message if redirected here due to location denial
+    const msg = sessionStorage.getItem('felix_location_error')
+              || sessionStorage.getItem('encryptz_location_logout');
     if (msg) {
       this.locationLogoutMsg.set(msg);
+      sessionStorage.removeItem('felix_location_error');
       sessionStorage.removeItem('encryptz_location_logout');
     }
   }
@@ -158,8 +162,7 @@ private handlePostLogin(data: any): void {
 
   private redirectByRole(role: string): void {
     if (role === 'Technician') {
-      this.locationPrompt.set(true);
-      this.requestLocation();
+      this.router.navigate(['/technicians/work-orders']);
     } else if (role === 'Admin' || role === 'CompanyAdmin') {
       this.router.navigate(['/complaints/dashboard']);
     } else if (role === 'Storekeeper') {
@@ -167,40 +170,6 @@ private handlePostLogin(data: any): void {
     } else {
       this.router.navigate(['/complaints/dashboard']);
     }
-  }
-
-  requestLocation(): void {
-    this.locationError.set('');
-
-    if (!navigator.geolocation) {
-      this.locationError.set('Geolocation is not supported by your browser.');
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        localStorage.setItem('encryptz_last_lat', position.coords.latitude.toString());
-        localStorage.setItem('encryptz_last_lng', position.coords.longitude.toString());
-        this.locationPrompt.set(false);
-        this.router.navigate(['/technicians/work-orders']);
-      },
-      (err) => {
-        switch (err.code) {
-          case err.PERMISSION_DENIED:
-            this.locationError.set('Location permission denied. Please enable it to continue.');
-            break;
-          case err.POSITION_UNAVAILABLE:
-            this.locationError.set('Location unavailable. Please check your GPS.');
-            break;
-          case err.TIMEOUT:
-            this.locationError.set('Location request timed out. Please try again.');
-            break;
-          default:
-            this.locationError.set('Unable to get location. Please try again.');
-        }
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
   }
 
   // ============================================

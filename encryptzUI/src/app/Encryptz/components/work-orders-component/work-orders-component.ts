@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal, computed, DestroyRef, HostListener, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { debounceTime, Subject } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../Services/API/api-service';
@@ -28,6 +28,7 @@ type SpareCartItem = {
 export class WorkOrdersComponent implements OnInit, OnDestroy {
   private api         = inject(ApiService);
   private auth        = inject(AuthService);
+  private router      = inject(Router);
   private _destroyRef = inject(DestroyRef);
   private techSearchSubject = new Subject<string>();
 constructor() {}
@@ -47,6 +48,7 @@ private geocode = inject(GeocodeService);
 // Change currentCoords to locationName
 locationName = signal('');
 spareCart = signal<SpareCartItem[]>([]);
+sparePhoto = signal<{ file: File; preview: string } | null>(null);
 urgencyOptions = ['Normal', 'Urgent', 'Critical'];
 
 spareSubmitting = signal(false);
@@ -69,6 +71,9 @@ repairSubmitting = signal(false);
 repairMsg = signal('');
 repairMsgErr = signal(false);
 repairImages = signal<{ file: File; preview: string; tag: string }[]>([]);
+repairUploadProgress = signal(0);
+repairUploadStep = signal(0);
+repairUploadTotal = signal(0);
 repairForm = {
   partName: '',
   partSerialNumber: '',
@@ -108,6 +113,10 @@ repairForm = {
   complaintSpares = signal<any[]>([]);
   sparesLoading   = signal(false);
 
+  // ── Location Device Prompt ────────────────────────────
+  showLocationPrompt = signal(false);
+  locationDeviceChoice = signal<'mobile' | 'computer' | 'tablet' | null>(null);
+
   // ── Repair Image Modal ──────────────────────────────
   showRepairImagesModal = signal(false);
   repairImagesLoading = signal(false);
@@ -144,9 +153,10 @@ ngOnInit(): void {
       });
     });
   } else {
+    this.checkTechnicianLocation();
     this.techId = this.auth.technicianId();
     this.load();
-    this.loadCheckInStatus();  // ← ADD
+    this.loadCheckInStatus();
   }
   this.spareSubject.pipe(
   debounceTime(300),
@@ -193,6 +203,39 @@ executeConfirm(): void {
 
 isAnyDialogOpen(): boolean {
   return this.showSpareDialog() || this.showRepairDialog() || this.showCompleteDialog() || this.showDetail() || this.showConfirmDialog() || this.showUnassignDialog();
+}
+
+private checkTechnicianLocation(): void {
+  if (!navigator.geolocation) { this.showLocationPrompt.set(true); return; }
+  if (!navigator.permissions) { this.showLocationPrompt.set(true); return; }
+  navigator.permissions.query({ name: 'geolocation' }).then(status => {
+    if (status.state === 'denied') {
+      this.showLocationPrompt.set(true);
+    }
+    status.onchange = () => {
+      if (status.state === 'granted') this.showLocationPrompt.set(false);
+      if (status.state === 'denied')  this.showLocationPrompt.set(true);
+    };
+  }).catch(() => { this.showLocationPrompt.set(true); });
+}
+
+retryLocation(): void {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      localStorage.setItem('encryptz_last_lat', pos.coords.latitude.toString());
+      localStorage.setItem('encryptz_last_lng', pos.coords.longitude.toString());
+      this.showLocationPrompt.set(false);
+      this.locationDeviceChoice.set(null);
+    },
+    () => { /* stay on prompt */ }
+  );
+}
+
+logoutFromLocation(): void {
+  sessionStorage.setItem('felix_location_error',
+    'Location permission is required. Please enable it and log in again.');
+  this.auth.logout();
 }
 
 ngOnDestroy(): void {
@@ -649,6 +692,7 @@ openSpareDialog(wo: WorkOrder, event?: Event): void {
   this.spareMsg.set('');
   this.spareMsgErr.set(false);
   this.showSpareDropdown = false;
+  this.clearSparePhoto();
   this.showSpareDialog.set(true);
   this.loadSpareOptions();
 }
@@ -660,6 +704,7 @@ closeSpareDialog(): void {
   this.spareSearch = '';
   this.spareResults.set([]);
   this.showSpareDropdown = false;
+  this.clearSparePhoto();
 }
 
 onSpareSearch(): void {
@@ -788,6 +833,12 @@ submitSpareRequest(): void {
     }
   }
 
+  if (!this.sparePhoto()) {
+    this.spareMsg.set('Please upload a reference photo');
+    this.spareMsgErr.set(true);
+    return;
+  }
+
   const payload = this.spareCart().map(item => ({
     complaintId: wo.complaintId,
     technicianId: this.techId,
@@ -805,13 +856,37 @@ submitSpareRequest(): void {
 
   this.api.createSpareRequest(payload).subscribe({
     next: (response: any) => {
-      this.spareSubmitting.set(false);
-      this.spareMsg.set(response?.message || 'Request submitted successfully');
-      this.spareMsgErr.set(false);
-
-      // reset
-      this.spareCart.set([]);
-      this.closeSpareDialog();
+      const photo = this.sparePhoto();
+      if (photo) {
+        const fd = new FormData();
+        fd.append('file', photo.file);
+        fd.append('imageType', 'SpareRequest');
+        fd.append('complaintId', wo.complaintId.toString());
+        fd.append('assignmentId', wo.assignmentId.toString());
+        this.api.uploadServiceImage(this.techId, fd).subscribe({
+          next: () => {
+            this.spareSubmitting.set(false);
+            this.spareMsg.set(response?.message || 'Request submitted successfully');
+            this.spareMsgErr.set(false);
+            this.spareCart.set([]);
+            this.closeSpareDialog();
+          },
+          error: () => {
+            // spare request created — photo upload failed but still success
+            this.spareSubmitting.set(false);
+            this.spareMsg.set('Request submitted (photo upload failed)');
+            this.spareMsgErr.set(false);
+            this.spareCart.set([]);
+            this.closeSpareDialog();
+          }
+        });
+      } else {
+        this.spareSubmitting.set(false);
+        this.spareMsg.set(response?.message || 'Request submitted successfully');
+        this.spareMsgErr.set(false);
+        this.spareCart.set([]);
+        this.closeSpareDialog();
+      }
     },
     error: () => {
       this.spareSubmitting.set(false);
@@ -830,6 +905,9 @@ openRepairDialog(wo: WorkOrder, event?: Event): void {
   this.repairMsg.set('');
   this.repairMsgErr.set(false);
   this.repairMeta.set(null);
+  this.repairUploadProgress.set(0);
+  this.repairUploadStep.set(0);
+  this.repairUploadTotal.set(0);
   this.repairImages().forEach(item => URL.revokeObjectURL(item.preview));
   this.repairImages.set([]);
   this.repairForm = {
@@ -868,6 +946,9 @@ closeRepairDialog(): void {
   this.repairImages.set([]);
   this.repairMsg.set('');
   this.repairMsgErr.set(false);
+  this.repairUploadProgress.set(0);
+  this.repairUploadStep.set(0);
+  this.repairUploadTotal.set(0);
 }
 
 onRepairFilesSelected(event: Event, tag: string): void {
@@ -877,15 +958,15 @@ onRepairFilesSelected(event: Event, tag: string): void {
   input.value = '';
 }
 
-private addRepairFiles(files: File[], tag: string): void {
+private async addRepairFiles(files: File[], tag: string): Promise<void> {
   const filtered = files.filter(file => file.type.startsWith('image/'));
   const limit = tag === 'before' ? 1 : 3;
   const existing = this.getRepairImages(tag);
-  const allowed = tag === 'before'
+  const toAdd = tag === 'before'
     ? filtered.slice(0, 1)
     : filtered.slice(0, Math.max(0, limit - existing.length));
 
-  if (allowed.length === 0) {
+  if (toAdd.length === 0) {
     this.repairMsg.set(tag === 'before'
       ? 'Only 1 part image can be uploaded'
       : 'Maximum 3 tagged images can be uploaded');
@@ -893,23 +974,17 @@ private addRepairFiles(files: File[], tag: string): void {
     return;
   }
 
-  const items = allowed.map(file => ({
-    file,
-    preview: URL.createObjectURL(file),
-    tag
-  }));
+  const compressed = await Promise.all(toAdd.map(f => this.compressImage(f)));
+  const items = compressed.map(file => ({ file, preview: URL.createObjectURL(file), tag }));
 
   this.repairMsg.set('');
   this.repairMsgErr.set(false);
 
   this.repairImages.update(list => {
     if (tag === 'before') {
-      list
-        .filter(item => item.tag === 'before')
-        .forEach(item => URL.revokeObjectURL(item.preview));
+      list.filter(item => item.tag === 'before').forEach(item => URL.revokeObjectURL(item.preview));
       return [...list.filter(item => item.tag !== 'before'), ...items];
     }
-
     return [...list, ...items];
   });
 }
@@ -1064,8 +1139,16 @@ submitRepairRequest(): void {
 
 private uploadRepairImagesSequentially(index: number, requestId: any): void {
   const images = this.repairImages();
+  const rId = typeof requestId === 'object' ? requestId.data : requestId;
+
+  if (index === 0) {
+    this.repairUploadTotal.set(images.length);
+    this.repairUploadStep.set(0);
+    this.repairUploadProgress.set(0);
+  }
 
   if (index >= images.length) {
+    this.repairUploadProgress.set(100);
     this.repairSubmitting.set(false);
     this.repairMsg.set('Repair request submitted successfully');
     this.repairMsgErr.set(false);
@@ -1075,11 +1158,13 @@ private uploadRepairImagesSequentially(index: number, requestId: any): void {
   }
 
   const item = images[index];
-  const rId = typeof requestId === 'object' ? requestId.data : requestId;
-
   this.api.uploadRepairImage(rId, item.file, item.tag === 'tagged' ? 'TaggedRepair' : 'BeforeRepair')
     .subscribe({
-      next: () => this.uploadRepairImagesSequentially(index + 1, rId),
+      next: () => {
+        this.repairUploadStep.set(index + 1);
+        this.repairUploadProgress.set(Math.round(((index + 1) / images.length) * 100));
+        this.uploadRepairImagesSequentially(index + 1, rId);
+      },
       error: () => {
         this.repairSubmitting.set(false);
         this.repairMsg.set('Repair request saved, but image upload failed');
@@ -1154,12 +1239,13 @@ onDragOver(event: DragEvent): void {
   event.stopPropagation();
 }
 
-private addFiles(files: File[]): void {
-  const valid = files.filter(f => f.type.startsWith('image/') && f.size <= 10 * 1024 * 1024); // max 10MB
-  const items = valid.map(f => ({
+private async addFiles(files: File[]): Promise<void> {
+  const valid = files.filter(f => f.type.startsWith('image/') && f.size <= 10 * 1024 * 1024);
+  const compressed = await Promise.all(valid.map(f => this.compressImage(f)));
+  const items = compressed.map(f => ({
     file: f,
     preview: URL.createObjectURL(f),
-    type: 'After', // default type
+    type: 'After',
     status: 'pending'
   }));
   this.uploadQueue.update(q => [...q, ...items]);
@@ -1322,6 +1408,53 @@ closeRepairImagesModal(): void {
   this.showRepairImagesModal.set(false);
   this.repairImagesList.set([]);
   this.activeRepairRequest.set(null);
+}
+
+// ── Spare photo handlers ────────────────────────────────
+clearSparePhoto(): void {
+  const p = this.sparePhoto();
+  if (p) URL.revokeObjectURL(p.preview);
+  this.sparePhoto.set(null);
+}
+
+onSparePhotoSelected(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const prev = this.sparePhoto();
+  if (prev) URL.revokeObjectURL(prev.preview);
+  this.compressImage(file).then(compressed => {
+    this.sparePhoto.set({ file: compressed, preview: URL.createObjectURL(compressed) });
+  });
+  input.value = '';
+}
+
+// ── Image compression ───────────────────────────────────
+private compressImage(file: File, maxSizeMB = 2): Promise<File> {
+  return new Promise(resolve => {
+    if (file.size <= maxSizeMB * 1024 * 1024) { resolve(file); return; }
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const maxDim = 1920;
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const scale = Math.min(maxDim / width, maxDim / height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(blob => {
+        const name = file.name.replace(/\.[^.]+$/, '.jpg');
+        resolve(blob ? new File([blob], name, { type: 'image/jpeg' }) : file);
+      }, 'image/jpeg', 0.82);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
 }
 
 }

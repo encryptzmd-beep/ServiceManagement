@@ -1,3 +1,66 @@
+@if (showLocationPrompt()) {
+  <div class="loc-overlay">
+    <div class="loc-card">
+      <span class="material-icons loc-icon">location_off</span>
+      <h2 class="loc-title">Location Required</h2>
+      <p class="loc-desc">Location access is required to use the technician portal. Please enable it to continue.</p>
+
+      @if (!locationDeviceChoice()) {
+        <p class="loc-choose-label">What device are you using?</p>
+        <div class="loc-device-btns">
+          <button class="loc-device-btn" (click)="locationDeviceChoice.set('mobile')">
+            <span class="material-icons">smartphone</span>
+            <span>Mobile</span>
+          </button>
+          <button class="loc-device-btn" (click)="locationDeviceChoice.set('tablet')">
+            <span class="material-icons">tablet</span>
+            <span>Tablet</span>
+          </button>
+          <button class="loc-device-btn" (click)="locationDeviceChoice.set('computer')">
+            <span class="material-icons">computer</span>
+            <span>Computer</span>
+          </button>
+        </div>
+      } @else {
+        <div class="loc-instructions">
+          @if (locationDeviceChoice() === 'mobile') {
+            <ol class="loc-steps">
+              <li>Open your phone <strong>Settings</strong></li>
+              <li>Go to <strong>Apps → Browser</strong> (Chrome / Safari)</li>
+              <li>Tap <strong>Permissions → Location</strong></li>
+              <li>Set to <strong>Allow</strong> or <strong>Ask every time</strong></li>
+              <li>Come back and tap <strong>Retry</strong> below</li>
+            </ol>
+          } @else if (locationDeviceChoice() === 'tablet') {
+            <ol class="loc-steps">
+              <li>Open <strong>Settings</strong> on your tablet</li>
+              <li>Find your browser under <strong>Apps</strong></li>
+              <li>Tap <strong>Permissions → Location → Allow</strong></li>
+              <li>Return here and tap <strong>Retry</strong> below</li>
+            </ol>
+          } @else {
+            <ol class="loc-steps">
+              <li>Click the <strong>lock icon</strong> in your browser address bar</li>
+              <li>Find <strong>Location</strong> and set it to <strong>Allow</strong></li>
+              <li>Refresh the page or tap <strong>Retry</strong> below</li>
+            </ol>
+          }
+        </div>
+        <div class="loc-actions">
+          <button class="loc-btn-back" (click)="locationDeviceChoice.set(null)">
+            <span class="material-icons">arrow_back</span> Back
+          </button>
+          <button class="loc-btn-retry" (click)="retryLocation()">
+            <span class="material-icons">refresh</span> Retry
+          </button>
+        </div>
+      }
+
+      <button class="loc-btn-logout" (click)="logoutFromLocation()">Log out</button>
+    </div>
+  </div>
+}
+
 <div class="fx-pagepage">
  <!--Header-->
  <div class="fx-page-headerpage-header">
@@ -215,7 +278,7 @@
  <!--Complete Work OrderCards-->
  <div class="orders-list">
  @for (wo of filteredOrders(); track wo.assignmentId) {
- <div class="order-card" [class.urgent]="wo.assignmentRole === 'Primary'">
+ <div class="order-card" [class.urgent]="wo.assignmentRole === 'Primary'" (click)="openDetail(wo, $event)">
  <div class="order-header">
  <div class="order-header-left">
  <div class="order-number-row">
@@ -257,7 +320,7 @@
     @if (wo.customerPhone) {
       <span class="cust-meta">
         <span class="material-icons">phone</span>
-        <a [href]="'tel:' + wo.customerPhone" class="phone-link">
+        <a [href]="'tel:' + wo.customerPhone" class="phone-link" (click)="$event.stopPropagation()">
           {{ wo.customerPhone }}
         </a>
       </span>
@@ -312,7 +375,7 @@
  @if (wo.status === 'Assigned') {
  <button
  class="btn-action btn-start icon-only-action"
- (click)="startWork(wo)"
+ (click)="startWork(wo); $event.stopPropagation()"
  [disabled]="!isAdmin() && !isCheckedIn()"
  title="Start Work"
  aria-label="Start Work"
@@ -320,53 +383,34 @@
  <span class="material-icons">play_arrow</span>
  </button>
  }
- @if (wo.status === 'InProgress') {
- <!-- <arouterLin k="/technicians/image-upload" class="btn-action btn-upload">
- <span class="material-icons">camera_alt</span> UploadImages
-</a> -->
+ <!-- @if (wo.status === 'InProgress') {
+ <button
+ class="btn-action btn-complete icon-only-action"
+ title="Complete Work"
+ (click)="openCompleteDialog(wo, $event)"
+ >
+ <span class="material-icons">check_circle</span>
+ </button>
  <button
  class="btn-action btn-spare icon-only-action"
  (click)="openSpareDialog(wo, $event)"
  title="Request Parts"
  aria-label="Request Parts"
  >
- <span class="material-icons">build</span>
+ <span class="material-icons">shopping_cart</span>
  </button>
  <button
  class="btn-action btn-repair icon-only-action"
- title="Repair Parts"
+ title="Repair Request"
  (click)="openRepairDialog(wo, $event)"
  >
  <span class="material-icons">construction</span>
  </button>
- <button
- class="btn-action btn-complete icon-only-action"
- title="Complete Work"
- (click)="openCompleteDialog (wo,$event)"
- >
- <span class="material-icons">check</span>
- </button>
- }
+ } -->
  @if (wo.status === 'Completed') {
  <span class="completed-badge">
  <span class="material-icons">verified</span> Completed</span
  >
- }
- <!-- <a [routerLink]=" ['/complaints',wo.complaintId]" class="btn-action btn-view">
- <span class="material-icons">open_in_new</span> View
-</a> -->
- <button
- class="btn-action btn-details icon-only-action"
- (click)="openDetail(wo, $event)"
- title="Details"
- aria-label="Details"
- >
- <span class="material-icons">info</span>
- </button>
- @if (canUnassign(wo)) {
- <button class="btn-action btn-unassign-action" (click)="openUnassign(wo, $event)">
- <span class="material-icons">person_remove</span>
- </button>
  }
  </div>
  </div>
@@ -879,6 +923,11 @@
  </button>
  }
 
+ @if (canUnassign(detailData())) {
+ <button class="btn-action btn-unassign-action" (click)="openUnassign(detailData(), $event)">
+ <span class="material-icons">person_remove</span> Unassign
+ </button>
+ }
  <button class="btn-action btn-secondary" (click)="closeDetail()">Close</button>
  </div>
  </div>
@@ -1120,6 +1169,35 @@
  </div>
  </div>
 
+ <!--Spare Photo-->
+ <div class="sp-photo-section">
+ <div class="sp-photo-label">
+ Reference Photo <span class="sp-req-star">*</span>
+ <small>Required — upload a photo of the part or issue</small>
+ </div>
+ @if (sparePhoto()) {
+ <div class="sp-photo-preview">
+ <img [src]="sparePhoto()!.preview" alt="Spare request photo" />
+ <button type="button" class="sp-photo-remove" (click)="clearSparePhoto()">
+ <span class="material-icons">close</span>
+ </button>
+ </div>
+ } @else {
+ <div class="sp-photo-btns">
+ <label class="sp-photo-btn">
+ <input type="file" accept="image/*" hidden (change)="onSparePhotoSelected($event)" />
+ <span class="material-icons">photo_library</span>
+ <span>Gallery</span>
+ </label>
+ <label class="sp-photo-btn">
+ <input type="file" accept="image/*" capture="environment" hidden (change)="onSparePhotoSelected($event)" />
+ <span class="material-icons">photo_camera</span>
+ <span>Camera</span>
+ </label>
+ </div>
+ }
+ </div>
+
  @if (spareMsg()) {
  <div class="sp-alert" [class.ok]="!spareMsgErr()" [class.err]="spareMsgErr()">
  <span class="material-icons">{{ spareMsgErr() ? 'error' : 'check_circle' }}</span>
@@ -1247,27 +1325,28 @@
  </div>
  }
  <label class="rp-uploader">
- <input type="file"
- accept="image/*"
- hidden
- (change)="onRepairFilesSelected($event, 'before')"
- />
+ <input type="file" accept="image/*" hidden (change)="onRepairFilesSelected($event, 'before')" />
+ <span class="material-icons">photo_library</span>
+ <span>Gallery</span>
+ </label>
+ <label class="rp-uploader rp-uploader-cam">
+ <input type="file" accept="image/*" capture="environment" hidden (change)="onRepairFilesSelected($event, 'before')" />
  <span class="material-icons">photo_camera</span>
- <span>Capture Image</span>
+ <span>Camera</span>
  </label>
  </div>
  </div>
 
  <div class="rp-upload-card">
  <div class="rp-upload-copy">
- <strong>2.Capture Tagged Image</strong>
+ <strong>2. Capture Tagged Image</strong>
  <small>Ensure customer code or serial is visible on the part. Maximum 3 images.</small>
  </div>
  <div class="rp-upload-grid">
  @if (getRepairImages('tagged').length > 0) {
  @for (img of getRepairImages('tagged'); track $index; let i = $index) {
  <div class="rp-preview">
- <img [src]="img.preview" alt="Taggedrepairimage" />
+ <img [src]="img.preview" alt="Tagged repair image" />
  <button type="button" class="rp-remove" (click)="removeRepairImage('tagged', i)">
  <span class="material-icons">close</span>
  </button>
@@ -1275,14 +1354,14 @@
  }
  }
  <label class="rp-uploader secondary">
- <input type="file"
- accept="image/*"
- multiple
- hidden
- (change)="onRepairFilesSelected($event, 'tagged')"
- />
- <span class="material-icons">add_a_photo</span>
- <span>Capture Tagged Image</span>
+ <input type="file" accept="image/*" multiple hidden (change)="onRepairFilesSelected($event, 'tagged')" />
+ <span class="material-icons">photo_library</span>
+ <span>Gallery</span>
+ </label>
+ <label class="rp-uploader secondary rp-uploader-cam">
+ <input type="file" accept="image/*" capture="environment" hidden (change)="onRepairFilesSelected($event, 'tagged')" />
+ <span class="material-icons">photo_camera</span>
+ <span>Camera</span>
  </label>
  </div>
 </div>
@@ -1302,6 +1381,14 @@
  }
  </div>
 
+ @if (repairSubmitting() && repairUploadTotal() > 0) {
+ <div class="cmp-progress-wrap" style="margin: 0 18px 12px;">
+ <div class="cmp-progress-bar">
+ <div class="cmp-progress-fill" [style.width.%]="repairUploadProgress()"></div>
+ </div>
+ <span class="cmp-progress-label">Uploading {{ repairUploadStep() }}/{{ repairUploadTotal() }} images... {{ repairUploadProgress() }}%</span>
+ </div>
+ }
  <div class="rp-footer">
  <button class="rp-cancel" type="button" (click)="closeRepairDialog()">Cancel</button>
  <button
@@ -1409,6 +1496,7 @@
  <p class="cmp-upload-hint">Upload before/after photos, parts, or customer signature</p>
 
  <!--Dropzone-->
+ <div class="cmp-upload-row">
  <div
  class="cmp-dropzone"
  (drop)="onDrop($event)"
@@ -1422,9 +1510,15 @@
  hidden
  (change)="onFilesSelected($event)"
  />
- <span class="material-icons cmp-dz-icon">add_a_photo</span>
- <p class="cmp-dz-text">Drop images or<strong>click to browse</strong></p>
- <p class="cmp-dz-sub">JPG,PNG upto 10MB each</p>
+ <span class="material-icons cmp-dz-icon">photo_library</span>
+ <p class="cmp-dz-text">Drop or <strong>browse gallery</strong></p>
+ <p class="cmp-dz-sub">JPG, PNG up to 10MB</p>
+ </div>
+ <button type="button" class="cmp-camera-btn" (click)="cameraInput.click()">
+ <input #cameraInput type="file" accept="image/*" capture="environment" hidden (change)="onFilesSelected($event)" />
+ <span class="material-icons">photo_camera</span>
+ <span>Take Photo</span>
+ </button>
  </div>
 
  <!--ImageQueue-->

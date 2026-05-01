@@ -1,30 +1,23 @@
-import { inject, Injectable, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Injectable, signal } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
 export class LocationMonitorService {
-  private router = inject(Router);
   private watchId: number | null = null;
   private checkInterval: any = null;
   private _role = '';
-  private _logoutFn: (() => void) | null = null;
 
   currentLat = signal<number | null>(null);
   currentLng = signal<number | null>(null);
   isTracking = signal(false);
 
   /** Call from MainLayout — pass role + logout callback to avoid circular DI */
-  startMonitoring(role: string, logoutFn: () => void): void {
+  startMonitoring(role: string, _logoutFn?: () => void): void {
     if (role !== 'Technician') return;
     if (this.watchId !== null) return;
 
     this._role = role;
-    this._logoutFn = logoutFn;
 
-    if (!navigator.geolocation) {
-      this.handleLocationLost('Geolocation not supported');
-      return;
-    }
+    if (!navigator.geolocation) return; // No GPS — skip silently, don't logout
 
     this.watchId = navigator.geolocation.watchPosition(
       (pos) => {
@@ -35,13 +28,14 @@ export class LocationMonitorService {
         localStorage.setItem('felix_last_lng', pos.coords.longitude.toString());
       },
       (err) => {
+        // Temporary GPS loss — mark as not tracking but keep session alive
         console.warn('Location watch error:', err.message);
-        this.handleLocationLost(err.message);
+        this.isTracking.set(false);
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
     );
 
-    this.checkInterval = setInterval(() => this.checkPermission(), 10000);
+    this.checkInterval = setInterval(() => this.checkPermission(), 30000);
   }
 
   stopMonitoring(): void {
@@ -54,7 +48,6 @@ export class LocationMonitorService {
       this.checkInterval = null;
     }
     this.isTracking.set(false);
-    this._logoutFn = null;
   }
 
   private async checkPermission(): Promise<void> {
@@ -64,28 +57,13 @@ export class LocationMonitorService {
       if (navigator.permissions) {
         const status = await navigator.permissions.query({ name: 'geolocation' });
         if (status.state === 'denied') {
-          this.handleLocationLost('Location permission revoked');
+          // Permission denied — stop tracking but do NOT logout the user
+          console.warn('GPS permission denied, stopping location tracking');
+          this.stopMonitoring();
         }
       }
     } catch {
-      navigator.geolocation.getCurrentPosition(
-        () => {},
-        () => this.handleLocationLost('Location unavailable'),
-        { timeout: 5000 }
-      );
-    }
-  }
-
-  private handleLocationLost(reason: string): void {
-    console.warn('Location lost:', reason);
-    this.stopMonitoring();
-
-    sessionStorage.setItem('felix_location_logout', 'Location access was turned off. Please enable location to continue.');
-
-    if (this._logoutFn) {
-      this._logoutFn();
-    } else {
-      this.router.navigate(['/login']);
+      // Can't query permission — continue silently
     }
   }
 }
