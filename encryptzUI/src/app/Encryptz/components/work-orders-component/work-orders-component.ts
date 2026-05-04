@@ -112,25 +112,28 @@ repairForm = {
   // ── Payments ──────────────────────────────────────────
   paymentsList = signal<any[]>([]);
   paymentsLoading = signal(false);
-  paymentForm = {
-    paymentType: 'Final',
-    serviceChargeAmount: 0,
-    sparePartsAmount: 0,
-    discountAmount: 0,
-    amountPaid: 0,
-    paymentMethod: 'Cash',
-    transactionReference: '',
-    remarks: ''
-  };
+  paymentForm = signal({
+    paymentType: 'Final' as string,
+    serviceChargeAmount: 0 as number,
+    sparePartsAmount: 0 as number,
+    discountAmount: 0 as number,
+    amountPaid: 0 as number,
+    paymentMethod: 'Cash' as string,
+    transactionReference: '' as string,
+    remarks: '' as string,
+  });
   paymentSubmitting = signal(false);
   defaultUpiId = signal<string>('');
   paymentMsg = signal('');
   paymentMsgErr = signal(false);
 
+  pf(field: string, val: any): void {
+    this.paymentForm.update(f => ({ ...f, [field]: val }));
+  }
+
   get netTotal(): number {
-    return (this.paymentForm.serviceChargeAmount || 0) +
-           (this.paymentForm.sparePartsAmount || 0) -
-           (this.paymentForm.discountAmount || 0);
+    const f = this.paymentForm();
+    return (f.serviceChargeAmount || 0) + (f.sparePartsAmount || 0) - (f.discountAmount || 0);
   }
 
   get totalPaid(): number {
@@ -147,8 +150,7 @@ repairForm = {
   }
   
   get qrCodeUrl(): string {
-    if (this.paymentForm.paymentMethod === 'UPI' && this.defaultUpiId() && this.netTotal > 0) {
-      // upi://pay?pa=upi_id&pn=Name&am=amount&cu=INR
+    if (this.paymentForm().paymentMethod === 'UPI' && this.defaultUpiId() && this.netTotal > 0) {
       const upiString = `upi://pay?pa=${this.defaultUpiId()}&pn=Encryptz&am=${this.netTotal.toFixed(2)}&cu=INR`;
       return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiString)}`;
     }
@@ -653,7 +655,7 @@ private showCheckInMsg(m: string, err: boolean): void {
 
   initPaymentForm(): void {
     this.paymentMsg.set('');
-    this.paymentForm = {
+    this.paymentForm.set({
       paymentType: 'Final',
       serviceChargeAmount: 0,
       sparePartsAmount: 0,
@@ -662,25 +664,18 @@ private showCheckInMsg(m: string, err: boolean): void {
       paymentMethod: 'Cash',
       transactionReference: '',
       remarks: ''
-    };
-    
-    // Fetch default service charge
-    this.api.getDefaultServiceCharge().subscribe({
-      next: (res: any) => this.paymentForm.serviceChargeAmount = res.data || 0
     });
 
-    // Fetch default UPI
+    this.api.getDefaultServiceCharge().subscribe({
+      next: (res: any) => this.paymentForm.update(f => ({ ...f, serviceChargeAmount: res.data || 0 }))
+    });
+
     this.api.getUPIConfigurations().subscribe({
       next: (res: any) => {
         const defaultUpi = (res.data || []).find((u: any) => u.isDefault && u.isActive);
-        if (defaultUpi) {
-          this.defaultUpiId.set(defaultUpi.upiId);
-        }
+        if (defaultUpi) this.defaultUpiId.set(defaultUpi.upiId);
       }
     });
-
-    // Calculate spare parts amount (sum of all approved/used spares cost - assuming we have cost, if not it's 0 for now)
-    // Wait, let's just set it to 0 and let admin/tech enter it or fetch if there's a cost.
   }
 
   setDetailTab(tab: string): void {
@@ -701,18 +696,19 @@ private showCheckInMsg(m: string, err: boolean): void {
     this.paymentSubmitting.set(true);
     this.paymentMsg.set('');
 
+    const f = this.paymentForm();
     const payload = {
       complaintId: cid,
-      paymentType: this.paymentForm.paymentType,
-      serviceChargeAmount: this.paymentForm.serviceChargeAmount,
-      sparePartsAmount: this.paymentForm.sparePartsAmount,
-      discountAmount: this.paymentForm.discountAmount,
+      paymentType: f.paymentType,
+      serviceChargeAmount: f.serviceChargeAmount,
+      sparePartsAmount: f.sparePartsAmount,
+      discountAmount: f.discountAmount,
       totalAmount: this.netTotal,
-      amountPaid: this.paymentForm.amountPaid,
-      paymentMethod: this.paymentForm.paymentMethod,
-      upiIdUsed: this.paymentForm.paymentMethod === 'UPI' ? this.defaultUpiId() : null,
-      transactionReference: this.paymentForm.transactionReference,
-      remarks: this.paymentForm.remarks
+      amountPaid: f.amountPaid,
+      paymentMethod: f.paymentMethod,
+      upiIdUsed: f.paymentMethod === 'UPI' ? this.defaultUpiId() : null,
+      transactionReference: f.transactionReference,
+      remarks: f.remarks
     };
 
     this.api.recordComplaintPayment(payload).subscribe({

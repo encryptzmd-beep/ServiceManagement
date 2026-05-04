@@ -1033,8 +1033,12 @@
   flex-wrap: nowrap;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  &::-webkit-scrollbar { display: none; }
   flex-shrink: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+  &::-webkit-scrollbar { height: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 }
 
 .dm-tab {
@@ -1085,6 +1089,13 @@
   min-height: 0;
   -webkit-overflow-scrolling: touch;
   animation: tabFadeIn .3s ease;
+  /* Visible scrollbar on desktop */
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; }
+  &::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 }
 
 .dm-location-card {
@@ -4903,6 +4914,44 @@
 }
 .phc-by { color: #64748b; font-weight: 500; }
 
+/* ── Payment form inputs ── */
+.fi {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  background: #f8fafc;
+  outline: none;
+  transition: border-color .18s, box-shadow .18s, background .18s;
+  box-sizing: border-box;
+  font-family: inherit;
+
+  &::placeholder { color: #94a3b8; font-weight: 400; }
+
+  &:focus {
+    border-color: #3b82f6;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, .12);
+  }
+
+  &.num {
+    font-family: 'Courier New', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .5px;
+  }
+
+  /* Remove number input spinners */
+  &[type="number"] {
+    -moz-appearance: textfield;
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  }
+}
+
 /* ── Record Form ── */
 .pay-record-form {
   background: #fff;
@@ -4914,16 +4963,22 @@
 .pay-form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 .pay-fg {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  label { font-size: 12px; font-weight: 600; color: #475569; }
+  gap: 6px;
+  label {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
   &.full { grid-column: span 2; }
-  &.mt-2 { margin-top: 6px; grid-column: span 2; }
+  &.mt-2 { margin-top: 8px; grid-column: span 2; }
 }
 .pay-net-total {
   grid-column: span 2;
@@ -4976,7 +5031,9 @@
   padding: 14px;
   margin-bottom: 10px;
 }
-.pay-qr-img { width: 90px; height: 90px; border-radius: 8px; }
+.pay-qr-img {
+  width: 90px; height: 90px; border-radius: 8px; flex-shrink: 0;
+}
 .pay-qr-info {
   display: flex;
   flex-direction: column;
@@ -5013,7 +5070,21 @@
   .psb-value { font-size: 15px; }
   .pay-form-grid { grid-template-columns: 1fr; }
   .pay-fg.full, .pay-net-total, .pay-fg.mt-2 { grid-column: span 1; }
-  .pay-qr-card { flex-direction: column; align-items: flex-start; }
+
+  /* QR card: stack vertically, centre-align, full-width QR image */
+  .pay-qr-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+  }
+  .pay-qr-img {
+    width: min(80vw, 220px);
+    height: min(80vw, 220px);
+  }
+  .pay-qr-info { align-items: center; }
+  .pay-qr-amount { font-size: 24px; }
+
   .phc-breakdown { grid-template-columns: 1fr; }
   .phc-br-item.total { grid-column: span 1; }
 }

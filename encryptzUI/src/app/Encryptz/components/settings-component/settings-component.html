@@ -4,7 +4,7 @@
       <h1>Settings</h1>
       <p class="subtitle">System configuration and preferences</p>
     </div>
-    <button class="btn-primary" (click)="saveAll()" [disabled]="!hasChanges()">
+    <button class="btn-primary" (click)="saveAll()" >
       💾 Save All Changes
     </button>
   </div>
@@ -85,7 +85,7 @@
           <h3>UPI Configurations</h3>
           <button class="btn-primary-sm" (click)="showAddUpiModal.set(true)">+ Add UPI ID</button>
         </div>
-        
+
         <table class="upi-table">
           <thead>
             <tr>

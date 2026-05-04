@@ -3,7 +3,7 @@ import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { debounceTime, Subject } from 'rxjs';
+import { debounceTime, forkJoin, Subject } from 'rxjs';
 import {
   ActiveAssignment, AuditLog, ComplaintFilter, ComplaintListItem,
   ComplaintLookup, DashboardChartData, DashboardResponse, Technician,
@@ -135,34 +135,41 @@ private _scrollTileTop(): void {
     return this.activeAssignments().filter((a: any) => a.technicianName?.toLowerCase().includes(t) || a.complaintNumber?.toLowerCase().includes(t) || a.customerName?.toLowerCase().includes(t));
   });
 
+  realCounts = signal<Record<string, number>>({});
+
   statCards = computed(() => {
     const s = this.dashboardData()?.stats;
+    const rc = this.realCounts();
     if (!s) return [];
     return [
-      { key:'spare', label:'Spare Requests', value: this.spareSummary()?.pendingCount ?? 0,
-  icon:'🔩', bg:'#fef9c3', accent:'#ca8a04', up:false, pct:0, isSpare:true },
-      { key:'total',       label:'Total',             value:s.totalComplaints,            icon:'📋', bg:'#ede9fe', accent:'#7c3aed', up:true,  pct:12 },
-      { key:'new',         label:'New',               value:s.newComplaints,              icon:'🆕', bg:'#dbeafe', accent:'#2563eb', up:true,  pct:8,  statusId:1 },
-      { key:'inprogress',  label:'In Progress',       value:s.inProgressComplaints,       icon:'🔧', bg:'#fef3c7', accent:'#d97706', up:false, pct:3,  statusId:2 },
-      { key:'resolved',    label:'Resolved',          value:s.resolvedComplaints,         icon:'✅', bg:'#d1fae5', accent:'#059669', up:true,  pct:15, statusId:3 },
-      { key:'closed',      label:'Closed',            value:s.closedComplaints??0,        icon:'🔒', bg:'#f3f4f6', accent:'#6b7280', up:false, pct:2,  statusId:4 },
-      { key:'sla',         label:'SLA Breached',      value:s.slaBreached,                icon:'⚠️', bg:'#fef2f2', accent:'#dc2626', up:false, pct:5,  isSLA:true },
-      { key:'warranty',    label:'Warranty',          value:s.warrantyComplaints,         icon:'🛡️', bg:'#fce7f3', accent:'#be185d', up:true,  pct:2,  isWarranty:true },
-      { key:'schedules',   label:'Today Schedules',   value:s.todaySchedules,             icon:'📅', bg:'#ccfbf1', accent:'#0d9488', up:true,  pct:10, isScheduled:true },
-      { key:'assignments', label:'Active Assignments', value:this.activeAssignments().length, icon:'👷', bg:'#e0e7ff', accent:'#6366f1', up:true, pct:0, isActiveAssign:true },
+      { key:'spare',         label:'Spare Requests',    value: this.spareSummary()?.pendingCount ?? 0,  icon:'🔩', bg:'#fef9c3', accent:'#ca8a04', up:false, pct:0,  isSpare:true },
+      { key:'total',         label:'Total',             value: rc['total']        ?? s.totalComplaints,          icon:'📋', bg:'#ede9fe', accent:'#7c3aed', up:true,  pct:12 },
+      { key:'new',           label:'New',               value: rc['new']          ?? s.newComplaints,            icon:'🆕', bg:'#dbeafe', accent:'#2563eb', up:true,  pct:8,  statusId:1 },
+      { key:'inprogress',    label:'In Progress',       value: rc['inprogress']   ?? s.inProgressComplaints,     icon:'🔧', bg:'#fef3c7', accent:'#d97706', up:false, pct:3,  statusId:3 },
+      { key:'workcompleted', label:'Work Completed',    value: rc['workcompleted']?? s.resolvedComplaints,       icon:'✅', bg:'#d1fae5', accent:'#059669', up:true,  pct:15, statusId:5 },
+      { key:'closed',        label:'Closed',            value: rc['closed']       ?? (s.closedComplaints ?? 0),  icon:'🔒', bg:'#f3f4f6', accent:'#6b7280', up:false, pct:2,  statusId:7 },
+      { key:'sla',           label:'SLA Breached',      value: s.slaBreached,                                    icon:'⚠️', bg:'#fef2f2', accent:'#dc2626', up:false, pct:5,  isSLA:true },
+      { key:'warranty',      label:'Warranty',          value: s.warrantyComplaints,                             icon:'🛡️', bg:'#fce7f3', accent:'#be185d', up:true,  pct:2,  isWarranty:true },
+      { key:'schedules',     label:'Today Schedules',   value: s.todaySchedules,                                 icon:'📅', bg:'#ccfbf1', accent:'#0d9488', up:true,  pct:10, isScheduled:true },
+      { key:'assignments',   label:'Active Assignments', value: this.activeAssignments().length,                 icon:'👷', bg:'#e0e7ff', accent:'#6366f1', up:true,  pct:0,  isActiveAssign:true },
     ];
   });
 
   statusItems = computed(() => {
     const s = this.dashboardData()?.stats;
+    const rc = this.realCounts();
     if (!s) return [];
-    const total = s.totalComplaints || 1;
+    const total = rc['total'] || s.totalComplaints || 1;
+    const n  = rc['new']          ?? s.newComplaints;
+    const ip = rc['inprogress']   ?? s.inProgressComplaints;
+    const wc = rc['workcompleted']?? s.resolvedComplaints;
+    const cl = rc['closed']       ?? (s.closedComplaints ?? 0);
     return [
-      { label:'New',         count:s.newComplaints,         pct:(s.newComplaints/total)*100,          color:'#7c3aed', statusId:1 },
-      { label:'In Progress', count:s.inProgressComplaints,  pct:(s.inProgressComplaints/total)*100,   color:'#f59e0b', statusId:2 },
-      { label:'Resolved',    count:s.resolvedComplaints,    pct:(s.resolvedComplaints/total)*100,     color:'#10b981', statusId:3 },
-      { label:'Closed',      count:s.closedComplaints??0,   pct:((s.closedComplaints??0)/total)*100,  color:'#6b7280', statusId:4 },
-      { label:'SLA Breach',  count:s.slaBreached,           pct:(s.slaBreached/total)*100,            color:'#ef4444' },
+      { label:'New',           count:n,  pct:(n/total)*100,  color:'#7c3aed', statusId:1 },
+      { label:'In Progress',   count:ip, pct:(ip/total)*100, color:'#f59e0b', statusId:3 },
+      { label:'Work Completed',count:wc, pct:(wc/total)*100, color:'#10b981', statusId:5 },
+      { label:'Closed',        count:cl, pct:(cl/total)*100, color:'#6b7280', statusId:7 },
+      { label:'SLA Breach',    count:s.slaBreached, pct:(s.slaBreached/total)*100, color:'#ef4444' },
     ];
   });
 
@@ -179,7 +186,9 @@ private _scrollTileTop(): void {
   }
 
   loadData(): void {
-    this.loadSpareSummary()
+    this.realCounts.set({});
+    this.loadSpareSummary();
+    this.loadRealCounts();
     this.loading.set(true);
     this.dashboardData.set(null);
     this.api.getStats().subscribe({
@@ -187,6 +196,31 @@ private _scrollTileTop(): void {
       error: () => { this.loadDemoData(); this.loading.set(false); },
     });
     this.loadChartData();
+  }
+
+  loadRealCounts(): void {
+    const queries: { key: string; filter: ComplaintFilter }[] = [
+      { key: 'total',         filter: { pageNumber: 1, pageSize: 1 } },
+      { key: 'new',           filter: { pageNumber: 1, pageSize: 1, statusId: 1 } },
+      { key: 'inprogress',    filter: { pageNumber: 1, pageSize: 1, statusId: 3 } },
+      { key: 'workcompleted', filter: { pageNumber: 1, pageSize: 1, statusId: 5 } },
+      { key: 'closed',        filter: { pageNumber: 1, pageSize: 1, statusId: 7 } },
+    ];
+
+    forkJoin(queries.map(q => this.api.getComplaints(q.filter)))
+      .pipe(takeUntilDestroyed(this._destroyRef))
+      .subscribe({
+        next: results => {
+          const counts: Record<string, number> = {};
+          queries.forEach((q, i) => {
+            const r = results[i];
+            const fromItem = r.items?.[0]?.totalCount;
+            counts[q.key] = fromItem ?? r.totalCount ?? 0;
+          });
+          this.realCounts.set(counts);
+        },
+        error: () => {},
+      });
   }
 
   loadChartData(): void {
@@ -226,19 +260,20 @@ private _scrollTileTop(): void {
 });
 private _getTotalForTile(tile: TileConfig): number | null {
   const s = this.dashboardData()?.stats;
+  const rc = this.realCounts();
   if (!s) return null;
 
   switch (tile.key) {
-    case 'total':       return s.totalComplaints ?? null;
-    case 'new':         return s.newComplaints ?? null;
-    case 'inprogress':  return s.inProgressComplaints ?? null;
-    case 'resolved':    return s.resolvedComplaints ?? null;
-    case 'closed':      return s.closedComplaints ?? null;
-    case 'sla':         return s.slaBreached ?? null;
-    case 'warranty':    return s.warrantyComplaints ?? null;
-    case 'schedules':   return s.todaySchedules ?? null;
-    case 'assignments': return this.activeAssignments().length;
-    default:            return null;
+    case 'total':         return rc['total']         ?? s.totalComplaints      ?? null;
+    case 'new':           return rc['new']           ?? s.newComplaints        ?? null;
+    case 'inprogress':    return rc['inprogress']    ?? s.inProgressComplaints ?? null;
+    case 'workcompleted': return rc['workcompleted'] ?? s.resolvedComplaints   ?? null;
+    case 'closed':        return rc['closed']        ?? s.closedComplaints     ?? null;
+    case 'sla':           return s.slaBreached       ?? null;
+    case 'warranty':      return s.warrantyComplaints ?? null;
+    case 'schedules':     return s.todaySchedules    ?? null;
+    case 'assignments':   return this.activeAssignments().length;
+    default:              return null;
   }
 }
 loadTile(): void {
@@ -427,8 +462,8 @@ get pagedItems(): any[] {
 
   getBarHeight(n: number): number { const mx=Math.max(...(this.chartData()?.complaintsByDate?.map(d=>d.count)||[1])); return Math.max(5,(n/mx)*100); }
   getBarColor(i: number): string { return ['#4f46e5','#7c3aed','#a78bfa','#6366f1','#818cf8','#4f46e5','#7c3aed'][i%7]; }
-  getStatusClass(id: number): string { return ({1:'status-new',2:'status-progress',3:'status-resolved',4:'status-closed'} as any)[id]||'status-new'; }
-  getStatusLabel(id: number): string { return ({1:'New',2:'In Progress',3:'Resolved',4:'Closed'} as any)[id]||'Unknown'; }
+  getStatusClass(id: number): string { return ({1:'status-new',2:'status-progress',3:'status-inprogress',4:'status-parts',5:'status-resolved',6:'status-pending',7:'status-closed',8:'status-reopened'} as any)[id]||'status-new'; }
+  getStatusLabel(id: number): string { return ({1:'New',2:'Assigned',3:'In Progress',4:'Parts Requested',5:'Work Completed',6:'Pending Confirmation',7:'Closed',8:'Reopened'} as any)[id]||'Unknown'; }
   getPriorityClass(id: number): string { return ({1:'priority-urgent',2:'priority-high',3:'priority-normal',4:'priority-low'} as any)[id]||'priority-normal'; }
   getPriorityLabel(id: number): string { return ({1:'Urgent',2:'High',3:'Normal',4:'Low'} as any)[id]||'Normal'; }
 

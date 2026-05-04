@@ -915,24 +915,27 @@
          <div class="pay-fg full">
            <label>Payment Type</label>
            <div class="pay-type-toggle">
-             <button [class.active]="paymentForm.paymentType === 'Advance'"
-                     (click)="paymentForm.paymentType = 'Advance'" type="button">Advance</button>
-             <button [class.active]="paymentForm.paymentType === 'Final'"
-                     (click)="paymentForm.paymentType = 'Final'" type="button">Final</button>
+             <button [class.active]="paymentForm().paymentType === 'Advance'"
+                     (click)="pf('paymentType','Advance')" type="button">Advance</button>
+             <button [class.active]="paymentForm().paymentType === 'Final'"
+                     (click)="pf('paymentType','Final')" type="button">Final</button>
            </div>
          </div>
 
          <div class="pay-fg">
            <label>Service Charge (₹)</label>
-           <input type="number" [(ngModel)]="paymentForm.serviceChargeAmount" class="fi num" min="0"/>
+           <input type="number" [ngModel]="paymentForm().serviceChargeAmount"
+                  (ngModelChange)="pf('serviceChargeAmount', +$event)" class="fi num" min="0"/>
          </div>
          <div class="pay-fg">
            <label>Spare Parts (₹)</label>
-           <input type="number" [(ngModel)]="paymentForm.sparePartsAmount" class="fi num" min="0"/>
+           <input type="number" [ngModel]="paymentForm().sparePartsAmount"
+                  (ngModelChange)="pf('sparePartsAmount', +$event)" class="fi num" min="0"/>
          </div>
-         <div class="pay-fg">
+         <div class="pay-fg full">
            <label>Discount (₹)</label>
-           <input type="number" [(ngModel)]="paymentForm.discountAmount" class="fi num" min="0"/>
+           <input type="number" [ngModel]="paymentForm().discountAmount"
+                  (ngModelChange)="pf('discountAmount', +$event)" class="fi num" min="0"/>
          </div>
 
          <div class="pay-fg pay-net-total">
@@ -942,24 +945,25 @@
 
          <div class="pay-fg">
            <label>Amount Paid (₹)</label>
-           <input type="number" [(ngModel)]="paymentForm.amountPaid" class="fi num" min="0"/>
+           <input type="number" [ngModel]="paymentForm().amountPaid"
+                  (ngModelChange)="pf('amountPaid', +$event)" class="fi num" min="0"/>
          </div>
          <div class="pay-fg">
            <label>Payment Method</label>
            <div class="pay-method-toggle">
-             <button [class.active]="paymentForm.paymentMethod === 'Cash'"
-                     (click)="paymentForm.paymentMethod = 'Cash'" type="button">
+             <button [class.active]="paymentForm().paymentMethod === 'Cash'"
+                     (click)="pf('paymentMethod','Cash')" type="button">
                <span class="material-icons">payments</span> Cash
              </button>
-             <button [class.active]="paymentForm.paymentMethod === 'UPI'"
-                     (click)="paymentForm.paymentMethod = 'UPI'" type="button">
+             <button [class.active]="paymentForm().paymentMethod === 'UPI'"
+                     (click)="pf('paymentMethod','UPI')" type="button">
                <span class="material-icons">qr_code_2</span> UPI
              </button>
            </div>
          </div>
        </div>
 
-       @if (paymentForm.paymentMethod === 'UPI') {
+       @if (paymentForm().paymentMethod === 'UPI') {
          <div class="pay-upi-section">
            @if (!defaultUpiId()) {
              <div class="alert alert-err">No Default UPI ID. Please set it in Admin Settings.</div>
@@ -976,14 +980,16 @@
            }
            <div class="pay-fg mt-2">
              <label>Transaction Reference</label>
-             <input type="text" [(ngModel)]="paymentForm.transactionReference" class="fi" placeholder="UPI Txn ID (optional)"/>
+             <input type="text" [ngModel]="paymentForm().transactionReference"
+                    (ngModelChange)="pf('transactionReference', $event)" class="fi" placeholder="UPI Txn ID (optional)"/>
            </div>
          </div>
        }
 
        <div class="pay-fg mt-2">
          <label>Remarks</label>
-         <input type="text" [(ngModel)]="paymentForm.remarks" class="fi" placeholder="Any notes..."/>
+         <input type="text" [ngModel]="paymentForm().remarks"
+                (ngModelChange)="pf('remarks', $event)" class="fi" placeholder="Any notes..."/>
        </div>
 
        <button class="pay-submit-btn" (click)="submitPayment()" [disabled]="paymentSubmitting() || netTotal < 0">

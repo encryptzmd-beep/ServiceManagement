@@ -22,10 +22,11 @@ export class ComplaintListComponent implements OnInit {
   private api = inject(ApiService);
   complaints = signal<ComplaintListItem[]>([]);
   totalPages = signal(1);
-  showFilters = signal(false);
+  showFilters = signal(true);
   statuses = COMPLAINT_STATUSES;
   priorities = PRIORITIES;
   filter: ComplaintFilter = { pageNumber: 1, pageSize: 20 };
+  realTotal = signal(0);
   showDetailPopup = signal(false);
 selectedComplaintId = signal<number | null>(null);
 
@@ -41,8 +42,7 @@ closeDetailPopup(): void {
 }
 
 handleRefresh(): void {
-  // Reload whatever list this component shows
-  // e.g. this.loadComplaints();  or  this.loadData();
+  this.load();
 }
 
   // Client-side search on current page
@@ -58,7 +58,7 @@ handleRefresh(): void {
     );
   });
 
-  totalCount = computed(() => this.complaints().length);
+  totalCount = computed(() => this.realTotal());
   breachedCount = computed(() => this.complaints().filter(c => c.isSLABreached).length);
   onTimeCount = computed(() => this.complaints().filter(c => !c.isSLABreached).length);
 
@@ -67,9 +67,11 @@ handleRefresh(): void {
   }
 
   load(): void {
+    this.filter.pageNumber = this.filter.pageNumber || 1;
     this.api.getComplaints(this.filter).subscribe((res) => {
       this.complaints.set(res.items);
       this.totalPages.set(res.totalPages);
+      this.realTotal.set(res.totalCount ?? res.totalPages * this.filter.pageSize);
     });
   }
 

@@ -1,12 +1,12 @@
 .filter-bar {
   display: flex;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   flex-wrap: wrap;
 }
 
 .filter-input {
-  padding: 8px 12px;
+  padding: 6px 12px;
   border: 1px solid #e2e8f0;
   border-radius: 9px;
   font-size: 13px;
@@ -22,15 +22,44 @@
   overflow-x: auto;
 }
 
+/* Scrollable table — max 15 rows then scroll */
+.table-scroll {
+  max-height: 570px;
+  overflow-y: auto;
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f8fafc;
+  }
+}
+
+/* Compact rows */
+.data-table td,
+.data-table th {
+  padding: 5px 10px;
+  font-size: 12.5px;
+}
+
+.data-table tbody tr {
+  height: 36px;
+}
+
+.fx-pagination-top {
+  margin-bottom: 8px;
+  margin-top: 0;
+}
+
 .mono {
   font-family: 'Courier New', monospace;
   font-weight: 600;
   color: #1B4A7A;
-  font-size: 12.5px;
+  font-size: 12px;
 }
 
 .priority-badge {
-  padding: 3px 10px;
+  padding: 2px 8px;
   border-radius: 20px;
   font-size: 11px;
   font-weight: 600;
@@ -42,7 +71,7 @@
 [data-priority="Low"]      { background: #f0fdf4; color: #16a34a; }
 
 .status-badge {
-  padding: 3px 10px;
+  padding: 2px 8px;
   border-radius: 20px;
   font-size: 11px;
   font-weight: 600;
