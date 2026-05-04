@@ -16,12 +16,22 @@ export class SettingsComponent {
   saveSuccess = signal(false);
   activeGroup = 'SLA';
   changedIds = new Set<number>();
+  
+  // Payment specific state
+  defaultServiceCharge = signal<number>(0);
+  upiConfigurations = signal<any[]>([]);
+  showAddUpiModal = signal(false);
+  newUpi = { upiId: '', displayName: '' };
+  paymentsLoading = signal(false);
 
-  groups = computed(() => [...new Set(this.settings().map(s => s.settingGroup))]);
+  groups = computed(() => [...new Set(this.settings().map(s => s.settingGroup)), 'Payments']);
   filteredSettings = computed(() => this.settings().filter(s => s.settingGroup === this.activeGroup));
 
   constructor(private svc: ApiService) {}
-  ngOnInit() { this.loadData(); }
+  ngOnInit() { 
+    this.loadData(); 
+    this.loadPaymentSettings();
+  }
 
   loadData() {
     this.loading.set(true);
@@ -40,10 +50,70 @@ export class SettingsComponent {
   }
 
   saveAll() {
+    if (this.activeGroup === 'Payments') {
+      this.svc.updateDefaultServiceCharge(this.defaultServiceCharge()).subscribe({
+        next: () => this.showSuccess(),
+        error: () => alert('Failed to save service charge')
+      });
+      return;
+    }
+
     const updates: SettingUpdateDto[] = this.settings().filter(s => this.changedIds.has(s.settingId)).map(s => ({ settingId: s.settingId, settingValue: s.settingValue }));
     this.svc.bulkUpdate(updates).subscribe({
       next: () => { this.changedIds.clear(); this.showSuccess(); },
       error: () => { this.changedIds.clear(); this.showSuccess(); }
+    });
+  }
+
+  // --- Payment Methods ---
+  loadPaymentSettings() {
+    this.paymentsLoading.set(true);
+    this.svc.getDefaultServiceCharge().subscribe({
+      next: (res) => this.defaultServiceCharge.set(res.data),
+      error: () => {}
+    });
+    this.loadUpiConfigs();
+  }
+
+  loadUpiConfigs() {
+    this.svc.getUPIConfigurations().subscribe({
+      next: (res) => { this.upiConfigurations.set(res.data); this.paymentsLoading.set(false); },
+      error: () => this.paymentsLoading.set(false)
+    });
+  }
+
+  addUpi() {
+    if (!this.newUpi.upiId || !this.newUpi.displayName) return;
+    this.svc.addUPIConfiguration(this.newUpi).subscribe({
+      next: () => {
+        this.showAddUpiModal.set(false);
+        this.newUpi = { upiId: '', displayName: '' };
+        this.loadUpiConfigs();
+        this.showSuccess();
+      },
+      error: () => alert('Failed to add UPI')
+    });
+  }
+
+  setDefaultUpi(id: number) {
+    this.svc.setDefaultUPI(id).subscribe({
+      next: () => { this.loadUpiConfigs(); this.showSuccess(); },
+      error: () => alert('Failed to set default UPI')
+    });
+  }
+
+  toggleUpiStatus(id: number) {
+    this.svc.toggleUPIStatus(id).subscribe({
+      next: () => { this.loadUpiConfigs(); this.showSuccess(); },
+      error: () => alert('Failed to toggle UPI status')
+    });
+  }
+
+  deleteUpi(id: number) {
+    if (!confirm('Are you sure you want to delete this UPI ID?')) return;
+    this.svc.deleteUPIConfiguration(id).subscribe({
+      next: () => { this.loadUpiConfigs(); this.showSuccess(); },
+      error: () => alert('Failed to delete UPI')
     });
   }
 

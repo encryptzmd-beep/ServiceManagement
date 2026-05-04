@@ -62,6 +62,7 @@
 }
 
 <div class="fx-pagepage">
+<div class="wo-sticky-top">
  <!--Header-->
  <div class="fx-page-header page-header">
  <div>
@@ -70,7 +71,7 @@
  </div>
  <div class="header-controls">
  @if (isAdmin()) {
- <!--Techniciansearch:Adminonly-->
+ <!-- Technician search: Admin only -->
  <div class="tech-autocomplete">
  <div class="tech-input-wrap" [class.has-val]="!!selectedTech()">
  <span class="material-icons ta-ic">engineering</span>
@@ -139,7 +140,7 @@
  {{ loading() ? 'Loading...' : 'Load Orders' }}
  </button>
  } @else {
- <!--Non-admin:justarefreshbutton-->
+ <!-- Non-admin: just a refresh button -->
  
  <button class="btn-primary" (click)="load()" [disabled]="loading()">
  @if (loading()) {
@@ -204,7 +205,7 @@
  </div>
  }
 
- <!--GPSTracker-->
+ <!-- GPS Tracker -->
  @if (gpsService.isTracking()) {
  <div class="gps-mini-bar">
  <div class="gmb-dot"></div>
@@ -216,67 +217,42 @@
  </div>
  }
  }
- <!--Stats-->
+ <!-- Summary Bar -->
  @if (orders().length > 0) {
- <div class="fx-stats-row">
- <div class="fx-stat-card">
- <div class="fx-stat-label">Total</div>
- <div class="fx-stat-val">{{ orders().length }}</div>
- <div class="fx-stat-pill pill-navy">All orders</div>
- </div>
- <div class="fx-stat-card">
- <div class="fx-stat-label">Assigned</div>
- <div class="fx-stat-val is-pending">{{ countByStatus('Assigned') }}</div>
- <div class="fx-stat-pill pill-amber">Not started</div>
- </div>
- <div class="fx-stat-card">
- <div class="fx-stat-label">In Progress</div>
- <div class="fx-stat-val is-navy">{{ countByStatus('InProgress') }}</div>
- <div class="fx-stat-pill pill-navy">Ongoing</div>
- </div>
- <div class="fx-stat-card">
- <div class="fx-stat-label">Completed</div>
- <div class="fx-stat-val is-active">{{ countByStatus('Completed') }}</div>
- <div class="fx-stat-pill pill-green">Done</div>
- </div>
+ <div class="wo-summary-bar">
+  <span class="wsb-chip wsb-today">
+   <span class="material-icons">today</span>
+   Today <strong>{{ todayCount() }}</strong>
+  </span>
+  <span class="wsb-divider"></span>
+  <span class="wsb-chip wsb-total">
+   Total <strong>{{ orders().length }}</strong>
+  </span>
+  <span class="wsb-divider"></span>
+  <span class="wsb-chip wsb-assigned">
+   Assigned <strong>{{ countByStatus('Assigned') }}</strong>
+  </span>
+  <span class="wsb-chip wsb-inprog">
+   In Progress <strong>{{ countByStatus('InProgress') }}</strong>
+  </span>
+  <span class="wsb-chip wsb-done">
+   Done <strong>{{ countByStatus('Completed') }}</strong>
+  </span>
  </div>
  }
 
- <!--FilterTabs-->
+ <!-- Filter Tabs -->
  @if (orders().length > 0) {
  <div class="filter-tabs">
- <button
- class="tab"
- [class.active]="activeFilter() === 'all'"
- (click)="activeFilter.set('all')"
- >
- All
- </button>
- <button
- class="tab"
- [class.active]="activeFilter() === 'Assigned'"
- (click)="activeFilter.set('Assigned')"
- >
- Assigned
- </button>
- <button
- class="tab"
- [class.active]="activeFilter() === 'InProgress'"
- (click)="activeFilter.set('InProgress')"
- >
- In Progress
- </button>
- <button
- class="tab"
- [class.active]="activeFilter() === 'Completed'"
- (click)="activeFilter.set('Completed')"
- >
- Completed
- </button>
+ <button class="tab" [class.active]="activeFilter() === 'all'" (click)="activeFilter.set('all')">All</button>
+ <button class="tab" [class.active]="activeFilter() === 'Assigned'" (click)="activeFilter.set('Assigned')">Assigned</button>
+ <button class="tab" [class.active]="activeFilter() === 'InProgress'" (click)="activeFilter.set('InProgress')">In Progress</button>
+ <button class="tab" [class.active]="activeFilter() === 'Completed'" (click)="activeFilter.set('Completed')">Completed</button>
  </div>
  }
+</div><!-- /wo-sticky-top -->
 
- <!--Complete Work OrderCards-->
+ <!-- Work Order Cards -->
  <div class="orders-list">
  @for (wo of filteredOrders(); track wo.assignmentId) {
  <div class="order-card" [class.urgent]="wo.assignmentRole === 'Primary'" (click)="openDetail(wo, $event)">
@@ -548,26 +524,29 @@
  </div>
 
 <div class="dm-tabs">
-<button class="dm-tab" [class.active]="detailTab() === 'info'" (click)="detailTab.set('info')">
+<button class="dm-tab" [class.active]="detailTab() === 'info'" (click)="setDetailTab('info')">
 <span class="material-icons">info</span> Info
 </button>
- <button class="dm-tab" [class.active]="detailTab() === 'map'" (click)="detailTab.set('map')">
+ <button class="dm-tab" [class.active]="detailTab() === 'map'" (click)="setDetailTab('map')">
  <span class="material-icons">location_on</span> Location
  </button>
-<button class="dm-tab" [class.active]="detailTab() === 'spares'" (click)="detailTab.set('spares')">
+ <button class="dm-tab" [class.active]="detailTab() === 'spares'" (click)="setDetailTab('spares')">
 <span class="material-icons">build</span> Spare Parts
  @if (complaintSpares().length > 0) {
  <span class="dm-tab-badge">{{ complaintSpares().length }}</span>
  }
  </button>
- <button class="dm-tab" [class.active]="detailTab() === 'repairs'" (click)="detailTab.set('repairs')">
+ <button class="dm-tab" [class.active]="detailTab() === 'repairs'" (click)="setDetailTab('repairs')">
  <span class="material-icons">construction</span> Repairs
  @if (detailData()?.repairDetails?.length) {
  <span class="dm-tab-badge">{{ detailData()?.repairDetails?.length }}</span>
  }
  </button>
- <button class="dm-tab" [class.active]="detailTab() === 'timeline'" (click)="detailTab.set('timeline')">
+ <button class="dm-tab" [class.active]="detailTab() === 'timeline'" (click)="setDetailTab('timeline')">
  <span class="material-icons">history</span> Timeline
+ </button>
+ <button class="dm-tab" [class.active]="detailTab() === 'payments'" (click)="setDetailTab('payments')">
+ <span class="material-icons">payments</span> Payments
  </button>
  @if (detailData()?.images?.length) {
  <button class="dm-tab" [class.active]="detailTab() === 'images'" (click)="detailTab.set('images')">
@@ -812,6 +791,214 @@
  }
  </div>
  }
+ </div>
+ }
+
+ <!--──PAYMENTS TAB──-->
+ @if (detailTab() === 'payments') {
+ <div class="dm-tab-content pay-tab">
+
+   @if (paymentsLoading()) {
+     <div class="spare-loading">
+       <div class="mini-spin blue"></div>
+       <span>Loading payments...</span>
+     </div>
+   } @else {
+
+     <!-- ── Summary Banner ── -->
+     @if (paymentsList().length > 0) {
+       <div class="pay-summary-banner">
+         <div class="psb-item">
+           <span class="psb-label">Total Billed</span>
+           <span class="psb-value">₹{{ totalBilled | number:'1.2-2' }}</span>
+         </div>
+         <div class="psb-divider"></div>
+         <div class="psb-item">
+           <span class="psb-label">Total Paid</span>
+           <span class="psb-value paid">₹{{ totalPaid | number:'1.2-2' }}</span>
+         </div>
+         <div class="psb-divider"></div>
+         <div class="psb-item">
+           <span class="psb-label">Balance Due</span>
+           <span class="psb-value due">₹{{ balanceDue | number:'1.2-2' }}</span>
+         </div>
+       </div>
+     }
+
+     <!-- ── Payment History ── -->
+     @if (paymentsList().length > 0) {
+       <div class="pay-hist-section">
+         <div class="pay-sect-hdr">
+           <span class="material-icons">receipt_long</span>
+           <h4>Payment History</h4>
+           <span class="pay-count-badge">{{ paymentsList().length }}</span>
+         </div>
+         <div class="pay-hist-list">
+           @for (p of paymentsList(); track p.paymentId) {
+             <div class="pay-hist-card" [attr.data-status]="(p.paymentStatus || 'pending') | lowercase">
+               <div class="phc-top">
+                 <div class="phc-badges">
+                   <span class="pay-type-badge" [attr.data-type]="(p.paymentType || '') | lowercase">
+                     {{ p.paymentType }}
+                   </span>
+                   <span class="pay-method-chip" [attr.data-method]="(p.paymentMethod || '') | lowercase">
+                     <span class="material-icons">{{ p.paymentMethod === 'UPI' ? 'qr_code_2' : 'payments' }}</span>
+                     {{ p.paymentMethod }}
+                   </span>
+                   <span class="pay-status-chip" [attr.data-status]="(p.paymentStatus || '') | lowercase">
+                     {{ p.paymentStatus || 'Pending' }}
+                   </span>
+                 </div>
+                 <div class="phc-amount">
+                   <span class="phc-paid-lbl">Paid</span>
+                   <span class="phc-paid-val">₹{{ p.amountPaid | number:'1.2-2' }}</span>
+                 </div>
+               </div>
+
+               <div class="phc-breakdown">
+                 <div class="phc-br-item">
+                   <span>Service</span>
+                   <span>₹{{ p.serviceChargeAmount | number:'1.0-0' }}</span>
+                 </div>
+                 <div class="phc-br-item">
+                   <span>Spare Parts</span>
+                   <span>₹{{ p.sparePartsAmount | number:'1.0-0' }}</span>
+                 </div>
+                 @if (p.discountAmount > 0) {
+                   <div class="phc-br-item discount">
+                     <span>Discount</span>
+                     <span>- ₹{{ p.discountAmount | number:'1.0-0' }}</span>
+                   </div>
+                 }
+                 <div class="phc-br-item total">
+                   <span>Net Total</span>
+                   <span>₹{{ p.totalAmount | number:'1.2-2' }}</span>
+                 </div>
+               </div>
+
+               @if (p.transactionReference) {
+                 <div class="phc-txn">
+                   <span class="material-icons">tag</span>
+                   <span>{{ p.transactionReference }}</span>
+                 </div>
+               }
+               @if (p.remarks) {
+                 <div class="phc-remarks">"{{ p.remarks }}"</div>
+               }
+
+               <div class="phc-footer">
+                 <span class="material-icons">schedule</span>
+                 <span>{{ p.createdAt | date:'dd MMM yyyy, hh:mm a':'+0530' }} IST</span>
+                 @if (p.createdByName) {
+                   <span class="phc-by">• {{ p.createdByName }}</span>
+                 }
+               </div>
+             </div>
+           }
+         </div>
+       </div>
+     } @else {
+       <div class="dm-empty-tab">
+         <span class="material-icons">receipt_long</span>
+         <p>No payments recorded yet</p>
+       </div>
+     }
+
+     <!-- ── Record New Payment ── -->
+     <div class="pay-record-form">
+       <div class="pay-sect-hdr">
+         <span class="material-icons">add_card</span>
+         <h4>Record New Payment</h4>
+       </div>
+
+       <div class="pay-form-grid">
+         <div class="pay-fg full">
+           <label>Payment Type</label>
+           <div class="pay-type-toggle">
+             <button [class.active]="paymentForm.paymentType === 'Advance'"
+                     (click)="paymentForm.paymentType = 'Advance'" type="button">Advance</button>
+             <button [class.active]="paymentForm.paymentType === 'Final'"
+                     (click)="paymentForm.paymentType = 'Final'" type="button">Final</button>
+           </div>
+         </div>
+
+         <div class="pay-fg">
+           <label>Service Charge (₹)</label>
+           <input type="number" [(ngModel)]="paymentForm.serviceChargeAmount" class="fi num" min="0"/>
+         </div>
+         <div class="pay-fg">
+           <label>Spare Parts (₹)</label>
+           <input type="number" [(ngModel)]="paymentForm.sparePartsAmount" class="fi num" min="0"/>
+         </div>
+         <div class="pay-fg">
+           <label>Discount (₹)</label>
+           <input type="number" [(ngModel)]="paymentForm.discountAmount" class="fi num" min="0"/>
+         </div>
+
+         <div class="pay-fg pay-net-total">
+           <span class="pnt-label">Net Total</span>
+           <span class="pnt-value">₹{{ netTotal | number:'1.2-2' }}</span>
+         </div>
+
+         <div class="pay-fg">
+           <label>Amount Paid (₹)</label>
+           <input type="number" [(ngModel)]="paymentForm.amountPaid" class="fi num" min="0"/>
+         </div>
+         <div class="pay-fg">
+           <label>Payment Method</label>
+           <div class="pay-method-toggle">
+             <button [class.active]="paymentForm.paymentMethod === 'Cash'"
+                     (click)="paymentForm.paymentMethod = 'Cash'" type="button">
+               <span class="material-icons">payments</span> Cash
+             </button>
+             <button [class.active]="paymentForm.paymentMethod === 'UPI'"
+                     (click)="paymentForm.paymentMethod = 'UPI'" type="button">
+               <span class="material-icons">qr_code_2</span> UPI
+             </button>
+           </div>
+         </div>
+       </div>
+
+       @if (paymentForm.paymentMethod === 'UPI') {
+         <div class="pay-upi-section">
+           @if (!defaultUpiId()) {
+             <div class="alert alert-err">No Default UPI ID. Please set it in Admin Settings.</div>
+           }
+           @if (defaultUpiId() && netTotal > 0) {
+             <div class="pay-qr-card">
+               <img [src]="qrCodeUrl" alt="UPI QR Code" class="pay-qr-img"/>
+               <div class="pay-qr-info">
+                 <span class="pay-qr-amount">₹{{ netTotal | number:'1.2-2' }}</span>
+                 <span class="pay-qr-upi">{{ defaultUpiId() }}</span>
+                 <span class="pay-qr-hint">Ask customer to scan and pay</span>
+               </div>
+             </div>
+           }
+           <div class="pay-fg mt-2">
+             <label>Transaction Reference</label>
+             <input type="text" [(ngModel)]="paymentForm.transactionReference" class="fi" placeholder="UPI Txn ID (optional)"/>
+           </div>
+         </div>
+       }
+
+       <div class="pay-fg mt-2">
+         <label>Remarks</label>
+         <input type="text" [(ngModel)]="paymentForm.remarks" class="fi" placeholder="Any notes..."/>
+       </div>
+
+       <button class="pay-submit-btn" (click)="submitPayment()" [disabled]="paymentSubmitting() || netTotal < 0">
+         <span class="material-icons">{{ paymentSubmitting() ? 'hourglass_top' : 'check_circle' }}</span>
+         {{ paymentSubmitting() ? 'Submitting...' : 'Record Payment' }}
+       </button>
+
+       @if (paymentMsg()) {
+         <div class="alert mt-2" [class.alert-ok]="!paymentMsgErr()" [class.alert-err]="paymentMsgErr()">
+           {{ paymentMsg() }}
+         </div>
+       }
+     </div>
+
+   }
  </div>
  }
 

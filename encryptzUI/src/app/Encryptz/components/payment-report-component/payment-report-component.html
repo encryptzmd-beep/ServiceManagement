@@ -1,0 +1,60 @@
+﻿<div class="report-card">
+  <h2 class="card-title">All Payments - Admin Report</h2>
+
+  @if (loading()) {
+    <div class="spinner-center">
+      <div class="mini-spin accent"></div>
+    </div>
+  }
+
+  @if (!loading() && payments().length > 0) {
+    <table class="payments-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Customer</th>
+          <th>Mobile</th>
+          <th>Type</th>
+          <th>Total (Rs)</th>
+          <th>Paid (Rs)</th>
+          <th>Method</th>
+          <th>Status</th>
+          <th>Created (IST)</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of payments(); track p.paymentId; let i = $index) {
+          <tr>
+            <td>{{ i + 1 }}</td>
+            <td>{{ p.customerName }}</td>
+            <td>{{ p.mobileNo }}</td>
+            <td>{{ p.paymentType }}</td>
+            <td class="amount">{{ p.totalAmount | number:'1.2-2' }}</td>
+            <td class="amount">{{ p.amountPaid | number:'1.2-2' }}</td>
+            <td>{{ p.paymentMethod }}</td>
+            <td [class]="(p.paymentStatus || '') | lowercase">
+              {{ p.paymentStatus || '-' }}
+            </td>
+            <td>{{ p.createdAt }}</td>
+            <td>
+              <button class="btn-primary-sm" (click)="edit(p)">Edit</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (!loading() && payments().length === 0) {
+    <div class="empty-state">No payment records found.</div>
+  }
+</div>
+
+@if (editingPayment()) {
+  <app-edit-payment-dialog
+    [payment]="editingPayment()"
+    (saved)="onSaved()"
+    (cancelled)="onCancelled()">
+  </app-edit-payment-dialog>
+}

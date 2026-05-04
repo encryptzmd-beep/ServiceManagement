@@ -107,7 +107,53 @@ repairForm = {
   detailData    = signal<any>(null);
   detailWorkOrder = signal<WorkOrder | null>(null);
   detailLoading = signal(false);
-  detailTab     = signal<string>('info'); // 'info' | 'map' | 'spares' | 'repairs' | 'timeline' | 'images'
+  detailTab     = signal<string>('info'); // 'info' | 'map' | 'spares' | 'repairs' | 'timeline' | 'images' | 'payments'
+
+  // ── Payments ──────────────────────────────────────────
+  paymentsList = signal<any[]>([]);
+  paymentsLoading = signal(false);
+  paymentForm = {
+    paymentType: 'Final',
+    serviceChargeAmount: 0,
+    sparePartsAmount: 0,
+    discountAmount: 0,
+    amountPaid: 0,
+    paymentMethod: 'Cash',
+    transactionReference: '',
+    remarks: ''
+  };
+  paymentSubmitting = signal(false);
+  defaultUpiId = signal<string>('');
+  paymentMsg = signal('');
+  paymentMsgErr = signal(false);
+
+  get netTotal(): number {
+    return (this.paymentForm.serviceChargeAmount || 0) +
+           (this.paymentForm.sparePartsAmount || 0) -
+           (this.paymentForm.discountAmount || 0);
+  }
+
+  get totalPaid(): number {
+    return this.paymentsList().reduce((sum, p) => sum + (p.amountPaid || 0), 0);
+  }
+
+  get totalBilled(): number {
+    const list = this.paymentsList();
+    return list.length ? (list[list.length - 1]?.totalAmount || 0) : 0;
+  }
+
+  get balanceDue(): number {
+    return this.totalBilled - this.totalPaid;
+  }
+  
+  get qrCodeUrl(): string {
+    if (this.paymentForm.paymentMethod === 'UPI' && this.defaultUpiId() && this.netTotal > 0) {
+      // upi://pay?pa=upi_id&pn=Name&am=amount&cu=INR
+      const upiString = `upi://pay?pa=${this.defaultUpiId()}&pn=Encryptz&am=${this.netTotal.toFixed(2)}&cu=INR`;
+      return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiString)}`;
+    }
+    return '';
+  }
 
   // ── Spare parts ───────────────────────────────────────
   complaintSpares = signal<any[]>([]);
@@ -128,6 +174,15 @@ repairForm = {
     const f = this.activeFilter();
     if (f === 'all') return this.orders();
     return this.orders().filter(o => o.status === f);
+  });
+
+  todayCount = computed(() => {
+    const t = new Date();
+    const ymd = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+    return this.orders().filter(o => {
+      const d = (o.assignedAt as any) ? new Date(o.assignedAt as any).toISOString().slice(0,10) : '';
+      return d === ymd;
+    }).length;
   });
 
 
@@ -569,6 +624,111 @@ private showCheckInMsg(m: string, err: boolean): void {
     this.detailData.set(null);
     this.detailWorkOrder.set(null);
     this.complaintSpares.set([]);
+    this.paymentsList.set([]);
+  }
+
+  // ── Load Payments ─────────────────────────────────────
+  loadPayments(complaintId: number): void {
+    this.paymentsLoading.set(true);
+    this.api.getComplaintPayments(complaintId).subscribe({
+      next: (res: any) => {
+        const raw: any[] = Array.isArray(res) ? res
+          : Array.isArray(res?.data)  ? res.data
+          : Array.isArray(res?.items) ? res.items
+          : [];
+        // Append 'Z' to bare ISO datetimes so Angular date pipe treats them as UTC
+        // and the ':+0530' timezone arg converts to IST for display
+        raw.forEach((p: any) => {
+          if (p.createdAt && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(p.createdAt)
+              && !p.createdAt.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(p.createdAt)) {
+            p.createdAt += 'Z';
+          }
+        });
+        this.paymentsList.set(raw);
+        this.paymentsLoading.set(false);
+      },
+      error: () => this.paymentsLoading.set(false)
+    });
+  }
+
+  initPaymentForm(): void {
+    this.paymentMsg.set('');
+    this.paymentForm = {
+      paymentType: 'Final',
+      serviceChargeAmount: 0,
+      sparePartsAmount: 0,
+      discountAmount: 0,
+      amountPaid: 0,
+      paymentMethod: 'Cash',
+      transactionReference: '',
+      remarks: ''
+    };
+    
+    // Fetch default service charge
+    this.api.getDefaultServiceCharge().subscribe({
+      next: (res: any) => this.paymentForm.serviceChargeAmount = res.data || 0
+    });
+
+    // Fetch default UPI
+    this.api.getUPIConfigurations().subscribe({
+      next: (res: any) => {
+        const defaultUpi = (res.data || []).find((u: any) => u.isDefault && u.isActive);
+        if (defaultUpi) {
+          this.defaultUpiId.set(defaultUpi.upiId);
+        }
+      }
+    });
+
+    // Calculate spare parts amount (sum of all approved/used spares cost - assuming we have cost, if not it's 0 for now)
+    // Wait, let's just set it to 0 and let admin/tech enter it or fetch if there's a cost.
+  }
+
+  setDetailTab(tab: string): void {
+    this.detailTab.set(tab);
+    if (tab === 'payments') {
+      const cid = this.detailData()?.complaintId;
+      if (cid) {
+        this.loadPayments(cid);
+        this.initPaymentForm();
+      }
+    }
+  }
+
+  submitPayment(): void {
+    const cid = this.detailData()?.complaintId;
+    if (!cid) return;
+
+    this.paymentSubmitting.set(true);
+    this.paymentMsg.set('');
+
+    const payload = {
+      complaintId: cid,
+      paymentType: this.paymentForm.paymentType,
+      serviceChargeAmount: this.paymentForm.serviceChargeAmount,
+      sparePartsAmount: this.paymentForm.sparePartsAmount,
+      discountAmount: this.paymentForm.discountAmount,
+      totalAmount: this.netTotal,
+      amountPaid: this.paymentForm.amountPaid,
+      paymentMethod: this.paymentForm.paymentMethod,
+      upiIdUsed: this.paymentForm.paymentMethod === 'UPI' ? this.defaultUpiId() : null,
+      transactionReference: this.paymentForm.transactionReference,
+      remarks: this.paymentForm.remarks
+    };
+
+    this.api.recordComplaintPayment(payload).subscribe({
+      next: (res: any) => {
+        this.paymentSubmitting.set(false);
+        this.paymentMsg.set('Payment recorded successfully');
+        this.paymentMsgErr.set(false);
+        this.loadPayments(cid);
+        this.initPaymentForm(); // Reset form
+      },
+      error: () => {
+        this.paymentSubmitting.set(false);
+        this.paymentMsg.set('Failed to record payment');
+        this.paymentMsgErr.set(true);
+      }
+    });
   }
 
   // ── Spare parts ───────────────────────────────────────

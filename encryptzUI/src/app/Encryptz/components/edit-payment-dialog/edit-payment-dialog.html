@@ -1,0 +1,70 @@
+﻿<div class="modal-backdrop" (click)="cancel()"></div>
+
+<div class="modal-panel">
+  <h2 class="dialog-title">Edit Payment - ID {{ payment?.paymentId }}</h2>
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <div class="field-group">
+      <label>Service Charge (Rs)</label>
+      <input type="number" formControlName="serviceChargeAmount" class="fi"/>
+    </div>
+
+    <div class="field-group">
+      <label>Spare Parts (Rs)</label>
+      <input type="number" formControlName="sparePartsAmount" class="fi"/>
+    </div>
+
+    <div class="field-group">
+      <label>Discount (Rs)</label>
+      <input type="number" formControlName="discountAmount" class="fi"/>
+    </div>
+
+    <div class="field-group">
+      <label>Amount Paid (Rs)</label>
+      <input type="number" formControlName="amountPaid" class="fi"/>
+    </div>
+
+    <div class="field-group">
+      <label>Method</label>
+      <select formControlName="paymentMethod" class="fi">
+        <option value="Cash">Cash</option>
+        <option value="UPI">UPI</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label>Status</label>
+      <select formControlName="paymentStatus" class="fi">
+        <option value="Success">Success</option>
+        <option value="Pending">Pending</option>
+        <option value="Failed">Failed</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label>Transaction Ref (optional)</label>
+      <input type="text" formControlName="transactionReference" class="fi"/>
+    </div>
+
+    <div class="field-group">
+      <label>Remarks</label>
+      <input type="text" formControlName="remarks" class="fi"/>
+    </div>
+
+    <div class="field-group password">
+      <label>Admin Password</label>
+      <input type="password" formControlName="adminPassword" class="fi"/>
+    </div>
+
+    <div class="dialog-actions">
+      <button type="button" class="btn-secondary" (click)="cancel()">Cancel</button>
+      <button type="submit" class="btn-primary" [disabled]="loading || form.invalid">
+        {{ loading ? 'Saving...' : 'Save changes' }}
+      </button>
+    </div>
+
+    @if (errorMsg) {
+      <p class="error-msg">{{ errorMsg }}</p>
+    }
+  </form>
+</div>

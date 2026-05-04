@@ -316,6 +316,14 @@ export const routes: Routes = [
 },
 
 
+{
+  path: 'admin/payments',
+  loadComponent: () =>
+    import('../app/Encryptz/components/payment-report-component/payment-report-component')
+      .then(m => m.PaymentReportComponent),
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'Manager'])],
+  data: { title: 'Payments Report', icon: 'account_balance_wallet', menu: 'admin' }
+},
 
 
 

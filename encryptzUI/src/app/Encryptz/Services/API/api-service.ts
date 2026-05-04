@@ -960,6 +960,51 @@ getRepairImageBase64(imageId: number): Observable<M.ApiResponse<string>> {
 
 
 
+// --- Payments & UPI Management ---
+getDefaultServiceCharge(): Observable<any> {
+  return this.http.get(`${this.api}/Payments/ServiceCharge`);
+}
+
+updateDefaultServiceCharge(amount: number): Observable<any> {
+  return this.http.put(`${this.api}/Payments/ServiceCharge`, amount);
+}
+
+getUPIConfigurations(): Observable<any> {
+  return this.http.get(`${this.api}/Payments/UPI`);
+}
+
+addUPIConfiguration(data: { upiId: string; displayName: string }): Observable<any> {
+  return this.http.post(`${this.api}/Payments/UPI`, data);
+}
+
+setDefaultUPI(id: number): Observable<any> {
+  return this.http.put(`${this.api}/Payments/UPI/${id}/Default`, {});
+}
+
+toggleUPIStatus(id: number): Observable<any> {
+  return this.http.put(`${this.api}/Payments/UPI/${id}/Toggle`, {});
+}
+
+deleteUPIConfiguration(id: number): Observable<any> {
+  return this.http.delete(`${this.api}/Payments/UPI/${id}`);
+}
+
+getComplaintPayments(complaintId: number): Observable<any> {
+  return this.http.get(`${this.api}/Payments/Complaint/${complaintId}`);
+}
+
+recordComplaintPayment(data: any): Observable<any> {
+  return this.http.post(`${this.api}/Payments/Complaint`, data);
+}
+// --- Admin Payment Report -------------------------------------------------
+getAllPayments(): Observable<M.ApiResponse<any[]>> {
+  return this.get<M.ApiResponse<any[]>>('Payments/Allpay');
+}
+
+updatePayment(payload: any): Observable<M.ApiResponse> {
+  return this.put<M.ApiResponse>('Payments/Updatepay', payload);
+}
+
 }
 
 

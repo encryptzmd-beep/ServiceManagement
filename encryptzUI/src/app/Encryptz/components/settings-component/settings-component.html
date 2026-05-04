@@ -64,8 +64,84 @@
         </ng-container>
       </div>
     </div>
-    <div class="empty" *ngIf="filteredSettings().length === 0">
+    <div class="empty" *ngIf="filteredSettings().length === 0 && activeGroup !== 'Payments'">
       <p>No settings in this group</p>
+    </div>
+
+    <!-- Payments Tab -->
+    <div class="payments-tab" *ngIf="activeGroup === 'Payments'">
+      <div class="setting-item">
+        <div class="setting-info">
+          <h3>Default Service Charge (₹)</h3>
+          <p>Amount automatically applied to new work order payments</p>
+        </div>
+        <div class="setting-control">
+          <input type="number" [(ngModel)]="defaultServiceCharge" class="fi num" />
+        </div>
+      </div>
+
+      <div class="upi-section">
+        <div class="section-header">
+          <h3>UPI Configurations</h3>
+          <button class="btn-primary-sm" (click)="showAddUpiModal.set(true)">+ Add UPI ID</button>
+        </div>
+        
+        <table class="upi-table">
+          <thead>
+            <tr>
+              <th>Display Name</th>
+              <th>UPI ID</th>
+              <th>Status</th>
+              <th>Default</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let u of upiConfigurations()">
+              <td>{{ u.displayName }}</td>
+              <td>{{ u.upiId }}</td>
+              <td>
+                <span class="badge" [class.success]="u.isActive" [class.danger]="!u.isActive">
+                  {{ u.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td>
+                <span class="badge primary" *ngIf="u.isDefault">Default</span>
+              </td>
+              <td class="actions">
+                <button class="btn-icon" (click)="toggleUpiStatus(u.id)" title="Toggle Status">
+                  <span class="material-icons">{{ u.isActive ? 'block' : 'check_circle' }}</span>
+                </button>
+                <button class="btn-icon" *ngIf="!u.isDefault && u.isActive" (click)="setDefaultUpi(u.id)" title="Set as Default">
+                  <span class="material-icons">star_border</span>
+                </button>
+                <button class="btn-icon danger" (click)="deleteUpi(u.id)" title="Delete">
+                  <span class="material-icons">delete</span>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add UPI Modal -->
+  <div class="modal-backdrop" *ngIf="showAddUpiModal()">
+    <div class="modal-content">
+      <h2>Add New UPI ID</h2>
+      <div class="form-group">
+        <label>Display Name</label>
+        <input type="text" [(ngModel)]="newUpi.displayName" class="fi" placeholder="e.g. Service Center" />
+      </div>
+      <div class="form-group">
+        <label>UPI ID</label>
+        <input type="text" [(ngModel)]="newUpi.upiId" class="fi" placeholder="e.g. name@bank" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" (click)="showAddUpiModal.set(false)">Cancel</button>
+        <button class="btn-primary" (click)="addUpi()" [disabled]="!newUpi.displayName || !newUpi.upiId">Save</button>
+      </div>
     </div>
   </div>
 
