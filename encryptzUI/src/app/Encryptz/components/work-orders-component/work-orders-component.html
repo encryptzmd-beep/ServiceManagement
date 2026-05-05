@@ -819,6 +819,11 @@
          </div>
          <div class="psb-divider"></div>
          <div class="psb-item">
+           <span class="psb-label">Advance Paid</span>
+           <span class="psb-value paid">₹{{ advancePaid | number:'1.2-2' }}</span>
+         </div>
+         <div class="psb-divider"></div>
+         <div class="psb-item">
            <span class="psb-label">Balance Due</span>
            <span class="psb-value due">₹{{ balanceDue | number:'1.2-2' }}</span>
          </div>
@@ -924,18 +929,25 @@
 
          <div class="pay-fg">
            <label>Service Charge (₹)</label>
-           <input type="number" [ngModel]="paymentForm().serviceChargeAmount"
-                  (ngModelChange)="pf('serviceChargeAmount', +$event)" class="fi num" min="0"/>
+           <input type="text" inputmode="decimal" [value]="paymentForm().serviceChargeAmount"
+                  (input)="onPaymentAmountInput('serviceChargeAmount', $event)"
+                  (blur)="normalizePaymentNumber('serviceChargeAmount')"
+                  class="fi num" [min]="minimumServiceCharge()"/>
+           <small class="pay-help">Minimum from service charge master: ₹{{ minimumServiceCharge() | number:'1.2-2' }}</small>
          </div>
          <div class="pay-fg">
            <label>Spare Parts (₹)</label>
-           <input type="number" [ngModel]="paymentForm().sparePartsAmount"
-                  (ngModelChange)="pf('sparePartsAmount', +$event)" class="fi num" min="0"/>
+           <input type="text" inputmode="decimal" [value]="paymentForm().sparePartsAmount"
+                  (input)="onPaymentAmountInput('sparePartsAmount', $event)"
+                  (blur)="normalizePaymentNumber('sparePartsAmount')"
+                  class="fi num" min="0"/>
          </div>
          <div class="pay-fg full">
            <label>Discount (₹)</label>
-           <input type="number" [ngModel]="paymentForm().discountAmount"
-                  (ngModelChange)="pf('discountAmount', +$event)" class="fi num" min="0"/>
+           <input type="text" inputmode="decimal" [value]="paymentForm().discountAmount"
+                  (input)="onPaymentAmountInput('discountAmount', $event)"
+                  (blur)="normalizePaymentNumber('discountAmount')"
+                  class="fi num" min="0"/>
          </div>
 
          <div class="pay-fg pay-net-total">
@@ -943,10 +955,25 @@
            <span class="pnt-value">₹{{ netTotal | number:'1.2-2' }}</span>
          </div>
 
+         @if (paymentForm().paymentType === 'Final' && advancePaid > 0) {
+           <div class="pay-fg pay-net-total">
+             <span class="pnt-label">Advance Less</span>
+             <span class="pnt-value">- ₹{{ advancePaid | number:'1.2-2' }}</span>
+           </div>
+         }
+
+         <div class="pay-fg pay-net-total">
+           <span class="pnt-label">Payable Now</span>
+           <span class="pnt-value">₹{{ payableNow | number:'1.2-2' }}</span>
+         </div>
+
          <div class="pay-fg">
            <label>Amount Paid (₹)</label>
-           <input type="number" [ngModel]="paymentForm().amountPaid"
-                  (ngModelChange)="pf('amountPaid', +$event)" class="fi num" min="0"/>
+           <input type="text" inputmode="decimal" [value]="paymentForm().amountPaid"
+                  (input)="onPaymentAmountInput('amountPaid', $event)"
+                  (blur)="normalizePaymentNumber('amountPaid')"
+                  class="fi num" min="0"
+                  [readonly]="paymentForm().paymentType === 'Final'"/>
          </div>
          <div class="pay-fg">
            <label>Payment Method</label>
@@ -968,11 +995,11 @@
            @if (!defaultUpiId()) {
              <div class="alert alert-err">No Default UPI ID. Please set it in Admin Settings.</div>
            }
-           @if (defaultUpiId() && netTotal > 0) {
+           @if (defaultUpiId() && payableNow > 0) {
              <div class="pay-qr-card">
                <img [src]="qrCodeUrl" alt="UPI QR Code" class="pay-qr-img"/>
                <div class="pay-qr-info">
-                 <span class="pay-qr-amount">₹{{ netTotal | number:'1.2-2' }}</span>
+                 <span class="pay-qr-amount">₹{{ payableNow | number:'1.2-2' }}</span>
                  <span class="pay-qr-upi">{{ defaultUpiId() }}</span>
                  <span class="pay-qr-hint">Ask customer to scan and pay</span>
                </div>
@@ -992,7 +1019,7 @@
                 (ngModelChange)="pf('remarks', $event)" class="fi" placeholder="Any notes..."/>
        </div>
 
-       <button class="pay-submit-btn" (click)="submitPayment()" [disabled]="paymentSubmitting() || netTotal < 0">
+       <button class="pay-submit-btn" (click)="submitPayment()" [disabled]="paymentSubmitting() || netTotal < 0 || payableNow <= 0">
          <span class="material-icons">{{ paymentSubmitting() ? 'hourglass_top' : 'check_circle' }}</span>
          {{ paymentSubmitting() ? 'Submitting...' : 'Record Payment' }}
        </button>

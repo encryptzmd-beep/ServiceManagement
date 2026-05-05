@@ -17,6 +17,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../Services/API/api-service';
 import { AuthService } from '../../Auth/auth-service';
+import { environment } from '../../../../environments/environment.development';
 
 declare var L: any;
 
@@ -48,7 +49,7 @@ export class ComplaintDetailPopupComponent implements OnInit, AfterViewChecked, 
   savingSpare    = signal(false);
   savingComment  = signal(false);
   savingComplete = signal(false);
-activeTab = signal<'overview'|'customer'|'product'|'location'|'assignments'|'spare'|'comments'|'images'>('overview');
+activeTab = signal<'overview'|'customer'|'product'|'location'|'assignments'|'spare'|'comments'|'images'|'payment'>('overview');
 
   complaintData = signal<any>(null);
   customerData  = signal<any>(null);
@@ -57,7 +58,44 @@ activeTab = signal<'overview'|'customer'|'product'|'location'|'assignments'|'spa
   spareParts    = signal<any[]>([]);
   comments      = signal<any[]>([]);
   complaintImages = signal<any[]>([]);
+  imagesLoading = signal(false);
 lightboxImage   = signal<any>(null);
+  private imagesLoaded = false;
+
+  // ── Payment ──────────────────────────────────────────
+  payments        = signal<any[]>([]);
+  upiConfigs      = signal<any[]>([]);
+  defaultCharge   = signal<number>(0);
+  savingPayment   = signal(false);
+  showPayForm     = signal(false);
+  private paymentSetupLoaded = false;
+
+  payForm: any = {
+    paymentType: 'ServiceCharge',
+    serviceChargeAmount: 0,
+    sparePartsAmount: 0,
+    discountAmount: 0,
+    totalAmount: 0,
+    amountPaid: 0,
+    paymentMethod: 'Cash',
+    upiIdUsed: '',
+    transactionReference: '',
+    remarks: ''
+  };
+
+  complaintOnlyImages = computed(() => this.complaintImages().filter(img => {
+    const t = this._imageType(img);
+    return !t || t === 'complaint' || t === 'customer';
+  }));
+  spareImages = computed(() => this.complaintImages().filter(img =>
+    this._imageType(img).includes('spare')
+  ));
+  repairImages = computed(() => this.complaintImages().filter(img =>
+    this._imageType(img).includes('repair')
+  ));
+  completionImages = computed(() => this.complaintImages().filter(img =>
+    this._isCompletionImage(img)
+  ));
 
   editing = { complaint: false, customer: false, product: false, location: false };
   editData: any = { complaint: {}, customer: {}, product: {}, location: {} };
@@ -116,22 +154,6 @@ lightboxImage   = signal<any>(null);
     this.api.getCompleteComplaintDetails(this.complaintId).subscribe({
       next: (response: any) => {
         const d = response?.data ?? [];
-        this.comments.set(Array.isArray(d[5]) ? d[5].map((x: any) => this._sanitize(x)) : []);
-this.complaintImages.set(Array.isArray(d[6]) ? d[6].map((x: any) => this._sanitize(x)) : []);
-// Debug — remove once images load correctly
-const first = this.complaintImages()[0];
-if (first) {
-  console.log('[ComplaintImages] first row:', {
-    hasPath: !!first.ImagePath,
-    pathPreview: first.ImagePath ? String(first.ImagePath).substring(0, 80) : null,
-    hasData: !!first.ImageData,
-    dataType: typeof first.ImageData,
-    isArray: Array.isArray(first.ImageData),
-    dataLen: first.ImageData ? String(first.ImageData).length : 0,
-    dataHead: first.ImageData ? String(first.ImageData).substring(0, 40) : null,
-    contentType: first.ContentType
-  });
-}
         this.complaintData.set(this._sanitize(d[0]?.[0]));
         this.customerData.set(this._sanitize(d[1]?.[0]));
         this.productData.set(this._sanitize(d[2]?.[0]));
@@ -139,8 +161,55 @@ if (first) {
         this.spareParts.set(Array.isArray(d[4]) ? d[4].map((x: any) => this._sanitize(x)) : []);
         this.comments.set(Array.isArray(d[5]) ? d[5].map((x: any) => this._sanitize(x)) : []);
         this.loading.set(false);
+        this.loadPayments();
       },
       error: () => { this.loading.set(false); this.showMessage('Failed to load complaint details', 'error'); }
+    });
+  }
+
+  openImagesTab() {
+    this.activeTab.set('images');
+    this.loadImages();
+  }
+
+  loadImages(force = false) {
+    if (this.imagesLoading()) return;
+    if (this.imagesLoaded && !force) return;
+    this.imagesLoading.set(true);
+    this.api.getComplaintAllImages(this.complaintId).subscribe({
+      next: (res: any) => {
+        const rows = Array.isArray(res?.data) ? res.data : [];
+        this.complaintImages.set(rows.map((x: any) => this._normalizeImage(this._sanitize(x))));
+        this.imagesLoaded = true;
+        this.imagesLoading.set(false);
+      },
+      error: () => {
+        this.imagesLoading.set(false);
+        this.showMessage('Failed to load photos', 'error');
+      }
+    });
+  }
+
+  loadPayments() {
+    this.api.getComplaintPayments(this.complaintId).subscribe({
+      next: (res: any) => {
+        const rows = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+        this.payments.set(rows.map((x: any) => this._sanitize(x)));
+      },
+      error: () => {}
+    });
+  }
+
+  loadPaymentSetup() {
+    if (this.paymentSetupLoaded) return;
+    this.paymentSetupLoaded = true;
+    this.api.getDefaultServiceCharge().subscribe({
+      next: (res: any) => { this.defaultCharge.set(Number(res?.data ?? res ?? 0) || 0); },
+      error: () => {}
+    });
+    this.api.getUPIConfigurations().subscribe({
+      next: (res: any) => { this.upiConfigs.set(Array.isArray(res?.data) ? res.data : []); },
+      error: () => {}
     });
   }
 
@@ -164,16 +233,49 @@ if (first) {
   }
 // ─────────── Images ───────────
 // ─────────── Images ───────────
+private _normalizeImage(raw: any): any {
+  if (!raw || typeof raw !== 'object') return raw;
+  const image = {
+    ...raw,
+    ImageId: raw.ImageId ?? raw.imageId,
+    ImagePath: raw.ImagePath ?? raw.imagePath,
+    ImageData: raw.ImageData ?? raw.imageData,
+    ImageName: raw.ImageName ?? raw.imageName,
+    ContentType: raw.ContentType ?? raw.contentType,
+    ImageType: raw.ImageType ?? raw.imageType,
+    UploadedAt: raw.UploadedAt ?? raw.uploadedAt,
+    UploadedByName: raw.UploadedByName ?? raw.uploadedByName
+  };
+
+  if (!image.ImageName) {
+    const type = String(image.ImageType || '').toLowerCase();
+    image.ImageName = type.includes('repair') ? 'Repair Image' : 'Untitled';
+  }
+  if (!image.ContentType) image.ContentType = 'image/jpeg';
+  return image;
+}
+
+private _imageType(img: any): string {
+  return String(img?.ImageType ?? img?.imageType ?? '').toLowerCase().trim();
+}
+
+private _isCompletionImage(img: any): boolean {
+  const t = this._imageType(img);
+  if (!t || t.includes('spare') || t.includes('repair') || t === 'complaint' || t === 'customer') return false;
+  return t.includes('complet') || ['before', 'after', 'part', 'signature', 'other', 'service'].includes(t);
+}
+
 getImageSrc(img: any): string {
   if (!img) return '';
 
-  // Use ImagePath only if it looks like a real URL/path
-  const path = img.ImagePath ? String(img.ImagePath).trim() : '';
-  if (path && (path.startsWith('http') || path.startsWith('/') || path.startsWith('data:'))) {
-    return path;
+  const path = String(img.ImagePath ?? img.imagePath ?? '').trim();
+  if (path) {
+    if (path.startsWith('data:')) return path;
+    if (/^https?:\/\//i.test(path)) return path;
+    if (this._looksLikeImagePath(path)) return this._toAbsoluteImagePath(path);
   }
 
-  const raw = img.ImageData;
+  const raw = img.ImageData ?? img.imageData ?? path;
   if (raw === null || raw === undefined || raw === '') return '';
 
   let b64 = '';
@@ -202,7 +304,7 @@ getImageSrc(img: any): string {
   if (!b64) return '';
   if (b64.startsWith('data:')) return b64;
 
-  const ct = (img.ContentType && String(img.ContentType).trim())
+  const ct = String(img.ContentType ?? img.contentType ?? '').trim()
               || this._detectImageMime(b64)
               || 'image/jpeg';
   return `data:${ct};base64,${b64}`;
@@ -218,6 +320,20 @@ private _detectImageMime(b64: string): string {
   if (h.startsWith('Qk'))           return 'image/bmp';   // BM
   return 'image/jpeg';
 }
+
+private _looksLikeImagePath(path: string): boolean {
+  return path.startsWith('/')
+    || path.includes('\\')
+    || path.includes('/')
+    || /\.(jpe?g|png|gif|webp|bmp)(\?.*)?$/i.test(path);
+}
+
+private _toAbsoluteImagePath(path: string): string {
+  const cleanPath = path.replace(/\\/g, '/');
+  if (cleanPath.startsWith('/')) return `${environment.apiUrl}${cleanPath}`;
+  return `${environment.apiUrl}/${cleanPath.replace(/^\/+/, '')}`;
+}
+
 imageTypeClass(t: any): string {
   return 'it-' + String(t || 'other').toLowerCase().replace(/\s+/g, '');
 }
@@ -228,7 +344,7 @@ downloadImage(img: any) {
   if (!src) return;
   const a = document.createElement('a');
   a.href = src;
-  a.download = img.ImageName || `complaint-image-${img.ImageId || ''}.jpg`;
+  a.download = img.ImageName || img.imageName || `complaint-image-${img.ImageId || img.imageId || ''}.jpg`;
   document.body.appendChild(a); a.click(); a.remove();
 }
 onImgError(ev: Event) {
@@ -743,6 +859,84 @@ nextImage()   { if (this.imagePage()   < this.imageTotalPages())   this.imagePag
     this.locationSearchResults = [];
   }
   private destroyMaps() { this.destroyCustomerMap(); this.destroyLocationMap(); }
+
+  // ═══════════════ PAYMENT ═══════════════
+  openPayForm() {
+    this.loadPaymentSetup();
+    this.payForm.serviceChargeAmount = this.defaultCharge();
+    this.payForm.sparePartsAmount    = 0;
+    this.payForm.discountAmount      = 0;
+    this.recalcTotal();
+    this.payForm.amountPaid = this.payForm.totalAmount;
+    this.showPayForm.set(true);
+  }
+
+  cancelPayForm() { this.showPayForm.set(false); this.resetPayForm(); }
+
+  private resetPayForm() {
+    this.payForm = {
+      paymentType: 'ServiceCharge', serviceChargeAmount: 0, sparePartsAmount: 0,
+      discountAmount: 0, totalAmount: 0, amountPaid: 0,
+      paymentMethod: 'Cash', upiIdUsed: '', transactionReference: '', remarks: ''
+    };
+  }
+
+  recalcTotal() {
+    const t = (Number(this.payForm.serviceChargeAmount) || 0)
+            + (Number(this.payForm.sparePartsAmount)    || 0)
+            - (Number(this.payForm.discountAmount)      || 0);
+    this.payForm.totalAmount = Math.max(0, t);
+    this.payForm.amountPaid  = this.payForm.totalAmount;
+  }
+
+  onPayMethodChange() {
+    if (this.payForm.paymentMethod !== 'UPI') this.payForm.upiIdUsed = '';
+    if (this.payForm.paymentMethod === 'Cash')  this.payForm.transactionReference = '';
+  }
+
+  submitPayment() {
+    if (this.payForm.amountPaid === null || this.payForm.amountPaid === undefined) {
+      this.showMessage('Amount paid is required', 'error'); return;
+    }
+    this.savingPayment.set(true);
+    this.api.recordComplaintPayment({
+      complaintId:          this.complaintId,
+      paymentType:          this.payForm.paymentType,
+      serviceChargeAmount:  Number(this.payForm.serviceChargeAmount) || 0,
+      sparePartsAmount:     Number(this.payForm.sparePartsAmount)    || 0,
+      discountAmount:       Number(this.payForm.discountAmount)      || 0,
+      totalAmount:          Number(this.payForm.totalAmount)         || 0,
+      amountPaid:           Number(this.payForm.amountPaid)          || 0,
+      paymentMethod:        this.payForm.paymentMethod,
+      upiIdUsed:            this.payForm.upiIdUsed  || null,
+      transactionReference: this.payForm.transactionReference || null,
+      remarks:              this.payForm.remarks || null
+    }).subscribe({
+      next: (r: any) => {
+        this.savingPayment.set(false);
+        if (r?.Success ?? r?.success) {
+          this.showMessage('Payment recorded', 'success');
+          this.cancelPayForm();
+          this.loadPayments();
+        } else {
+          this.showMessage(r?.Message || r?.message || 'Failed to record payment', 'error');
+        }
+      },
+      error: () => { this.savingPayment.set(false); this.showMessage('Error recording payment', 'error'); }
+    });
+  }
+
+  payMethodIcon(m: any): string {
+    const s = String(m || '').toLowerCase();
+    if (s === 'cash') return 'payments';
+    if (s === 'upi')  return 'qr_code';
+    if (s === 'card') return 'credit_card';
+    return 'account_balance';
+  }
+
+  payStatusClass(s: any): string {
+    return 'pstat-' + String(s || 'pending').toLowerCase();
+  }
 
   // ───────────────────────── UTIL ─────────────────────────
   display(v: any, fallback = '—'): string {

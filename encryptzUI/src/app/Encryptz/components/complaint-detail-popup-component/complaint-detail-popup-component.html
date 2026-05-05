@@ -43,10 +43,14 @@
       <button class="cd-tab" [class.active]="activeTab()==='comments'" (click)="activeTab.set('comments')">
         <span class="material-icons">chat</span> Comments
         <span class="cd-tab-count">{{ comments().length }}</span></button>
-        <button class="cd-tab" [class.active]="activeTab()==='images'" (click)="activeTab.set('images')">
+        <button class="cd-tab" [class.active]="activeTab()==='images'" (click)="openImagesTab()">
   <span class="material-icons">photo_library</span> Photos
   <span class="cd-tab-count">{{ complaintImages().length }}</span>
 </button>
+      <!-- <button class="cd-tab" [class.active]="activeTab()==='payment'" (click)="activeTab.set('payment'); loadPaymentSetup()">
+        <span class="material-icons">account_balance_wallet</span> Payments
+        <span class="cd-tab-count">{{ payments().length }}</span>
+      </button> -->
     </div>
 
     <div class="cd-body">
@@ -565,7 +569,7 @@
           <div class="assign-list">
             @for (a of pagedAssignments(); track a.AssignmentId) {
               <div class="assign-card" [class.completed]="a.Status==='Completed'">
-                
+
                 <div class="ac-header">
                   <div class="ac-avatar" [ngClass]="assignStatusClass(a.Status)">
                     {{ (a.TechnicianName || 'T').charAt(0) }}
@@ -808,56 +812,298 @@
 @if (activeTab()==='images') {
   <div class="cd-section">
     <div class="cd-section-header">
-      <h3>Complaint Photos</h3>
+      <h3>Photos</h3>
       <span class="cd-muted">{{ complaintImages().length }} image(s)</span>
     </div>
 
-    @if (complaintImages().length === 0) {
+    @if (imagesLoading()) {
+      <div class="cd-loading">
+        <div class="spinner"></div>
+        <p>Loading photos...</p>
+      </div>
+    } @else if (complaintImages().length === 0) {
       <div class="cd-empty">
         <span class="material-icons">photo_library</span>
         <p>No photos uploaded for this complaint</p>
       </div>
     } @else {
-      <div class="img-grid">
-        @for (img of pagedImages(); track img.ImageId) {
-          <div class="img-card" (click)="openLightbox(img)">
-            <div class="img-thumb">
-              <img [src]="getImageSrc(img)" [alt]="img.ImageName || 'Complaint image'"
-                   loading="lazy" (error)="onImgError($event)">
-              <div class="img-fail" style="display:none">
-                <span class="material-icons">broken_image</span>
-                <small>Unable to load</small>
+
+      <!-- ── Complaint Images ── -->
+      <div class="img-section">
+        <div class="img-section-label">
+          <span class="material-icons">photo_camera</span>
+          Complaint Images
+          <span class="img-section-count">{{ complaintOnlyImages().length }}</span>
+        </div>
+        @if (complaintOnlyImages().length === 0) {
+          <div class="cd-empty cd-empty-sm">
+            <span class="material-icons">image_not_supported</span>
+            <p>No complaint images</p>
+          </div>
+        } @else {
+          <div class="img-grid">
+            @for (img of complaintOnlyImages(); track img.ImageId) {
+              <div class="img-card" (click)="openLightbox(img)">
+                <div class="img-thumb">
+                  <img [src]="getImageSrc(img)" [alt]="img.ImageName || 'Image'" loading="lazy" (error)="onImgError($event)">
+                  <div class="img-fail" style="display:none"><span class="material-icons">broken_image</span><small>Unable to load</small></div>
+                </div>
+                <div class="img-meta">
+                  <strong class="img-name">{{ display(img.ImageName, 'Untitled') }}</strong>
+                  <div class="img-sub"><span class="material-icons">person</span><span>{{ display(img.UploadedByName, 'Customer') }}</span></div>
+                  <div class="img-sub"><span class="material-icons">schedule</span><span>{{ formatDateTime(img.UploadedAt) }}</span></div>
+                </div>
               </div>
-              @if (img.ImageType) {
-                <span class="img-type-tag" [ngClass]="imageTypeClass(img.ImageType)">
-                  {{ display(img.ImageType) }}
-                </span>
-              }
-            </div>
-            <div class="img-meta">
-              <strong class="img-name">{{ display(img.ImageName, 'Untitled') }}</strong>
-              <div class="img-sub">
-                <span class="material-icons">person</span>
-                <span>{{ display(img.UploadedByName, 'Customer') }}</span>
-              </div>
-              <div class="img-sub">
-                <span class="material-icons">schedule</span>
-                <span>{{ formatDateTime(img.UploadedAt) }}</span>
-              </div>
-            </div>
+            }
           </div>
         }
       </div>
-      @if (imageTotalPages() > 1) {
-  <div class="tab-pagination">
-    <button (click)="prevImage()" [disabled]="imagePage() <= 1" class="page-btn">&laquo; Prev</button>
-    <span class="page-info">Page {{ imagePage() }} of {{ imageTotalPages() }} · {{ complaintImages().length }} photos</span>
-    <button (click)="nextImage()" [disabled]="imagePage() >= imageTotalPages()" class="page-btn">Next &raquo;</button>
-  </div>
-}
+
+      <!-- ── Spare Parts Images ── -->
+      <div class="img-section">
+        <div class="img-section-label">
+          <span class="material-icons">build</span>
+          Spare Parts Images
+          <span class="img-section-count">{{ spareImages().length }}</span>
+        </div>
+        @if (spareImages().length === 0) {
+          <div class="cd-empty cd-empty-sm">
+            <span class="material-icons">image_not_supported</span>
+            <p>No spare parts images</p>
+          </div>
+        } @else {
+          <div class="img-grid">
+            @for (img of spareImages(); track img.ImageId) {
+              <div class="img-card" (click)="openLightbox(img)">
+                <div class="img-thumb">
+                  <img [src]="getImageSrc(img)" [alt]="img.ImageName || 'Image'" loading="lazy" (error)="onImgError($event)">
+                  <div class="img-fail" style="display:none"><span class="material-icons">broken_image</span><small>Unable to load</small></div>
+                </div>
+                <div class="img-meta">
+                  <strong class="img-name">{{ display(img.ImageName, 'Untitled') }}</strong>
+                  <div class="img-sub"><span class="material-icons">person</span><span>{{ display(img.UploadedByName, 'Customer') }}</span></div>
+                  <div class="img-sub"><span class="material-icons">schedule</span><span>{{ formatDateTime(img.UploadedAt) }}</span></div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- ── Repair Parts Images ── -->
+      <div class="img-section">
+        <div class="img-section-label">
+          <span class="material-icons">hardware</span>
+          Repair Parts Images
+          <span class="img-section-count">{{ repairImages().length }}</span>
+        </div>
+        @if (repairImages().length === 0) {
+          <div class="cd-empty cd-empty-sm">
+            <span class="material-icons">image_not_supported</span>
+            <p>No repair parts images</p>
+          </div>
+        } @else {
+          <div class="img-grid">
+            @for (img of repairImages(); track img.ImageId) {
+              <div class="img-card" (click)="openLightbox(img)">
+                <div class="img-thumb">
+                  <img [src]="getImageSrc(img)" [alt]="img.ImageName || 'Image'" loading="lazy" (error)="onImgError($event)">
+                  <div class="img-fail" style="display:none"><span class="material-icons">broken_image</span><small>Unable to load</small></div>
+                </div>
+                <div class="img-meta">
+                  <strong class="img-name">{{ display(img.ImageName, 'Untitled') }}</strong>
+                  <div class="img-sub"><span class="material-icons">person</span><span>{{ display(img.UploadedByName, 'Customer') }}</span></div>
+                  <div class="img-sub"><span class="material-icons">schedule</span><span>{{ formatDateTime(img.UploadedAt) }}</span></div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- ── Complaint Completion Images ── -->
+      <div class="img-section">
+        <div class="img-section-label">
+          <span class="material-icons">task_alt</span>
+          Complaint Completion Images
+          <span class="img-section-count">{{ completionImages().length }}</span>
+        </div>
+        @if (completionImages().length === 0) {
+          <div class="cd-empty cd-empty-sm">
+            <span class="material-icons">image_not_supported</span>
+            <p>No completion images</p>
+          </div>
+        } @else {
+          <div class="img-grid">
+            @for (img of completionImages(); track img.ImageId) {
+              <div class="img-card" (click)="openLightbox(img)">
+                <div class="img-thumb">
+                  <img [src]="getImageSrc(img)" [alt]="img.ImageName || 'Image'" loading="lazy" (error)="onImgError($event)">
+                  <div class="img-fail" style="display:none"><span class="material-icons">broken_image</span><small>Unable to load</small></div>
+                </div>
+                <div class="img-meta">
+                  <strong class="img-name">{{ display(img.ImageName, 'Untitled') }}</strong>
+                  <div class="img-sub"><span class="material-icons">person</span><span>{{ display(img.UploadedByName, 'Customer') }}</span></div>
+                  <div class="img-sub"><span class="material-icons">schedule</span><span>{{ formatDateTime(img.UploadedAt) }}</span></div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
     }
   </div>
 }
+<!-- ═══════════════ PAYMENT ═══════════════ -->
+@if (activeTab()==='payment') {
+  <div class="cd-section">
+    <div class="cd-section-header">
+      <h3>Payments</h3>
+      @if (!viewOnly && !showPayForm()) {
+        <button class="cd-btn-add" (click)="openPayForm()">
+          <span class="material-icons">add_card</span> Record Payment
+        </button>
+      }
+    </div>
+
+    @if (showPayForm()) {
+      <div class="cd-edit-form pay-form">
+        <div class="cd-form-row">
+          <div class="cd-field">
+            <label>Payment Type</label>
+            <select class="cd-inp bare cd-select" [(ngModel)]="payForm.paymentType">
+              <option value="ServiceCharge">Service Charge</option>
+              <option value="SpareParts">Spare Parts</option>
+              <option value="Both">Both</option>
+            </select>
+          </div>
+          <div class="cd-field">
+            <label>Payment Method</label>
+            <select class="cd-inp bare cd-select" [(ngModel)]="payForm.paymentMethod" (ngModelChange)="onPayMethodChange()">
+              <option value="Cash">Cash</option>
+              <option value="UPI">UPI</option>
+              <option value="Card">Card</option>
+              <option value="NetBanking">Net Banking</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cd-form-row">
+          <div class="cd-field">
+            <label>Service Charge (₹)</label>
+            <input class="cd-inp bare" type="number" min="0" step="0.01" [(ngModel)]="payForm.serviceChargeAmount" (ngModelChange)="recalcTotal()">
+          </div>
+          <div class="cd-field">
+            <label>Spare Parts Amount (₹)</label>
+            <input class="cd-inp bare" type="number" min="0" step="0.01" [(ngModel)]="payForm.sparePartsAmount" (ngModelChange)="recalcTotal()">
+          </div>
+          <div class="cd-field">
+            <label>Discount (₹)</label>
+            <input class="cd-inp bare" type="number" min="0" step="0.01" [(ngModel)]="payForm.discountAmount" (ngModelChange)="recalcTotal()">
+          </div>
+        </div>
+
+        <div class="cd-form-row pay-total-row">
+          <div class="cd-field">
+            <label>Total (₹) <span class="cd-muted">(auto)</span></label>
+            <input class="cd-inp bare pay-total-input" type="number" [ngModel]="payForm.totalAmount" readonly>
+          </div>
+          <div class="cd-field">
+            <label>Amount Paid (₹) <span class="req">*</span></label>
+            <input class="cd-inp bare" type="number" min="0" step="0.01" [(ngModel)]="payForm.amountPaid">
+          </div>
+        </div>
+
+        @if (payForm.paymentMethod === 'UPI') {
+          <div class="cd-form-row">
+            <div class="cd-field">
+              <label>UPI ID</label>
+              <select class="cd-inp bare cd-select" [(ngModel)]="payForm.upiIdUsed">
+                <option value="">— Select UPI —</option>
+                @for (u of upiConfigs(); track u.Id) {
+                  @if (u.IsActive) {
+                    <option [value]="u.UpiId">{{ u.DisplayName }} · {{ u.UpiId }}{{ u.IsDefault ? ' ★' : '' }}</option>
+                  }
+                }
+              </select>
+            </div>
+            <div class="cd-field">
+              <label>Transaction / UTR Reference</label>
+              <input class="cd-inp bare" [(ngModel)]="payForm.transactionReference" placeholder="UTR number">
+            </div>
+          </div>
+        }
+
+        @if (payForm.paymentMethod === 'Card' || payForm.paymentMethod === 'NetBanking') {
+          <div class="cd-field">
+            <label>Transaction Reference</label>
+            <input class="cd-inp bare" [(ngModel)]="payForm.transactionReference" placeholder="Approval / Ref No.">
+          </div>
+        }
+
+        <div class="cd-field">
+          <label>Remarks</label>
+          <textarea class="cd-textarea" rows="2" [(ngModel)]="payForm.remarks" placeholder="Optional notes…"></textarea>
+        </div>
+
+        <div class="cd-form-actions">
+          <button class="cd-btn-cancel" (click)="cancelPayForm()">Cancel</button>
+          <button class="cd-btn-save green" (click)="submitPayment()" [disabled]="savingPayment()">
+            @if (savingPayment()) { <span class="mini-spinner white"></span> Recording… }
+            @else { <span class="material-icons">payment</span> Record Payment }
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (payments().length === 0) {
+      <div class="cd-empty">
+        <span class="material-icons">receipt_long</span>
+        <p>No payments recorded for this complaint</p>
+      </div>
+    } @else {
+      <div class="pay-list">
+        @for (p of payments(); track p.PaymentId) {
+          <div class="pay-card">
+            <div class="pay-card-top">
+              <div class="pay-method-icon">
+                <span class="material-icons">{{ payMethodIcon(p.PaymentMethod) }}</span>
+              </div>
+              <div class="pay-card-info">
+                <div class="pay-card-title">
+                  <strong class="pay-amount">₹{{ p.AmountPaid | number:'1.2-2' }}</strong>
+                  <span class="pay-type-tag">{{ display(p.PaymentType) }}</span>
+                  <span class="pay-status-tag" [ngClass]="payStatusClass(p.PaymentStatus)">{{ display(p.PaymentStatus) }}</span>
+                </div>
+                <div class="pay-card-sub">
+                  <span class="material-icons">payments</span>
+                  <span>{{ display(p.PaymentMethod) }}</span>
+                  @if (p.UpiIdUsed) { <span class="pay-sep">·</span><span class="mono">{{ p.UpiIdUsed }}</span> }
+                  @if (p.TransactionReference) { <span class="pay-sep">·</span><span class="mono">Ref: {{ p.TransactionReference }}</span> }
+                </div>
+              </div>
+              <span class="pay-date">{{ formatDateTime(p.CreatedAt) }}</span>
+            </div>
+            <div class="pay-breakdown">
+              <span class="pay-br-item">Service <strong>₹{{ p.ServiceChargeAmount | number:'1.2-2' }}</strong></span>
+              <span class="pay-br-sep">+</span>
+              <span class="pay-br-item">Parts <strong>₹{{ p.SparePartsAmount | number:'1.2-2' }}</strong></span>
+              <span class="pay-br-sep">−</span>
+              <span class="pay-br-item">Discount <strong>₹{{ p.DiscountAmount | number:'1.2-2' }}</strong></span>
+              <span class="pay-br-sep">=</span>
+              <span class="pay-br-item total">Total <strong>₹{{ p.TotalAmount | number:'1.2-2' }}</strong></span>
+            </div>
+            @if (p.Remarks) {
+              <div class="pay-remarks"><span class="material-icons">note</span>{{ display(p.Remarks) }}</div>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+}
+
 @if (lightboxImage()) {
   <div class="lb-overlay" (click)="closeLightbox()">
     <div class="lb-box" (click)="$event.stopPropagation()">
@@ -893,7 +1139,7 @@
     <button class="cd-btn-save primary" (click)="refresh()">
       <span class="material-icons">refresh</span> Refresh
     </button>
-  
+
     @if (!viewOnly && complaintData()?.StatusId !== 5) {
       <button class="cd-btn-save green" (click)="markComplaintResolved()" [disabled]="saving()">
         <span class="material-icons">task_alt</span> Mark Resolved

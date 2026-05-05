@@ -1,0 +1,132 @@
+<!-- payment-settings-component.html -->
+<div class="ps-page">
+
+  <div class="ps-toast" [class.show]="showToast()" [class.error]="toastErr()">
+    <span class="material-icons">{{ toastErr() ? 'error' : 'check_circle' }}</span>
+    {{ toastMsg() }}
+  </div>
+
+  <div class="ps-header">
+    <div class="ps-header-icon"><span class="material-icons">account_balance_wallet</span></div>
+    <div>
+      <h2>Payment Settings</h2>
+      <p>Configure UPI IDs and default service charge</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="ps-loading">
+      <div class="ps-spinner"></div>
+      <p>Loading settings…</p>
+    </div>
+  } @else {
+
+    <!-- ── Service Charge ── -->
+    <div class="ps-card">
+      <div class="ps-card-header">
+        <div class="ps-card-icon sc-icon"><span class="material-icons">receipt</span></div>
+        <div>
+          <h3>Default Service Charge</h3>
+          <p>Pre-filled when recording a new payment</p>
+        </div>
+        <div class="ps-current-val">₹{{ serviceCharge() | number:'1.2-2' }}</div>
+      </div>
+      <div class="ps-card-body">
+        <div class="ps-inline-form">
+          <div class="ps-field">
+            <label>Amount (₹)</label>
+            <input class="ps-inp" type="number" min="0" step="0.01" [(ngModel)]="chargeInput"
+                   placeholder="e.g. 200">
+          </div>
+          <button class="ps-btn-save" (click)="saveCharge()" [disabled]="savingCharge()">
+            @if (savingCharge()) { <span class="ps-spinner-sm"></span> Saving… }
+            @else { <span class="material-icons">save</span> Save }
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── UPI Configurations ── -->
+    <div class="ps-card">
+      <div class="ps-card-header">
+        <div class="ps-card-icon upi-icon"><span class="material-icons">qr_code</span></div>
+        <div>
+          <h3>UPI Configurations</h3>
+          <p>{{ upiList().length }} UPI ID(s) configured</p>
+        </div>
+        <button class="ps-btn-add" (click)="showAddForm.set(!showAddForm())">
+          <span class="material-icons">{{ showAddForm() ? 'close' : 'add' }}</span>
+          {{ showAddForm() ? 'Cancel' : 'Add UPI' }}
+        </button>
+      </div>
+
+      @if (showAddForm()) {
+        <div class="ps-add-form">
+          <div class="ps-form-row">
+            <div class="ps-field">
+              <label>UPI ID <span class="req">*</span></label>
+              <input class="ps-inp" [(ngModel)]="newUpi.upiId" placeholder="e.g. business@upi">
+            </div>
+            <div class="ps-field">
+              <label>Display Name <span class="req">*</span></label>
+              <input class="ps-inp" [(ngModel)]="newUpi.displayName" placeholder="e.g. Main Business UPI">
+            </div>
+            <button class="ps-btn-save" (click)="addUpi()" [disabled]="savingUpi()">
+              @if (savingUpi()) { <span class="ps-spinner-sm"></span> Adding… }
+              @else { <span class="material-icons">add_circle</span> Add }
+            </button>
+          </div>
+        </div>
+      }
+
+      <div class="ps-card-body">
+        @if (upiList().length === 0) {
+          <div class="ps-empty">
+            <span class="material-icons">qr_code_2</span>
+            <p>No UPI IDs configured yet</p>
+          </div>
+        } @else {
+          <div class="upi-list">
+            @for (u of upiList(); track u.Id) {
+              <div class="upi-row" [class.upi-inactive]="!u.IsActive">
+                <div class="upi-row-left">
+                  <div class="upi-avatar" [class.default]="u.IsDefault">
+                    <span class="material-icons">{{ u.IsDefault ? 'star' : 'qr_code' }}</span>
+                  </div>
+                  <div class="upi-info">
+                    <strong>{{ u.DisplayName }}</strong>
+                    <span class="upi-id mono">{{ u.UpiId }}</span>
+                  </div>
+                  <div class="upi-badges">
+                    @if (u.IsDefault) { <span class="upi-badge default-badge">Default</span> }
+                    <span class="upi-badge" [class.active-badge]="u.IsActive" [class.inactive-badge]="!u.IsActive">
+                      {{ u.IsActive ? 'Active' : 'Inactive' }}
+                    </span>
+                  </div>
+                </div>
+                <div class="upi-actions">
+                  @if (!u.IsDefault) {
+                    <button class="upi-btn" title="Set as default" (click)="setDefault(u.Id)">
+                      <span class="material-icons">star_outline</span> Set Default
+                    </button>
+                  }
+                  <button class="upi-btn toggle-btn" [class.deactivate]="u.IsActive" (click)="toggle(u.Id)"
+                          title="{{ u.IsActive ? 'Deactivate' : 'Activate' }}">
+                    <span class="material-icons">{{ u.IsActive ? 'toggle_on' : 'toggle_off' }}</span>
+                    {{ u.IsActive ? 'Disable' : 'Enable' }}
+                  </button>
+                  @if (!u.IsDefault) {
+                    <button class="upi-btn delete-btn" title="Delete" (click)="deleteUpi(u.Id)">
+                      <span class="material-icons">delete</span>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+  }
+</div>

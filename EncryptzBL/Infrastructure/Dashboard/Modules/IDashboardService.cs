@@ -17,6 +17,9 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
         // Master management endpoint
         Task<ApiResponse<dynamic>> ManageComplaintDetails(ManageComplaintRequestModel request);
 
+        // Images
+        Task<List<ComplaintImageItemDto>> GetComplaintAllImages(int complaintId);
+
         // Dropdown helpers
         Task<ApiResponse<List<SparePartDropdownModel>>> GetSparePartsDropdown();
         Task<ApiResponse<List<TechnicianDropdownModel>>> GetTechniciansDropdown();

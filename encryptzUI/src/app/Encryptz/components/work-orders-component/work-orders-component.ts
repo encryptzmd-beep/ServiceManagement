@@ -124,16 +124,92 @@ repairForm = {
   });
   paymentSubmitting = signal(false);
   defaultUpiId = signal<string>('');
+  minimumServiceCharge = signal<number>(0);
   paymentMsg = signal('');
   paymentMsgErr = signal(false);
 
   pf(field: string, val: any): void {
-    this.paymentForm.update(f => ({ ...f, [field]: val }));
+    const numericFields = ['serviceChargeAmount', 'sparePartsAmount', 'discountAmount', 'amountPaid'];
+    const nextVal = numericFields.includes(field) ? this.normalizeAmountValue(val) : val;
+
+    this.paymentForm.update(f => {
+      const next: any = { ...f, [field]: nextVal };
+      if (field === 'serviceChargeAmount') {
+        next.serviceChargeAmount = Math.max(next.serviceChargeAmount, this.minimumServiceCharge());
+      }
+      if (field === 'paymentType' && next.paymentType === 'Final') {
+        next.amountPaid = this.payableNowFor(next);
+      }
+      if (field === 'paymentType' && next.paymentType === 'Advance') {
+        next.amountPaid = 0;
+      }
+      if (next.paymentType === 'Final' && ['serviceChargeAmount', 'sparePartsAmount', 'discountAmount'].includes(field)) {
+        next.amountPaid = this.payableNowFor(next);
+      }
+      return next;
+    });
+  }
+
+  normalizePaymentNumber(field: string): void {
+    this.paymentForm.update(f => ({
+      ...f,
+      [field]: this.normalizeAmountValue((f as any)[field])
+    }));
+  }
+
+  onPaymentAmountInput(field: string, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const normalized = this.normalizeAmountText(input.value);
+    if (input.value !== normalized) input.value = normalized;
+    this.pf(field, normalized);
+  }
+
+  private normalizeAmountValue(value: any): number {
+    const raw = this.normalizeAmountText(value);
+    if (!raw) return 0;
+    return Math.max(Number(raw) || 0, 0);
+  }
+
+  private normalizeAmountText(value: any): string {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+
+    const cleaned = raw
+      .replace(/[^\d.]/g, '')
+      .replace(/(\..*)\./g, '$1');
+
+    if (!cleaned) return '';
+
+    const [wholeRaw, decimalRaw] = cleaned.split('.');
+    const whole = wholeRaw.replace(/^0+(?=\d)/, '') || '0';
+
+    if (cleaned.includes('.')) {
+      return `${whole}.${decimalRaw ?? ''}`;
+    }
+
+    return wholeRaw.replace(/^0+(?=\d)/, '') || '0';
   }
 
   get netTotal(): number {
     const f = this.paymentForm();
     return (f.serviceChargeAmount || 0) + (f.sparePartsAmount || 0) - (f.discountAmount || 0);
+  }
+
+  private payableNowFor(form: any): number {
+    const gross = (form.serviceChargeAmount || 0) + (form.sparePartsAmount || 0) - (form.discountAmount || 0);
+    return Math.max(gross - this.advancePaid, 0);
+  }
+
+  get advancePaid(): number {
+    return this.paymentsList()
+      .filter((p: any) => String(p.paymentType || '').toLowerCase() === 'advance')
+      .reduce((sum, p) => sum + (Number(p.amountPaid) || 0), 0);
+  }
+
+  get payableNow(): number {
+    return this.paymentForm().paymentType === 'Final'
+      ? this.payableNowFor(this.paymentForm())
+      : Number(this.paymentForm().amountPaid) || 0;
   }
 
   get totalPaid(): number {
@@ -146,12 +222,13 @@ repairForm = {
   }
 
   get balanceDue(): number {
-    return this.totalBilled - this.totalPaid;
+    const currentBill = Math.max(this.netTotal, this.totalBilled);
+    return Math.max(currentBill - this.totalPaid, 0);
   }
   
   get qrCodeUrl(): string {
-    if (this.paymentForm().paymentMethod === 'UPI' && this.defaultUpiId() && this.netTotal > 0) {
-      const upiString = `upi://pay?pa=${this.defaultUpiId()}&pn=Encryptz&am=${this.netTotal.toFixed(2)}&cu=INR`;
+    if (this.paymentForm().paymentMethod === 'UPI' && this.defaultUpiId() && this.payableNow > 0) {
+      const upiString = `upi://pay?pa=${this.defaultUpiId()}&pn=Encryptz&am=${this.payableNow.toFixed(2)}&cu=INR`;
       return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiString)}`;
     }
     return '';
@@ -647,6 +724,9 @@ private showCheckInMsg(m: string, err: boolean): void {
           }
         });
         this.paymentsList.set(raw);
+        if (this.paymentForm().paymentType === 'Final') {
+          this.paymentForm.update(f => ({ ...f, amountPaid: this.payableNowFor(f) }));
+        }
         this.paymentsLoading.set(false);
       },
       error: () => this.paymentsLoading.set(false)
@@ -655,10 +735,18 @@ private showCheckInMsg(m: string, err: boolean): void {
 
   initPaymentForm(): void {
     this.paymentMsg.set('');
+
+    // Calculate total for valid spare parts
+    const spares = this.complaintSpares() || [];
+    const validStatuses = ['Used', 'Dispatched', 'Approved'];
+    const totalSparesAmount = spares
+      .filter((s: any) => s.sparePartId && s.unitPrice && validStatuses.includes(s.status))
+      .reduce((sum: number, s: any) => sum + (s.unitPrice * (s.quantity || 1)), 0);
+
     this.paymentForm.set({
       paymentType: 'Final',
       serviceChargeAmount: 0,
-      sparePartsAmount: 0,
+      sparePartsAmount: totalSparesAmount,
       discountAmount: 0,
       amountPaid: 0,
       paymentMethod: 'Cash',
@@ -667,7 +755,17 @@ private showCheckInMsg(m: string, err: boolean): void {
     });
 
     this.api.getDefaultServiceCharge().subscribe({
-      next: (res: any) => this.paymentForm.update(f => ({ ...f, serviceChargeAmount: res.data || 0 }))
+      next: (res: any) => {
+        const charge = Number(res?.data ?? 0) || 0;
+        this.minimumServiceCharge.set(charge);
+        this.paymentForm.update(f => ({
+          ...f,
+          serviceChargeAmount: Math.max(Number(f.serviceChargeAmount) || 0, charge),
+          amountPaid: f.paymentType === 'Final'
+            ? this.payableNowFor({ ...f, serviceChargeAmount: Math.max(Number(f.serviceChargeAmount) || 0, charge) })
+            : f.amountPaid
+        }));
+      }
     });
 
     this.api.getUPIConfigurations().subscribe({
@@ -697,6 +795,22 @@ private showCheckInMsg(m: string, err: boolean): void {
     this.paymentMsg.set('');
 
     const f = this.paymentForm();
+    if ((Number(f.serviceChargeAmount) || 0) < this.minimumServiceCharge()) {
+      this.paymentSubmitting.set(false);
+      this.paymentMsg.set(`Service charge cannot be below ₹${this.minimumServiceCharge().toFixed(2)}`);
+      this.paymentMsgErr.set(true);
+      this.paymentForm.update(x => ({ ...x, serviceChargeAmount: this.minimumServiceCharge() }));
+      return;
+    }
+
+    const amountPaid = f.paymentType === 'Final' ? this.payableNow : Number(f.amountPaid) || 0;
+    if (amountPaid <= 0) {
+      this.paymentSubmitting.set(false);
+      this.paymentMsg.set('Amount paid must be greater than zero');
+      this.paymentMsgErr.set(true);
+      return;
+    }
+
     const payload = {
       complaintId: cid,
       paymentType: f.paymentType,
@@ -704,7 +818,7 @@ private showCheckInMsg(m: string, err: boolean): void {
       sparePartsAmount: f.sparePartsAmount,
       discountAmount: f.discountAmount,
       totalAmount: this.netTotal,
-      amountPaid: f.amountPaid,
+      amountPaid,
       paymentMethod: f.paymentMethod,
       upiIdUsed: f.paymentMethod === 'UPI' ? this.defaultUpiId() : null,
       transactionReference: f.transactionReference,

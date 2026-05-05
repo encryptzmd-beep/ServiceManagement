@@ -348,6 +348,13 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
             }
         }
 
+        public async Task<List<ComplaintImageItemDto>> GetComplaintAllImages(int complaintId)
+        {
+            var parameters = new[] { SqlParameterHelper.Input("@ComplaintId", complaintId) };
+            var dt = await GetDataTableAsync("sp_GetComplaintAllImages", parameters);
+            return dt.Rows.Count > 0 ? dt.ToList<ComplaintImageItemDto>() : new List<ComplaintImageItemDto>();
+        }
+
         public async Task<ApiResponse<List<SparePartDropdownModel>>> GetSparePartsDropdown()
         {
             try

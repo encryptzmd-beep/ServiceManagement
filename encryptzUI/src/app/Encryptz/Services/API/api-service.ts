@@ -989,6 +989,10 @@ deleteUPIConfiguration(id: number): Observable<any> {
   return this.http.delete(`${this.api}/Payments/UPI/${id}`);
 }
 
+getComplaintAllImages(complaintId: number): Observable<any> {
+  return this.http.get(`${this.api}/Dashboard/${complaintId}/images`);
+}
+
 getComplaintPayments(complaintId: number): Observable<any> {
   return this.http.get(`${this.api}/Payments/Complaint/${complaintId}`);
 }

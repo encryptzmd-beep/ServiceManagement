@@ -88,6 +88,12 @@ namespace EncryptzBL.Infrastructure.Payments.Modules
 
         public async Task<ApiResponse<int>> RecordComplaintPayment(RecordPaymentRequest request, int userId)
         {
+            var defaultServiceCharge = await GetDefaultServiceCharge();
+            if (request.ServiceChargeAmount < defaultServiceCharge)
+            {
+                return ApiResponse<int>.Fail($"Service charge cannot be below {defaultServiceCharge:F2}");
+            }
+
             var parameters = new[]
             {
                 SqlParameterHelper.Input("@ComplaintId", request.ComplaintId),

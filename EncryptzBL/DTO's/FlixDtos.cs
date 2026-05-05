@@ -95,6 +95,19 @@ namespace EncryptzBL.DTO_s
 
         public List<MenuDto> Children { get; set; } = new();
     }
+    // --- COMPLAINT IMAGES ---
+    public class ComplaintImageItemDto
+    {
+        public int ImageId { get; set; }
+        public string? ImagePath { get; set; }
+        public string? ImageData { get; set; }
+        public string? ImageName { get; set; }
+        public string? ContentType { get; set; }
+        public string? ImageType { get; set; }
+        public DateTime? UploadedAt { get; set; }
+        public string? UploadedByName { get; set; }
+    }
+
     // --- CUSTOMER ---
     public class CustomerDto
     {
