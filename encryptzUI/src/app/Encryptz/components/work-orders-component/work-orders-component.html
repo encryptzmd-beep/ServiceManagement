@@ -819,13 +819,10 @@
          </div>
          <div class="psb-divider"></div>
          <div class="psb-item">
-           <span class="psb-label">Advance Paid</span>
-           <span class="psb-value paid">₹{{ advancePaid | number:'1.2-2' }}</span>
-         </div>
-         <div class="psb-divider"></div>
-         <div class="psb-item">
-           <span class="psb-label">Balance Due</span>
-           <span class="psb-value due">₹{{ balanceDue | number:'1.2-2' }}</span>
+           <span class="psb-label">{{ balanceDue < 0 ? 'Overpaid' : 'Balance Due' }}</span>
+           <span class="psb-value" [class.due]="balanceDue >= 0" [class.overpaid]="balanceDue < 0">
+             {{ balanceDue < 0 ? '-' : '' }}₹{{ (balanceDue < 0 ? -balanceDue : balanceDue) | number:'1.2-2' }}
+           </span>
          </div>
        </div>
      }
@@ -850,9 +847,6 @@
                      <span class="material-icons">{{ p.paymentMethod === 'UPI' ? 'qr_code_2' : 'payments' }}</span>
                      {{ p.paymentMethod }}
                    </span>
-                   <span class="pay-status-chip" [attr.data-status]="(p.paymentStatus || '') | lowercase">
-                     {{ p.paymentStatus || 'Pending' }}
-                   </span>
                  </div>
                  <div class="phc-amount">
                    <span class="phc-paid-lbl">Paid</span>
@@ -860,33 +854,47 @@
                  </div>
                </div>
 
-               <div class="phc-breakdown">
-                 <div class="phc-br-item">
-                   <span>Service</span>
-                   <span>₹{{ p.serviceChargeAmount | number:'1.0-0' }}</span>
+               <!-- Final payment: full breakdown + advance reconciliation -->
+               @if ((p.paymentType | lowercase) === 'final') {
+                 <div class="phc-breakdown">
+                   <div class="phc-br-item">
+                     <span>Service</span>
+                     <span>₹{{ p.serviceChargeAmount | number:'1.0-0' }}</span>
+                   </div>
+                   <div class="phc-br-item">
+                     <span>Spare Parts</span>
+                     <span>₹{{ p.sparePartsAmount | number:'1.0-0' }}</span>
+                   </div>
+                   @if (p.discountAmount > 0) {
+                     <div class="phc-br-item discount">
+                       <span>Discount</span>
+                       <span>- ₹{{ p.discountAmount | number:'1.0-0' }}</span>
+                     </div>
+                   }
+                   <div class="phc-br-item total">
+                     <span>Total Bill</span>
+                     <span>₹{{ p.totalAmount | number:'1.2-2' }}</span>
+                   </div>
+                   @if (advancePaid > 0) {
+                     <div class="phc-br-item advance-less">
+                       <span>Advance Paid</span>
+                       <span>- ₹{{ advancePaid | number:'1.2-2' }}</span>
+                     </div>
+                     <div class="phc-br-item total">
+                       <span>Balance Collected</span>
+                       <span>₹{{ p.amountPaid | number:'1.2-2' }}</span>
+                     </div>
+                   }
                  </div>
-                 <div class="phc-br-item">
-                   <span>Spare Parts</span>
-                   <span>₹{{ p.sparePartsAmount | number:'1.0-0' }}</span>
-                 </div>
-                 @if (p.discountAmount > 0) {
-                   <div class="phc-br-item discount">
-                     <span>Discount</span>
-                     <span>- ₹{{ p.discountAmount | number:'1.0-0' }}</span>
+                 @if (p.transactionReference) {
+                   <div class="phc-txn">
+                     <span class="material-icons">tag</span>
+                     <span>{{ p.transactionReference }}</span>
                    </div>
                  }
-                 <div class="phc-br-item total">
-                   <span>Net Total</span>
-                   <span>₹{{ p.totalAmount | number:'1.2-2' }}</span>
-                 </div>
-               </div>
-
-               @if (p.transactionReference) {
-                 <div class="phc-txn">
-                   <span class="material-icons">tag</span>
-                   <span>{{ p.transactionReference }}</span>
-                 </div>
                }
+
+               <!-- Advance payment: remarks only (no breakdown) -->
                @if (p.remarks) {
                  <div class="phc-remarks">"{{ p.remarks }}"</div>
                }
@@ -894,9 +902,6 @@
                <div class="phc-footer">
                  <span class="material-icons">schedule</span>
                  <span>{{ p.createdAt | date:'dd MMM yyyy, hh:mm a':'+0530' }} IST</span>
-                 @if (p.createdByName) {
-                   <span class="phc-by">• {{ p.createdByName }}</span>
-                 }
                </div>
              </div>
            }
@@ -927,54 +932,65 @@
            </div>
          </div>
 
-         <div class="pay-fg">
-           <label>Service Charge (₹)</label>
-           <input type="text" inputmode="decimal" [value]="paymentForm().serviceChargeAmount"
-                  (input)="onPaymentAmountInput('serviceChargeAmount', $event)"
-                  (blur)="normalizePaymentNumber('serviceChargeAmount')"
-                  class="fi num" [min]="minimumServiceCharge()"/>
-           <!-- <small class="pay-help">Minimum from service charge master: ₹{{ minimumServiceCharge() | number:'1.2-2' }}</small> -->
-         </div>
-         <div class="pay-fg">
-           <label>Spare Parts (₹)</label>
-           <input type="text" inputmode="decimal" [value]="paymentForm().sparePartsAmount"
-                  (input)="onPaymentAmountInput('sparePartsAmount', $event)"
-                  (blur)="normalizePaymentNumber('sparePartsAmount')"
-                  class="fi num" min="0"/>
-         </div>
-         <div class="pay-fg full">
-           <label>Discount (₹)</label>
-           <input type="text" inputmode="decimal" [value]="paymentForm().discountAmount"
-                  (input)="onPaymentAmountInput('discountAmount', $event)"
-                  (blur)="normalizePaymentNumber('discountAmount')"
-                  class="fi num" min="0"/>
-         </div>
+         @if (paymentForm().paymentType === 'Final') {
+           <div class="pay-fg">
+             <label>Service Charge (₹)</label>
+             <input type="text" inputmode="decimal" [value]="paymentForm().serviceChargeAmount"
+                    (input)="onPaymentAmountInput('serviceChargeAmount', $event)"
+                    (blur)="normalizePaymentNumber('serviceChargeAmount')"
+                    class="fi num" [min]="minimumServiceCharge()"/>
+           </div>
+           <div class="pay-fg">
+             <label>Spare Parts (₹)</label>
+             <input type="text" inputmode="decimal" [value]="paymentForm().sparePartsAmount"
+                    (input)="onPaymentAmountInput('sparePartsAmount', $event)"
+                    (blur)="normalizePaymentNumber('sparePartsAmount')"
+                    class="fi num" min="0"/>
+           </div>
+           <div class="pay-fg full">
+             <label>Discount (₹)</label>
+             <input type="text" inputmode="decimal" [value]="paymentForm().discountAmount"
+                    (input)="onPaymentAmountInput('discountAmount', $event)"
+                    (blur)="normalizePaymentNumber('discountAmount')"
+                    class="fi num" min="0"/>
+           </div>
 
-         <div class="pay-fg pay-net-total">
-           <span class="pnt-label">Net Total</span>
-           <span class="pnt-value">₹{{ netTotal | number:'1.2-2' }}</span>
-         </div>
-
-         @if (paymentForm().paymentType === 'Final' && advancePaid > 0) {
            <div class="pay-fg pay-net-total">
-             <span class="pnt-label">Advance Less</span>
-             <span class="pnt-value">- ₹{{ advancePaid | number:'1.2-2' }}</span>
+             <span class="pnt-label">Net Total</span>
+             <span class="pnt-value">₹{{ netTotal | number:'1.2-2' }}</span>
+           </div>
+
+           @if (advancePaid > 0) {
+             <div class="pay-fg pay-net-total">
+               <span class="pnt-label">Advance Less</span>
+               <span class="pnt-value">- ₹{{ advancePaid | number:'1.2-2' }}</span>
+             </div>
+           }
+
+           <div class="pay-fg pay-net-total">
+             <span class="pnt-label">Payable Now</span>
+             <span class="pnt-value">₹{{ payableNow | number:'1.2-2' }}</span>
+           </div>
+
+           <div class="pay-fg">
+             <label>Amount Paid (₹)</label>
+             <input type="text" inputmode="decimal" [value]="paymentForm().amountPaid"
+                    (input)="onPaymentAmountInput('amountPaid', $event)"
+                    (blur)="normalizePaymentNumber('amountPaid')"
+                    class="fi num" min="0" readonly/>
            </div>
          }
 
-         <div class="pay-fg pay-net-total">
-           <span class="pnt-label">Payable Now</span>
-           <span class="pnt-value">₹{{ payableNow | number:'1.2-2' }}</span>
-         </div>
+         @if (paymentForm().paymentType === 'Advance' && paymentForm().paymentMethod === 'Cash') {
+           <div class="pay-fg full">
+             <label>Amount Paid (₹)</label>
+             <input type="text" inputmode="decimal" [value]="paymentForm().amountPaid"
+                    (input)="onPaymentAmountInput('amountPaid', $event)"
+                    (blur)="normalizePaymentNumber('amountPaid')"
+                    class="fi num" min="0"/>
+           </div>
+         }
 
-         <div class="pay-fg">
-           <label>Amount Paid (₹)</label>
-           <input type="text" inputmode="decimal" [value]="paymentForm().amountPaid"
-                  (input)="onPaymentAmountInput('amountPaid', $event)"
-                  (blur)="normalizePaymentNumber('amountPaid')"
-                  class="fi num" min="0"
-                  [readonly]="paymentForm().paymentType === 'Final'"/>
-         </div>
          <div class="pay-fg">
            <label>Payment Method</label>
            <div class="pay-method-toggle">
@@ -990,7 +1006,7 @@
          </div>
        </div>
 
-       @if (paymentForm().paymentMethod === 'UPI') {
+       @if (paymentForm().paymentType === 'Final' && paymentForm().paymentMethod === 'UPI') {
          <div class="pay-upi-section">
            @if (!defaultUpiId()) {
              <div class="alert alert-err">No Default UPI ID. Please set it in Admin Settings.</div>
@@ -1019,7 +1035,10 @@
                 (ngModelChange)="pf('remarks', $event)" class="fi" placeholder="Any notes..."/>
        </div>
 
-       <button class="pay-submit-btn" (click)="submitPayment()" [disabled]="paymentSubmitting() || netTotal < 0 || payableNow <= 0">
+       <button class="pay-submit-btn" (click)="submitPayment()"
+               [disabled]="paymentSubmitting() ||
+                 (paymentForm().paymentType === 'Final' && (netTotal < 0 || payableNow <= 0)) ||
+                 (paymentForm().paymentType === 'Advance' && paymentForm().paymentMethod === 'Cash' && (paymentForm().amountPaid || 0) <= 0)">
          <span class="material-icons">{{ paymentSubmitting() ? 'hourglass_top' : 'check_circle' }}</span>
          {{ paymentSubmitting() ? 'Submitting...' : 'Record Payment' }}
        </button>

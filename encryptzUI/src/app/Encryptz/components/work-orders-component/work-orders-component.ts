@@ -134,10 +134,9 @@ repairForm = {
 
     this.paymentForm.update(f => {
       const next: any = { ...f, [field]: nextVal };
-      if (field === 'serviceChargeAmount') {
-        next.serviceChargeAmount = Math.max(next.serviceChargeAmount, this.minimumServiceCharge());
-      }
+      // Don't clamp serviceChargeAmount while typing — only validate on submit
       if (field === 'paymentType' && next.paymentType === 'Final') {
+        next.serviceChargeAmount = Math.max(Number(next.serviceChargeAmount) || 0, this.minimumServiceCharge());
         next.amountPaid = this.payableNowFor(next);
       }
       if (field === 'paymentType' && next.paymentType === 'Advance') {
@@ -151,10 +150,13 @@ repairForm = {
   }
 
   normalizePaymentNumber(field: string): void {
-    this.paymentForm.update(f => ({
-      ...f,
-      [field]: this.normalizeAmountValue((f as any)[field])
-    }));
+    this.paymentForm.update(f => {
+      let value = this.normalizeAmountValue((f as any)[field]);
+      if (field === 'serviceChargeAmount') {
+        value = Math.max(value, this.minimumServiceCharge());
+      }
+      return { ...f, [field]: value };
+    });
   }
 
   onPaymentAmountInput(field: string, event: Event): void {
@@ -218,12 +220,15 @@ repairForm = {
 
   get totalBilled(): number {
     const list = this.paymentsList();
-    return list.length ? (list[list.length - 1]?.totalAmount || 0) : 0;
+    if (!list.length) return 0;
+    // Use the Final payment's totalAmount as the authoritative bill; fall back to max seen
+    const finalPay = [...list].reverse().find((p: any) => String(p.paymentType || '').toLowerCase() === 'final');
+    if (finalPay) return Number(finalPay.totalAmount) || 0;
+    return list.reduce((max: number, p: any) => Math.max(max, Number(p.totalAmount) || 0), 0);
   }
 
   get balanceDue(): number {
-    const currentBill = Math.max(this.netTotal, this.totalBilled);
-    return Math.max(currentBill - this.totalPaid, 0);
+    return this.totalBilled - this.totalPaid;
   }
 
   get qrCodeUrl(): string {

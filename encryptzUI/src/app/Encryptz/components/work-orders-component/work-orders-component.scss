@@ -4766,8 +4766,9 @@
   font-size: 17px;
   font-weight: 700;
   color: #fff;
-  &.paid  { color: #4ade80; }
-  &.due   { color: #fb923c; }
+  &.paid     { color: #4ade80; }
+  &.due      { color: #fb923c; }
+  &.overpaid { color: #4ade80; }
 }
 
 /* ── Section Header ── */
