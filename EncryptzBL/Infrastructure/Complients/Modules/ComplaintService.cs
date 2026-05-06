@@ -79,16 +79,22 @@ namespace EncryptzBL.Infrastructure.Complients.Modules
 
             var items = ds.Tables[0].ToList<ComplaintListDto>();
 
+            // SP embeds TotalCount via COUNT(*) OVER() on each row (single result set).
+            // Fall back to items[0].TotalCount when a second table is not present.
             var totalCount = ds.Tables.Count > 1 && ds.Tables[1].Rows.Count > 0
                 ? Convert.ToInt32(ds.Tables[1].Rows[0]["TotalCount"])
-                : 0;
+                : (items.Count > 0 ? items[0].TotalCount : 0);
+
+            var totalPages = totalCount > 0
+                ? (int)Math.Ceiling(totalCount / (double)filter.PageSize)
+                : (items.Count > 0 ? 1 : 0);
 
             return new PagedResult<ComplaintListDto>(
                 items,
                 totalCount,
                 filter.PageNumber,
                 filter.PageSize,
-                (int)Math.Ceiling(totalCount / (double)filter.PageSize)
+                totalPages
             );
         }
 

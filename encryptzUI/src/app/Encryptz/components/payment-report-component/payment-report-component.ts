@@ -1,5 +1,6 @@
-﻿import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../Services/API/api-service';
 import { EditPaymentDialog } from '../edit-payment-dialog/edit-payment-dialog';
 
@@ -20,13 +21,17 @@ interface AdminPayment {
   paymentStatus: string;
   remarks: string;
   createdAt: string;
+  createdAtRaw: Date;
   createdByName: string;
+  isVerified: boolean;
+  verifiedByName: string | null;
+  verifiedAt: string | null;
 }
 
 @Component({
   selector: 'app-payment-report',
   standalone: true,
-  imports: [CommonModule, EditPaymentDialog],
+  imports: [CommonModule, FormsModule, EditPaymentDialog],
   templateUrl: './payment-report-component.html',
   styleUrls: ['./payment-report-component.scss']
 })
@@ -35,11 +40,64 @@ export class PaymentReportComponent implements OnInit {
   payments       = signal<AdminPayment[]>([]);
   editingPayment = signal<AdminPayment | null>(null);
 
+  // Date filter — default: last 7 days → today
+  fromDate = signal(this.defaultFrom());
+  toDate   = signal(this.todayStr());
+
+  // Tracks which rows are mid-verify API call
+  verifyingIds = signal<Set<number>>(new Set());
+
+  // Inline comment
+  commentingId  = signal<number | null>(null);
+  commentDraft  = '';
+  savingComment = signal(false);
+
+  // Pagination
+  currentPage    = signal(1);
+  readonly pageSize = 10;
+
+  // ── Computed ──────────────────────────────────────────────────────────────
+
+  filteredPayments = computed(() => {
+    const from = new Date(this.fromDate() + 'T00:00:00');
+    const to   = new Date(this.toDate()   + 'T23:59:59');
+    return this.payments().filter(p => p.createdAtRaw >= from && p.createdAtRaw <= to);
+  });
+
+  totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.filteredPayments().length / this.pageSize))
+  );
+
+  paginatedPayments = computed(() => {
+    const s = (this.currentPage() - 1) * this.pageSize;
+    return this.filteredPayments().slice(s, s + this.pageSize);
+  });
+
+  visiblePages = computed((): (number | null)[] => {
+    const total = this.totalPages();
+    const cur   = this.currentPage();
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: (number | null)[] = [1];
+    if (cur > 3) pages.push(null);
+    for (let i = Math.max(2, cur - 1); i <= Math.min(total - 1, cur + 1); i++) pages.push(i);
+    if (cur < total - 2) pages.push(null);
+    pages.push(total);
+    return pages;
+  });
+
   constructor(private api: ApiService) {}
 
-  ngOnInit(): void {
-    this.loadAll();
+  private todayStr(): string {
+    return new Date().toISOString().slice(0, 10);
   }
+
+  private defaultFrom(): string {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return d.toISOString().slice(0, 10);
+  }
+
+  ngOnInit(): void { this.loadAll(); }
 
   loadAll(): void {
     this.loading.set(true);
@@ -54,7 +112,10 @@ export class PaymentReportComponent implements OnInit {
 
         this.payments.set(rows.map((p: any) => ({
           ...p,
-          createdAt: this.toIST(p.createdAt)
+          createdAtRaw: this.parseDate(p.createdAt),
+          createdAt:    this.toIST(p.createdAt),
+          isVerified:   !!p.isVerified,
+          verifiedAt:   p.verifiedAt ? this.toIST(p.verifiedAt) : null
         })));
         this.loading.set(false);
       },
@@ -65,37 +126,91 @@ export class PaymentReportComponent implements OnInit {
     });
   }
 
-  /** Convert a UTC datetime string (with or without Z) to IST display string */
+  private parseDate(raw: any): Date {
+    if (!raw) return new Date(0);
+    let s = String(raw).trim();
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s) && !s.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(s)) s += 'Z';
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? new Date(0) : d;
+  }
+
   private toIST(raw: any): string {
-    if (!raw) return '';
-    let str = String(raw).trim();
-    // Bare ISO datetime = server UTC without timezone marker — force UTC
-    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(str) && !str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
-      str += 'Z';
-    }
-    const d = new Date(str);
-    if (isNaN(d.getTime())) return String(raw); // already formatted or unparseable
+    const d = this.parseDate(raw);
+    if (d.getTime() === 0) return String(raw ?? '');
     return d.toLocaleString('en-IN', {
-      day:    '2-digit',
-      month:  'short',
-      year:   'numeric',
-      hour:   '2-digit',
-      minute: '2-digit',
-      hour12: true,
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: true,
       timeZone: 'Asia/Kolkata'
     }) + ' IST';
   }
 
-  edit(payment: AdminPayment): void {
-    this.editingPayment.set({ ...payment });
+  onDateChange(): void { this.currentPage.set(1); }
+
+  // ── Edit dialog ────────────────────────────────────────────────────────────
+  edit(p: AdminPayment): void { this.editingPayment.set({ ...p }); }
+  onSaved():     void { this.editingPayment.set(null); this.loadAll(); }
+  onCancelled(): void { this.editingPayment.set(null); }
+
+  // ── Verify (calls API) ────────────────────────────────────────────────────
+  isVerifying(id: number): boolean { return this.verifyingIds().has(id); }
+
+  toggleVerify(p: AdminPayment): void {
+    if (this.isVerifying(p.paymentId)) return;
+
+    const newVal = !p.isVerified;
+
+    // mark as in-progress
+    this.verifyingIds.update(s => { const n = new Set(s); n.add(p.paymentId); return n; });
+
+    this.api.verifyPayment(p.paymentId, newVal).subscribe({
+      next: () => {
+        this.payments.update(list =>
+          list.map(x => x.paymentId === p.paymentId
+            ? { ...x, isVerified: newVal, verifiedByName: newVal ? 'You' : null, verifiedAt: newVal ? this.toIST(new Date().toISOString()) : null }
+            : x)
+        );
+        this.verifyingIds.update(s => { const n = new Set(s); n.delete(p.paymentId); return n; });
+      },
+      error: () => {
+        this.verifyingIds.update(s => { const n = new Set(s); n.delete(p.paymentId); return n; });
+        console.error('[PaymentReport] verify failed for', p.paymentId);
+      }
+    });
   }
 
-  onSaved(): void {
-    this.editingPayment.set(null);
-    this.loadAll();
+  // ── Comment ───────────────────────────────────────────────────────────────
+  openComment(p: AdminPayment): void {
+    this.commentingId.set(p.paymentId);
+    this.commentDraft = p.remarks ?? '';
   }
 
-  onCancelled(): void {
-    this.editingPayment.set(null);
+  cancelComment(): void {
+    this.commentingId.set(null);
+    this.commentDraft = '';
   }
+
+  saveComment(p: AdminPayment): void {
+    this.savingComment.set(true);
+    const draft = this.commentDraft;
+    this.api.updatePayment({ ...p, remarks: draft }).subscribe({
+      next: () => {
+        this.payments.update(list =>
+          list.map(x => x.paymentId === p.paymentId ? { ...x, remarks: draft } : x)
+        );
+        this.savingComment.set(false);
+        this.cancelComment();
+      },
+      error: () => this.savingComment.set(false)
+    });
+  }
+
+  // ── Pagination ────────────────────────────────────────────────────────────
+  goToPage(n: number): void {
+    if (n >= 1 && n <= this.totalPages()) this.currentPage.set(n);
+  }
+  prevPage(): void { this.goToPage(this.currentPage() - 1); }
+  nextPage(): void { this.goToPage(this.currentPage() + 1); }
+
+  startIndex(): number { return (this.currentPage() - 1) * this.pageSize + 1; }
+  endIndex():   number { return Math.min(this.currentPage() * this.pageSize, this.filteredPayments().length); }
 }

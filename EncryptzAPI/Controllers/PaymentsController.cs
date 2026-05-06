@@ -135,11 +135,20 @@ namespace EncryptzAPI.Controllers
         {
             // Verify admin password via auth service
             var email = User.FindFirstValue(ClaimTypes.Email);
+
             var loginResult = await _authService.Login(email, request.AdminPassword);
-            if (loginResult == null )
+            if (loginResult.Data == null )
                 return Unauthorized(new { Message = "Invalid admin password. Modification not allowed." });
 
             var result = await _paymentService.UpdatePayment(request, GetUserId());
+            return Ok(result);
+        }
+
+        [HttpPut("Verify")]
+        [Authorize(Roles = "Admin,CompanyAdmin,Manager")]
+        public async Task<IActionResult> VerifyPayment([FromBody] VerifyPaymentRequest request)
+        {
+            var result = await _paymentService.VerifyPayment(request, GetUserId());
             return Ok(result);
         }
 

@@ -286,7 +286,7 @@ export const routes: Routes = [
 
       // 8. Settings
       {
-        path: 'settings',
+        path: 'settings/general',
         loadComponent: () =>
           import('../app/Encryptz/components/settings-component/settings-component').then(
             (m) => m.SettingsComponent,
@@ -317,21 +317,21 @@ export const routes: Routes = [
 
 
 {
-  path: 'admin/payments',
+  path: 'settings/payments',
   loadComponent: () =>
     import('../app/Encryptz/components/payment-report-component/payment-report-component')
       .then(m => m.PaymentReportComponent),
   canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'Manager'])],
   data: { title: 'Payments Report', icon: 'account_balance_wallet', menu: 'admin' }
 },
-{
-  path: 'settings/payments',
-  loadComponent: () =>
-    import('../app/Encryptz/components/payment-settings-component/payment-settings-component')
-      .then(m => m.PaymentSettingsComponent),
-  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'Manager'])],
-  data: { title: 'Payment Settings', icon: 'settings', menu: 'settings' }
-},
+// {
+//   path: 'settings/payments',
+//   loadComponent: () =>
+//     import('../app/Encryptz/components/payment-settings-component/payment-settings-component')
+//       .then(m => m.PaymentSettingsComponent),
+//   canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'Manager'])],
+//   data: { title: 'Payment Settings', icon: 'settings', menu: 'settings' }
+// },
 
 
 

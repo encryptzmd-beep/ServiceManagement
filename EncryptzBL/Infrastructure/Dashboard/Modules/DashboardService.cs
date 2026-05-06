@@ -355,6 +355,15 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
             return dt.Rows.Count > 0 ? dt.ToList<ComplaintImageItemDto>() : new List<ComplaintImageItemDto>();
         }
 
+        public async Task<int> GetComplaintImageCount(int complaintId)
+        {
+            var parameters = new[] { SqlParameterHelper.Input("@ComplaintId", complaintId) };
+            var dt = await GetDataTableAsync("sp_GetComplaintImageCount", parameters);
+            if (dt.Rows.Count > 0 && dt.Rows[0]["ImageCount"] != DBNull.Value)
+                return Convert.ToInt32(dt.Rows[0]["ImageCount"]);
+            return 0;
+        }
+
         public async Task<ApiResponse<List<SparePartDropdownModel>>> GetSparePartsDropdown()
         {
             try

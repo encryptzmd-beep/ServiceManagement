@@ -141,7 +141,7 @@
  </button>
  } @else {
  <!-- Non-admin: just a refresh button -->
- 
+
  <button class="btn-primary" (click)="load()" [disabled]="loading()">
  @if (loading()) {
  <span class="mini-spin"></span>
@@ -933,7 +933,7 @@
                   (input)="onPaymentAmountInput('serviceChargeAmount', $event)"
                   (blur)="normalizePaymentNumber('serviceChargeAmount')"
                   class="fi num" [min]="minimumServiceCharge()"/>
-           <small class="pay-help">Minimum from service charge master: ₹{{ minimumServiceCharge() | number:'1.2-2' }}</small>
+           <!-- <small class="pay-help">Minimum from service charge master: ₹{{ minimumServiceCharge() | number:'1.2-2' }}</small> -->
          </div>
          <div class="pay-fg">
            <label>Spare Parts (₹)</label>

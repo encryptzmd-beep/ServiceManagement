@@ -58,8 +58,9 @@ activeTab = signal<'overview'|'customer'|'product'|'location'|'assignments'|'spa
   spareParts    = signal<any[]>([]);
   comments      = signal<any[]>([]);
   complaintImages = signal<any[]>([]);
-  imagesLoading = signal(false);
-lightboxImage   = signal<any>(null);
+  imagesLoading   = signal(false);
+  photoCount      = signal(0);
+  lightboxImage   = signal<any>(null);
   private imagesLoaded = false;
 
   // ── Payment ──────────────────────────────────────────
@@ -162,6 +163,7 @@ lightboxImage   = signal<any>(null);
         this.comments.set(Array.isArray(d[5]) ? d[5].map((x: any) => this._sanitize(x)) : []);
         this.loading.set(false);
         this.loadPayments();
+        this.loadPhotoCount();
       },
       error: () => { this.loading.set(false); this.showMessage('Failed to load complaint details', 'error'); }
     });
@@ -172,6 +174,16 @@ lightboxImage   = signal<any>(null);
     this.loadImages();
   }
 
+  loadPhotoCount(): void {
+    this.api.getComplaintImageCount(this.complaintId).subscribe({
+      next: (res: any) => {
+        const count = typeof res?.data === 'number' ? res.data : 0;
+        this.photoCount.set(count);
+      },
+      error: () => {}
+    });
+  }
+
   loadImages(force = false) {
     if (this.imagesLoading()) return;
     if (this.imagesLoaded && !force) return;
@@ -179,7 +191,9 @@ lightboxImage   = signal<any>(null);
     this.api.getComplaintAllImages(this.complaintId).subscribe({
       next: (res: any) => {
         const rows = Array.isArray(res?.data) ? res.data : [];
-        this.complaintImages.set(rows.map((x: any) => this._normalizeImage(this._sanitize(x))));
+        const images = rows.map((x: any) => this._normalizeImage(this._sanitize(x)));
+        this.complaintImages.set(images);
+        this.photoCount.set(images.length);   // sync badge with actual loaded count
         this.imagesLoaded = true;
         this.imagesLoading.set(false);
       },

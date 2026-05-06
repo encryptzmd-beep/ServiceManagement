@@ -19,5 +19,6 @@ namespace EncryptzBL.Infrastructure.Payments.Modules
         Task<ApiResponse<int>> RecordComplaintPayment(RecordPaymentRequest request, int userId);
         Task<List<AdminPaymentDto>> GetAllPayments();
         Task<ApiResponse<int>> UpdatePayment(UpdatePaymentRequest request, int userId);
+        Task<ApiResponse<int>> VerifyPayment(VerifyPaymentRequest request, int userId);
     }
 }

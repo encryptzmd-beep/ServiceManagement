@@ -50,6 +50,15 @@ namespace EncryptzBL.DTO_s
         public string CustomerName { get; set; }
         public string MobileNo { get; set; }
         public string CreatedByName { get; set; }
+        public bool IsVerified { get; set; }
+        public string VerifiedByName { get; set; }
+        public DateTime? VerifiedAt { get; set; }
+    }
+
+    public class VerifyPaymentRequest
+    {
+        public int PaymentId { get; set; }
+        public bool IsVerified { get; set; }
     }
 
     public class UpdatePaymentRequest

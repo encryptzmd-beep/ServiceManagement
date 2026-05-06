@@ -993,6 +993,10 @@ getComplaintAllImages(complaintId: number): Observable<any> {
   return this.http.get(`${this.api}/Dashboard/${complaintId}/images`);
 }
 
+getComplaintImageCount(complaintId: number): Observable<any> {
+  return this.http.get(`${this.api}/Dashboard/${complaintId}/images/count`);
+}
+
 getComplaintPayments(complaintId: number): Observable<any> {
   return this.http.get(`${this.api}/Payments/Complaint/${complaintId}`);
 }
@@ -1007,6 +1011,10 @@ getAllPayments(): Observable<M.ApiResponse<any[]>> {
 
 updatePayment(payload: any): Observable<M.ApiResponse> {
   return this.put<M.ApiResponse>('Payments/Updatepay', payload);
+}
+
+verifyPayment(paymentId: number, isVerified: boolean): Observable<M.ApiResponse> {
+  return this.put<M.ApiResponse>('Payments/Verify', { paymentId, isVerified });
 }
 
 }

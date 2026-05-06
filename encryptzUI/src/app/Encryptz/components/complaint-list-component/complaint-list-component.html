@@ -21,13 +21,13 @@
     <div class="fx-stat-card">
       <div class="fx-stat-label">On Time</div>
       <div class="fx-stat-val is-active">{{ onTimeCount() }}</div>
-      <div class="fx-stat-pill pill-green">Within SLA</div>
+      <div class="fx-stat-pill pill-green">This page · Within SLA</div>
     </div>
     <div class="fx-stat-card">
       <div class="fx-stat-label">SLA Breached</div>
       <div class="fx-stat-val is-inactive">{{ breachedCount() }}</div>
       <div class="fx-stat-pill" [class.pill-red]="breachedCount() > 0" [class.pill-green]="breachedCount() === 0">
-        {{ breachedCount() > 0 ? 'Needs attention' : 'All on track' }}
+        {{ breachedCount() > 0 ? 'This page · Needs attention' : 'This page · All on track' }}
       </div>
     </div>
   </div>

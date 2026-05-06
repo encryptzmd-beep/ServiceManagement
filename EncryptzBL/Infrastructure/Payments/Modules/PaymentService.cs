@@ -142,5 +142,18 @@ namespace EncryptzBL.Infrastructure.Payments.Modules
             var dt = await GetDataTableAsync("sp_UpdateComplaintPayment", parameters);
             return ApiResponse<int>.Ok(1, "Payment updated successfully");
         }
+
+        public async Task<ApiResponse<int>> VerifyPayment(VerifyPaymentRequest request, int userId)
+        {
+            var parameters = new[]
+            {
+                SqlParameterHelper.Input("@PaymentId",  request.PaymentId),
+                SqlParameterHelper.Input("@IsVerified", request.IsVerified),
+                SqlParameterHelper.Input("@VerifiedBy", userId)
+            };
+            await GetDataTableAsync("sp_VerifyComplaintPayment", parameters);
+            var msg = request.IsVerified ? "Payment marked as verified" : "Payment verification removed";
+            return ApiResponse<int>.Ok(1, msg);
+        }
     }
 }

@@ -225,7 +225,7 @@ repairForm = {
     const currentBill = Math.max(this.netTotal, this.totalBilled);
     return Math.max(currentBill - this.totalPaid, 0);
   }
-  
+
   get qrCodeUrl(): string {
     if (this.paymentForm().paymentMethod === 'UPI' && this.defaultUpiId() && this.payableNow > 0) {
       const upiString = `upi://pay?pa=${this.defaultUpiId()}&pn=Encryptz&am=${this.payableNow.toFixed(2)}&cu=INR`;
@@ -746,7 +746,7 @@ private showCheckInMsg(m: string, err: boolean): void {
     this.paymentForm.set({
       paymentType: 'Final',
       serviceChargeAmount: 0,
-      sparePartsAmount: totalSparesAmount,
+      sparePartsAmount: 0,
       discountAmount: 0,
       amountPaid: 0,
       paymentMethod: 'Cash',

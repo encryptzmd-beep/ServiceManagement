@@ -372,6 +372,14 @@ namespace EncryptzAPI.Controllers
             return Ok(new { data = result });
         }
 
+        [HttpGet("{complaintId}/images/count")]
+        [Authorize(Roles = "Admin,CompanyAdmin,Technician,Customer")]
+        public async Task<IActionResult> GetComplaintImageCount(int complaintId)
+        {
+            var count = await _service.GetComplaintImageCount(complaintId);
+            return Ok(new { data = count });
+        }
+
         [HttpGet("spare-parts/dropdown")]
         [Authorize(Roles = "Admin,CompanyAdmin,Technician")]
         public async Task<IActionResult> GetSparePartsDropdown()

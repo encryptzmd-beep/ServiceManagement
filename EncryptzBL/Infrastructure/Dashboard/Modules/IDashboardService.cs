@@ -19,6 +19,7 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
 
         // Images
         Task<List<ComplaintImageItemDto>> GetComplaintAllImages(int complaintId);
+        Task<int> GetComplaintImageCount(int complaintId);
 
         // Dropdown helpers
         Task<ApiResponse<List<SparePartDropdownModel>>> GetSparePartsDropdown();

@@ -45,7 +45,7 @@
         <span class="cd-tab-count">{{ comments().length }}</span></button>
         <button class="cd-tab" [class.active]="activeTab()==='images'" (click)="openImagesTab()">
   <span class="material-icons">photo_library</span> Photos
-  <span class="cd-tab-count">{{ complaintImages().length }}</span>
+  <span class="cd-tab-count" [class.has-items]="photoCount() > 0">{{ photoCount() }}</span>
 </button>
       <!-- <button class="cd-tab" [class.active]="activeTab()==='payment'" (click)="activeTab.set('payment'); loadPaymentSetup()">
         <span class="material-icons">account_balance_wallet</span> Payments

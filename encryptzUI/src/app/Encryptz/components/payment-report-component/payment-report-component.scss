@@ -1,83 +1,422 @@
+/* ── Card shell ────────────────────────────────────────────────────────── */
 .report-card {
   background: #fff;
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .09);
   margin: 24px;
-  animation: fadeIn 0.4s ease-out;
+  animation: fadeIn .35s ease-out;
+}
 
-  .card-title {
-    font-size: 1.6rem;
+/* ── Header row ─────────────────────────────────────────────────────────── */
+.report-header {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.card-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #1e1b4b;
+  margin: 0;
+  flex: 1 0 auto;
+}
+
+/* ── Filter bar ─────────────────────────────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.date-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  label {
+    font-size: .83rem;
     font-weight: 600;
-    margin-bottom: 16px;
-    color: var(--primary-dark);
-    display: flex;
-    align-items: center;
-    gap: .5rem;
+    color: #4b5563;
+    white-space: nowrap;
   }
 
-  .spinner-center {
-    display: flex;
-    justify-content: center;
-    padding: 48px 0;
-  }
+  input[type="date"] {
+    border: 1.5px solid #d1d5db;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: .875rem;
+    color: #111827;
+    outline: none;
+    cursor: pointer;
+    transition: border-color .2s;
+    background: #fff;
 
-  .payments-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: .925rem;
-
-    th, td {
-      padding: .75rem 1rem;
-      text-align: left;
-    }
-
-    th {
-      background: var(--primary-light);
-      color: #fff;
-      font-weight: 600;
-    }
-
-    tbody tr {
-      transition: background .2s ease;
-      &:hover { background: rgba(0,0,0,.04); }
-    }
-
-    .amount { font-weight: 600; }
-    .pending { color: #b45309; }
-    .success { color: #16a34a; }
-    .failed { color: #b91c1c; }
-  }
-
-  .empty-state {
-    text-align: center;
-    color: #6b7280;
-    padding: 48px 0;
-    font-size: 1rem;
+    &:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,.12); }
   }
 }
 
-/* Desktop – two‑column layout for the table wrapper */
-@media (min-width: 960px) {
+.record-count {
+  font-size: .83rem;
+  color: #4f46e5;
+  background: #ede9fe;
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-weight: 600;
+}
+
+/* ── Spinner ────────────────────────────────────────────────────────────── */
+.spinner-center {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+/* ── Table wrapper (horizontal scroll) ─────────────────────────────────── */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
+
+/* ── Table ──────────────────────────────────────────────────────────────── */
+.payments-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .9rem;
+  min-width: 980px;
+
+  /* ── Header ── */
+  thead tr {
+    background: #4338ca;  /* solid indigo — always visible */
+  }
+
+  th {
+    padding: .8rem 1rem;
+    text-align: left;
+    color: #fff;
+    font-weight: 600;
+    font-size: .83rem;
+    letter-spacing: .03em;
+    white-space: nowrap;
+    border-right: 1px solid rgba(255, 255, 255, .15);
+    user-select: none;
+
+    &:last-child { border-right: none; }
+  }
+
+  /* ── Cells ── */
+  td {
+    padding: .7rem 1rem;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+  }
+
+  tbody tr {
+    transition: background .15s;
+
+    &:hover { background: #f5f3ff; }
+    &:last-child td { border-bottom: none; }
+  }
+
+  .amount {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ── Column sizing ──────────────────────────────────────────────────────── */
+.col-check    { width: 72px; text-align: center; }
+.col-no       { width: 44px; }
+.col-customer { min-width: 120px; }
+.col-amt      { min-width: 110px; }
+.col-date     { min-width: 165px; font-size: .82rem; color: #6b7280; }
+.col-remark   { min-width: 180px; }
+
+/* ── Verified row ───────────────────────────────────────────────────────── */
+.verified-row {
+  background: #f0fdf4 !important;
+
+  &:hover { background: #dcfce7 !important; }
+}
+
+/* ── Verify in-progress spinner ─────────────────────────────────────────── */
+.verify-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #c7d2fe;
+  border-top-color: #4338ca;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Checkbox ───────────────────────────────────────────────────────────── */
+.check-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  height: 100%;
+
+  input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    accent-color: #4338ca;
+    cursor: pointer;
+  }
+}
+
+/* ── Type badge ─────────────────────────────────────────────────────────── */
+.type-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: .77rem;
+  font-weight: 600;
+  background: #ede9fe;
+  color: #4338ca;
+
+  &.final   { background: #fef3c7; color: #92400e; }
+  &.advance { background: #ede9fe; color: #4338ca; }
+}
+
+/* ── Status badge ───────────────────────────────────────────────────────── */
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: .8rem;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #374151;
+
+  &.success { background: #dcfce7; color: #15803d; }
+  &.pending { background: #fef9c3; color: #a16207; }
+  &.failed  { background: #fee2e2; color: #b91c1c; }
+}
+
+/* ── Verified badge (in Actions cell) ──────────────────────────────────── */
+.verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: .77rem;
+  font-weight: 700;
+  color: #15803d;
+  background: #dcfce7;
+  padding: 3px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+/* ── Action cell ────────────────────────────────────────────────────────── */
+.action-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+/* ── Remark chip ────────────────────────────────────────────────────────── */
+.remark-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 5px 8px;
+  transition: background .15s;
+  max-width: 210px;
+
+  &:hover { background: #ede9fe; }
+
+  .remark-text {
+    font-size: .82rem;
+    color: #374151;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 155px;
+  }
+
+  .edit-icon {
+    font-size: .85rem;
+    color: #9ca3af;
+    flex-shrink: 0;
+  }
+
+  .add-remark {
+    font-size: .82rem;
+    color: #4338ca;
+    font-style: italic;
+  }
+}
+
+/* ── Inline comment box ─────────────────────────────────────────────────── */
+.comment-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  textarea {
+    border: 1.5px solid #c7d2fe;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: .83rem;
+    resize: vertical;
+    width: 100%;
+    min-width: 175px;
+    outline: none;
+    font-family: inherit;
+    color: #111827;
+    background: #fff;
+
+    &:focus { border-color: #4338ca; box-shadow: 0 0 0 3px rgba(67,56,202,.1); }
+  }
+}
+
+.comment-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.btn-primary-sm {
+  background: linear-gradient(135deg, #4f46e5, #3b82f6);
+  color: #fff;
+  border: none;
+  padding: .35rem .8rem;
+  border-radius: 6px;
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, .35);
+  }
+}
+
+.btn-save-sm {
+  background: #15803d;
+  color: #fff;
+  border: none;
+  padding: .3rem .7rem;
+  border-radius: 6px;
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+
+  &:hover:not(:disabled) { background: #166534; }
+  &:disabled { opacity: .6; cursor: not-allowed; }
+}
+
+.btn-cancel-sm {
+  background: #f9fafb;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: .3rem .7rem;
+  border-radius: 6px;
+  font-size: .8rem;
+  cursor: pointer;
+  transition: background .15s;
+
+  &:hover { background: #f3f4f6; }
+}
+
+/* ── Pagination ─────────────────────────────────────────────────────────── */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.page-info {
+  font-size: .83rem;
+  color: #6b7280;
+}
+
+.page-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.page-btn {
+  min-width: 38px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  font-size: .83rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    border-color: #4338ca;
+    color: #4338ca;
+    background: #ede9fe;
+  }
+
+  &.active {
+    background: #4338ca;
+    color: #fff;
+    border-color: #4338ca;
+    font-weight: 700;
+  }
+
+  &:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+  }
+}
+
+.page-ellipsis {
+  padding: 0 4px;
+  color: #9ca3af;
+  font-size: .85rem;
+  line-height: 36px;
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  color: #6b7280;
+  padding: 56px 0;
+  font-size: 1rem;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (min-width: 1024px) {
   .report-card {
-    max-width: 1200px;
+    max-width: 1350px;
     margin-left: auto;
     margin-right: auto;
   }
 }
 
-/* Button styling – matches premium UI */
-.btn-primary-sm {
-  background: linear-gradient(135deg, #4f46e5, #3b82f6);
-  color: #fff;
-  border: none;
-  padding: .35rem .7rem;
-  border-radius: 6px;
-  font-size: .85rem;
-  cursor: pointer;
-  transition: transform .2s, box-shadow .2s;
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(79,70,229,.3);
-  }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

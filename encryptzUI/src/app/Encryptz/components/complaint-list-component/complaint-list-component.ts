@@ -58,9 +58,9 @@ handleRefresh(): void {
     );
   });
 
-  totalCount = computed(() => this.realTotal());
-  breachedCount = computed(() => this.complaints().filter(c => c.isSLABreached).length);
-  onTimeCount = computed(() => this.complaints().filter(c => !c.isSLABreached).length);
+  totalCount    = computed(() => this.realTotal());
+  breachedCount = computed(() => this.filteredComplaints().filter(c => c.isSLABreached).length);
+  onTimeCount   = computed(() => this.filteredComplaints().filter(c => !c.isSLABreached).length);
 
   ngOnInit() {
     this.load();
@@ -70,8 +70,18 @@ handleRefresh(): void {
     this.filter.pageNumber = this.filter.pageNumber || 1;
     this.api.getComplaints(this.filter).subscribe((res) => {
       this.complaints.set(res.items);
-      this.totalPages.set(res.totalPages);
-      this.realTotal.set(res.totalCount ?? res.totalPages * this.filter.pageSize);
+
+      // SP embeds TotalCount on each row; use it when the top-level count is missing or 0
+      const total = res.totalCount > 0
+        ? res.totalCount
+        : (res.items?.[0]?.totalCount ?? 0);
+
+      const pages = res.totalPages > 0
+        ? res.totalPages
+        : Math.max(1, Math.ceil(total / this.filter.pageSize));
+
+      this.totalPages.set(pages);
+      this.realTotal.set(total);
     });
   }
 
