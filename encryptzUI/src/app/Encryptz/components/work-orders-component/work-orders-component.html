@@ -915,6 +915,15 @@
      }
 
      <!-- ── Record New Payment ── -->
+     @if (!showNewPaymentForm()) {
+       <div class="pay-add-btn-row">
+         <button class="pay-add-btn" (click)="openNewPaymentForm()" type="button">
+           <span class="material-icons">add_card</span> Record New Payment
+         </button>
+       </div>
+     }
+
+     @if (showNewPaymentForm()) {
      <div class="pay-record-form">
        <div class="pay-sect-hdr">
          <span class="material-icons">add_card</span>
@@ -981,7 +990,7 @@
            </div>
          }
 
-         @if (paymentForm().paymentType === 'Advance' && paymentForm().paymentMethod === 'Cash') {
+         @if (paymentForm().paymentType === 'Advance') {
            <div class="pay-fg full">
              <label>Amount Paid (₹)</label>
              <input type="text" inputmode="decimal" [value]="paymentForm().amountPaid"
@@ -1006,7 +1015,7 @@
          </div>
        </div>
 
-       @if (paymentForm().paymentType === 'Final' && paymentForm().paymentMethod === 'UPI') {
+       @if (paymentForm().paymentMethod === 'UPI') {
          <div class="pay-upi-section">
            @if (!defaultUpiId()) {
              <div class="alert alert-err">No Default UPI ID. Please set it in Admin Settings.</div>
@@ -1036,9 +1045,9 @@
        </div>
 
        <button class="pay-submit-btn" (click)="submitPayment()"
-               [disabled]="paymentSubmitting() ||
-                 (paymentForm().paymentType === 'Final' && (netTotal < 0 || payableNow <= 0)) ||
-                 (paymentForm().paymentType === 'Advance' && paymentForm().paymentMethod === 'Cash' && (paymentForm().amountPaid || 0) <= 0)">
+               [disabled]="paymentSubmitting() || !paymentFormTouched() ||
+                 (paymentForm().paymentType === 'Final' && ((paymentForm().serviceChargeAmount || 0) <= 0 && (paymentForm().sparePartsAmount || 0) <= 0)) ||
+                 (paymentForm().paymentType === 'Advance' && (paymentForm().amountPaid || 0) <= 0)">
          <span class="material-icons">{{ paymentSubmitting() ? 'hourglass_top' : 'check_circle' }}</span>
          {{ paymentSubmitting() ? 'Submitting...' : 'Record Payment' }}
        </button>
@@ -1049,6 +1058,7 @@
          </div>
        }
      </div>
+     }
 
    }
  </div>

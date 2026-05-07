@@ -5065,6 +5065,29 @@
   &:disabled { opacity: .55; cursor: not-allowed; }
 }
 
+/* ── Add Payment Toggle Button ── */
+.pay-add-btn-row {
+  display: flex;
+  justify-content: center;
+  padding: 14px 0 4px;
+}
+.pay-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  border: 1.5px dashed #3b82f6;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  .material-icons { font-size: 17px; }
+  &:hover { background: #dbeafe; border-color: #1d4ed8; }
+}
+
 /* ── Mobile tweaks ── */
 @media (max-width: 600px) {
   .pay-summary-banner { padding: 14px 12px; }

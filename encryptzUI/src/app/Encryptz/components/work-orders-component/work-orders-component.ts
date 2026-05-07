@@ -127,6 +127,8 @@ repairForm = {
   minimumServiceCharge = signal<number>(0);
   paymentMsg = signal('');
   paymentMsgErr = signal(false);
+  showNewPaymentForm = signal(false);
+  paymentFormTouched = signal(false);
 
   pf(field: string, val: any): void {
     const numericFields = ['serviceChargeAmount', 'sparePartsAmount', 'discountAmount', 'amountPaid'];
@@ -136,7 +138,9 @@ repairForm = {
       const next: any = { ...f, [field]: nextVal };
       // Don't clamp serviceChargeAmount while typing — only validate on submit
       if (field === 'paymentType' && next.paymentType === 'Final') {
-        next.serviceChargeAmount = Math.max(Number(next.serviceChargeAmount) || 0, this.minimumServiceCharge());
+        if ((Number(next.serviceChargeAmount) || 0) > 0) {
+          next.serviceChargeAmount = Math.max(Number(next.serviceChargeAmount) || 0, this.minimumServiceCharge());
+        }
         next.amountPaid = this.payableNowFor(next);
       }
       if (field === 'paymentType' && next.paymentType === 'Advance') {
@@ -152,7 +156,7 @@ repairForm = {
   normalizePaymentNumber(field: string): void {
     this.paymentForm.update(f => {
       let value = this.normalizeAmountValue((f as any)[field]);
-      if (field === 'serviceChargeAmount') {
+      if (field === 'serviceChargeAmount' && value > 0) {
         value = Math.max(value, this.minimumServiceCharge());
       }
       return { ...f, [field]: value };
@@ -163,6 +167,7 @@ repairForm = {
     const input = event.target as HTMLInputElement;
     const normalized = this.normalizeAmountText(input.value);
     if (input.value !== normalized) input.value = normalized;
+    this.paymentFormTouched.set(true);
     this.pf(field, normalized);
   }
 
@@ -729,6 +734,9 @@ private showCheckInMsg(m: string, err: boolean): void {
           }
         });
         this.paymentsList.set(raw);
+        const hasFinal = raw.some((p: any) => String(p.paymentType || '').toLowerCase() === 'final');
+        this.showNewPaymentForm.set(!hasFinal);
+        if (!hasFinal) this.paymentFormTouched.set(false);
         if (this.paymentForm().paymentType === 'Final') {
           this.paymentForm.update(f => ({ ...f, amountPaid: this.payableNowFor(f) }));
         }
@@ -763,13 +771,15 @@ private showCheckInMsg(m: string, err: boolean): void {
       next: (res: any) => {
         const charge = Number(res?.data ?? 0) || 0;
         this.minimumServiceCharge.set(charge);
-        this.paymentForm.update(f => ({
-          ...f,
-          serviceChargeAmount: Math.max(Number(f.serviceChargeAmount) || 0, charge),
-          amountPaid: f.paymentType === 'Final'
-            ? this.payableNowFor({ ...f, serviceChargeAmount: Math.max(Number(f.serviceChargeAmount) || 0, charge) })
-            : f.amountPaid
-        }));
+        if (charge > 0) {
+          this.paymentForm.update(f => ({
+            ...f,
+            serviceChargeAmount: charge,
+            amountPaid: f.paymentType === 'Final'
+              ? this.payableNowFor({ ...f, serviceChargeAmount: charge })
+              : f.amountPaid
+          }));
+        }
       }
     });
 
@@ -790,6 +800,12 @@ private showCheckInMsg(m: string, err: boolean): void {
         this.initPaymentForm();
       }
     }
+  }
+
+  openNewPaymentForm(): void {
+    this.showNewPaymentForm.set(true);
+    this.paymentFormTouched.set(false);
+    this.initPaymentForm();
   }
 
   submitPayment(): void {
@@ -831,12 +847,12 @@ private showCheckInMsg(m: string, err: boolean): void {
     };
 
     this.api.recordComplaintPayment(payload).subscribe({
-      next: (res: any) => {
+      next: (_res: any) => {
         this.paymentSubmitting.set(false);
         this.paymentMsg.set('Payment recorded successfully');
         this.paymentMsgErr.set(false);
         this.loadPayments(cid);
-        this.initPaymentForm(); // Reset form
+        this.initPaymentForm();
       },
       error: () => {
         this.paymentSubmitting.set(false);
