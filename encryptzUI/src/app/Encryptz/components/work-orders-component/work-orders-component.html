@@ -765,10 +765,13 @@
  </div>
  <div class="ric-meta-row">
  <span class="ric-date">{{ r.createdAt | date: 'dd MMM, HH:mm' }}</span>
- <span class="ric-status-pill">{{ r.status }}</span>
+ <span class="ric-status-pill" [attr.data-status]="r.status?.toLowerCase()">{{ r.status }}</span>
  </div>
  @if (r.notes) {
  <p class="ric-notes">"{{ r.notes }}"</p>
+ }
+ @if (r.statusNotes) {
+ <p class="ric-notes ric-status-note">📋 {{ r.statusNotes }}</p>
  }
  </div>
  <div class="ric-right">
@@ -782,8 +785,13 @@
  }
 
  @if (r.status?.toLowerCase() === 'dispatched') {
- <button class="btn-mark-used" (click)="markRepairAsUsed(r.repairRequestId)">
- <span class="material-icons">check_circle</span> Used
+ <button class="btn-mark-used" (click)="markRepairDelivered(r.repairRequestId)">
+ <span class="material-icons">local_shipping</span> Delivered
+ </button>
+ }
+ @if (r.status?.toLowerCase() === 'delivered') {
+ <button class="btn-mark-used btn-mark-resolved" (click)="markRepairResolved(r.repairRequestId)">
+ <span class="material-icons">check_circle</span> Resolved
  </button>
  }
  </div>
@@ -1351,6 +1359,30 @@
  @if (!item.customPartName?.trim()) {
  <div class="sp-field-error">Part name is required for custom items.</div>
  }
+ <!-- Per-item photo upload -->
+ <div class="sp-ci-photo">
+ @if (item.customPartPhoto) {
+ <div class="sp-ci-photo-preview">
+ <img [src]="item.customPartPhoto.preview" alt="Custom part photo" />
+ <button type="button" class="sp-photo-remove" (click)="clearCustomPartPhoto(i)">
+ <span class="material-icons">close</span>
+ </button>
+ </div>
+ } @else {
+ <div class="sp-ci-photo-btns">
+ <label class="sp-ci-photo-btn">
+ <input type="file" accept="image/*" hidden (change)="onCustomPartPhotoSelected(i, $event)" />
+ <span class="material-icons">photo_library</span>
+ <span>Add Photo</span>
+ </label>
+ <label class="sp-ci-photo-btn">
+ <input type="file" accept="image/*" capture="environment" hidden (change)="onCustomPartPhotoSelected(i, $event)" />
+ <span class="material-icons">photo_camera</span>
+ <span>Camera</span>
+ </label>
+ </div>
+ }
+ </div>
  }
  </div>
 
@@ -1417,35 +1449,6 @@
  }
  </div>
  </div>
- </div>
-
- <!--Spare Photo-->
- <div class="sp-photo-section">
- <div class="sp-photo-label">
- Reference Photo <span class="sp-req-star">*</span>
- <small>Required — upload a photo of the part or issue</small>
- </div>
- @if (sparePhoto()) {
- <div class="sp-photo-preview">
- <img [src]="sparePhoto()!.preview" alt="Spare request photo" />
- <button type="button" class="sp-photo-remove" (click)="clearSparePhoto()">
- <span class="material-icons">close</span>
- </button>
- </div>
- } @else {
- <div class="sp-photo-btns">
- <label class="sp-photo-btn">
- <input type="file" accept="image/*" hidden (change)="onSparePhotoSelected($event)" />
- <span class="material-icons">photo_library</span>
- <span>Gallery</span>
- </label>
- <label class="sp-photo-btn">
- <input type="file" accept="image/*" capture="environment" hidden (change)="onSparePhotoSelected($event)" />
- <span class="material-icons">photo_camera</span>
- <span>Camera</span>
- </label>
- </div>
- }
  </div>
 
  @if (spareMsg()) {

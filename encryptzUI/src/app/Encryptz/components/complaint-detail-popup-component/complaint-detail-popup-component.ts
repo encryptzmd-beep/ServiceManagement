@@ -49,7 +49,11 @@ export class ComplaintDetailPopupComponent implements OnInit, AfterViewChecked, 
   savingSpare    = signal(false);
   savingComment  = signal(false);
   savingComplete = signal(false);
-activeTab = signal<'overview'|'customer'|'product'|'location'|'assignments'|'spare'|'comments'|'images'|'payment'>('overview');
+activeTab = signal<'overview'|'customer'|'product'|'location'|'assignments'|'spare'|'repair'|'comments'|'images'|'payment'>('overview');
+
+  repairParts      = signal<any[]>([]);
+  repairLoading    = signal(false);
+  private repairLoaded = false;
 
   complaintData = signal<any>(null);
   customerData  = signal<any>(null);
@@ -94,9 +98,10 @@ activeTab = signal<'overview'|'customer'|'product'|'location'|'assignments'|'spa
   repairImages = computed(() => this.complaintImages().filter(img =>
     this._imageType(img).includes('repair')
   ));
-  completionImages = computed(() => this.complaintImages().filter(img =>
-    this._isCompletionImage(img)
-  ));
+  completionImages = computed(() => this.complaintImages().filter(img => {
+    const t = this._imageType(img);
+    return t && !t.includes('spare') && !t.includes('repair') && t !== 'complaint' && t !== 'customer';
+  }));
 
   editing = { complaint: false, customer: false, product: false, location: false };
   editData: any = { complaint: {}, customer: {}, product: {}, location: {} };
@@ -172,6 +177,32 @@ activeTab = signal<'overview'|'customer'|'product'|'location'|'assignments'|'spa
   openImagesTab() {
     this.activeTab.set('images');
     this.loadImages();
+  }
+
+  openRepairTab() {
+    this.activeTab.set('repair');
+    if (!this.repairLoaded) this.loadRepairParts();
+  }
+
+  loadRepairParts() {
+    this.repairLoading.set(true);
+    this.repairLoaded = true;
+    this.api.getRepairPartsByComplaint(this.complaintId).subscribe({
+      next: (res: any) => {
+        const list = res?.data ?? res ?? [];
+        this.repairParts.set(list);
+        this.repairLoading.set(false);
+      },
+      error: () => { this.repairLoading.set(false); }
+    });
+  }
+
+  repairStatusColor(s: string): string {
+    const map: Record<string, string> = {
+      requested: '#6366f1', receivedathq: '#0ea5e9', underrepair: '#d97706',
+      repaired: '#16a34a', dispatched: '#7c3aed', delivered: '#2563eb', resolved: '#15803d'
+    };
+    return map[(s ?? '').toLowerCase()] ?? '#6b7280';
   }
 
   loadPhotoCount(): void {

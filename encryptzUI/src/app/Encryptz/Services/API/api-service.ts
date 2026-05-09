@@ -1017,6 +1017,14 @@ verifyPayment(paymentId: number, isVerified: boolean): Observable<M.ApiResponse>
   return this.put<M.ApiResponse>('Payments/Verify', { paymentId, isVerified });
 }
 
+getRepairParts(filter?: { status?: string; complaintId?: number; technicianId?: number; pageNumber?: number; pageSize?: number }): Observable<any> {
+  return this.get<any>('RepairPart', filter as any);
+}
+
+getRepairPartsByComplaint(complaintId: number): Observable<any> {
+  return this.get<any>(`RepairPart/by-complaint/${complaintId}`);
+}
+
 }
 
 

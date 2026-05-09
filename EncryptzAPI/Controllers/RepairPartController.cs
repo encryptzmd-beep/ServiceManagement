@@ -91,6 +91,34 @@ namespace EncryptzAPI.Controllers
             var result = await _service.UpdateStatus(id, dto.Status, dto.Notes);
             return Ok(result);
         }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin,CompanyAdmin")]
+        public async Task<IActionResult> GetAll(
+            [FromQuery] string? status,
+            [FromQuery] int? complaintId,
+            [FromQuery] int? technicianId,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 30)
+        {
+            var filter = new RepairPartFilterDto
+            {
+                Status       = status,
+                ComplaintId  = complaintId,
+                TechnicianId = technicianId,
+                PageNumber   = pageNumber,
+                PageSize     = pageSize
+            };
+            var result = await _service.GetAll(filter);
+            return Ok(result);
+        }
+
+        [HttpGet("by-complaint/{complaintId}")]
+        public async Task<IActionResult> GetByComplaint(int complaintId)
+        {
+            var result = await _service.GetByComplaint(complaintId);
+            return Ok(result);
+        }
     }
 
     public class UpdateRepairStatusDto

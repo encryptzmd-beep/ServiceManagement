@@ -3262,11 +3262,20 @@
 .ric-status-pill {
   font-size: 10px;
   font-weight: 700;
-  padding: 1px 7px;
-  border-radius: 4px;
+  padding: 2px 8px;
+  border-radius: 20px;
   background: #eff6ff;
   color: #2563eb;
-  text-transform: uppercase;
+  text-transform: capitalize;
+  border: 1px solid currentColor;
+
+  &[data-status="requested"]    { background: #eef2ff; color: #6366f1; }
+  &[data-status="receivedathq"] { background: #f0f9ff; color: #0ea5e9; }
+  &[data-status="underrepair"]  { background: #fffbeb; color: #d97706; }
+  &[data-status="repaired"]     { background: #f0fdf4; color: #16a34a; }
+  &[data-status="dispatched"]   { background: #faf5ff; color: #7c3aed; }
+  &[data-status="delivered"]    { background: #eff6ff; color: #2563eb; }
+  &[data-status="resolved"]     { background: #f0fdf4; color: #15803d; }
 }
 
 .ric-notes {
@@ -3274,6 +3283,7 @@
   color: #64748b;
   margin: 4px 0 0;
   font-style: italic;
+  &.ric-status-note { color: #475569; font-style: normal; }
 }
 
 .ric-right {
@@ -3439,6 +3449,14 @@
 
   &:active {
     transform: none;
+  }
+}
+
+.btn-mark-resolved {
+  background: #2563eb;
+  &:hover {
+    background: #1d4ed8;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
   }
 }
 
@@ -3737,6 +3755,27 @@
   background: #ef4444; color: #fff; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   .material-icons { font-size: 14px; }
+}
+
+/* ─── Per-custom-item photo upload ─────────────────── */
+.sp-ci-photo {
+  margin-top: 8px;
+}
+.sp-ci-photo-btns {
+  display: flex; gap: 8px;
+}
+.sp-ci-photo-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 12px;
+  background: #fff; border: 1.5px dashed #cbd5e1; border-radius: 8px;
+  color: #64748b; font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: all .2s;
+  .material-icons { font-size: 16px; }
+  &:hover { border-color: #ea580c; color: #ea580c; background: #fff7ed; }
+}
+.sp-ci-photo-preview {
+  position: relative; display: inline-block; max-width: 120px;
+  img { width: 100%; border-radius: 8px; display: block; }
 }
 
 /* ─── Mobile: full-screen dialogs on small screens ──── */

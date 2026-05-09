@@ -1008,6 +1008,8 @@ namespace EncryptzBL.DTO_s
         public int? SparePartId { get; set; }
         public string PartName { get; set; } = string.Empty;
         public string? PartNumber { get; set; }
+        public string? CustomPartName { get; set; }
+        public string? CustomPartNumber { get; set; }
         public decimal? UnitPrice { get; set; }
         public int Quantity { get; set; }
         public string Status { get; set; } = string.Empty;
@@ -2369,6 +2371,49 @@ namespace EncryptzBL.DTO_s
             public string PartName { get; set; }
             public string PartSerialNumber { get; set; }
             public string Notes { get; set; }
+        }
+
+        public class RepairPartFilterDto
+        {
+            public string? Status { get; set; }
+            public int? ComplaintId { get; set; }
+            public int? TechnicianId { get; set; }
+            public int PageNumber { get; set; } = 1;
+            public int PageSize { get; set; } = 30;
+        }
+
+        public class RepairPartListDto
+        {
+            public int RepairRequestId { get; set; }
+            public int ComplaintId { get; set; }
+            public string ComplaintNumber { get; set; } = string.Empty;
+            public int AssignmentId { get; set; }
+            public string PartName { get; set; } = string.Empty;
+            public string? PartSerialNumber { get; set; }
+            public string? Notes { get; set; }
+            public string Status { get; set; } = string.Empty;
+            public string? StatusNotes { get; set; }
+            public string TechnicianName { get; set; } = string.Empty;
+            public string? CustomerName { get; set; }
+            public string? ProductName { get; set; }
+            public DateTime CreatedAt { get; set; }
+            public DateTime? UpdatedAt { get; set; }
+            public int ImageCount { get; set; }
+            public int TotalCount { get; set; }
+        }
+
+        public class RepairPartByComplaintDto
+        {
+            public int RepairRequestId { get; set; }
+            public string PartName { get; set; } = string.Empty;
+            public string? PartSerialNumber { get; set; }
+            public string? Notes { get; set; }
+            public string Status { get; set; } = string.Empty;
+            public string? StatusNotes { get; set; }
+            public string TechnicianName { get; set; } = string.Empty;
+            public DateTime CreatedAt { get; set; }
+            public DateTime? UpdatedAt { get; set; }
+            public int ImageCount { get; set; }
         }
     }
 }

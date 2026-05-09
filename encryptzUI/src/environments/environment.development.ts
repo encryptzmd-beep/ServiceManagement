@@ -3,8 +3,8 @@ import { ApiService } from "../app/Encryptz/Services/API/api-service";
 // src/environments/environment.ts
 export const environment = {
   production: false,
-  // apiUrl: 'https://serviceapp.encryptz.in/api'
-   //apiUrl:'https://app.encryptz.in'
+ // apiUrl: 'https://serviceapp.encryptz.in/api'
+ //  apiUrl:'https://app.encryptz.in'
    // apiUrl:'http://192.168.1.39:5092'
    apiUrl:'http://localhost:5092'
 };

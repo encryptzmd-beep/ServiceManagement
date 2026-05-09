@@ -1,5 +1,6 @@
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Dashboard.Modules;
+using EncryptzBL.Infrastructure.Spareparts.Modules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -12,7 +13,12 @@ namespace EncryptzAPI.Controllers
     public class DashboardController : ControllerBase
     {
         private readonly IDashboardService _service;
-        public DashboardController(IDashboardService service) => _service = service;
+        private readonly ISparePartService _spareService;
+        public DashboardController(IDashboardService service, ISparePartService spareService)
+        {
+            _service = service;
+            _spareService = spareService;
+        }
 
         [HttpGet("stats")]
         public async Task<IActionResult> GetStats([FromQuery] int? roleId, [FromQuery] int? technicianId)
@@ -66,6 +72,31 @@ namespace EncryptzAPI.Controllers
             var result = await _service.ManageComplaintDetails(request);
             if (!result.Success)
                 return BadRequest(result);
+
+            // Replace d[4] (spare parts) with dedicated query that includes custom parts
+            // sp_ManageComplaintDetails uses INNER JOIN which excludes custom parts (SparePartId = null)
+            var spareParts = await _spareService.GetByComplaint(complaintId);
+            var spareSlice = spareParts.Select(s => new Dictionary<string, object?>
+            {
+                ["RequestId"]        = s.RequestId,
+                ["SparePartId"]      = (object?)s.SparePartId,
+                ["PartName"]         = s.PartName,
+                ["PartNumber"]       = s.PartNumber,
+                ["CustomPartName"]   = s.CustomPartName,
+                ["CustomPartNumber"] = s.CustomPartNumber,
+                ["Quantity"]         = s.Quantity,
+                ["Status"]           = s.Status,
+                ["UrgencyLevel"]     = s.UrgencyLevel,
+                ["Remarks"]          = s.Remarks,
+                ["RequestedAt"]      = s.RequestedAt,
+                ["ApprovedAt"]       = (object?)s.ApprovedAt,
+                ["TechnicianName"]   = s.TechnicianName,
+                ["ApprovedByName"]   = s.ApprovedByName
+            }).ToList<object>();
+
+            if (result.Data is List<object> data && data.Count > 4)
+                data[4] = spareSlice;
+
             return Ok(result);
         }
 

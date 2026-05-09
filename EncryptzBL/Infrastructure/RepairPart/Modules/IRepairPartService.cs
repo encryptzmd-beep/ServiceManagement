@@ -14,6 +14,8 @@ namespace EncryptzBL.Infrastructure.RepairPart.Modules
         Task<ApiResponse<List<RepairImageDto>>> GetImagesByRequest(int repairRequestId);
         Task<ApiResponse<string>> GetImageBase64(int imageId);
         Task<ApiResponse<bool>> UpdateStatus(int repairRequestId, string status, string? notes);
+        Task<ApiResponse<List<RepairPartListDto>>> GetAll(RepairPartFilterDto filter);
+        Task<ApiResponse<List<RepairPartByComplaintDto>>> GetByComplaint(int complaintId);
     }
 
     public class RepairImageDto

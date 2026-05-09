@@ -315,6 +315,14 @@ export const routes: Routes = [
     .then(m => m.SparePartMasterComponent)
 },
 
+{
+  path: 'technicians/repair-parts',
+  loadComponent: () => import('./Encryptz/components/repair-parts-management-component/repair-parts-management-component')
+    .then(m => m.RepairPartsManagementComponent),
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager'])],
+  data: { title: 'Repair Parts', icon: 'construction', menu: 'technicians' }
+},
+
 
 {
   path: 'settings/payments',

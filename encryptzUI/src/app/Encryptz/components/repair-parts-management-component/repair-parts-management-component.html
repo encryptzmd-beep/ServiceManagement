@@ -1,0 +1,270 @@
+<div class="rpm-page">
+
+  <!-- Header -->
+  <div class="rpm-header">
+    <div class="rpm-header-left">
+      <span class="material-icons">construction</span>
+      <div>
+        <h2>Repair Parts</h2>
+        <p>Track parts sent to Head Office for repair</p>
+      </div>
+    </div>
+    <div class="rpm-header-right">
+      <select [(ngModel)]="filterStatus" (change)="onFilterChange()" class="rpm-filter-select">
+        <option value="">All Statuses</option>
+        <option value="Requested">Requested</option>
+        <option value="ReceivedAtHQ">Received at HQ</option>
+        <option value="UnderRepair">Under Repair</option>
+        <option value="Repaired">Repaired</option>
+        <option value="Dispatched">Dispatched</option>
+        <option value="Delivered">Delivered</option>
+        <option value="Resolved">Resolved</option>
+      </select>
+      <button class="rpm-refresh-btn" (click)="load()" title="Refresh">
+        <span class="material-icons">refresh</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats bar -->
+  <div class="rpm-stats">
+    @for (s of ['Requested','ReceivedAtHQ','UnderRepair','Repaired','Dispatched','Delivered','Resolved']; track s) {
+      <div class="rpm-stat-chip" [style.borderColor]="statusColor(s)" (click)="filterStatus=s; onFilterChange()">
+        <span class="rpm-stat-dot" [style.background]="statusColor(s)"></span>
+        {{ s === 'ReceivedAtHQ' ? 'At HQ' : s === 'UnderRepair' ? 'In Repair' : s }}
+      </div>
+    }
+  </div>
+
+  <!-- Table -->
+  <div class="rpm-table-wrap">
+    @if (loading()) {
+      <div class="rpm-loading">
+        <div class="rpm-spinner"></div>
+        <span>Loading repair requests…</span>
+      </div>
+    } @else if (!items().length) {
+      <div class="rpm-empty">
+        <span class="material-icons">inbox</span>
+        <p>No repair requests found</p>
+      </div>
+    } @else {
+      <table class="rpm-table">
+        <thead>
+          <tr>
+            <th>Complaint</th>
+            <th>Part</th>
+            <th>Serial No.</th>
+            <th>Technician</th>
+            <th>Customer</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th>Images</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.repairRequestId) {
+            <tr (click)="openDetail(item)" class="rpm-row" [class.rpm-row-active]="selected()?.repairRequestId === item.repairRequestId">
+              <td>
+                <span class="rpm-complaint-no">{{ item.complaintNumber }}</span>
+              </td>
+              <td>
+                <strong>{{ item.partName }}</strong>
+                @if (item.notes) {
+                  <small class="rpm-notes-tip" [title]="item.notes">📝</small>
+                }
+              </td>
+              <td>
+                <span class="rpm-mono">{{ item.partSerialNumber || '—' }}</span>
+              </td>
+              <td>{{ item.technicianName }}</td>
+              <td>{{ item.customerName || '—' }}</td>
+              <td>
+                <span class="rpm-status-badge" [style.background]="statusColor(item.status) + '22'" [style.color]="statusColor(item.status)" [style.borderColor]="statusColor(item.status)">
+                  {{ item.status }}
+                </span>
+              </td>
+              <td class="rpm-date">{{ item.createdAt | date:'dd MMM yy' }}</td>
+              <td>
+                @if (item.imageCount > 0) {
+                  <span class="rpm-img-count"><span class="material-icons" style="font-size:14px">photo</span> {{ item.imageCount }}</span>
+                } @else {
+                  <span class="rpm-no-img">—</span>
+                }
+              </td>
+              <td (click)="$event.stopPropagation()">
+                <button class="rpm-btn-status" (click)="openStatusModal(item)" title="Update Status">
+                  <span class="material-icons">edit</span>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <!-- Pagination -->
+      @if (totalPages() > 1) {
+        <div class="rpm-pagination">
+          <button [disabled]="pageNumber() === 1" (click)="changePage(pageNumber() - 1)">‹ Prev</button>
+          <span>Page {{ pageNumber() }} of {{ totalPages() }}</span>
+          <button [disabled]="pageNumber() >= totalPages()" (click)="changePage(pageNumber() + 1)">Next ›</button>
+        </div>
+      }
+    }
+  </div>
+
+</div>
+
+<!-- ══ DETAIL PANEL ══ -->
+@if (selected()) {
+  <div class="rpm-overlay" (click)="closeDetail()"></div>
+  <div class="rpm-panel">
+    <div class="rpm-panel-header">
+      <span class="material-icons">construction</span>
+      <div>
+        <h3>{{ selected()!.partName }}</h3>
+        <small>{{ selected()!.complaintNumber }} · {{ selected()!.technicianName }}</small>
+      </div>
+      <button class="rpm-panel-close" (click)="closeDetail()"><span class="material-icons">close</span></button>
+    </div>
+
+    <div class="rpm-panel-body">
+      <!-- Status timeline -->
+      <div class="rpm-timeline">
+        @for (s of ['Requested','ReceivedAtHQ','UnderRepair','Repaired','Dispatched','Delivered','Resolved']; track s; let i = $index) {
+          <div class="rpm-tl-step" [class.rpm-tl-done]="isStatusDone(selected()!.status, s)" [class.rpm-tl-active]="selected()!.status === s">
+            <div class="rpm-tl-dot" [style.background]="selected()!.status === s || isStatusDone(selected()!.status, s) ? statusColor(s) : '#e5e7eb'"></div>
+            <span class="rpm-tl-label">{{ s === 'ReceivedAtHQ' ? 'At HQ' : s === 'UnderRepair' ? 'In Repair' : s }}</span>
+          </div>
+          @if (i < 6) { <div class="rpm-tl-line" [class.rpm-tl-line-done]="isStatusDone(selected()!.status, s)"></div> }
+        }
+      </div>
+
+      <!-- Info rows -->
+      <div class="rpm-detail-grid">
+        <div class="rpm-detail-row">
+          <span>Part Name</span><strong>{{ selected()!.partName }}</strong>
+        </div>
+        <div class="rpm-detail-row">
+          <span>Serial No.</span><strong>{{ selected()!.partSerialNumber || '—' }}</strong>
+        </div>
+        <div class="rpm-detail-row">
+          <span>Customer</span><strong>{{ selected()!.customerName || '—' }}</strong>
+        </div>
+        <div class="rpm-detail-row">
+          <span>Product</span><strong>{{ selected()!.productName || '—' }}</strong>
+        </div>
+        <div class="rpm-detail-row">
+          <span>Technician</span><strong>{{ selected()!.technicianName }}</strong>
+        </div>
+        <div class="rpm-detail-row">
+          <span>Requested On</span><strong>{{ selected()!.createdAt | date:'dd MMM yyyy, HH:mm' }}</strong>
+        </div>
+        @if (selected()!.updatedAt) {
+          <div class="rpm-detail-row">
+            <span>Last Updated</span><strong>{{ selected()!.updatedAt | date:'dd MMM yyyy, HH:mm' }}</strong>
+          </div>
+        }
+        @if (selected()!.notes) {
+          <div class="rpm-detail-row rpm-detail-notes">
+            <span>Notes</span><p>{{ selected()!.notes }}</p>
+          </div>
+        }
+        @if (selected()!.statusNotes) {
+          <div class="rpm-detail-row rpm-detail-notes">
+            <span>Status Notes</span><p>{{ selected()!.statusNotes }}</p>
+          </div>
+        }
+      </div>
+
+      <!-- Update status button -->
+      <button class="rpm-btn-update-status" (click)="openStatusModal(selected()!)">
+        <span class="material-icons">sync</span> Update Status
+      </button>
+
+      <!-- Images -->
+      <div class="rpm-images-section">
+        <h4><span class="material-icons">photo_library</span> Images</h4>
+        @if (imagesLoading()) {
+          <div class="rpm-img-loading"><div class="rpm-spinner-sm"></div> Loading images…</div>
+        } @else if (!imagesList().length) {
+          <p class="rpm-no-img-msg">No images uploaded</p>
+        } @else {
+          <div class="rpm-img-grid">
+            @for (img of imagesList(); track img.imageId) {
+              <div class="rpm-img-thumb" (click)="loadImageBase64(img); openLightbox(img)">
+                @if (img.base64) {
+                  <img [src]="img.base64" alt="repair image" />
+                } @else {
+                  <div class="rpm-img-placeholder" (click)="loadImageBase64(img)">
+                    <span class="material-icons">image</span>
+                    <small>{{ img.imageType }}</small>
+                  </div>
+                }
+                <span class="rpm-img-type-label">{{ img.imageType }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══ STATUS MODAL ══ -->
+@if (showStatusModal()) {
+  <div class="rpm-modal-overlay" (click)="closeStatusModal()"></div>
+  <div class="rpm-modal">
+    <div class="rpm-modal-header">
+      <span class="material-icons">sync</span>
+      <h3>Update Status</h3>
+      <button class="rpm-modal-close" (click)="closeStatusModal()"><span class="material-icons">close</span></button>
+    </div>
+    <div class="rpm-modal-body">
+      <div class="rpm-modal-part-info">
+        <strong>{{ statusTarget()!.partName }}</strong>
+        <span class="rpm-status-badge" [style.background]="statusColor(statusTarget()!.status) + '22'" [style.color]="statusColor(statusTarget()!.status)" [style.borderColor]="statusColor(statusTarget()!.status)">
+          {{ statusTarget()!.status }}
+        </span>
+      </div>
+
+      <label class="rpm-modal-label">
+        New Status
+        <select [(ngModel)]="newStatus" class="rpm-modal-select">
+          @for (s of ['Requested','ReceivedAtHQ','UnderRepair','Repaired','Dispatched','Delivered','Resolved']; track s) {
+            <option [value]="s">{{ s === 'ReceivedAtHQ' ? 'Received at HQ' : s === 'UnderRepair' ? 'Under Repair' : s }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="rpm-modal-label">
+        Notes <small>(optional)</small>
+        <textarea [(ngModel)]="statusNotes" rows="3" placeholder="Add status notes…" class="rpm-modal-textarea"></textarea>
+      </label>
+
+      @if (statusMsg()) {
+        <p class="rpm-modal-msg" [class.err]="statusMsgErr()">{{ statusMsg() }}</p>
+      }
+    </div>
+    <div class="rpm-modal-footer">
+      <button class="rpm-btn-cancel" (click)="closeStatusModal()">Cancel</button>
+      <button class="rpm-btn-save" (click)="saveStatus()" [disabled]="statusSaving()">
+        @if (statusSaving()) { <span class="rpm-spinner-sm"></span> } Save
+      </button>
+    </div>
+  </div>
+}
+
+<!-- ══ LIGHTBOX ══ -->
+@if (lightboxImg()) {
+  <div class="rpm-lightbox-overlay" (click)="closeLightbox()">
+    <img [src]="lightboxImg()!" class="rpm-lightbox-img" (click)="$event.stopPropagation()" />
+    <button class="rpm-lightbox-close" (click)="closeLightbox()"><span class="material-icons">close</span></button>
+  </div>
+}
+
+<!-- ══ TOAST ══ -->
+@if (showToast()) {
+  <div class="rpm-toast" [class.err]="toastErr()">{{ toastMsg() }}</div>
+}

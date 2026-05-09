@@ -125,5 +125,40 @@ namespace EncryptzBL.Infrastructure.RepairPart.Modules
                 return ApiResponse<bool>.Fail(ex.Message);
             }
         }
+
+        public async Task<ApiResponse<List<RepairPartListDto>>> GetAll(RepairPartFilterDto filter)
+        {
+            try
+            {
+                var p = new[]
+                {
+                    SqlParameterHelper.Input("@Status",      string.IsNullOrWhiteSpace(filter.Status)      ? (object)DBNull.Value : filter.Status),
+                    SqlParameterHelper.Input("@ComplaintId", filter.ComplaintId  ?? (object)DBNull.Value),
+                    SqlParameterHelper.Input("@TechnicianId",filter.TechnicianId ?? (object)DBNull.Value),
+                    SqlParameterHelper.Input("@PageNumber",  filter.PageNumber),
+                    SqlParameterHelper.Input("@PageSize",    filter.PageSize)
+                };
+                var list = await GetListAsync<RepairPartListDto>("sp_RepairPart_GetAll", p);
+                return ApiResponse<List<RepairPartListDto>>.Ok(list);
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<List<RepairPartListDto>>.Fail(ex.Message);
+            }
+        }
+
+        public async Task<ApiResponse<List<RepairPartByComplaintDto>>> GetByComplaint(int complaintId)
+        {
+            try
+            {
+                var p = new[] { SqlParameterHelper.Input("@ComplaintId", complaintId) };
+                var list = await GetListAsync<RepairPartByComplaintDto>("sp_RepairPart_GetByComplaint", p);
+                return ApiResponse<List<RepairPartByComplaintDto>>.Ok(list);
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<List<RepairPartByComplaintDto>>.Fail(ex.Message);
+            }
+        }
     }
 }

@@ -14,6 +14,7 @@ type SpareCartItem = {
   isCustom: boolean;          // flag
   customPartName?: string;
   customPartNumber?: string;
+  customPartPhoto?: { file: File; preview: string } | null;
   quantity: number;
   urgencyLevel: string;
   remarks: string;
@@ -48,7 +49,6 @@ private geocode = inject(GeocodeService);
 // Change currentCoords to locationName
 locationName = signal('');
 spareCart = signal<SpareCartItem[]>([]);
-sparePhoto = signal<{ file: File; preview: string } | null>(null);
 urgencyOptions = ['Normal', 'Urgent', 'Critical'];
 
 spareSubmitting = signal(false);
@@ -909,23 +909,43 @@ private showCheckInMsg(m: string, err: boolean): void {
     });
   }
 
-  markRepairAsUsed(repairRequestId: number): void {
-    if (!confirm('Are you sure you want to mark this repair part as used?')) return;
-    this.api.updateRepairStatus(repairRequestId, 'Used').subscribe({
+  markRepairDelivered(repairRequestId: number): void {
+    if (!confirm('Confirm that this part has been delivered back to site?')) return;
+    this.api.updateRepairStatus(repairRequestId, 'Delivered').subscribe({
       next: (res) => {
         if (res.success) {
-          this.show('Repair part marked as used', false);
-          // Refresh detail data to see updated repair status
-          this.api.getWorkOrderDetails(this.detailData().assignmentId).subscribe({
-            next: (res: any) => {
-              this.detailData.set(Array.isArray(res) ? res[0] : (res?.data ?? res));
-            }
-          });
+          this.show('Marked as Delivered', false);
+          this.refreshRepairDetails();
         } else {
           this.show(res.message || 'Failed to update status', true);
         }
       },
       error: () => this.show('Error updating status', true)
+    });
+  }
+
+  markRepairResolved(repairRequestId: number): void {
+    if (!confirm('Mark this repair as fully resolved?')) return;
+    this.api.updateRepairStatus(repairRequestId, 'Resolved').subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.show('Repair marked as Resolved', false);
+          this.refreshRepairDetails();
+        } else {
+          this.show(res.message || 'Failed to update status', true);
+        }
+      },
+      error: () => this.show('Error updating status', true)
+    });
+  }
+
+  private refreshRepairDetails(): void {
+    const d = this.detailData();
+    if (!d?.assignmentId) return;
+    this.api.getWorkOrderDetails(d.assignmentId).subscribe({
+      next: (res: any) => {
+        this.detailData.set(Array.isArray(res) ? res[0] : (res?.data ?? res));
+      }
     });
   }
 
@@ -971,31 +991,33 @@ private spareSubject = new Subject<string>();
 // Add to ngOnInit (inside the method, after existing code):
 
 removeSpareFromCart(index: number): void {
+  const item = this.spareCart()[index];
+  if (item?.customPartPhoto) URL.revokeObjectURL(item.customPartPhoto.preview);
   this.spareCart.update(list => list.filter((_, i) => i !== index));
 }
 // ── Open spare dialog from work order ───────────────────
 openSpareDialog(wo: WorkOrder, event?: Event): void {
   event?.stopPropagation();
   this.spareDialogWo.set(wo);
+  this.clearAllCustomPhotos();
   this.spareCart.set([]);
   this.spareSearch = '';
   this.spareResults.set([]);
   this.spareMsg.set('');
   this.spareMsgErr.set(false);
   this.showSpareDropdown = false;
-  this.clearSparePhoto();
   this.showSpareDialog.set(true);
   this.loadSpareOptions();
 }
 
 closeSpareDialog(): void {
+  this.clearAllCustomPhotos();
   this.showSpareDialog.set(false);
   this.spareDialogWo.set(null);
   this.spareCart.set([]);
   this.spareSearch = '';
   this.spareResults.set([]);
   this.showSpareDropdown = false;
-  this.clearSparePhoto();
 }
 
 onSpareSearch(): void {
@@ -1039,6 +1061,7 @@ addCustomPart(): void {
       isCustom: true,
       customPartName: '',
       customPartNumber: '',
+      customPartPhoto: null,
       quantity: 1,
       urgencyLevel: 'Normal',
       remarks: ''
@@ -1124,12 +1147,6 @@ submitSpareRequest(): void {
     }
   }
 
-  if (!this.sparePhoto()) {
-    this.spareMsg.set('Please upload a reference photo');
-    this.spareMsgErr.set(true);
-    return;
-  }
-
   const payload = this.spareCart().map(item => ({
     complaintId: wo.complaintId,
     technicianId: this.techId,
@@ -1147,37 +1164,33 @@ submitSpareRequest(): void {
 
   this.api.createSpareRequest(payload).subscribe({
     next: (response: any) => {
-      const photo = this.sparePhoto();
-      if (photo) {
-        const fd = new FormData();
-        fd.append('file', photo.file);
-        fd.append('imageType', 'SpareRequest');
-        fd.append('complaintId', wo.complaintId.toString());
-        fd.append('assignmentId', wo.assignmentId.toString());
-        this.api.uploadServiceImage(this.techId, fd).subscribe({
-          next: () => {
-            this.spareSubmitting.set(false);
-            this.spareMsg.set(response?.message || 'Request submitted successfully');
-            this.spareMsgErr.set(false);
-            this.spareCart.set([]);
-            this.closeSpareDialog();
-          },
-          error: () => {
-            // spare request created — photo upload failed but still success
-            this.spareSubmitting.set(false);
-            this.spareMsg.set('Request submitted (photo upload failed)');
-            this.spareMsgErr.set(false);
-            this.spareCart.set([]);
-            this.closeSpareDialog();
-          }
-        });
-      } else {
+      const customPhotos = this.spareCart()
+        .filter(item => item.isCustom && item.customPartPhoto)
+        .map(item => item.customPartPhoto!);
+
+      const finish = () => {
         this.spareSubmitting.set(false);
         this.spareMsg.set(response?.message || 'Request submitted successfully');
         this.spareMsgErr.set(false);
         this.spareCart.set([]);
         this.closeSpareDialog();
-      }
+      };
+
+      if (customPhotos.length === 0) { finish(); return; }
+
+      const uploadNext = (idx: number) => {
+        if (idx >= customPhotos.length) { finish(); return; }
+        const fd = new FormData();
+        fd.append('file', customPhotos[idx].file);
+        fd.append('imageType', 'SpareRequest');
+        fd.append('complaintId', wo.complaintId.toString());
+        fd.append('assignmentId', wo.assignmentId.toString());
+        this.api.uploadServiceImage(this.techId, fd).subscribe({
+          next: () => uploadNext(idx + 1),
+          error: () => uploadNext(idx + 1)
+        });
+      };
+      uploadNext(0);
     },
     error: () => {
       this.spareSubmitting.set(false);
@@ -1701,23 +1714,37 @@ closeRepairImagesModal(): void {
   this.activeRepairRequest.set(null);
 }
 
-// ── Spare photo handlers ────────────────────────────────
-clearSparePhoto(): void {
-  const p = this.sparePhoto();
-  if (p) URL.revokeObjectURL(p.preview);
-  this.sparePhoto.set(null);
+// ── Per-custom-item photo handlers ─────────────────────
+private clearAllCustomPhotos(): void {
+  this.spareCart().forEach(item => {
+    if (item.customPartPhoto) URL.revokeObjectURL(item.customPartPhoto.preview);
+  });
 }
 
-onSparePhotoSelected(event: Event): void {
+onCustomPartPhotoSelected(index: number, event: Event): void {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   if (!file || !file.type.startsWith('image/')) return;
-  const prev = this.sparePhoto();
-  if (prev) URL.revokeObjectURL(prev.preview);
   this.compressImage(file).then(compressed => {
-    this.sparePhoto.set({ file: compressed, preview: URL.createObjectURL(compressed) });
+    this.spareCart.update(list => {
+      const updated = [...list];
+      const item = updated[index];
+      if (item?.customPartPhoto) URL.revokeObjectURL(item.customPartPhoto.preview);
+      updated[index] = { ...item, customPartPhoto: { file: compressed, preview: URL.createObjectURL(compressed) } };
+      return updated;
+    });
   });
   input.value = '';
+}
+
+clearCustomPartPhoto(index: number): void {
+  this.spareCart.update(list => {
+    const updated = [...list];
+    const item = updated[index];
+    if (item?.customPartPhoto) URL.revokeObjectURL(item.customPartPhoto.preview);
+    updated[index] = { ...item, customPartPhoto: null };
+    return updated;
+  });
 }
 
 // ── Image compression ───────────────────────────────────

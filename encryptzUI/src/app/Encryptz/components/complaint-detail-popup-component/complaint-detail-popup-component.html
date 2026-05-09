@@ -40,6 +40,12 @@
       <button class="cd-tab" [class.active]="activeTab()==='spare'" (click)="activeTab.set('spare')">
         <span class="material-icons">build</span> Spares
         <span class="cd-tab-count">{{ spareParts().length }}</span></button>
+      <button class="cd-tab" [class.active]="activeTab()==='repair'" (click)="openRepairTab()">
+        <span class="material-icons">construction</span> Repairs
+        @if (repairParts().length) {
+          <span class="cd-tab-count">{{ repairParts().length }}</span>
+        }
+      </button>
       <button class="cd-tab" [class.active]="activeTab()==='comments'" (click)="activeTab.set('comments')">
         <span class="material-icons">chat</span> Comments
         <span class="cd-tab-count">{{ comments().length }}</span></button>
@@ -691,8 +697,13 @@
                     @if (editingSpareId !== p.RequestId) {
                       <tr>
                         <td>
-                          <strong>{{ display(p.PartName) }}</strong>
-                          @if (p.PartNumber) { <small class="mono">{{ display(p.PartNumber) }}</small> }
+                          @if (!p.SparePartId) {
+                            <span class="sp-type-chip custom" style="font-size:10px;padding:1px 6px;margin-right:4px;">Custom</span>
+                          }
+                          <strong>{{ display(p.CustomPartName || p.PartName) }}</strong>
+                          @if (p.CustomPartNumber || p.PartNumber) {
+                            <small class="mono">{{ display(p.CustomPartNumber || p.PartNumber) }}</small>
+                          }
                         </td>
                         <td class="qty">× {{ display(p.Quantity, '1') }}</td>
                         <td><span class="urg-tag u-{{ (p.UrgencyLevel || 'normal').toLowerCase() }}">{{ display(p.UrgencyLevel, 'Normal') }}</span></td>
@@ -711,7 +722,7 @@
                       }
                     } @else {
                       <tr class="edit-row">
-                        <td><strong>{{ display(p.PartName) }}</strong></td>
+                        <td><strong>{{ display(p.CustomPartName || p.PartName) }}</strong></td>
                         <td><input type="number" min="1" class="cd-inp bare sm" [(ngModel)]="editSpare.Quantity"></td>
                         <td>
                           <select class="cd-inp bare sm cd-select" [(ngModel)]="editSpare.UrgencyLevel">
@@ -753,6 +764,72 @@
     <button (click)="nextSpare()" [disabled]="sparePage() >= spareTotalPages()" class="page-btn">Next &raquo;</button>
   </div>
 }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- ═══════════════ REPAIRS ═══════════════ -->
+      @if (activeTab()==='repair') {
+        <div class="cd-section">
+          <div class="cd-section-header"><h3>Repair Part Requests</h3></div>
+
+          @if (repairLoading()) {
+            <div class="cd-empty">
+              <div class="spare-loading"><div class="mini-spin blue"></div><span>Loading repair data…</span></div>
+            </div>
+          } @else if (!repairParts().length) {
+            <div class="cd-empty">
+              <span class="material-icons">construction</span>
+              <p>No repair part requests for this complaint</p>
+            </div>
+          } @else {
+            <div class="spare-wrap">
+              <table class="spare-tbl">
+                <thead>
+                  <tr>
+                    <th>Part</th>
+                    <th>Serial No.</th>
+                    <th>Status</th>
+                    <th>Technician</th>
+                    <th>Date</th>
+                    <th>Images</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of repairParts(); track r.repairRequestId) {
+                    <tr>
+                      <td>
+                        <strong>{{ r.partName }}</strong>
+                        @if (r.notes) {
+                          <small class="sp-notes-preview" [title]="r.notes">{{ r.notes }}</small>
+                        }
+                      </td>
+                      <td><span class="sp-mono">{{ r.partSerialNumber || '—' }}</span></td>
+                      <td>
+                        <span class="rp-status-chip"
+                          [style.background]="repairStatusColor(r.status) + '1a'"
+                          [style.color]="repairStatusColor(r.status)"
+                          [style.border]="'1px solid ' + repairStatusColor(r.status)">
+                          {{ r.status === 'ReceivedAtHQ' ? 'At HQ' : r.status === 'UnderRepair' ? 'In Repair' : r.status }}
+                        </span>
+                        @if (r.statusNotes) {
+                          <small class="sp-notes-preview" [title]="r.statusNotes">{{ r.statusNotes }}</small>
+                        }
+                      </td>
+                      <td>{{ r.technicianName }}</td>
+                      <td class="sp-date-cell">{{ r.createdAt | date:'dd MMM yy' }}</td>
+                      <td>
+                        @if (r.imageCount > 0) {
+                          <span class="sp-img-count"><span class="material-icons" style="font-size:13px">photo</span> {{ r.imageCount }}</span>
+                        } @else {
+                          <span class="sp-no-img">—</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
             </div>
           }
         </div>
@@ -921,17 +998,17 @@
         }
       </div>
 
-      <!-- ── Complaint Completion Images ── -->
+      <!-- ── Other / Completion Images ── -->
       <div class="img-section">
         <div class="img-section-label">
           <span class="material-icons">task_alt</span>
-          Complaint Completion Images
+          Other Images
           <span class="img-section-count">{{ completionImages().length }}</span>
         </div>
         @if (completionImages().length === 0) {
           <div class="cd-empty cd-empty-sm">
             <span class="material-icons">image_not_supported</span>
-            <p>No completion images</p>
+            <p>No other images</p>
           </div>
         } @else {
           <div class="img-grid">
