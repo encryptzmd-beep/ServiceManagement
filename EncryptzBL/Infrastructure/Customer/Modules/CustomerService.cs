@@ -785,6 +785,77 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
         //    }
 
 
+        public async Task<ApiResponse<dynamic>> CreatePublicQuickComplaint(PublicQuickComplaintRequest_Dto dto)
+        {
+            try
+            {
+                int customerId;
+
+                // 1. Check if mobile already exists
+                var mobileCheck = await CheckByMobile(dto.MobileNumber);
+                if (mobileCheck.Success && mobileCheck.Data != null)
+                {
+                    customerId = mobileCheck.Data.CustomerId;
+                }
+                else
+                {
+                    // 2. New customer — register with mobile as default password
+                    var registerDto = new CustomerRegister_Dto
+                    {
+                        FullName = dto.FullName,
+                        Email = dto.Email,
+                        MobileNumber = dto.MobileNumber,
+                        PasswordHash = dto.MobileNumber
+                    };
+                    var regResult = await Register_Customer(registerDto);
+                    if (!regResult.Success || regResult.Data == null)
+                        return ApiResponse<dynamic>.Fail(regResult.Message ?? "Registration failed");
+
+                    if (regResult.Data.CustomerId == null || regResult.Data.CustomerId == 0)
+                        return ApiResponse<dynamic>.Fail("Could not create customer account");
+
+                    customerId = regResult.Data.CustomerId.Value;
+                }
+
+                // 3. Create quick complaint using the customerId directly
+                var parameters = new[]
+                {
+                    SqlParameterHelper.Input("@CustomerId", customerId),
+                    SqlParameterHelper.Input("@Subject", dto.Subject),
+                    SqlParameterHelper.Input("@Description", dto.Description ?? (object)DBNull.Value),
+                    SqlParameterHelper.Input("@Category", dto.Category ?? (object)DBNull.Value),
+                    SqlParameterHelper.Input("@BrandName", dto.BrandName ?? (object)DBNull.Value),
+                    SqlParameterHelper.Input("@ModelNumber", dto.ModelNumber ?? (object)DBNull.Value),
+                    SqlParameterHelper.Input("@Latitude", dto.Latitude ?? (object)DBNull.Value),
+                    SqlParameterHelper.Input("@Longitude", dto.Longitude ?? (object)DBNull.Value),
+                    SqlParameterHelper.Input("@LocationName", dto.LocationName ?? (object)DBNull.Value),
+                    SqlParameterHelper.Input("@ImageBase64", dto.ImageBase64 ?? (object)DBNull.Value),
+                    SqlParameterHelper.Input("@ImageName", dto.ImageName ?? (object)DBNull.Value),
+                    SqlParameterHelper.Input("@ContentType", dto.ContentType ?? (object)DBNull.Value)
+                };
+
+                var dt = await GetDataTableAsync("sp_QuickComplaint_Create", parameters);
+                if (dt != null && dt.Rows.Count > 0)
+                {
+                    var row = dt.Rows[0];
+                    var complaintId = Convert.ToInt32(row["ComplaintId"]);
+                    var complaintNumber = row["ComplaintNumber"].ToString();
+                    var message = row["Message"].ToString();
+
+                    if (complaintId > 0)
+                        return ApiResponse<dynamic>.Ok(new { ComplaintId = complaintId, ComplaintNumber = complaintNumber }, message);
+
+                    return ApiResponse<dynamic>.Fail(message ?? "Failed to create complaint");
+                }
+
+                return ApiResponse<dynamic>.Fail("Failed to create complaint");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<dynamic>.Fail(ex.Message);
+            }
+        }
+
         public async Task<ApiResponse<string>> UploadComplaintImage(
       int complaintId,
       string imagePath,

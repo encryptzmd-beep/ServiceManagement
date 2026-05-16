@@ -10,6 +10,12 @@ import { ComplaintDetailComponent } from '../components/complaint-detail-compone
 export const CUSTOMER_ROUTES: Routes = [
   { path: 'login', component: CustomerLoginComponent },
   { path: 'register', component: CustomerRegisterComponent },
+  {
+    path: 'public-complaint',
+    loadComponent: () =>
+      import('../components/public-quick-complaint-component/public-quick-complaint-component')
+        .then(m => m.PublicQuickComplaintComponent)
+  },
 
   {
     path: '',

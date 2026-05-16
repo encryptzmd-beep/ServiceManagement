@@ -112,7 +112,10 @@ namespace EncryptzBL.DTO_s
     public class CustomerDto
     {
         public int CustomerId { get; set; }
+        public int UserId { get; set; }
         public string CustomerName { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string? Email { get; set; }
         public string? Address { get; set; }
         public string? City { get; set; }
         public string? State { get; set; }
@@ -1966,6 +1969,24 @@ namespace EncryptzBL.DTO_s
             public decimal? Longitude { get; set; }
             public string LocationName { get; set; }
             public string ImageBase64 { get; set; }  // Base64 string
+            public string ImageName { get; set; }
+            public string ContentType { get; set; }
+        }
+
+        public class PublicQuickComplaintRequest_Dto
+        {
+            public string MobileNumber { get; set; }
+            public string FullName { get; set; }
+            public string Email { get; set; }
+            public string Subject { get; set; }
+            public string Category { get; set; }
+            public string BrandName { get; set; }
+            public string ModelNumber { get; set; }
+            public string Description { get; set; }
+            public decimal? Latitude { get; set; }
+            public decimal? Longitude { get; set; }
+            public string LocationName { get; set; }
+            public string ImageBase64 { get; set; }
             public string ImageName { get; set; }
             public string ContentType { get; set; }
         }

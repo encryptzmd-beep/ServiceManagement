@@ -419,7 +419,26 @@ getOrCreateProfile(): Observable<M.ApiResponse<any>> {
 }
 
 checkCustomerByMobile(mobile: string): Observable<M.ApiResponse<any>> {
-  return this.http.get<M.ApiResponse<any>>(`${this.api}/customer/check-mobile/${mobile}`);
+  return this.http.get<M.ApiResponse<any>>(`${this.api}/customer/check-by-mobile/${mobile}`);
+}
+
+submitPublicQuickComplaint(data: {
+  mobileNumber: string;
+  fullName?: string;
+  email?: string;
+  subject: string;
+  category?: string;
+  brandName?: string;
+  modelNumber?: string;
+  description?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  locationName?: string;
+  imageBase64?: string;
+  imageName?: string;
+  contentType?: string;
+}): Observable<any> {
+  return this.http.post<any>(`${this.api}/Customer/public-quick-complaint`, data);
 }
 
 // Products

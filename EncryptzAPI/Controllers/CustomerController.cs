@@ -199,6 +199,15 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [HttpPost("public-quick-complaint")]
+        [AllowAnonymous]
+        public async Task<IActionResult> PublicQuickComplaint([FromBody] PublicQuickComplaintRequest_Dto dto)
+        {
+            var result = await _svc.CreatePublicQuickComplaint(dto);
+            if (!result.Success) return BadRequest(result);
+            return Ok(result);
+        }
+
 
 
         [HttpPost("complaints/{id}/images")]

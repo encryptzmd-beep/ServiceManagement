@@ -52,5 +52,6 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
         Task<ApiResponse<List<Product_Dto>>> GetProducts_Customer(int userId);
         Task<ApiResponse<int>> AddProduct(int userId, ProductCreate_Dto dto);
         Task<ApiResponse<dynamic>> CreateQuickComplaint(int userId, QuickComplaintRequest_Dto request);
+        Task<ApiResponse<dynamic>> CreatePublicQuickComplaint(PublicQuickComplaintRequest_Dto dto);
     }
 }
