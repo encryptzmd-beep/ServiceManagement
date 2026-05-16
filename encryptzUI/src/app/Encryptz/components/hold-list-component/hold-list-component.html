@@ -1,0 +1,67 @@
+<div class="page">
+  <div class="page-header">
+    <h1 class="page-title">
+      <span class="material-icons">pause_circle</span> On Hold
+    </h1>
+    <p class="page-subtitle">Work orders currently placed on hold pending parts resolution</p>
+  </div>
+
+  @if (loading()) {
+    <div class="hl-loading">
+      <div class="mini-spin blue"></div>
+      <span>Loading hold list...</span>
+    </div>
+  } @else if (error()) {
+    <div class="hl-error">
+      <span class="material-icons">error_outline</span>
+      {{ error() }}
+    </div>
+  } @else if (items().length === 0) {
+    <div class="hl-empty">
+      <span class="material-icons">check_circle_outline</span>
+      <p>No work orders on hold</p>
+    </div>
+  } @else {
+    <div class="hl-table-wrap">
+      <table class="hl-table">
+        <thead>
+          <tr>
+            <th>Complaint #</th>
+            <th>Subject</th>
+            <th>Customer</th>
+            <th>Hold Since</th>
+            <th>Hold Type</th>
+            <th>Repair Status</th>
+            <th>Spare Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.complaintId) {
+            <tr class="hl-row">
+              <td class="hl-num">{{ item.complaintNumber }}</td>
+              <td class="hl-subject">{{ item.subject }}</td>
+              <td class="hl-customer">{{ item.customerName }}</td>
+              <td class="hl-date">{{ item.holdSince | date:'dd MMM yyyy' }}</td>
+              <td>
+                <span class="hl-type-badge"
+                  [attr.data-type]="holdType(item).toLowerCase().replace(' ','-')">
+                  {{ holdType(item) }}
+                </span>
+              </td>
+              <td>
+                <span class="hl-status-badge" [class]="repairStatusClass(item.repairStatus)">
+                  {{ item.repairStatus || '—' }}
+                </span>
+              </td>
+              <td>
+                <span class="hl-status-badge" [class]="spareStatusClass(item.spareStatus)">
+                  {{ item.spareStatus || '—' }}
+                </span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

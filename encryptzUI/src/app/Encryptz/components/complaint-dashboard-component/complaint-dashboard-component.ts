@@ -14,7 +14,7 @@ import { ComplaintDetailPopupComponent } from "../complaint-detail-popup-compone
 import { Router } from '@angular/router';
 
 interface TileConfig {
-  key: string; label: string; statusId?: number;isSpare?: boolean;
+  key: string; label: string; statusId?: number; isSpare?: boolean;
   isSLA?: boolean; isWarranty?: boolean; isScheduled?: boolean; isActiveAssign?: boolean;
 }
 
@@ -152,6 +152,7 @@ private _scrollTileTop(): void {
       { key:'warranty',      label:'Warranty',          value: s.warrantyComplaints,                             icon:'🛡️', bg:'#fce7f3', accent:'#be185d', up:true,  pct:2,  isWarranty:true },
       { key:'schedules',     label:'Today Schedules',   value: s.todaySchedules,                                 icon:'📅', bg:'#ccfbf1', accent:'#0d9488', up:true,  pct:10, isScheduled:true },
       { key:'assignments',   label:'Active Assignments', value: this.activeAssignments().length,                 icon:'👷', bg:'#e0e7ff', accent:'#6366f1', up:true,  pct:0,  isActiveAssign:true },
+      { key:'hold',          label:'On Hold',            value: rc['hold'] ?? 0,                                  icon:'⏸️', bg:'#ffedd5', accent:'#ea580c', up:false, pct:0,  statusId:9 },
     ];
   });
 
@@ -205,6 +206,7 @@ private _scrollTileTop(): void {
       { key: 'inprogress',    filter: { pageNumber: 1, pageSize: 1, statusId: 3 } },
       { key: 'workcompleted', filter: { pageNumber: 1, pageSize: 1, statusId: 5 } },
       { key: 'closed',        filter: { pageNumber: 1, pageSize: 1, statusId: 7 } },
+      { key: 'hold',          filter: { pageNumber: 1, pageSize: 1, statusId: 9 } },
     ];
 
     forkJoin(queries.map(q => this.api.getComplaints(q.filter)))
@@ -269,6 +271,7 @@ private _getTotalForTile(tile: TileConfig): number | null {
     case 'inprogress':    return rc['inprogress']    ?? s.inProgressComplaints ?? null;
     case 'workcompleted': return rc['workcompleted'] ?? s.resolvedComplaints   ?? null;
     case 'closed':        return rc['closed']        ?? s.closedComplaints     ?? null;
+    case 'hold':          return rc['hold']          ?? null;
     case 'sla':           return s.slaBreached       ?? null;
     case 'warranty':      return s.warrantyComplaints ?? null;
     case 'schedules':     return s.todaySchedules    ?? null;
@@ -462,8 +465,8 @@ get pagedItems(): any[] {
 
   getBarHeight(n: number): number { const mx=Math.max(...(this.chartData()?.complaintsByDate?.map(d=>d.count)||[1])); return Math.max(5,(n/mx)*100); }
   getBarColor(i: number): string { return ['#4f46e5','#7c3aed','#a78bfa','#6366f1','#818cf8','#4f46e5','#7c3aed'][i%7]; }
-  getStatusClass(id: number): string { return ({1:'status-new',2:'status-progress',3:'status-inprogress',4:'status-parts',5:'status-resolved',6:'status-pending',7:'status-closed',8:'status-reopened'} as any)[id]||'status-new'; }
-  getStatusLabel(id: number): string { return ({1:'New',2:'Assigned',3:'In Progress',4:'Parts Requested',5:'Work Completed',6:'Pending Confirmation',7:'Closed',8:'Reopened'} as any)[id]||'Unknown'; }
+  getStatusClass(id: number): string { return ({1:'status-new',2:'status-progress',3:'status-inprogress',4:'status-parts',5:'status-resolved',6:'status-pending',7:'status-closed',8:'status-reopened',9:'status-hold'} as any)[id]||'status-new'; }
+  getStatusLabel(id: number): string { return ({1:'New',2:'Assigned',3:'In Progress',4:'Parts Requested',5:'Work Completed',6:'Pending Confirmation',7:'Closed',8:'Reopened',9:'Hold'} as any)[id]||'Unknown'; }
   getPriorityClass(id: number): string { return ({1:'priority-urgent',2:'priority-high',3:'priority-normal',4:'priority-low'} as any)[id]||'priority-normal'; }
   getPriorityLabel(id: number): string { return ({1:'Urgent',2:'High',3:'Normal',4:'Low'} as any)[id]||'Normal'; }
 
@@ -521,7 +524,10 @@ doUnAssign(): void {
     next: (r) => {
       this.unAssigning.set(false);
       if (r.success) {
-        this.unAssignOk.set(r.message || 'Technician unassigned');
+        if (a.complaintId) {
+          this.api.setComplaintHold(a.complaintId, this.unAssignReason || undefined).subscribe();
+        }
+        this.unAssignOk.set(r.message || 'Work order placed on hold');
         this.loadActiveAssignments();
         this.loadData();
         if (this.activeTile()) this.loadTile();

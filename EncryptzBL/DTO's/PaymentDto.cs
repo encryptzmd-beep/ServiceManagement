@@ -47,6 +47,7 @@ namespace EncryptzBL.DTO_s
 
     public class AdminPaymentDto : ComplaintPaymentDto
     {
+        public string ComplaintNumber { get; set; }
         public string CustomerName { get; set; }
         public string MobileNo { get; set; }
         public string CreatedByName { get; set; }

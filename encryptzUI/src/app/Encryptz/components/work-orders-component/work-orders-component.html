@@ -545,9 +545,6 @@
  <button class="dm-tab" [class.active]="detailTab() === 'timeline'" (click)="setDetailTab('timeline')">
  <span class="material-icons">history</span> Timeline
  </button>
- <button class="dm-tab" [class.active]="detailTab() === 'payments'" (click)="setDetailTab('payments')">
- <span class="material-icons">payments</span> Payments
- </button>
  @if (detailData()?.images?.length) {
  <button class="dm-tab" [class.active]="detailTab() === 'images'" (click)="detailTab.set('images')">
  <span class="material-icons">photo_library</span> Images
@@ -802,8 +799,8 @@
  </div>
  }
 
- <!--──PAYMENTS TAB──-->
- @if (detailTab() === 'payments') {
+ <!--──PAYMENTS TAB removed – payments handled in Complete dialog──-->
+ @if (false) {
  <div class="dm-tab-content pay-tab">
 
    @if (paymentsLoading()) {
@@ -1170,6 +1167,7 @@
  >
  <span class="material-icons">construction</span> Repair Request
  </button>
+ @if (canComplete()) {
  <button
  class="btn-action btn-complete"
  type="button"
@@ -1179,6 +1177,13 @@
  >
  <span class="material-icons">check_circle</span> Complete
  </button>
+ }
+ @if (hasPendingParts()) {
+ <div class="pending-parts-hint">
+ <span class="material-icons">hourglass_top</span>
+ Parts pending – resolve all parts before completing
+ </div>
+ }
  }
 
  @if (canUnassign(detailData())) {
@@ -1459,6 +1464,37 @@
  }
  </div>
 
+ <div class="sp-advance-row">
+ <label class="sp-advance-label">
+ <span class="material-icons">currency_rupee</span> Advance Amount
+ <span class="sp-advance-optional">(optional)</span>
+ </label>
+ <div class="adv-input-wrap">
+ <input type="number" class="sp-advance-input" min="0" placeholder="0"
+ [ngModel]="spareAdvanceAmount()"
+ (ngModelChange)="spareAdvanceAmount.set($event > 0 ? $event : null)" />
+ <div class="adv-method-toggle">
+ <button type="button" [class.active]="spareAdvanceMethod() === 'Cash'"
+ (click)="spareAdvanceMethod.set('Cash')">
+ <span class="material-icons">payments</span> Cash
+ </button>
+ <button type="button" [class.active]="spareAdvanceMethod() === 'UPI'"
+ (click)="spareAdvanceMethod.set('UPI')">
+ <span class="material-icons">qr_code_2</span> UPI
+ </button>
+ </div>
+ </div>
+ @if (spareAdvanceMethod() === 'UPI' && (spareAdvanceAmount() || 0) > 0 && defaultUpiId()) {
+ <div class="adv-qr-wrap">
+ <img [src]="getAdvanceQrUrl(spareAdvanceAmount())" class="adv-qr-img" alt="UPI QR" />
+ <div class="adv-qr-info">
+ <span class="adv-qr-amt">₹{{ spareAdvanceAmount() | number:'1.2-2' }}</span>
+ <span class="adv-qr-upi">{{ defaultUpiId() }}</span>
+ </div>
+ </div>
+ }
+ </div>
+
  <div class="sp-footer">
  <button class="sp-cancel" type="button" (click)="closeSpareDialog()">Cancel</button>
  <button
@@ -1643,6 +1679,37 @@
  <span class="cmp-progress-label">Uploading {{ repairUploadStep() }}/{{ repairUploadTotal() }} images... {{ repairUploadProgress() }}%</span>
  </div>
  }
+ <div class="rp-advance-row">
+ <label class="rp-advance-label">
+ <span class="material-icons">currency_rupee</span> Advance Amount
+ <span class="rp-advance-optional">(optional)</span>
+ </label>
+ <div class="adv-input-wrap">
+ <input type="number" class="rp-advance-input" min="0" placeholder="0"
+ [ngModel]="repairAdvanceAmount()"
+ (ngModelChange)="repairAdvanceAmount.set($event > 0 ? $event : null)" />
+ <div class="adv-method-toggle">
+ <button type="button" [class.active]="repairAdvanceMethod() === 'Cash'"
+ (click)="repairAdvanceMethod.set('Cash')">
+ <span class="material-icons">payments</span> Cash
+ </button>
+ <button type="button" [class.active]="repairAdvanceMethod() === 'UPI'"
+ (click)="repairAdvanceMethod.set('UPI')">
+ <span class="material-icons">qr_code_2</span> UPI
+ </button>
+ </div>
+ </div>
+ @if (repairAdvanceMethod() === 'UPI' && (repairAdvanceAmount() || 0) > 0 && defaultUpiId()) {
+ <div class="adv-qr-wrap">
+ <img [src]="getAdvanceQrUrl(repairAdvanceAmount())" class="adv-qr-img" alt="UPI QR" />
+ <div class="adv-qr-info">
+ <span class="adv-qr-amt">₹{{ repairAdvanceAmount() | number:'1.2-2' }}</span>
+ <span class="adv-qr-upi">{{ defaultUpiId() }}</span>
+ </div>
+ </div>
+ }
+ </div>
+
  <div class="rp-footer">
  <button class="rp-cancel" type="button" (click)="closeRepairDialog()">Cancel</button>
  <button
@@ -1680,6 +1747,157 @@
  </div>
 
  <div class="cmp-body">
+
+ <!--Payment step: shown when no final payment has been recorded-->
+ @if (completePaymentLoading()) {
+ <div class="cmp-pay-loading">
+ <div class="mini-spin blue"></div>
+ <span>Checking payment status...</span>
+ </div>
+ }
+
+ @if (!completePaymentLoading() && completePaymentStep()) {
+ <div class="cmp-pay-step">
+ <div class="cmp-pay-banner">
+ <span class="material-icons">payment</span>
+ <div>
+ <strong>Final Payment Required</strong>
+ <p>Please collect and record the final payment before completing this work order.</p>
+ </div>
+ </div>
+
+ <div class="pay-form-grid" style="padding: 0 4px;">
+ <div class="pay-fg full">
+ <label>Payment Type</label>
+ <div class="pay-type-toggle">
+ <button [class.active]="paymentForm().paymentType === 'Advance'"
+ (click)="pf('paymentType','Advance')" type="button">Advance</button>
+ <button [class.active]="paymentForm().paymentType === 'Final'"
+ (click)="pf('paymentType','Final')" type="button">Final</button>
+ </div>
+ </div>
+
+ @if (paymentForm().paymentType === 'Final') {
+ <div class="pay-fg">
+ <label>Service Charge (₹)</label>
+ <input type="text" inputmode="decimal" [value]="paymentForm().serviceChargeAmount"
+ (input)="onPaymentAmountInput('serviceChargeAmount', $event)"
+ (blur)="normalizePaymentNumber('serviceChargeAmount')"
+ class="fi num" [min]="minimumServiceCharge()"/>
+ </div>
+ <div class="pay-fg">
+ <label>Spare Parts (₹)</label>
+ <input type="text" inputmode="decimal" [value]="paymentForm().sparePartsAmount"
+ (input)="onPaymentAmountInput('sparePartsAmount', $event)"
+ (blur)="normalizePaymentNumber('sparePartsAmount')"
+ class="fi num" min="0"/>
+ </div>
+ <div class="pay-fg full">
+ <label>Discount (₹)</label>
+ <input type="text" inputmode="decimal" [value]="paymentForm().discountAmount"
+ (input)="onPaymentAmountInput('discountAmount', $event)"
+ (blur)="normalizePaymentNumber('discountAmount')"
+ class="fi num" min="0"/>
+ </div>
+ <div class="pay-fg pay-net-total">
+ <span class="pnt-label">Net Total</span>
+ <span class="pnt-value">₹{{ netTotal | number:'1.2-2' }}</span>
+ </div>
+ @if (completeAdvancePaid > 0) {
+ <div class="pay-fg pay-net-total">
+ <span class="pnt-label">Advance Less</span>
+ <span class="pnt-value">- ₹{{ completeAdvancePaid | number:'1.2-2' }}</span>
+ </div>
+ }
+ <div class="pay-fg pay-net-total">
+ <span class="pnt-label">Payable Now</span>
+ <span class="pnt-value">₹{{ payableNow | number:'1.2-2' }}</span>
+ </div>
+ <div class="pay-fg">
+ <label>Amount Paid (₹)</label>
+ <input type="text" inputmode="decimal" [value]="paymentForm().amountPaid"
+ class="fi num" readonly/>
+ </div>
+ }
+
+ @if (paymentForm().paymentType === 'Advance') {
+ <div class="pay-fg full">
+ <label>Advance Payments Collected</label>
+ @if (completePayments().some(p => (p.paymentType ?? '').toLowerCase() === 'advance')) {
+ @for (p of completePayments(); track $index) {
+ @if ((p.paymentType ?? '').toLowerCase() === 'advance') {
+ <div class="adv-history-row">
+ <span class="adv-history-method">{{ p.paymentMethod }}</span>
+ <span class="adv-history-date">{{ p.createdAt | date:'dd MMM yyyy' }}</span>
+ <span class="adv-history-amt">₹{{ p.amountPaid | number:'1.2-2' }}</span>
+ </div>
+ }
+ }
+ <div class="adv-history-total">
+ <span>Total Advance Paid</span>
+ <strong>₹{{ completeAdvancePaid | number:'1.2-2' }}</strong>
+ </div>
+ } @else {
+ <p class="adv-history-none">No advance payments recorded.</p>
+ }
+ </div>
+ }
+
+ @if (paymentForm().paymentType === 'Final') {
+ <div class="pay-fg">
+ <label>Payment Method</label>
+ <div class="pay-method-toggle">
+ <button [class.active]="paymentForm().paymentMethod === 'Cash'"
+ (click)="pf('paymentMethod','Cash')" type="button">
+ <span class="material-icons">payments</span> Cash
+ </button>
+ <button [class.active]="paymentForm().paymentMethod === 'UPI'"
+ (click)="pf('paymentMethod','UPI')" type="button">
+ <span class="material-icons">qr_code_2</span> UPI
+ </button>
+ </div>
+ </div>
+ }
+ </div>
+
+ @if (paymentForm().paymentType === 'Final') {
+ @if (paymentForm().paymentMethod === 'UPI' && defaultUpiId() && payableNow > 0) {
+ <div class="pay-qr-card" style="margin: 8px 4px;">
+ <img [src]="qrCodeUrl" alt="UPI QR Code" class="pay-qr-img"/>
+ <div class="pay-qr-info">
+ <span class="pay-qr-amount">₹{{ payableNow | number:'1.2-2' }}</span>
+ <span class="pay-qr-upi">{{ defaultUpiId() }}</span>
+ </div>
+ </div>
+ }
+
+ <div class="pay-fg mt-2" style="padding: 0 4px;">
+ <label>Remarks</label>
+ <input type="text" [ngModel]="paymentForm().remarks"
+ (ngModelChange)="pf('remarks', $event)" class="fi" placeholder="Any notes..."/>
+ </div>
+ }
+
+ @if (paymentMsg()) {
+ <div class="alert mt-2" [class.alert-ok]="!paymentMsgErr()" [class.alert-err]="paymentMsgErr()">
+ {{ paymentMsg() }}
+ </div>
+ }
+
+ @if (paymentForm().paymentType === 'Final') {
+ <div class="cmp-pay-actions">
+ <button class="pay-submit-btn" (click)="submitCompletionPayment()"
+ [disabled]="paymentSubmitting() ||
+ ((paymentForm().serviceChargeAmount || 0) <= 0 && (paymentForm().sparePartsAmount || 0) <= 0)">
+ <span class="material-icons">{{ paymentSubmitting() ? 'hourglass_top' : 'check_circle' }}</span>
+ {{ paymentSubmitting() ? 'Recording...' : 'Record Payment & Continue' }}
+ </button>
+ </div>
+ }
+ </div>
+ }
+
+ @if (!completePaymentLoading() && !completePaymentStep()) {
  <!--Complete Work OrderSummary-->
  @if (completeWo()) {
  <div class="cmp-wo-summary">
@@ -1846,6 +2064,7 @@
  {{ completeMsg() }}
  </div>
  }
+ }
  </div>
 
  <!--Footer-->
@@ -1853,6 +2072,7 @@
  <button class="cmp-cancel" (click)="closeCompleteDialog()" [disabled]="completeBusy()">
  Cancel
  </button>
+ @if (!completePaymentStep()) {
  <button
  class="cmp-submit"
  (click)="submitCompletion()"
@@ -1869,6 +2089,7 @@
  }
  }
  </button>
+ }
  </div>
  </div>
 }

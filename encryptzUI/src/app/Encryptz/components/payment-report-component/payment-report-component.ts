@@ -7,6 +7,7 @@ import { EditPaymentDialog } from '../edit-payment-dialog/edit-payment-dialog';
 interface AdminPayment {
   paymentId: number;
   complaintId: number;
+  complaintNumber?: string;
   customerName: string;
   mobileNo: string;
   paymentType: string;
@@ -44,6 +45,12 @@ export class PaymentReportComponent implements OnInit {
   fromDate = signal(this.defaultFrom());
   toDate   = signal(this.todayStr());
 
+  // Search & segmented filters
+  filterSearch = signal('');
+  filterType   = signal('');   // '' | 'Advance' | 'Final'
+  filterMethod = signal('');   // '' | 'Cash' | 'UPI'
+  filterStatus = signal('');   // '' | 'Success' | 'Pending' | 'Failed'
+
   // Tracks which rows are mid-verify API call
   verifyingIds = signal<Set<number>>(new Set());
 
@@ -59,9 +66,25 @@ export class PaymentReportComponent implements OnInit {
   // ── Computed ──────────────────────────────────────────────────────────────
 
   filteredPayments = computed(() => {
-    const from = new Date(this.fromDate() + 'T00:00:00');
-    const to   = new Date(this.toDate()   + 'T23:59:59');
-    return this.payments().filter(p => p.createdAtRaw >= from && p.createdAtRaw <= to);
+    const from   = new Date(this.fromDate() + 'T00:00:00');
+    const to     = new Date(this.toDate()   + 'T23:59:59');
+    const search = this.filterSearch().toLowerCase().trim();
+    const type   = this.filterType().toLowerCase();
+    const method = this.filterMethod().toLowerCase();
+    const status = this.filterStatus().toLowerCase();
+
+    return this.payments().filter(p => {
+      if (p.createdAtRaw < from || p.createdAtRaw > to) return false;
+      if (type   && (p.paymentType   || '').toLowerCase() !== type)   return false;
+      if (method && (p.paymentMethod || '').toLowerCase() !== method) return false;
+      if (status && (p.paymentStatus || '').toLowerCase() !== status) return false;
+      if (search) {
+        const hay = [p.customerName, p.mobileNo, p.complaintNumber]
+          .filter(Boolean).join(' ').toLowerCase();
+        if (!hay.includes(search)) return false;
+      }
+      return true;
+    });
   });
 
   totalPages = computed(() =>
@@ -145,6 +168,21 @@ export class PaymentReportComponent implements OnInit {
   }
 
   onDateChange(): void { this.currentPage.set(1); }
+
+  setFilter(kind: 'type' | 'method' | 'status', val: string): void {
+    if (kind === 'type')   this.filterType.set(val);
+    if (kind === 'method') this.filterMethod.set(val);
+    if (kind === 'status') this.filterStatus.set(val);
+    this.currentPage.set(1);
+  }
+
+  onSearchChange(): void { this.currentPage.set(1); }
+
+  verifyAll(): void {
+    const targets = this.filteredPayments()
+      .filter(p => !p.isVerified && !this.isVerifying(p.paymentId));
+    targets.forEach(p => this.toggleVerify(p));
+  }
 
   // ── Edit dialog ────────────────────────────────────────────────────────────
   edit(p: AdminPayment): void { this.editingPayment.set({ ...p }); }

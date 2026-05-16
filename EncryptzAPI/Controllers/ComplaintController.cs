@@ -92,6 +92,18 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        // 🔹 SET HOLD STATUS
+        [HttpPost("{id}/hold")]
+        public async Task<IActionResult> SetHold(int id, [FromBody] SetHoldDto? dto)
+        {
+            var result = await _svc.UpdateStatus(id, GetUserId(), new ComplaintUpdateStatusDto
+            {
+                StatusId = 9,
+                Remarks = dto?.Reason
+            });
+            return Ok(result);
+        }
+
         // 🔹 GET MY COMPLAINTS (Matches: GetByCustomer(int customerId))
         [HttpGet("my-complaints")]
         public async Task<IActionResult> GetMyComplaints()

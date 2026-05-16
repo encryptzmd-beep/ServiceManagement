@@ -1,0 +1,40 @@
+.page { padding: 24px; }
+.page-header { margin-bottom: 24px; }
+.page-title { display: flex; align-items: center; gap: 8px; font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+.page-subtitle { color: #6B7280; font-size: 14px; margin: 0; }
+
+.hl-loading, .hl-empty, .hl-error {
+  display: flex; align-items: center; gap: 10px; padding: 40px;
+  justify-content: center; color: #6B7280; font-size: 15px;
+}
+.hl-error { color: #EF4444; }
+.hl-empty .material-icons { font-size: 36px; color: #10B981; }
+
+.hl-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid #E5E7EB; }
+.hl-table {
+  width: 100%; border-collapse: collapse; font-size: 14px;
+  thead tr { background: #F9FAFB; }
+  th { padding: 12px 14px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #E5E7EB; white-space: nowrap; }
+  td { padding: 12px 14px; border-bottom: 1px solid #F3F4F6; vertical-align: middle; }
+  .hl-row:last-child td { border-bottom: none; }
+  .hl-row:hover td { background: #F9FAFB; }
+}
+.hl-num { font-weight: 600; color: #3B82F6; white-space: nowrap; }
+.hl-subject { max-width: 200px; }
+.hl-date { white-space: nowrap; color: #6B7280; }
+
+.hl-type-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  &[data-type='repair-parts'] { background: #FEF3C7; color: #B45309; }
+  &[data-type='spare-parts']  { background: #EDE9FE; color: #7C3AED; }
+  &[data-type='both']         { background: #FEE2E2; color: #DC2626; }
+  &[data-type='—']            { background: #F3F4F6; color: #6B7280; }
+}
+
+.hl-status-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500;
+  &.hl-ok       { background: #D1FAE5; color: #065F46; }
+  &.hl-progress { background: #FEF3C7; color: #B45309; }
+  &.hl-pending  { background: #FEE2E2; color: #B91C1C; }
+  &.hl-none     { background: #F3F4F6; color: #9CA3AF; }
+}

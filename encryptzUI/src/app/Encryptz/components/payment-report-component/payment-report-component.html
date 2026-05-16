@@ -21,6 +21,39 @@
     </div>
   </div>
 
+  <!-- ── Search + Segment Filters ── -->
+  <div class="filter-row">
+    <div class="search-box">
+      <span class="material-icons search-icon">search</span>
+      <input type="text" class="search-input"
+             placeholder="Customer, mobile, complaint #…"
+             [ngModel]="filterSearch()"
+             (ngModelChange)="filterSearch.set($event); onSearchChange()" />
+    </div>
+
+    <div class="seg-group">
+      <span class="seg-label">Type</span>
+      <button class="seg-btn" [class.active]="filterType() === ''"        (click)="setFilter('type','')">All</button>
+      <button class="seg-btn adv" [class.active]="filterType() === 'Advance'" (click)="setFilter('type','Advance')">Advance</button>
+      <button class="seg-btn fin" [class.active]="filterType() === 'Final'"   (click)="setFilter('type','Final')">Final</button>
+    </div>
+
+    <div class="seg-group">
+      <span class="seg-label">Method</span>
+      <button class="seg-btn" [class.active]="filterMethod() === ''"     (click)="setFilter('method','')">All</button>
+      <button class="seg-btn" [class.active]="filterMethod() === 'Cash'" (click)="setFilter('method','Cash')">Cash</button>
+      <button class="seg-btn" [class.active]="filterMethod() === 'UPI'"  (click)="setFilter('method','UPI')">UPI</button>
+    </div>
+
+    <div class="seg-group">
+      <span class="seg-label">Status</span>
+      <button class="seg-btn"     [class.active]="filterStatus() === ''"        (click)="setFilter('status','')">All</button>
+      <button class="seg-btn suc" [class.active]="filterStatus() === 'Success'" (click)="setFilter('status','Success')">Success</button>
+      <button class="seg-btn pen" [class.active]="filterStatus() === 'Pending'" (click)="setFilter('status','Pending')">Pending</button>
+      <button class="seg-btn fai" [class.active]="filterStatus() === 'Failed'"  (click)="setFilter('status','Failed')">Failed</button>
+    </div>
+  </div>
+
   <!-- ── Loader ── -->
   @if (loading()) {
     <div class="spinner-center">
@@ -34,8 +67,18 @@
       <table class="payments-table">
         <thead>
           <tr>
-            <th class="col-check">Verify</th>
+            <th class="col-check">
+              <div class="verify-header">
+                <span>Verify</span>
+                <button class="verify-all-btn"
+                        (click)="verifyAll()"
+                        [title]="'Verify all unverified in current filter (' + filteredPayments().filter(p => !p.isVerified).length + ')'">
+                  All
+                </button>
+              </div>
+            </th>
             <th class="col-no">#</th>
+            <th class="col-complaint">Complaint #</th>
             <th>Customer</th>
             <th>Mobile</th>
             <th>Type</th>
@@ -68,6 +111,7 @@
               <!-- Row number -->
               <td class="col-no">{{ (currentPage() - 1) * pageSize + i + 1 }}</td>
 
+              <td class="col-complaint">{{ p.complaintNumber || '—' }}</td>
               <td class="col-customer">{{ p.customerName }}</td>
               <td>{{ p.mobileNo }}</td>
 
@@ -159,7 +203,7 @@
 
   <!-- ── Empty state ── -->
   @if (!loading() && filteredPayments().length === 0) {
-    <div class="empty-state">No payment records found for the selected date range.</div>
+    <div class="empty-state">No payment records match the selected filters.</div>
   }
 
 </div>

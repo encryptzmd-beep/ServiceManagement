@@ -205,6 +205,11 @@ namespace EncryptzBL.DTO_s
         public string? Remarks { get; set; }
     }
 
+    public class SetHoldDto
+    {
+        public string? Reason { get; set; }
+    }
+
     public class ComplaintImageDto
     {
         public int ImageId { get; set; }

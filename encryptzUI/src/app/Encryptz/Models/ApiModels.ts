@@ -468,6 +468,7 @@ export interface DashboardSummary {
   slaBreached: number;
   activeTechnicians: number;
   avgResolutionHours: number;
+  holdCount?: number;
 }
 
 export interface SLAReport {
@@ -504,6 +505,7 @@ export const COMPLAINT_STATUSES = [
   { id: 6, name: 'PendingConfirmation', color: '#6366F1' },
   { id: 7, name: 'Closed', color: '#6B7280' },
   { id: 8, name: 'Reopened', color: '#DC2626' },
+  { id: 9, name: 'Hold', color: '#F97316' },
 ];
 
 export const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];

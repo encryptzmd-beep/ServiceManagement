@@ -1025,6 +1025,14 @@ getRepairPartsByComplaint(complaintId: number): Observable<any> {
   return this.get<any>(`RepairPart/by-complaint/${complaintId}`);
 }
 
+setComplaintHold(complaintId: number, reason?: string): Observable<any> {
+  return this.http.post(`${this.api}/complaint/${complaintId}/hold`, { reason: reason || null });
+}
+
+getHoldList(): Observable<any> {
+  return this.http.get(`${this.api}/Complaints/hold-list`);
+}
+
 }
 
 

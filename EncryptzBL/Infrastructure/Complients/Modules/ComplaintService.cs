@@ -133,7 +133,7 @@ namespace EncryptzBL.Infrastructure.Complients.Modules
             var parameters = new[]
             {
                 SqlParameterHelper.Input("@ComplaintId", id),
-                SqlParameterHelper.Input("@UserId", userId),
+                SqlParameterHelper.Input("@ActionBy", userId),
                 SqlParameterHelper.Input("@StatusId", dto.StatusId),
                 SqlParameterHelper.Input("@Remarks", dto.Remarks)
             };

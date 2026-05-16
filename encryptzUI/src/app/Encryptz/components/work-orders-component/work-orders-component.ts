@@ -80,6 +80,10 @@ repairForm = {
   customerCode: '',
   notes: ''
 };
+repairAdvanceAmount = signal<number | null>(null);
+spareAdvanceAmount  = signal<number | null>(null);
+spareAdvanceMethod  = signal<'Cash' | 'UPI'>('Cash');
+repairAdvanceMethod = signal<'Cash' | 'UPI'>('Cash');
 
   // ── Orders ────────────────────────────────────────────
   orders       = signal<WorkOrder[]>([]);
@@ -204,11 +208,18 @@ repairForm = {
 
   private payableNowFor(form: any): number {
     const gross = (form.serviceChargeAmount || 0) + (form.sparePartsAmount || 0) - (form.discountAmount || 0);
-    return Math.max(gross - this.advancePaid, 0);
+    const advance = this.showCompleteDialog() ? this.completeAdvancePaid : this.advancePaid;
+    return Math.max(gross - advance, 0);
   }
 
   get advancePaid(): number {
     return this.paymentsList()
+      .filter((p: any) => String(p.paymentType || '').toLowerCase() === 'advance')
+      .reduce((sum, p) => sum + (Number(p.amountPaid) || 0), 0);
+  }
+
+  get completeAdvancePaid(): number {
+    return this.completePayments()
       .filter((p: any) => String(p.paymentType || '').toLowerCase() === 'advance')
       .reduce((sum, p) => sum + (Number(p.amountPaid) || 0), 0);
   }
@@ -661,9 +672,11 @@ private showCheckInMsg(m: string, err: boolean): void {
       next: (r: any) => {
         this.unassigning.set(false);
         if (r.success) {
-          this.show('Technician unassigned successfully', false);
+          this.api.setComplaintHold((target as any).complaintId, this.unassignReason || undefined).subscribe();
+          this.show('Work order placed on hold', false);
           this.orders.update(list => list.filter(order => order.assignmentId !== target.assignmentId));
           this.closeUnassign();
+          this.closeDetail();
           this.load();
         } else {
           this.show(r.message || 'Unassign failed', true);
@@ -678,6 +691,21 @@ private showCheckInMsg(m: string, err: boolean): void {
 
   canUnassign(wo: WorkOrder): boolean {
     return this.isActiveAssignmentStatus(wo?.status) && wo.status !== 'Completed';
+  }
+
+  canComplete(): boolean {
+    const repairs = (this.detailData()?.repairDetails ?? []) as any[];
+    const spares  = this.complaintSpares();
+    const pendingRepair = repairs.some(r => !['Resolved','Cancelled','Rejected'].includes(r.status ?? ''));
+    const pendingSpare  = spares.some(s => !['Used','Rejected','Cancelled'].includes(s.status ?? ''));
+    return !pendingRepair && !pendingSpare;
+  }
+
+  hasPendingParts(): boolean {
+    return !this.canComplete() && (
+      (this.detailData()?.repairDetails?.length > 0) ||
+      (this.complaintSpares().length > 0)
+    );
   }
 
   getUnassignTechnicianName(wo: WorkOrder | null): string {
@@ -816,7 +844,7 @@ private showCheckInMsg(m: string, err: boolean): void {
     this.paymentMsg.set('');
 
     const f = this.paymentForm();
-    if ((Number(f.serviceChargeAmount) || 0) < this.minimumServiceCharge()) {
+    if (f.paymentType === 'Final' && (Number(f.serviceChargeAmount) || 0) < this.minimumServiceCharge()) {
       this.paymentSubmitting.set(false);
       this.paymentMsg.set(`Service charge cannot be below ₹${this.minimumServiceCharge().toFixed(2)}`);
       this.paymentMsgErr.set(true);
@@ -853,6 +881,57 @@ private showCheckInMsg(m: string, err: boolean): void {
         this.paymentMsgErr.set(false);
         this.loadPayments(cid);
         this.initPaymentForm();
+      },
+      error: () => {
+        this.paymentSubmitting.set(false);
+        this.paymentMsg.set('Failed to record payment');
+        this.paymentMsgErr.set(true);
+      }
+    });
+  }
+
+  submitCompletionPayment(): void {
+    const wo = this.completeWo();
+    if (!wo) return;
+
+    this.paymentSubmitting.set(true);
+    this.paymentMsg.set('');
+
+    const f = this.paymentForm();
+    if ((Number(f.serviceChargeAmount) || 0) < this.minimumServiceCharge()) {
+      this.paymentSubmitting.set(false);
+      this.paymentMsg.set(`Service charge cannot be below ₹${this.minimumServiceCharge().toFixed(2)}`);
+      this.paymentMsgErr.set(true);
+      return;
+    }
+
+    const amountPaid = f.paymentType === 'Final' ? this.payableNow : Number(f.amountPaid) || 0;
+    if (amountPaid <= 0) {
+      this.paymentSubmitting.set(false);
+      this.paymentMsg.set('Amount paid must be greater than zero');
+      this.paymentMsgErr.set(true);
+      return;
+    }
+
+    const payload = {
+      complaintId: wo.complaintId,
+      paymentType: f.paymentType,
+      serviceChargeAmount: f.serviceChargeAmount,
+      sparePartsAmount: f.sparePartsAmount,
+      discountAmount: f.discountAmount,
+      totalAmount: this.netTotal,
+      amountPaid,
+      paymentMethod: f.paymentMethod,
+      upiIdUsed: f.paymentMethod === 'UPI' ? this.defaultUpiId() : null,
+      transactionReference: f.transactionReference,
+      remarks: f.remarks
+    };
+
+    this.api.recordComplaintPayment(payload).subscribe({
+      next: (_res: any) => {
+        this.paymentSubmitting.set(false);
+        this.paymentMsg.set('');
+        this.completePaymentStep.set(false);
       },
       error: () => {
         this.paymentSubmitting.set(false);
@@ -995,6 +1074,22 @@ removeSpareFromCart(index: number): void {
   if (item?.customPartPhoto) URL.revokeObjectURL(item.customPartPhoto.preview);
   this.spareCart.update(list => list.filter((_, i) => i !== index));
 }
+getAdvanceQrUrl(amount: number | null): string {
+  if (!amount || amount <= 0 || !this.defaultUpiId()) return '';
+  const str = `upi://pay?pa=${this.defaultUpiId()}&pn=Encryptz&am=${Number(amount).toFixed(2)}&cu=INR`;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(str)}`;
+}
+
+private loadDefaultUpiId(): void {
+  if (this.defaultUpiId()) return;
+  this.api.getUPIConfigurations().subscribe({
+    next: (res: any) => {
+      const d = (res.data || []).find((u: any) => u.isDefault && u.isActive);
+      if (d) this.defaultUpiId.set(d.upiId);
+    }
+  });
+}
+
 // ── Open spare dialog from work order ───────────────────
 openSpareDialog(wo: WorkOrder, event?: Event): void {
   event?.stopPropagation();
@@ -1006,8 +1101,10 @@ openSpareDialog(wo: WorkOrder, event?: Event): void {
   this.spareMsg.set('');
   this.spareMsgErr.set(false);
   this.showSpareDropdown = false;
+  this.spareAdvanceMethod.set('Cash');
   this.showSpareDialog.set(true);
   this.loadSpareOptions();
+  this.loadDefaultUpiId();
 }
 
 closeSpareDialog(): void {
@@ -1018,6 +1115,8 @@ closeSpareDialog(): void {
   this.spareSearch = '';
   this.spareResults.set([]);
   this.showSpareDropdown = false;
+  this.spareAdvanceAmount.set(null);
+  this.spareAdvanceMethod.set('Cash');
 }
 
 onSpareSearch(): void {
@@ -1168,6 +1267,19 @@ submitSpareRequest(): void {
         .filter(item => item.isCustom && item.customPartPhoto)
         .map(item => item.customPartPhoto!);
 
+      const advance = Number(this.spareAdvanceAmount()) || 0;
+      if (advance > 0) {
+        this.api.recordComplaintPayment({
+          complaintId: wo.complaintId,
+          paymentType: 'Advance',
+          serviceChargeAmount: 0, sparePartsAmount: 0, discountAmount: 0,
+          totalAmount: advance, amountPaid: advance,
+          paymentMethod: this.spareAdvanceMethod(),
+          upiIdUsed: this.spareAdvanceMethod() === 'UPI' ? this.defaultUpiId() : null,
+          remarks: 'Advance collected at spare parts request'
+        }).subscribe();
+      }
+
       const finish = () => {
         this.spareSubmitting.set(false);
         this.spareMsg.set(response?.message || 'Request submitted successfully');
@@ -1209,6 +1321,8 @@ openRepairDialog(wo: WorkOrder, event?: Event): void {
   this.repairMsg.set('');
   this.repairMsgErr.set(false);
   this.repairMeta.set(null);
+  this.repairAdvanceMethod.set('Cash');
+  this.loadDefaultUpiId();
   this.repairUploadProgress.set(0);
   this.repairUploadStep.set(0);
   this.repairUploadTotal.set(0);
@@ -1253,6 +1367,8 @@ closeRepairDialog(): void {
   this.repairUploadProgress.set(0);
   this.repairUploadStep.set(0);
   this.repairUploadTotal.set(0);
+  this.repairAdvanceAmount.set(null);
+  this.repairAdvanceMethod.set('Cash');
 }
 
 onRepairFilesSelected(event: Event, tag: string): void {
@@ -1431,6 +1547,18 @@ submitRepairRequest(): void {
   this.api.createRepairPartRequest(payload).subscribe({
     next: (res: any) => {
       const requestId = res.data || res.requestId || res;
+      const advance = Number(this.repairAdvanceAmount()) || 0;
+      if (advance > 0) {
+        this.api.recordComplaintPayment({
+          complaintId: wo.complaintId,
+          paymentType: 'Advance',
+          serviceChargeAmount: 0, sparePartsAmount: 0, discountAmount: 0,
+          totalAmount: advance, amountPaid: advance,
+          paymentMethod: this.repairAdvanceMethod(),
+          upiIdUsed: this.repairAdvanceMethod() === 'UPI' ? this.defaultUpiId() : null,
+          remarks: 'Advance collected at repair request'
+        }).subscribe();
+      }
       this.uploadRepairImagesSequentially(0, requestId);
     },
     error: () => {
@@ -1462,19 +1590,21 @@ private uploadRepairImagesSequentially(index: number, requestId: any): void {
   }
 
   const item = images[index];
-  this.api.uploadRepairImage(rId, item.file, item.tag === 'tagged' ? 'TaggedRepair' : 'BeforeRepair')
-    .subscribe({
-      next: () => {
-        this.repairUploadStep.set(index + 1);
-        this.repairUploadProgress.set(Math.round(((index + 1) / images.length) * 100));
-        this.uploadRepairImagesSequentially(index + 1, rId);
-      },
-      error: () => {
-        this.repairSubmitting.set(false);
-        this.repairMsg.set('Repair request saved, but image upload failed');
-        this.repairMsgErr.set(true);
-      }
-    });
+  this.compressImage(item.file, 1).then(compressed => {
+    this.api.uploadRepairImage(rId, compressed, item.tag === 'tagged' ? 'TaggedRepair' : 'BeforeRepair')
+      .subscribe({
+        next: () => {
+          this.repairUploadStep.set(index + 1);
+          this.repairUploadProgress.set(Math.round(((index + 1) / images.length) * 100));
+          this.uploadRepairImagesSequentially(index + 1, rId);
+        },
+        error: () => {
+          this.repairSubmitting.set(false);
+          this.repairMsg.set('Repair request saved, but image upload failed');
+          this.repairMsgErr.set(true);
+        }
+      });
+  });
 }
 
 
@@ -1485,11 +1615,24 @@ private uploadRepairImagesSequentially(index: number, requestId: any): void {
 
 
 // ── Completion Dialog ───────────────────────────────────
-showCompleteDialog = signal(false);
-completeWo         = signal<WorkOrder | null>(null);
-completeBusy       = signal(false);
-completeMsg        = signal('');
-completeMsgErr     = signal(false);
+showCompleteDialog     = signal(false);
+completeWo             = signal<WorkOrder | null>(null);
+completeBusy           = signal(false);
+completeMsg            = signal('');
+completeMsgErr         = signal(false);
+completePaymentStep    = signal(false);
+completePaymentLoading = signal(false);
+completePayments       = signal<any[]>([]);
+
+get completeBalanceDue(): number {
+  const payments = this.completePayments();
+  const finalP = payments.find(p => String(p.paymentType ?? '').toLowerCase() === 'final');
+  if (finalP) return 0;
+  const totalBilled = payments.reduce((s: number, p: any) =>
+    String(p.paymentType ?? '').toLowerCase() === 'final' ? s + (Number(p.totalAmount) || 0) : s, 0);
+  const totalPaid   = payments.reduce((s: number, p: any) => s + (Number(p.amountPaid) || 0), 0);
+  return Math.max(0, totalBilled - totalPaid);
+}
 
 completeForm = {
   remarks: '',
@@ -1511,13 +1654,34 @@ openCompleteDialog(wo: WorkOrder, event?: Event): void {
   this.uploadQueue.set([]);
   this.completeMsg.set('');
   this.uploadProgress.set(0);
+  this.completePaymentStep.set(false);
+  this.completePayments.set([]);
   this.showCompleteDialog.set(true);
+  this.completePaymentLoading.set(true);
+  this.api.getComplaintPayments(wo.complaintId).subscribe({
+    next: (res: any) => {
+      const raw: any[] = Array.isArray(res) ? res
+        : Array.isArray(res?.data)  ? res.data
+        : Array.isArray(res?.items) ? res.items
+        : [];
+      this.completePayments.set(raw);
+      this.paymentsList.set(raw);
+      const hasFinal = raw.some(p => String(p.paymentType ?? '').toLowerCase() === 'final');
+      if (!hasFinal) {
+        this.completePaymentStep.set(true);
+        this.initPaymentForm();
+      }
+      this.completePaymentLoading.set(false);
+    },
+    error: () => this.completePaymentLoading.set(false)
+  });
 }
 
 closeCompleteDialog(): void {
   this.showCompleteDialog.set(false);
   this.completeWo.set(null);
-  // Revoke preview URLs
+  this.completePaymentStep.set(false);
+  this.completePayments.set([]);
   this.uploadQueue().forEach(q => URL.revokeObjectURL(q.preview));
   this.uploadQueue.set([]);
 }
@@ -1748,14 +1912,13 @@ clearCustomPartPhoto(index: number): void {
 }
 
 // ── Image compression ───────────────────────────────────
-private compressImage(file: File, maxSizeMB = 2): Promise<File> {
+private compressImage(file: File, maxSizeMB = 1): Promise<File> {
   return new Promise(resolve => {
-    if (file.size <= maxSizeMB * 1024 * 1024) { resolve(file); return; }
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(url);
-      const maxDim = 1920;
+      const maxDim = 1280;
       let { width, height } = img;
       if (width > maxDim || height > maxDim) {
         const scale = Math.min(maxDim / width, maxDim / height);
@@ -1767,8 +1930,16 @@ private compressImage(file: File, maxSizeMB = 2): Promise<File> {
       canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
       canvas.toBlob(blob => {
         const name = file.name.replace(/\.[^.]+$/, '.jpg');
-        resolve(blob ? new File([blob], name, { type: 'image/jpeg' }) : file);
-      }, 'image/jpeg', 0.82);
+        const compressed = blob ? new File([blob], name, { type: 'image/jpeg' }) : file;
+        // if still over limit, compress again at lower quality
+        if (compressed.size > maxSizeMB * 1024 * 1024) {
+          canvas.toBlob(blob2 => {
+            resolve(blob2 ? new File([blob2], name, { type: 'image/jpeg' }) : compressed);
+          }, 'image/jpeg', 0.6);
+        } else {
+          resolve(compressed);
+        }
+      }, 'image/jpeg', 0.75);
     };
     img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
     img.src = url;

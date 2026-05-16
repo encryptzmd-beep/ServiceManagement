@@ -53,10 +53,10 @@
   <span class="material-icons">photo_library</span> Photos
   <span class="cd-tab-count" [class.has-items]="photoCount() > 0">{{ photoCount() }}</span>
 </button>
-      <!-- <button class="cd-tab" [class.active]="activeTab()==='payment'" (click)="activeTab.set('payment'); loadPaymentSetup()">
+      <button class="cd-tab" [class.active]="activeTab()==='payment'" (click)="activeTab.set('payment')">
         <span class="material-icons">account_balance_wallet</span> Payments
         <span class="cd-tab-count">{{ payments().length }}</span>
-      </button> -->
+      </button>
     </div>
 
     <div class="cd-body">
@@ -1044,7 +1044,7 @@
       }
     </div>
 
-    @if (showPayForm()) {
+    @if (showPayForm() && !viewOnly) {
       <div class="cd-edit-form pay-form">
         <div class="cd-form-row">
           <div class="cd-field">
