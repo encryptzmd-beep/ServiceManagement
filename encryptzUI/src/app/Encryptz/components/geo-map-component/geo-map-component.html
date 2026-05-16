@@ -17,25 +17,41 @@
         <label class="ctrl-label">
           <span class="material-icons">engineering</span> Technician
         </label>
+
+        @if (selectedTech()) {
+        <!-- ── Selected chip (hides the input) ── -->
+        <div class="selected-tech-chip">
+          <div class="stc-avatar" [ngClass]="getTechAvailClass(selectedTech().availabilityStatus)">
+            {{ selectedTech().fullName?.charAt(0) || 'T' }}
+          </div>
+          <div class="stc-info">
+            <strong>{{ selectedTech().fullName }}</strong>
+            <span>{{ selectedTech().specialization || 'General' }} · ID: {{ selectedTech().technicianId }}</span>
+          </div>
+          <span class="stc-avail" [ngClass]="getTechAvailClass(selectedTech().availabilityStatus)">
+            <span class="dot"></span>{{ getTechAvailLabel(selectedTech().availabilityStatus) }}
+          </span>
+          <button class="stc-change-btn" type="button" (click)="changeTech()">
+            <span class="material-icons">edit</span>
+            Change
+          </button>
+        </div>
+        } @else {
+        <!-- ── Search input (only when no tech selected) ── -->
         <div class="tech-autocomplete">
-          <div class="tech-input-wrap" [class.has-val]="!!selectedTech()">
+          <div class="tech-input-wrap">
             <span class="material-icons ta-ic">search</span>
             <input type="text"
                    [(ngModel)]="techSearch"
                    class="tech-input"
                    placeholder="Search technician..."
                    (input)="onTechSearch()"
-                   (focus)="showTechDropdown = true"
+                   (focus)="onTechFocus()"
                    autocomplete="off" />
-            @if (selectedTech()) {
-            <button class="ta-clear" type="button" (click)="clearTech()">
-              <span class="material-icons">close</span>
-            </button>
-            }
             @if (techSearchLoading()) { <div class="ta-spinner"></div> }
           </div>
 
-          @if (showTechDropdown && techResults().length > 0 && !selectedTech()) {
+          @if (showTechDropdown && techResults().length > 0) {
           <div class="ta-dropdown">
             @for (t of techResults(); track t.technicianId) {
             <div class="ta-item" (click)="selectTech(t)">
@@ -54,6 +70,7 @@
           </div>
           }
         </div>
+        }
       </div>
 
       <!-- Date Picker -->
@@ -86,21 +103,6 @@
       </div>
     </div>
 
-    <!-- Selected Tech Banner -->
-    @if (selectedTech()) {
-    <div class="selected-tech-strip">
-      <div class="sts-avatar" [ngClass]="getTechAvailClass(selectedTech().availabilityStatus)">
-        {{ selectedTech().fullName?.charAt(0) || 'T' }}
-      </div>
-      <div class="sts-info">
-        <strong>{{ selectedTech().fullName }}</strong>
-        <span>{{ selectedTech().specialization || 'General' }} · ID: {{ selectedTech().technicianId }}</span>
-      </div>
-      <span class="sts-avail" [ngClass]="getTechAvailClass(selectedTech().availabilityStatus)">
-        <span class="dot"></span>{{ getTechAvailLabel(selectedTech().availabilityStatus) }}
-      </span>
-    </div>
-    }
   </div>
 
   @if (loaded() && selectedTech()) {
@@ -229,8 +231,22 @@
       <span class="timeline-date">{{ selectedDate | date:'dd MMM yyyy' }}</span>
     </div>
 
+    <!-- Toggle button -->
+    @if (trail().length > displayTrail().length || showAllEvents()) {
+    <button class="toggle-events-btn" type="button" (click)="showAllEvents.set(!showAllEvents())">
+      @if (showAllEvents()) {
+        <span class="material-icons">expand_less</span>
+        Show summary only
+      } @else {
+        <span class="material-icons">expand_more</span>
+        Show all {{ trail().length }} events
+        <span class="hidden-count">+{{ trail().length - displayTrail().length }} hidden</span>
+      }
+    </button>
+    }
+
     <div class="timeline">
-      @for (t of trail(); track t.trackingId; let i = $index; let last = $last) {
+      @for (t of displayTrail(); track t.trackingId; let i = $index; let last = $last) {
 
       <!-- Time gap indicator -->
       @if (getTimeBetween(i)) {

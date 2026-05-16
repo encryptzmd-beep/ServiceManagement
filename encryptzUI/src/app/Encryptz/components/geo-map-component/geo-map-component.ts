@@ -58,6 +58,15 @@ liveLocationName = signal('');
   loading = signal(false);
   loaded = signal(false);
   activeTab = signal<'timeline' | 'positions'>('timeline');
+  showAllEvents = signal(false);
+
+  private readonly PRIMARY_EVENTS = new Set(['CheckIn', 'CheckOut', 'SiteArrival']);
+
+  displayTrail = computed(() =>
+    this.showAllEvents()
+      ? this.trail()
+      : this.trail().filter(e => this.PRIMARY_EVENTS.has(e.eventType))
+  );
 
   get techId(): number {
     return this.selectedTech()?.technicianId ?? 0;
@@ -165,26 +174,51 @@ liveLocationName = signal('');
 
   selectTech(t: any): void {
     this.selectedTech.set(t);
-    this.techSearch = t.fullName;
+    this.techSearch = '';
     this.showTechDropdown = false;
     this.techResults.set([]);
+    this.showAllEvents.set(false);
 
-    // Auto-load if date is already set
     if (this.selectedDate) {
       this.loadAll();
     }
   }
 
-  clearTech(): void {
+  changeTech(): void {
     this.selectedTech.set(null);
     this.techSearch = '';
-    this.techResults.set([]);
-    this.showTechDropdown = false;
     this.trail.set([]);
     this.dayAttendance.set(null);
     this.travelData.set(null);
     this.livePosition.set(null);
     this.loaded.set(false);
+    this.showAllEvents.set(false);
+    // Load all technicians immediately so dropdown is ready
+    this.techSearchLoading.set(true);
+    this.showTechDropdown = true;
+    this.api.getTechnicians({ pageNumber: 1, pageSize: 50 } as any).subscribe({
+      next: (d: any) => {
+        const raw = d?.data?.items ?? d?.data ?? d?.items ?? d;
+        this.techResults.set(Array.isArray(raw) ? raw : []);
+        this.techSearchLoading.set(false);
+      },
+      error: () => { this.techResults.set([]); this.techSearchLoading.set(false); }
+    });
+  }
+
+  onTechFocus(): void {
+    this.showTechDropdown = true;
+    if (!this.techSearch.trim() && this.techResults().length === 0) {
+      this.techSearchLoading.set(true);
+      this.api.getTechnicians({ pageNumber: 1, pageSize: 50 } as any).subscribe({
+        next: (d: any) => {
+          const raw = d?.data?.items ?? d?.data ?? d?.items ?? d;
+          this.techResults.set(Array.isArray(raw) ? raw : []);
+          this.techSearchLoading.set(false);
+        },
+        error: () => { this.techResults.set([]); this.techSearchLoading.set(false); }
+      });
+    }
   }
 
   getTechAvailClass(status: number): string {
@@ -340,7 +374,7 @@ liveLocationName = signal('');
   }
 
   getTimeBetween(idx: number): string | null {
-    const events = this.trail();
+    const events = this.displayTrail();
     if (idx <= 0 || idx >= events.length) return null;
     const prev = new Date(events[idx - 1].recordedAt).getTime();
     const curr = new Date(events[idx].recordedAt).getTime();

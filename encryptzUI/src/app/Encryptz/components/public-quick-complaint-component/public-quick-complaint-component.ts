@@ -376,10 +376,10 @@ declare var L: any;
         }
 
         <!-- Footer link -->
-        <div class="page-footer">
+        <!-- <div class="page-footer">
           Already have an account?
           <a href="/customer/login">Login here</a>
-        </div>
+        </div> -->
 
       </div>
     </div>
@@ -1341,7 +1341,7 @@ export class PublicQuickComplaintComponent implements AfterViewInit {
           this.successMessage.set(num ? `Complaint #${num} registered successfully.` : 'Your complaint has been registered.');
           this.showSuccess.set(true);
           setTimeout(() => this.showSuccess.set(false), 5000);
-          this.resetForm();
+          this.resetComplaintOnly();
         } else {
           alert(res.message || 'Failed to submit complaint.');
         }
@@ -1354,7 +1354,7 @@ export class PublicQuickComplaintComponent implements AfterViewInit {
     });
   }
 
-  private resetForm(): void {
+  private resetComplaintOnly(): void {
     this.subject = ''; this.category = ''; this.brandName = '';
     this.modelNumber = ''; this.description = '';
     this.subjectTouched = false;
@@ -1362,11 +1362,8 @@ export class PublicQuickComplaintComponent implements AfterViewInit {
     this.latitude = null; this.longitude = null;
     this.searchResults.set([]);
     this.removePhoto();
-    this.identityConfirmed.set(false);
-    this.showIdentityFields.set(false);
-    this.isExistingCustomer.set(false);
-    this.mobile = ''; this.name = ''; this.email = '';
-    this.mobileTouched = false; this.nameTouched = false;
     if (this.map) { this.map.remove(); this.map = null; }
+    // Re-init map after brief delay so the form is still visible
+    setTimeout(() => this.initMiniMap(), 200);
   }
 }

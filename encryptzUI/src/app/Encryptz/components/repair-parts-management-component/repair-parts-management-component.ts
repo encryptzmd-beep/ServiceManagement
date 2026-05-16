@@ -15,20 +15,32 @@ const STATUS_ORDER = ['Requested','ReceivedAtHQ','UnderRepair','Repaired','Dispa
 export class RepairPartsManagementComponent {
   private api = inject(ApiService);
 
-  items       = signal<any[]>([]);
-  loading     = signal(true);
-  totalCount  = signal(0);
-  pageNumber  = signal(1);
-  pageSize    = signal(20);
+  // Raw data from API (loaded once, filtered client-side)
+  allItems  = signal<any[]>([]);
+  loading   = signal(true);
 
-  filterStatus = '';
-  searchTimeout: any;
+  // Filter signals (computed depends on these)
+  filterStatus = signal('');
+  searchText   = signal('');
+  fromDate     = signal('');
+  toDate       = signal('');
+
+  // ngModel props (update signals via change handlers)
+  filterStatusVal = '';
+  searchVal       = '';
+  fromVal         = '';
+  toVal           = '';
+  today           = this.formatDate(new Date());
+
+  // Pagination
+  currentPage  = signal(1);
+  itemsPerPage = signal(15);
 
   // Detail / images panel
-  selected        = signal<any | null>(null);
-  imagesList      = signal<any[]>([]);
-  imagesLoading   = signal(false);
-  lightboxImg     = signal<string | null>(null);
+  selected      = signal<any | null>(null);
+  imagesList    = signal<any[]>([]);
+  imagesLoading = signal(false);
+  lightboxImg   = signal<string | null>(null);
 
   // Status update modal
   showStatusModal = signal(false);
@@ -44,7 +56,59 @@ export class RepairPartsManagementComponent {
   toastErr  = signal(false);
   showToast = signal(false);
 
-  totalPages = computed(() => Math.ceil(this.totalCount() / this.pageSize()));
+  // ── Computed: all filters applied ──────────────────────────────────────
+  filteredItems = computed(() => {
+    let items  = this.allItems();
+    const from   = this.fromDate();
+    const to     = this.toDate();
+    const status = this.filterStatus();
+    const q      = this.searchText().toLowerCase().trim();
+
+    if (from) {
+      const fromD = new Date(from);
+      items = items.filter(i => new Date(i.createdAt) >= fromD);
+    }
+    if (to) {
+      const toD = new Date(to);
+      toD.setHours(23, 59, 59, 999);
+      items = items.filter(i => new Date(i.createdAt) <= toD);
+    }
+    if (status) items = items.filter(i => i.status === status);
+    if (q) items = items.filter(i =>
+      i.complaintNumber?.toLowerCase().includes(q) ||
+      i.partName?.toLowerCase().includes(q) ||
+      i.technicianName?.toLowerCase().includes(q) ||
+      i.customerName?.toLowerCase().includes(q) ||
+      i.partSerialNumber?.toLowerCase().includes(q)
+    );
+    return items;
+  });
+
+  // ── Computed: paginated slice ───────────────────────────────────────────
+  displayItems = computed(() => {
+    const all   = this.filteredItems();
+    const start = (this.currentPage() - 1) * this.itemsPerPage();
+    return all.slice(start, start + this.itemsPerPage());
+  });
+
+  totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.filteredItems().length / this.itemsPerPage()))
+  );
+
+  pageNumbers = computed((): (number | string)[] => {
+    const total   = this.totalPages();
+    const current = this.currentPage();
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: (number | string)[] = [1];
+    if (current > 3) pages.push('...');
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
+    if (current < total - 2) pages.push('...');
+    if (total > 1) pages.push(total);
+    return pages;
+  });
+
+  showingFrom = computed(() => this.filteredItems().length === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage() + 1);
+  showingTo   = computed(() => Math.min(this.currentPage() * this.itemsPerPage(), this.filteredItems().length));
 
   readonly STATUS_COLORS: Record<string, string> = {
     Requested:    '#6366f1',
@@ -56,30 +120,100 @@ export class RepairPartsManagementComponent {
     Resolved:     '#22c55e',
   };
 
-  ngOnInit() { this.load(); }
+  ngOnInit() {
+    this.setLast15(false);
+    this.load();
+  }
 
   load() {
     this.loading.set(true);
-    const filter: any = { pageNumber: this.pageNumber(), pageSize: this.pageSize() };
-    if (this.filterStatus) filter.status = this.filterStatus;
-    this.api.getRepairParts(filter).subscribe({
+    this.api.getRepairParts({ pageNumber: 1, pageSize: 500 }).subscribe({
       next: (res: any) => {
         const list = res?.data ?? res ?? [];
-        this.items.set(list);
-        this.totalCount.set(list[0]?.totalCount ?? list.length);
+        this.allItems.set(Array.isArray(list) ? list : []);
+        this.currentPage.set(1);
         this.loading.set(false);
       },
       error: () => { this.loading.set(false); this.toast('Failed to load repair requests', true); }
     });
   }
 
-  onFilterChange() {
-    clearTimeout(this.searchTimeout);
-    this.searchTimeout = setTimeout(() => { this.pageNumber.set(1); this.load(); }, 350);
+  // ── Filter handlers ─────────────────────────────────────────────────────
+  onStatusChip(s: string) {
+    this.filterStatusVal = this.filterStatusVal === s ? '' : s;
+    this.filterStatus.set(this.filterStatusVal);
+    this.currentPage.set(1);
   }
 
-  changePage(p: number) { this.pageNumber.set(p); this.load(); }
+  onStatusDropdown() {
+    this.filterStatus.set(this.filterStatusVal);
+    this.currentPage.set(1);
+  }
 
+  onSearch() {
+    this.searchText.set(this.searchVal);
+    this.currentPage.set(1);
+  }
+
+  clearSearch() {
+    this.searchVal = '';
+    this.searchText.set('');
+    this.currentPage.set(1);
+  }
+
+  onDateChange() {
+    this.fromDate.set(this.fromVal);
+    this.toDate.set(this.toVal);
+    this.currentPage.set(1);
+  }
+
+  setLast15(reset = true) {
+    const from = new Date();
+    from.setDate(from.getDate() - 14);
+    this.fromVal = this.formatDate(from);
+    this.toVal   = this.today;
+    this.fromDate.set(this.fromVal);
+    this.toDate.set(this.toVal);
+    if (reset) this.currentPage.set(1);
+  }
+
+  setLast30() {
+    const from = new Date();
+    from.setDate(from.getDate() - 29);
+    this.fromVal = this.formatDate(from);
+    this.toVal   = this.today;
+    this.fromDate.set(this.fromVal);
+    this.toDate.set(this.toVal);
+    this.currentPage.set(1);
+  }
+
+  clearDates() {
+    this.fromVal = '';
+    this.toVal   = '';
+    this.fromDate.set('');
+    this.toDate.set('');
+    this.currentPage.set(1);
+  }
+
+  isActiveDatePreset(days: number): boolean {
+    if (!this.fromVal || !this.toVal) return false;
+    const from = new Date();
+    from.setDate(from.getDate() - (days - 1));
+    return this.fromVal === this.formatDate(from) && this.toVal === this.today;
+  }
+
+  // ── Pagination ──────────────────────────────────────────────────────────
+  changePage(p: number | string) {
+    if (typeof p !== 'number') return;
+    if (p < 1 || p > this.totalPages()) return;
+    this.currentPage.set(p);
+  }
+
+  onPageSizeChange() {
+    this.currentPage.set(1);
+  }
+
+  // ── Detail panel ────────────────────────────────────────────────────────
   openDetail(item: any) {
     this.selected.set(item);
     this.imagesList.set([]);
@@ -107,6 +241,7 @@ export class RepairPartsManagementComponent {
   openLightbox(img: any) { this.lightboxImg.set(img.base64 ?? null); }
   closeLightbox() { this.lightboxImg.set(null); }
 
+  // ── Status modal ────────────────────────────────────────────────────────
   openStatusModal(item: any) {
     this.statusTarget.set(item);
     this.newStatus   = item.status;
@@ -161,5 +296,12 @@ export class RepairPartsManagementComponent {
   private toast(msg: string, err = false) {
     this.toastMsg.set(msg); this.toastErr.set(err); this.showToast.set(true);
     setTimeout(() => this.showToast.set(false), 3000);
+  }
+
+  private formatDate(d: Date): string {
+    const y   = d.getFullYear();
+    const m   = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   }
 }

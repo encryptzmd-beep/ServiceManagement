@@ -10,7 +10,7 @@
       </div>
     </div>
     <div class="rpm-header-right">
-      <select [(ngModel)]="filterStatus" (change)="onFilterChange()" class="rpm-filter-select">
+      <select [(ngModel)]="filterStatusVal" (change)="onStatusDropdown()" class="rpm-filter-select">
         <option value="">All Statuses</option>
         <option value="Requested">Requested</option>
         <option value="ReceivedAtHQ">Received at HQ</option>
@@ -26,14 +26,77 @@
     </div>
   </div>
 
-  <!-- Stats bar -->
+  <!-- Status chips -->
   <div class="rpm-stats">
+    <div class="rpm-stat-chip"
+         [class.rpm-stat-active]="!filterStatusVal"
+         style="border-color:#94a3b8"
+         (click)="onStatusChip('')">
+      <span class="rpm-stat-dot" style="background:#94a3b8"></span>
+      All
+    </div>
     @for (s of ['Requested','ReceivedAtHQ','UnderRepair','Repaired','Dispatched','Delivered','Resolved']; track s) {
-      <div class="rpm-stat-chip" [style.borderColor]="statusColor(s)" (click)="filterStatus=s; onFilterChange()">
+      <div class="rpm-stat-chip"
+           [style.borderColor]="statusColor(s)"
+           [class.rpm-stat-active]="filterStatusVal === s"
+           (click)="onStatusChip(s)">
         <span class="rpm-stat-dot" [style.background]="statusColor(s)"></span>
         {{ s === 'ReceivedAtHQ' ? 'At HQ' : s === 'UnderRepair' ? 'In Repair' : s }}
       </div>
     }
+  </div>
+
+  <!-- Filter bar -->
+  <div class="rpm-filter-bar">
+
+    <!-- Search -->
+    <div class="rpm-search-wrap">
+      <span class="material-icons">search</span>
+      <input
+        type="text"
+        [(ngModel)]="searchVal"
+        (ngModelChange)="onSearch()"
+        placeholder="Search complaint, part, technician, customer..."
+        class="rpm-search-input"
+      />
+      @if (searchVal) {
+        <button class="rpm-search-clear" type="button" (click)="clearSearch()">
+          <span class="material-icons">close</span>
+        </button>
+      }
+    </div>
+
+    <!-- Date range -->
+    <div class="rpm-date-range">
+      <div class="rpm-date-field">
+        <label>From</label>
+        <input type="date" [(ngModel)]="fromVal" (change)="onDateChange()" [max]="toVal || today" class="rpm-date-input" />
+      </div>
+      <span class="rpm-date-sep">—</span>
+      <div class="rpm-date-field">
+        <label>To</label>
+        <input type="date" [(ngModel)]="toVal" (change)="onDateChange()" [min]="fromVal" [max]="today" class="rpm-date-input" />
+      </div>
+      <div class="rpm-date-presets">
+        <button class="rpm-preset-btn" [class.active]="isActiveDatePreset(15)" (click)="setLast15()">15d</button>
+        <button class="rpm-preset-btn" [class.active]="isActiveDatePreset(30)" (click)="setLast30()">30d</button>
+        @if (fromVal || toVal) {
+          <button class="rpm-preset-btn rpm-preset-clear" (click)="clearDates()">All</button>
+        }
+      </div>
+    </div>
+
+    <!-- Page size -->
+    <div class="rpm-pagesize-wrap">
+      <label>Show</label>
+      <select [(ngModel)]="itemsPerPage" (ngModelChange)="onPageSizeChange()" class="rpm-pagesize-select">
+        <option [value]="10">10</option>
+        <option [value]="15">15</option>
+        <option [value]="25">25</option>
+        <option [value]="50">50</option>
+      </select>
+      <label>/ page</label>
+    </div>
   </div>
 
   <!-- Table -->
@@ -43,12 +106,27 @@
         <div class="rpm-spinner"></div>
         <span>Loading repair requests…</span>
       </div>
-    } @else if (!items().length) {
+    } @else if (!filteredItems().length) {
       <div class="rpm-empty">
         <span class="material-icons">inbox</span>
         <p>No repair requests found</p>
+        @if (searchVal || filterStatusVal || fromVal || toVal) {
+          <button class="rpm-clear-filters-btn" (click)="clearSearch(); clearDates(); onStatusChip('')">
+            <span class="material-icons">filter_alt_off</span>
+            Clear all filters
+          </button>
+        }
       </div>
     } @else {
+      <!-- Results info -->
+      <div class="rpm-results-info">
+        Showing <strong>{{ showingFrom() }}–{{ showingTo() }}</strong> of
+        <strong>{{ filteredItems().length }}</strong> results
+        @if (allItems().length !== filteredItems().length) {
+          <span class="rpm-results-filtered">(filtered from {{ allItems().length }} total)</span>
+        }
+      </div>
+
       <table class="rpm-table">
         <thead>
           <tr>
@@ -64,7 +142,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (item of items(); track item.repairRequestId) {
+          @for (item of displayItems(); track item.repairRequestId) {
             <tr (click)="openDetail(item)" class="rpm-row" [class.rpm-row-active]="selected()?.repairRequestId === item.repairRequestId">
               <td>
                 <span class="rpm-complaint-no">{{ item.complaintNumber }}</span>
@@ -81,14 +159,19 @@
               <td>{{ item.technicianName }}</td>
               <td>{{ item.customerName || '—' }}</td>
               <td>
-                <span class="rpm-status-badge" [style.background]="statusColor(item.status) + '22'" [style.color]="statusColor(item.status)" [style.borderColor]="statusColor(item.status)">
-                  {{ item.status }}
+                <span class="rpm-status-badge"
+                      [style.background]="statusColor(item.status) + '22'"
+                      [style.color]="statusColor(item.status)"
+                      [style.borderColor]="statusColor(item.status)">
+                  {{ item.status === 'ReceivedAtHQ' ? 'At HQ' : item.status === 'UnderRepair' ? 'In Repair' : item.status }}
                 </span>
               </td>
               <td class="rpm-date">{{ item.createdAt | date:'dd MMM yy' }}</td>
               <td>
                 @if (item.imageCount > 0) {
-                  <span class="rpm-img-count"><span class="material-icons" style="font-size:14px">photo</span> {{ item.imageCount }}</span>
+                  <span class="rpm-img-count">
+                    <span class="material-icons" style="font-size:14px">photo</span> {{ item.imageCount }}
+                  </span>
                 } @else {
                   <span class="rpm-no-img">—</span>
                 }
@@ -106,9 +189,23 @@
       <!-- Pagination -->
       @if (totalPages() > 1) {
         <div class="rpm-pagination">
-          <button [disabled]="pageNumber() === 1" (click)="changePage(pageNumber() - 1)">‹ Prev</button>
-          <span>Page {{ pageNumber() }} of {{ totalPages() }}</span>
-          <button [disabled]="pageNumber() >= totalPages()" (click)="changePage(pageNumber() + 1)">Next ›</button>
+          <button class="rpm-page-nav" [disabled]="currentPage() === 1" (click)="changePage(currentPage() - 1)">
+            <span class="material-icons">chevron_left</span>
+          </button>
+
+          @for (p of pageNumbers(); track $index) {
+            @if (p === '...') {
+              <span class="rpm-page-ellipsis">…</span>
+            } @else {
+              <button class="rpm-page-btn" [class.rpm-page-active]="currentPage() === p" (click)="changePage(p)">
+                {{ p }}
+              </button>
+            }
+          }
+
+          <button class="rpm-page-nav" [disabled]="currentPage() >= totalPages()" (click)="changePage(currentPage() + 1)">
+            <span class="material-icons">chevron_right</span>
+          </button>
         </div>
       }
     }
