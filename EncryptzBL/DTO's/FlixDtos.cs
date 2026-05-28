@@ -506,6 +506,9 @@ namespace EncryptzBL.DTO_s
         public string? Address { get; set; }
         public string EventType { get; set; } = string.Empty;
         public DateTime RecordedAt { get; set; }
+        public int? ComplaintId { get; set; }
+        public string? ComplaintNumber { get; set; }
+        public string? ComplaintSubject { get; set; }
     }
 
     public class SiteArrivalDto

@@ -428,6 +428,9 @@ export interface GeoTrack {
   address?: string;
   eventType: string;
   recordedAt: string;
+  complaintId?: number;
+  complaintNumber?: string;
+  complaintSubject?: string;
 }
 
 export interface TravelReport {

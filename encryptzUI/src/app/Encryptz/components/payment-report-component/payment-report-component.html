@@ -1,149 +1,348 @@
-<div class="report-card">
+<div class="pr-page">
 
-  <!-- ── Header + Date Filters ── -->
-  <div class="report-header">
-    <h2 class="card-title">All Payments Report</h2>
-
-    <div class="filter-bar">
-      <div class="date-group">
-        <label>From</label>
-        <input type="date"
-               [ngModel]="fromDate()"
-               (ngModelChange)="fromDate.set($event); onDateChange()" />
-      </div>
-      <div class="date-group">
-        <label>To</label>
-        <input type="date"
-               [ngModel]="toDate()"
-               (ngModelChange)="toDate.set($event); onDateChange()" />
-      </div>
-      <span class="record-count">{{ filteredPayments().length }} record{{ filteredPayments().length !== 1 ? 's' : '' }}</span>
+  <!-- ═══ Page Header ═══ -->
+  <div class="pr-header">
+    <div class="pr-header-left">
+      <div class="pr-title">Customer Payment Collection Report</div>
+      <div class="pr-sub">Track technician collections, company receipts and accounting status</div>
     </div>
   </div>
 
-  <!-- ── Search + Segment Filters ── -->
-  <div class="filter-row">
-    <div class="search-box">
-      <span class="material-icons search-icon">search</span>
-      <input type="text" class="search-input"
-             placeholder="Customer, mobile, complaint #…"
-             [ngModel]="filterSearch()"
-             (ngModelChange)="filterSearch.set($event); onSearchChange()" />
+  <!-- ═══ Summary Cards ═══ -->
+  <div class="summary-grid">
+
+    <div class="sum-card">
+      <div class="sum-icon-wrap blue">
+        <span class="material-icons">account_balance_wallet</span>
+      </div>
+      <div class="sum-body">
+        <div class="sum-label">Total Collection</div>
+        <div class="sum-val">{{ formatINR(totalCollection()) }}</div>
+        <div class="sum-trend up">
+          <span class="material-icons">trending_up</span>
+          18.6% vs last 30 days
+        </div>
+      </div>
     </div>
 
-    <div class="seg-group">
-      <span class="seg-label">Type</span>
-      <button class="seg-btn" [class.active]="filterType() === ''"        (click)="setFilter('type','')">All</button>
-      <button class="seg-btn adv" [class.active]="filterType() === 'Advance'" (click)="setFilter('type','Advance')">Advance</button>
-      <button class="seg-btn fin" [class.active]="filterType() === 'Final'"   (click)="setFilter('type','Final')">Final</button>
+    <div class="sum-card">
+      <div class="sum-icon-wrap green">
+        <span class="material-icons">payments</span>
+      </div>
+      <div class="sum-body">
+        <div class="sum-label">Cash Collection</div>
+        <div class="sum-val">{{ formatINR(cashCollection()) }}</div>
+        <div class="sum-sub">{{ cashPercent() | number:'1.2-2' }}% of total</div>
+      </div>
     </div>
 
-    <div class="seg-group">
-      <span class="seg-label">Method</span>
-      <button class="seg-btn" [class.active]="filterMethod() === ''"     (click)="setFilter('method','')">All</button>
-      <button class="seg-btn" [class.active]="filterMethod() === 'Cash'" (click)="setFilter('method','Cash')">Cash</button>
-      <button class="seg-btn" [class.active]="filterMethod() === 'UPI'"  (click)="setFilter('method','UPI')">UPI</button>
+    <div class="sum-card">
+      <div class="sum-icon-wrap purple">
+        <span class="material-icons">qr_code_2</span>
+      </div>
+      <div class="sum-body">
+        <div class="sum-label">UPI Collection</div>
+        <div class="sum-val">{{ formatINR(upiCollection()) }}</div>
+        <div class="sum-sub">{{ upiPercent() | number:'1.2-2' }}% of total</div>
+      </div>
     </div>
 
-    <div class="seg-group">
-      <span class="seg-label">Status</span>
-      <button class="seg-btn"     [class.active]="filterStatus() === ''"        (click)="setFilter('status','')">All</button>
-      <button class="seg-btn suc" [class.active]="filterStatus() === 'Success'" (click)="setFilter('status','Success')">Success</button>
-      <button class="seg-btn pen" [class.active]="filterStatus() === 'Pending'" (click)="setFilter('status','Pending')">Pending</button>
-      <button class="seg-btn fai" [class.active]="filterStatus() === 'Failed'"  (click)="setFilter('status','Failed')">Failed</button>
+    <div class="sum-card">
+      <div class="sum-icon-wrap orange">
+        <span class="material-icons">engineering</span>
+      </div>
+      <div class="sum-body">
+        <div class="sum-label">Pending From Technicians</div>
+        <div class="sum-val">{{ formatINR(pendingAmount()) }}</div>
+        <div class="sum-sub warn">{{ pendingCount() }} Collections</div>
+      </div>
+    </div>
+
+    <div class="sum-card">
+      <div class="sum-icon-wrap red">
+        <span class="material-icons">receipt_long</span>
+      </div>
+      <div class="sum-body">
+        <div class="sum-label">Pending Accounting</div>
+        <div class="sum-val sum-count-val">{{ pendingAccounting() }}</div>
+        <div class="sum-sub warn">{{ formatINR(pendingAccountingAmount()) }}</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ Filter Row ═══ -->
+  <div class="filter-card">
+    <div class="filter-row">
+
+      <div class="filter-group">
+        <label class="filter-label">Date Range</label>
+        <div class="filter-date-pair">
+          <input type="date" class="filter-date-input"
+                 [ngModel]="fromDate()"
+                 (ngModelChange)="fromDate.set($event); onDateChange()" />
+          <span class="date-sep">–</span>
+          <input type="date" class="filter-date-input"
+                 [ngModel]="toDate()"
+                 (ngModelChange)="toDate.set($event); onDateChange()" />
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Technician</label>
+        <select class="filter-select"
+                [ngModel]="filterTechnician()"
+                (ngModelChange)="setFilter('technician', $event)">
+          <option value="">All Technicians</option>
+          @for (t of technicianList(); track t) {
+            <option [value]="t">{{ t }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Payment Mode</label>
+        <select class="filter-select"
+                [ngModel]="filterMethod()"
+                (ngModelChange)="setFilter('method', $event)">
+          <option value="">All Modes</option>
+          <option value="Cash">Cash</option>
+          <option value="UPI">UPI</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Company Received Status</label>
+        <select class="filter-select"
+                [ngModel]="filterCompanyStatus()"
+                (ngModelChange)="setFilter('company', $event)">
+          <option value="">All Status</option>
+          <option value="success">Received</option>
+          <option value="pending">Pending</option>
+          <option value="failed">Partially Received</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Accounting Status</label>
+        <select class="filter-select"
+                [ngModel]="filterAccountingStatus()"
+                (ngModelChange)="setFilter('accounting', $event)">
+          <option value="">All Status</option>
+          <option value="verified">Verified</option>
+          <option value="unverified">Pending Entry</option>
+        </select>
+      </div>
+
+      <div class="filter-btns">
+        <button class="btn-reset" (click)="resetFilters()">
+          <span class="material-icons">refresh</span> Reset
+        </button>
+        <button class="btn-apply" (click)="onDateChange()">
+          <span class="material-icons">filter_alt</span> Apply Filter
+        </button>
+      </div>
+
     </div>
   </div>
 
-  <!-- ── Loader ── -->
+  <!-- ═══ Loader ═══ -->
   @if (loading()) {
     <div class="spinner-center">
-      <div class="mini-spin accent"></div>
+      <div class="mini-spin"></div>
     </div>
   }
 
-  <!-- ── Table ── -->
-  @if (!loading() && filteredPayments().length > 0) {
+  <!-- ═══ Table Card ═══ -->
+  @if (!loading()) {
+  <div class="table-card">
+
+    <!-- Toolbar -->
+    <div class="table-toolbar">
+      <span class="total-records">Total Records: <strong>{{ filteredPayments().length }}</strong></span>
+
+      <div class="legend">
+        <span class="leg-dot pend"></span><span class="leg-lbl">Pending</span>
+        <span class="leg-dot recv"></span><span class="leg-lbl">Received</span>
+        <span class="leg-dot part"></span><span class="leg-lbl">Partially Received</span>
+      </div>
+
+      <button class="btn-print" (click)="printReport()">
+        <span class="material-icons">print</span> Print
+      </button>
+
+      <div class="tb-search">
+        <span class="material-icons">search</span>
+        <input type="text" placeholder="Customer, mobile, complaint #..."
+               [ngModel]="filterSearch()"
+               (ngModelChange)="filterSearch.set($event); onSearchChange()" />
+      </div>
+    </div>
+
+    <!-- Table -->
     <div class="table-wrapper">
-      <table class="payments-table">
+      <table class="pay-table">
         <thead>
           <tr>
-            <th class="col-check">
+            <th class="col-verify">
               <div class="verify-header">
                 <span>Verify</span>
                 <button class="verify-all-btn"
                         (click)="verifyAll()"
-                        [title]="'Verify all unverified in current filter (' + filteredPayments().filter(p => !p.isVerified).length + ')'">
+                        [title]="'Verify all unverified (' + filteredPayments().filter(p => !p.isVerified).length + ')'">
                   All
                 </button>
               </div>
             </th>
-            <th class="col-no">#</th>
-            <th class="col-complaint">Complaint #</th>
-            <th>Customer</th>
-            <th>Mobile</th>
-            <th>Type</th>
-            <th class="col-amt">Total (₹)</th>
-            <th class="col-amt">Paid (₹)</th>
-            <th>Method</th>
-            <th>Status</th>
-            <th class="col-date">Date (IST)</th>
+            <th>Date</th>
+            <th>Job Card No</th>
+            <th>Customer Name</th>
+            <th>Service / Product</th>
+            <th class="col-amt">Bill Amount</th>
+            <th class="col-amt">Advance Collected</th>
+            <th class="col-amt">Discount</th>
+            <th class="col-amt">Net Payable<div class="th-sub">(Final – Discount)</div></th>
+            <th class="col-amt">Final Payment<div class="th-sub">Received</div></th>
+            <th>Collected By<div class="th-sub">(Technician)</div></th>
+            <th class="col-amt">Cash</th>
+            <th class="col-amt">UPI</th>
+            <th>Company<div class="th-sub">Received Status</div></th>
+            <th>Received<div class="th-sub">Date / By</div></th>
+            <th>Accounting<div class="th-sub">Status</div></th>
             <th class="col-remark">Remarks</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          @for (p of paginatedPayments(); track p.paymentId; let i = $index) {
+
+          @if (filteredPayments().length === 0) {
+            <tr>
+              <td colspan="18" class="empty-row">
+                <span class="material-icons">inbox</span>
+                <p>No payment records match the selected filters.</p>
+              </td>
+            </tr>
+          }
+
+          @for (p of paginatedPayments(); track p.paymentId) {
             <tr [class.verified-row]="p.isVerified">
 
-              <!-- Verify checkbox -->
-              <td class="col-check">
+              <!-- Verify -->
+              <td class="col-verify">
                 @if (isVerifying(p.paymentId)) {
                   <span class="verify-spinner"></span>
                 } @else {
                   <label class="check-wrap" [title]="p.isVerified ? 'Click to unverify' : 'Click to verify'">
-                    <input type="checkbox"
-                           [checked]="p.isVerified"
-                           (change)="toggleVerify(p)" />
+                    <input type="checkbox" [checked]="p.isVerified" (change)="toggleVerify(p)" />
                   </label>
                 }
               </td>
 
-              <!-- Row number -->
-              <td class="col-no">{{ (currentPage() - 1) * pageSize + i + 1 }}</td>
-
-              <td class="col-complaint">{{ p.complaintNumber || '—' }}</td>
-              <td class="col-customer">{{ p.customerName }}</td>
-              <td>{{ p.mobileNo }}</td>
-
-              <td>
-                <span class="type-badge {{ (p.paymentType || '') | lowercase }}">
-                  {{ p.paymentType }}
-                </span>
-              </td>
-
-              <td class="amount">{{ p.totalAmount | number:'1.2-2' }}</td>
-              <td class="amount">{{ p.amountPaid | number:'1.2-2' }}</td>
-              <td>{{ p.paymentMethod }}</td>
-
-              <td>
-                <span class="status-badge {{ (p.paymentStatus || '') | lowercase }}">
-                  {{ p.paymentStatus || '—' }}
-                </span>
-              </td>
-
+              <!-- Date -->
               <td class="col-date">{{ p.createdAt }}</td>
 
-              <!-- Remarks / Inline comment -->
+              <!-- Job Card No -->
+              <td>
+                <span class="job-link">{{ p.complaintNumber || '—' }}</span>
+              </td>
+
+              <!-- Customer Name -->
+              <td class="col-customer">
+                <div class="cust-name">{{ p.customerName }}</div>
+                <div class="cust-mobile">{{ p.mobileNo }}</div>
+              </td>
+
+              <!-- Service / Product -->
+              <td class="col-service">
+                {{ p.serviceDescription || (p.paymentType ? p.paymentType + ' Payment' : '—') }}
+              </td>
+
+              <!-- Bill Amount -->
+              <td class="col-amt">{{ formatINR(p.totalAmount) }}</td>
+
+              <!-- Advance Collected -->
+              <td class="col-amt">
+                @if (getAdvanceAmount(p) !== null) {
+                  {{ formatINR(getAdvanceAmount(p)!) }}
+                } @else {
+                  <span class="text-muted">₹0</span>
+                }
+              </td>
+
+              <!-- Discount -->
+              <td class="col-amt">{{ formatINR(p.discountAmount) }}</td>
+
+              <!-- Net Payable -->
+              <td class="col-amt fw-bold">{{ formatINR(p.totalAmount - p.discountAmount) }}</td>
+
+              <!-- Final Payment Received -->
+              <td class="col-amt">
+                @if (getFinalAmount(p) !== null) {
+                  <span class="fw-bold">{{ formatINR(getFinalAmount(p)!) }}</span>
+                } @else {
+                  <span class="text-muted">—</span>
+                }
+              </td>
+
+              <!-- Collected By -->
+              <td>
+                <div class="tech-cell">
+                  <div class="tech-avatar" [style.background]="getAvatarColor(p.createdByName)">
+                    {{ getAvatarLetter(p.createdByName) }}
+                  </div>
+                  <span>{{ p.createdByName || '—' }}</span>
+                </div>
+              </td>
+
+              <!-- Cash -->
+              <td class="col-amt">
+                @if (p.paymentMethod === 'Cash') {
+                  <span class="cash-amt">{{ formatINR(p.amountPaid) }}</span>
+                } @else {
+                  <span class="text-muted">—</span>
+                }
+              </td>
+
+              <!-- UPI -->
+              <td class="col-amt">
+                @if (p.paymentMethod === 'UPI') {
+                  <span class="upi-amt">{{ formatINR(p.amountPaid) }}</span>
+                } @else {
+                  <span class="text-muted">—</span>
+                }
+              </td>
+
+              <!-- Company Received Status -->
+              <td>
+                <span class="cs-badge" [ngClass]="getCompanyStatusClass(p.paymentStatus)">
+                  {{ getCompanyStatusLabel(p.paymentStatus) }}
+                </span>
+              </td>
+
+              <!-- Received Date / By -->
+              <td class="col-date">
+                @if (p.verifiedAt) {
+                  <div class="recv-date">{{ p.verifiedAt }}</div>
+                  <div class="by-name">{{ p.verifiedByName }}</div>
+                } @else {
+                  <span class="text-muted">—</span>
+                }
+              </td>
+
+              <!-- Accounting Status -->
+              <td>
+                <span class="ac-badge" [ngClass]="getAccountingClass(p)">
+                  {{ getAccountingLabel(p) }}
+                </span>
+              </td>
+
+              <!-- Remarks -->
               <td class="col-remark">
                 @if (commentingId() === p.paymentId) {
                   <div class="comment-box">
-                    <textarea [(ngModel)]="commentDraft"
-                              rows="2"
-                              placeholder="Add remark…"></textarea>
+                    <textarea [(ngModel)]="commentDraft" rows="2" placeholder="Add remark…"></textarea>
                     <div class="comment-actions">
-                      <button class="btn-save-sm"
-                              (click)="saveComment(p)"
-                              [disabled]="savingComment()">
+                      <button class="btn-save-sm" (click)="saveComment(p)" [disabled]="savingComment()">
                         {{ savingComment() ? 'Saving…' : 'Save' }}
                       </button>
                       <button class="btn-cancel-sm" (click)="cancelComment()">Cancel</button>
@@ -153,9 +352,9 @@
                   <div class="remark-chip" (click)="openComment(p)" title="Click to add / edit remark">
                     @if (p.remarks) {
                       <span class="remark-text">{{ p.remarks }}</span>
-                      <span class="edit-icon">✎</span>
+                      <span class="remark-edit">✎</span>
                     } @else {
-                      <span class="add-remark">+ Add remark</span>
+                      <span class="remark-add">+ Add remark</span>
                     }
                   </div>
                 }
@@ -163,29 +362,46 @@
 
               <!-- Actions -->
               <td>
-                <div class="action-cell">
-                  @if (p.isVerified) {
-                    <span class="verified-badge">✓ Verified</span>
-                  }
-                  <button class="btn-primary-sm" (click)="edit(p)">Edit</button>
-                </div>
+                <button class="btn-view" (click)="edit(p)" title="View / Edit">
+                  <span class="material-icons">visibility</span>
+                </button>
               </td>
 
             </tr>
           }
         </tbody>
+
       </table>
     </div>
 
-    <!-- ── Pagination ── -->
+    <!-- ── Always-visible totals bar (outside scroll area) ── -->
+    @if (filteredPayments().length > 0) {
+    <div class="totals-bar">
+      <span class="tb-records">
+        <span class="material-icons">functions</span>
+        Total ({{ filteredPayments().length }} records)
+      </span>
+      <div class="tb-amounts">
+        <div class="tb-item">
+          <span class="tb-lbl">Cash</span>
+          <span class="tb-cash">{{ formatINR(cashTotal()) }}</span>
+        </div>
+        <span class="tb-divider"></span>
+        <div class="tb-item">
+          <span class="tb-lbl">UPI</span>
+          <span class="tb-upi">{{ formatINR(upiTotal()) }}</span>
+        </div>
+      </div>
+    </div>
+    }
+
+    <!-- Pagination -->
     <div class="pagination-bar">
       <span class="page-info">
-        Showing {{ startIndex() }}–{{ endIndex() }} of {{ filteredPayments().length }}
+        Showing {{ startIndex() }} to {{ endIndex() }} of {{ filteredPayments().length }} entries
       </span>
-
       <div class="page-controls">
-        <button class="page-btn" (click)="prevPage()" [disabled]="currentPage() === 1">‹ Prev</button>
-
+        <button class="page-btn" (click)="prevPage()" [disabled]="currentPage() === 1">‹</button>
         @for (n of visiblePages(); track $index) {
           @if (n === null) {
             <span class="page-ellipsis">…</span>
@@ -195,15 +411,11 @@
                     (click)="goToPage(n)">{{ n }}</button>
           }
         }
-
-        <button class="page-btn" (click)="nextPage()" [disabled]="currentPage() === totalPages()">Next ›</button>
+        <button class="page-btn" (click)="nextPage()" [disabled]="currentPage() === totalPages()">›</button>
       </div>
     </div>
-  }
 
-  <!-- ── Empty state ── -->
-  @if (!loading() && filteredPayments().length === 0) {
-    <div class="empty-state">No payment records match the selected filters.</div>
+  </div>
   }
 
 </div>

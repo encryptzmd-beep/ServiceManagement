@@ -344,3 +344,26 @@ input, select, textarea { font-family: inherit; }
   }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
+
+/* ============================================
+   GLOBAL PRINT RULES
+   ============================================ */
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+
+  app-header,
+  app-sidebar { display: none !important; }
+
+  .layout { background: #fff !important; }
+
+  .main-content,
+  .main-content.sidebar-open {
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: unset !important;
+  }
+
+  .content-wrapper { padding: 0 !important; }
+
+  body { background: #fff !important; }
+}
