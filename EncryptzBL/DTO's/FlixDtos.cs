@@ -509,6 +509,7 @@ namespace EncryptzBL.DTO_s
         public int? ComplaintId { get; set; }
         public string? ComplaintNumber { get; set; }
         public string? ComplaintSubject { get; set; }
+        public string? customerName { get; set; }
     }
 
     public class SiteArrivalDto

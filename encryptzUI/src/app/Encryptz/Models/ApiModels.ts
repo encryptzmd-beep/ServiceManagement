@@ -431,6 +431,8 @@ export interface GeoTrack {
   complaintId?: number;
   complaintNumber?: string;
   complaintSubject?: string;
+  customerName?: string;
+  customerPhone?: string;
 }
 
 export interface TravelReport {

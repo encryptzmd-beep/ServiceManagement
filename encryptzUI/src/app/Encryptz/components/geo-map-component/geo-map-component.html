@@ -296,6 +296,9 @@
   <div class="tl-complaint-badge">
     <span class="material-icons">confirmation_number</span>
     <span class="tl-complaint-no">{{ t.complaintNumber }}</span>
+    @if (t.customerName) {
+    <span class="tl-complaint-customer">· {{ t.customerName }}</span>
+    }
     @if (t.complaintSubject) {
     <span class="tl-complaint-subject">— {{ t.complaintSubject }}</span>
     }
