@@ -118,6 +118,11 @@
                 <button class="fx-action-btn" (click)="openComplaintDetails(c.complaintId, $event)" title="View">
                   <span class="material-icons">visibility</span>
                 </button>
+                @if (canCancel(c)) {
+                  <button class="fx-action-btn cancel-action" (click)="openCancel(c, $event)" title="Cancel complaint">
+                    <span class="material-icons">cancel</span>
+                  </button>
+                }
               </td>
             </tr>
           } @empty {
@@ -151,4 +156,21 @@
     (closed)="closeDetailPopup()"
     (refreshed)="handleRefresh()">
   </app-complaint-detail-popup>
+}
+
+@if (cancelTarget()) {
+  <div class="cancel-overlay" (click)="closeCancel()"></div>
+  <div class="cancel-dialog" role="dialog" aria-modal="true" aria-labelledby="cancel-title">
+    <h3 id="cancel-title">Cancel complaint</h3>
+    <p><strong>{{ cancelTarget()!.complaintNumber }}</strong> will be moved to Cancelled.</p>
+    <label for="cancel-reason">Reason</label>
+    <textarea id="cancel-reason" [(ngModel)]="cancelReason" rows="3" placeholder="Enter cancellation reason"></textarea>
+    @if (cancelError()) { <div class="cancel-error">{{ cancelError() }}</div> }
+    <div class="cancel-dialog-actions">
+      <button (click)="closeCancel()" [disabled]="cancelling()">Keep complaint</button>
+      <button class="confirm-cancel" (click)="confirmCancel()" [disabled]="cancelling()">
+        {{ cancelling() ? 'Cancelling...' : 'Cancel complaint' }}
+      </button>
+    </div>
+  </div>
 }

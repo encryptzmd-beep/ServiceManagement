@@ -15,6 +15,15 @@
   &:hover { transform:translateY(-2px); border-color:var(--accent,#6366f1); box-shadow:0 6px 20px rgba(0,0,0,.1); }
   &.active { border-color:var(--accent,#6366f1); background:color-mix(in srgb,var(--accent,#6366f1) 4%,#fff); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent,#6366f1) 18%,transparent); .tile-bar{opacity:1;} .tile-chevron{color:var(--accent,#6366f1);} }
 }
+.filter-date { height: 38px; padding: 0 10px; border: 1px solid #d7e0ea; border-radius: 7px; background: #fff; color: #334155; }
+.btn-cancel-complaint { display: inline-flex; align-items: center; gap: 3px; border: 1px solid #fecaca; border-radius: 6px; padding: 5px 8px; background: #fff; color: #dc2626; cursor: pointer; }
+.btn-cancel-complaint .material-icons { font-size: 15px; }
+.cancel-overlay { position: fixed; inset: 0; z-index: 1500; background: rgba(15,23,42,.48); }
+.cancel-dialog { position: fixed; z-index: 1501; top: 50%; left: 50%; transform: translate(-50%,-50%); width: min(430px, calc(100vw - 32px)); padding: 24px; border-radius: 12px; background: #fff; box-shadow: 0 24px 70px rgba(15,23,42,.25); }
+.cancel-dialog h3 { margin: 0 0 8px; }.cancel-dialog p { color: #64748b; }.cancel-dialog label { display:block; margin:18px 0 6px; font-weight:600; }
+.cancel-dialog textarea { width:100%; box-sizing:border-box; resize:vertical; padding:10px; border:1px solid #cbd5e1; border-radius:7px; }
+.cancel-error { margin-top:8px; color:#dc2626; font-size:12px; }.cancel-dialog-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+.cancel-dialog-actions button { padding:9px 14px; border:1px solid #cbd5e1; border-radius:7px; background:#fff; cursor:pointer; }.cancel-dialog-actions .confirm-cancel { border-color:#dc2626; background:#dc2626; color:#fff; }
 .tile-bar { position:absolute; bottom:0; left:0; right:0; height:3px; background:var(--accent,#6366f1); opacity:0; transition:opacity .2s; }
 .tile-chevron { position:absolute; bottom:4px; right:6px; font-size:16px!important; color:#d1d5db; transition:color .2s; }
 .stat-icon { width:44px; height:44px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }

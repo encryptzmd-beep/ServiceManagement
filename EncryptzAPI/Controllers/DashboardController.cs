@@ -28,9 +28,13 @@ namespace EncryptzAPI.Controllers
         }
 
         [HttpGet("charts")]
-        public async Task<IActionResult> GetChartData([FromQuery] int days = 30)
+        public async Task<IActionResult> GetChartData([FromQuery] int days = 30, [FromQuery] DateTime? fromDate = null, [FromQuery] DateTime? toDate = null)
         {
-            var result = await _service.GetChartData(days);
+            if (days < 1 || days > 3660)
+                return BadRequest("Days must be between 1 and 3660.");
+            if (fromDate.HasValue && toDate.HasValue && fromDate.Value.Date > toDate.Value.Date)
+                return BadRequest("From date cannot be after to date.");
+            var result = await _service.GetChartData(days, fromDate, toDate);
             return Ok(result);
         }
         // ═════════════════════════════════════════════════════════════════════════

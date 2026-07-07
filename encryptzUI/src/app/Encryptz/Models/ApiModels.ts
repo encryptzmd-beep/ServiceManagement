@@ -172,6 +172,7 @@ export interface ComplaintListItem {
   subject: string;
   priority: string;
   statusName: string;
+  statusId?: number;
   statusColor?: string;
   customerName: string;
   productName: string;
@@ -511,6 +512,7 @@ export const COMPLAINT_STATUSES = [
   { id: 7, name: 'Closed', color: '#6B7280' },
   { id: 8, name: 'Reopened', color: '#DC2626' },
   { id: 9, name: 'Hold', color: '#F97316' },
+  { id: 10, name: 'Cancelled', color: '#DC2626' },
 ];
 
 export const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];

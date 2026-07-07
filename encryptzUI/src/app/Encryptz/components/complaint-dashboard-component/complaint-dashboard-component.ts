@@ -34,6 +34,12 @@ private router = inject(Router);
   dashboardData = signal<DashboardResponse | null>(null);
   chartData = signal<DashboardChartData | null>(null);
   chartDays = 30;
+  chartFromDate = '';
+  chartToDate = '';
+  cancelling = signal(false);
+  cancelTarget = signal<any>(null);
+  cancelReason = '';
+  cancelError = signal('');
 
 
   activeTile = signal<TileConfig | null>(null);
@@ -148,7 +154,8 @@ private _scrollTileTop(): void {
       { key:'inprogress',    label:'In Progress',       value: rc['inprogress']   ?? s.inProgressComplaints,     icon:'🔧', bg:'#fef3c7', accent:'#d97706', up:false, pct:3,  statusId:3 },
       { key:'workcompleted', label:'Work Completed',    value: rc['workcompleted']?? s.resolvedComplaints,       icon:'✅', bg:'#d1fae5', accent:'#059669', up:true,  pct:15, statusId:5 },
       { key:'closed',        label:'Closed',            value: rc['closed']       ?? (s.closedComplaints ?? 0),  icon:'🔒', bg:'#f3f4f6', accent:'#6b7280', up:false, pct:2,  statusId:7 },
-      { key:'sla',           label:'SLA Breached',      value: s.slaBreached,                                    icon:'⚠️', bg:'#fef2f2', accent:'#dc2626', up:false, pct:5,  isSLA:true },
+      { key:'cancelled',     label:'Cancelled',         value: rc['cancelled']    ?? 0,                          icon:'✖', bg:'#fee2e2', accent:'#dc2626', up:false, pct:0, statusId:10 },
+      { key:'sla',           label:'SLA Breached',      value: rc['sla'] ?? s.slaBreached,                       icon:'⚠️', bg:'#fef2f2', accent:'#dc2626', up:false, pct:5,  isSLA:true },
       { key:'warranty',      label:'Warranty',          value: s.warrantyComplaints,                             icon:'🛡️', bg:'#fce7f3', accent:'#be185d', up:true,  pct:2,  isWarranty:true },
       { key:'schedules',     label:'Today Schedules',   value: s.todaySchedules,                                 icon:'📅', bg:'#ccfbf1', accent:'#0d9488', up:true,  pct:10, isScheduled:true },
       { key:'assignments',   label:'Active Assignments', value: this.activeAssignments().length,                 icon:'👷', bg:'#e0e7ff', accent:'#6366f1', up:true,  pct:0,  isActiveAssign:true },
@@ -170,11 +177,12 @@ private _scrollTileTop(): void {
       { label:'In Progress',   count:ip, pct:(ip/total)*100, color:'#f59e0b', statusId:3 },
       { label:'Work Completed',count:wc, pct:(wc/total)*100, color:'#10b981', statusId:5 },
       { label:'Closed',        count:cl, pct:(cl/total)*100, color:'#6b7280', statusId:7 },
-      { label:'SLA Breach',    count:s.slaBreached, pct:(s.slaBreached/total)*100, color:'#ef4444' },
+      { label:'SLA Breach',    count:rc['sla'] ?? s.slaBreached, pct:((rc['sla'] ?? s.slaBreached)/total)*100, color:'#ef4444' },
     ];
   });
 
   ngOnInit(): void {
+    this.setChartRange(30, false);
     this.loadData();
     this.loadActiveAssignments();
     this.cSubject.pipe(debounceTime(300), takeUntilDestroyed(this._destroyRef)).subscribe(term => {
@@ -199,14 +207,21 @@ private _scrollTileTop(): void {
     this.loadChartData();
   }
 
+  refreshDashboard(): void {
+    this.loadData();
+    if (this.activeTile()) this.loadTile();
+  }
+
   loadRealCounts(): void {
+    const dateRange = { fromDate: this.chartFromDate, toDate: this.chartToDate };
     const queries: { key: string; filter: ComplaintFilter }[] = [
-      { key: 'total',         filter: { pageNumber: 1, pageSize: 1 } },
-      { key: 'new',           filter: { pageNumber: 1, pageSize: 1, statusId: 1 } },
-      { key: 'inprogress',    filter: { pageNumber: 1, pageSize: 1, statusId: 3 } },
-      { key: 'workcompleted', filter: { pageNumber: 1, pageSize: 1, statusId: 5 } },
-      { key: 'closed',        filter: { pageNumber: 1, pageSize: 1, statusId: 7 } },
-      { key: 'hold',          filter: { pageNumber: 1, pageSize: 1, statusId: 9 } },
+      { key: 'total',         filter: { pageNumber: 1, pageSize: 1, ...dateRange } },
+      { key: 'new',           filter: { pageNumber: 1, pageSize: 1, statusId: 1, ...dateRange } },
+      { key: 'inprogress',    filter: { pageNumber: 1, pageSize: 1, statusId: 3, ...dateRange } },
+      { key: 'workcompleted', filter: { pageNumber: 1, pageSize: 1, statusId: 5, ...dateRange } },
+      { key: 'closed',        filter: { pageNumber: 1, pageSize: 1, statusId: 7, ...dateRange } },
+      { key: 'hold',          filter: { pageNumber: 1, pageSize: 1, statusId: 9, ...dateRange } },
+      { key: 'cancelled',     filter: { pageNumber: 1, pageSize: 1, statusId: 10, ...dateRange } },
     ];
 
     forkJoin(queries.map(q => this.api.getComplaints(q.filter)))
@@ -220,14 +235,61 @@ private _scrollTileTop(): void {
             counts[q.key] = fromItem ?? r.totalCount ?? 0;
           });
           this.realCounts.set(counts);
+          this.loadFilteredSLACount();
         },
         error: () => {},
       });
   }
 
+  private loadFilteredSLACount(): void {
+    this.api.getComplaints({
+      pageNumber: 1,
+      pageSize: 10000,
+      fromDate: this.chartFromDate,
+      toDate: this.chartToDate,
+    }).pipe(takeUntilDestroyed(this._destroyRef)).subscribe({
+      next: result => this.realCounts.update(c => ({
+        ...c,
+        sla: (result.items ?? []).filter(item => item.isSLABreached).length,
+      })),
+      error: () => {},
+    });
+  }
+
+  private formatDate(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  setChartRange(days: number, reload = true): void {
+    this.chartDays = days;
+    const to = new Date();
+    const from = new Date(to);
+    from.setDate(from.getDate() - (days - 1));
+    this.chartFromDate = this.formatDate(from);
+    this.chartToDate = this.formatDate(to);
+    if (reload) this.applyDashboardDateFilter();
+  }
+
+  onCustomRangeChange(): void {
+    if (!this.chartFromDate || !this.chartToDate || this.chartFromDate > this.chartToDate) return;
+    const start = new Date(`${this.chartFromDate}T00:00:00`);
+    const end = new Date(`${this.chartToDate}T00:00:00`);
+    this.chartDays = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+    this.applyDashboardDateFilter();
+  }
+
+  private applyDashboardDateFilter(): void {
+    this.tilePage = 1;
+    this.loadData();
+    if (this.activeTile()) this.loadTile();
+  }
+
   loadChartData(): void {
     this.chartData.set(null);
-    this.api.getChartData(this.chartDays).subscribe({
+    this.api.getChartData(this.chartDays, this.chartFromDate, this.chartToDate).subscribe({
       next: d => this.chartData.set(d),
       error: () => this.chartData.set({ complaintsByDate:this.demoDates(), complaintsByStatus:[], complaintsByPriority:[] }),
     });
@@ -272,7 +334,8 @@ private _getTotalForTile(tile: TileConfig): number | null {
     case 'workcompleted': return rc['workcompleted'] ?? s.resolvedComplaints   ?? null;
     case 'closed':        return rc['closed']        ?? s.closedComplaints     ?? null;
     case 'hold':          return rc['hold']          ?? null;
-    case 'sla':           return s.slaBreached       ?? null;
+    case 'cancelled':     return rc['cancelled']     ?? null;
+    case 'sla':           return rc['sla']            ?? s.slaBreached ?? null;
     case 'warranty':      return s.warrantyComplaints ?? null;
     case 'schedules':     return s.todaySchedules    ?? null;
     case 'assignments':   return this.activeAssignments().length;
@@ -287,13 +350,24 @@ loadTile(): void {
 
   const totalFromTile = this._getTotalForTile(tile);
 
-  // ── SLA tile (client-side, full list) ──
+  // SLA records must use the selected dashboard date range, not the unfiltered
+  // list returned by the dashboard statistics procedure.
   if (tile.isSLA) {
-    const items = (this.dashboardData()?.slaBreaches ?? []) as any[];
-    this.tileItems.set(items);
-    const total = totalFromTile ?? items.length;
-    this.tileTotalPages.set(Math.max(1, Math.ceil(total / this.PAGE_SIZE)));
-    this.tileLoading.set(false);
+    this.api.getComplaints({
+      pageNumber: 1,
+      pageSize: 10000,
+      fromDate: this.chartFromDate,
+      toDate: this.chartToDate,
+    }).subscribe({
+      next: result => {
+        const items = (result.items ?? []).filter(item => item.isSLABreached);
+        this.tileItems.set(items);
+        this.tileTotalPages.set(Math.max(1, Math.ceil(items.length / this.PAGE_SIZE)));
+        this.realCounts.update(c => ({ ...c, sla: items.length }));
+        this.tileLoading.set(false);
+      },
+      error: () => { this.tileItems.set([]); this.tileTotalPages.set(1); this.tileLoading.set(false); },
+    });
     return;
   }
 
@@ -308,7 +382,12 @@ loadTile(): void {
   }
 
   // ── Server-side paginated tiles ──
-  const f: ComplaintFilter = { pageNumber: this.tilePage, pageSize: this.PAGE_SIZE };
+  const f: ComplaintFilter = {
+    pageNumber: this.tilePage,
+    pageSize: this.PAGE_SIZE,
+    fromDate: this.chartFromDate,
+    toDate: this.chartToDate,
+  };
   if (tile.statusId) f.statusId = tile.statusId;
 
   this.api.getComplaints(f).subscribe({
@@ -366,6 +445,26 @@ get pagedItems(): any[] {
   clearTile(): void { this.activeTile.set(null); this.tileItems.set([]); }
   isSLATile(): boolean { return !!this.activeTile()?.isSLA; }
   isAssignTile(): boolean { return !!this.activeTile()?.isActiveAssign; }
+
+  canCancel(c: any): boolean {
+    return !['cancelled', 'closed', 'workcompleted'].includes((c?.statusName || '').replace(/\s/g, '').toLowerCase());
+  }
+  openCancel(c: any, event?: Event): void { event?.stopPropagation(); this.cancelTarget.set(c); this.cancelReason=''; this.cancelError.set(''); }
+  closeCancel(): void { if (!this.cancelling()) this.cancelTarget.set(null); }
+  confirmCancel(): void {
+    const c = this.cancelTarget();
+    if (!c) return;
+    if (!this.cancelReason.trim()) { this.cancelError.set('Cancellation reason is required.'); return; }
+    this.cancelling.set(true); this.cancelError.set('');
+    this.api.updateComplaintStatus(c.complaintId, 10, this.cancelReason.trim()).subscribe({
+      next: r => {
+        this.cancelling.set(false);
+        if (r.success) { this.cancelTarget.set(null); this.loadData(); if (this.activeTile()) this.loadTile(); }
+        else this.cancelError.set(r.message || 'Unable to cancel complaint.');
+      },
+      error: () => { this.cancelling.set(false); this.cancelError.set('Unable to cancel complaint.'); },
+    });
+  }
 
   // Panel
   openAssign(item: any, event?: Event): void {

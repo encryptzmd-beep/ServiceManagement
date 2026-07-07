@@ -26,6 +26,10 @@ export class ComplaintListComponent implements OnInit {
   statuses = COMPLAINT_STATUSES;
   priorities = PRIORITIES;
   filter: ComplaintFilter = { pageNumber: 1, pageSize: 20 };
+  cancelling = signal(false);
+  cancelTarget = signal<ComplaintListItem | null>(null);
+  cancelReason = '';
+  cancelError = signal('');
   realTotal = signal(0);
   showDetailPopup = signal(false);
 selectedComplaintId = signal<number | null>(null);
@@ -63,7 +67,49 @@ handleRefresh(): void {
   onTimeCount   = computed(() => this.filteredComplaints().filter(c => !c.isSLABreached).length);
 
   ngOnInit() {
+    this.setDefaultDateRange();
     this.load();
+  }
+
+  private formatDate(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  setDefaultDateRange(): void {
+    const to = new Date();
+    const from = new Date(to);
+    from.setDate(from.getDate() - 29);
+    this.filter.fromDate = this.formatDate(from);
+    this.filter.toDate = this.formatDate(to);
+  }
+
+  canCancel(c: ComplaintListItem): boolean {
+    return !['cancelled', 'closed', 'workcompleted'].includes((c.statusName || '').replace(/\s/g, '').toLowerCase());
+  }
+
+  openCancel(c: ComplaintListItem, event?: Event): void {
+    event?.stopPropagation();
+    this.cancelTarget.set(c); this.cancelReason = ''; this.cancelError.set('');
+  }
+
+  closeCancel(): void { if (!this.cancelling()) this.cancelTarget.set(null); }
+
+  confirmCancel(): void {
+    const c = this.cancelTarget();
+    if (!c) return;
+    if (!this.cancelReason.trim()) { this.cancelError.set('Cancellation reason is required.'); return; }
+    this.cancelling.set(true); this.cancelError.set('');
+    this.api.updateComplaintStatus(c.complaintId, 10, this.cancelReason.trim()).subscribe({
+      next: r => {
+        this.cancelling.set(false);
+        if (r.success) { this.cancelTarget.set(null); this.load(); }
+        else this.cancelError.set(r.message || 'Unable to cancel complaint.');
+      },
+      error: () => { this.cancelling.set(false); this.cancelError.set('Unable to cancel complaint.'); },
+    });
   }
 
   load(): void {

@@ -256,8 +256,8 @@ uploadServiceImage(technicianId: number, formData: FormData): Observable<any> {
     return this.get<M.DashboardResponse>('Dashboard/stats', { roleId, technicianId });
   }
 
-  getChartData(days: number = 30): Observable<M.DashboardChartData> {
-    return this.get<M.DashboardChartData>('Dashboard/charts', { days });
+  getChartData(days: number = 30, fromDate?: string, toDate?: string): Observable<M.DashboardChartData> {
+    return this.get<M.DashboardChartData>('Dashboard/charts', { days, fromDate, toDate });
   }
  getAll(group?: string): Observable<M.SystemSetting[]> {
     return this.get<M.SystemSetting[]>('Settings', { group });

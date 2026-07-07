@@ -10,13 +10,15 @@
       <button class="fx-btn-new" (click)="openBlankPanel()">
         <span class="material-icons" style="font-size:18px;">person_add</span> Assign Technician
       </button>
-      <select [(ngModel)]="chartDays" (ngModelChange)="loadChartData()" class="fx-filter-select">
-        <option [value]="7">Last 7 Days</option>
-        <option [value]="15">Last 15 Days</option>
-        <option [value]="30">Last 30 Days</option>
-        <option [value]="90">Last 90 Days</option>
+      <select [ngModel]="chartDays" (ngModelChange)="setChartRange(+$event)" class="fx-filter-select" aria-label="Dashboard period">
+        <option [ngValue]="7">Last 7 Days</option>
+        <option [ngValue]="14">Last 14 Days</option>
+        <option [ngValue]="30">Last 30 Days</option>
+        <option [ngValue]="90">Last 90 Days</option>
       </select>
-      <button class="fx-btn-navy" (click)="loadData()">
+      <input type="date" [(ngModel)]="chartFromDate" (change)="onCustomRangeChange()" class="filter-date" aria-label="From date" />
+      <input type="date" [(ngModel)]="chartToDate" (change)="onCustomRangeChange()" class="filter-date" aria-label="To date" />
+      <button class="fx-btn-navy" (click)="refreshDashboard()">
         <span class="material-icons" style="font-size:18px;">refresh</span> Refresh
       </button>
     </div>
@@ -215,6 +217,11 @@
                   <span class="material-icons">{{ isReassign(c) ? 'swap_horiz' : 'person_add' }}</span>
                   {{ isReassign(c) ? 'Reassign' : 'Assign' }}
                 </button>
+                @if (canCancel(c)) {
+                <button class="btn-cancel-complaint" (click)="openCancel(c, $event)" title="Cancel complaint">
+                  <span class="material-icons">cancel</span> Cancel
+                </button>
+                }
               </div>
             </td>
           </tr>
@@ -868,3 +875,18 @@
        (customerRequested)="handleCustomerFromPopup($event)">
      </app-complaint-detail-popup>
    }
+
+@if (cancelTarget()) {
+<div class="cancel-overlay" (click)="closeCancel()"></div>
+<div class="cancel-dialog" role="dialog" aria-modal="true" aria-labelledby="dashboard-cancel-title">
+  <h3 id="dashboard-cancel-title">Cancel complaint</h3>
+  <p><strong>{{ cancelTarget().complaintNumber }}</strong> will be moved to Cancelled.</p>
+  <label for="dashboard-cancel-reason">Reason</label>
+  <textarea id="dashboard-cancel-reason" [(ngModel)]="cancelReason" rows="3" placeholder="Enter cancellation reason"></textarea>
+  @if (cancelError()) { <div class="cancel-error">{{ cancelError() }}</div> }
+  <div class="cancel-dialog-actions">
+    <button (click)="closeCancel()" [disabled]="cancelling()">Keep complaint</button>
+    <button class="confirm-cancel" (click)="confirmCancel()" [disabled]="cancelling()">{{ cancelling() ? 'Cancelling...' : 'Cancel complaint' }}</button>
+  </div>
+</div>
+}

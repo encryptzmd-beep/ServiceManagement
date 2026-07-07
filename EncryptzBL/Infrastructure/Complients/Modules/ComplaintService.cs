@@ -138,11 +138,21 @@ namespace EncryptzBL.Infrastructure.Complients.Modules
                 SqlParameterHelper.Input("@Remarks", dto.Remarks)
             };
 
-            var rows = await ExecuteAsync("sp_Complaint_UpdateStatus", parameters);
+            // The procedure uses SET NOCOUNT ON and returns its outcome through
+            // SELECT Success, Message, OldStatusId, NewStatusId. ExecuteNonQuery
+            // therefore returns -1 even when the update succeeds, so consume the
+            // procedure's existing result row instead.
+            var result = await GetDataTableAsync("sp_Complaint_UpdateStatus", parameters);
 
-            return rows > 0
-                ? new ApiResponse(true, "Status updated")
-                : new ApiResponse(false, "Complaint not found or update failed");
+            if (result == null || result.Rows.Count == 0)
+                return new ApiResponse(false, "Complaint not found or update failed");
+
+            var row = result.Rows[0];
+            var success = Convert.ToBoolean(row["Success"]);
+            var message = row["Message"]?.ToString()
+                ?? (success ? "Status updated" : "Complaint not found or update failed");
+
+            return new ApiResponse(success, message);
         }
 
         // 🔥 CONFIRM CLOSURE

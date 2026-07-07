@@ -11,7 +11,7 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
     public interface IDashboardService
     {
         Task<DashboardResponse> GetDashboardStats(int? roleId, int? technicianId);
-        Task<DashboardChartData> GetChartData(int days = 30);
+        Task<DashboardChartData> GetChartData(int days = 30, DateTime? fromDate = null, DateTime? toDate = null);
         Task<ApiResponse<ComplaintDetailResponseModel>> GetComplaintDetails(int complaintId);
 
         // Master management endpoint

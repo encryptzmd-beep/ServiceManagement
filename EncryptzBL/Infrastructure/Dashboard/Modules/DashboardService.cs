@@ -47,11 +47,13 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
         }
 
         // 🔥 CHART DATA (Matches sp_Dashboard_GetChartData - 3 Result Sets)
-        public async Task<DashboardChartData> GetChartData(int days = 30)
+        public async Task<DashboardChartData> GetChartData(int days = 30, DateTime? fromDate = null, DateTime? toDate = null)
         {
             var parameters = new[]
             {
-                SqlParameterHelper.Input("@Days", days)
+                SqlParameterHelper.Input("@Days", days),
+                SqlParameterHelper.Input("@FromDate", fromDate),
+                SqlParameterHelper.Input("@ToDate", toDate)
             };
 
             // Your SP returns:
