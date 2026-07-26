@@ -3,10 +3,11 @@ import { Router } from '@angular/router';
 import { AuthService, Company } from '../../Auth/auth-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ProjectLocationSwitcherComponent } from '../project-location-switcher-component/project-location-switcher-component';
 
 @Component({
   selector: 'app-company-selector-component',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ProjectLocationSwitcherComponent],
   templateUrl: './company-selector-component.html',
   styleUrl: './company-selector-component.scss',
 })
@@ -18,6 +19,11 @@ export class CompanySelectorComponent {
   error = signal('');
   companies = signal<Company[]>([]);
   showCreateCompany = signal(true); // Show disabled create company option
+
+  // Two-stage flow: pick company -> pick project/location (scope)
+  stage = signal<'company' | 'scope'>('company');
+  selectedCompanyName = signal('');
+  private pendingRole = '';
 
   // Change Password States
   showChangePasswordModal = signal(false);
@@ -68,7 +74,16 @@ loadCompanies() {
         return;
       }
 
-      this.redirectByRole(res.data.role);
+      this.pendingRole = res.data.role;
+      this.selectedCompanyName.set(company.companyName);
+
+      // If a default project + location is already baked into the token, go
+      // straight in. Otherwise let the user pick project/location for this company.
+      if (res.data.projectId && res.data.locationId) {
+        this.redirectByRole(res.data.role);
+      } else {
+        this.stage.set('scope');
+      }
     },
     error: () => {
       this.loading.set(false);
@@ -76,6 +91,17 @@ loadCompanies() {
     }
   });
 }
+
+  /** Fired by the project/location switcher once a scope is applied. */
+  onScopeApplied(): void {
+    this.redirectByRole(this.pendingRole);
+  }
+
+  /** Return to the company list to pick a different company. */
+  backToCompanies(): void {
+    this.stage.set('company');
+    this.error.set('');
+  }
 
   private redirectByRole(role: string): void {
     switch (role) {

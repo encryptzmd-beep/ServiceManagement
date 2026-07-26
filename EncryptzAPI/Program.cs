@@ -1,3 +1,4 @@
+using EncryptzAPI.Middleware;
 using EncryptzAPI.SrvInjection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -68,6 +69,7 @@ app.UseHttpsRedirection();
 // 🔥 VERY IMPORTANT ORDER (Most people do wrong)
 app.UseCors("CorsPolicy");     // 1️⃣ FIRST CORS
 app.UseAuthentication();       // 2️⃣ Auth
+app.UseMiddleware<TenantResolutionMiddleware>();  // 2️⃣.5 Resolve tenant/ServiceDB from JWT claims
 app.UseAuthorization();        // 3️⃣ Authorization
 
 app.MapControllers();

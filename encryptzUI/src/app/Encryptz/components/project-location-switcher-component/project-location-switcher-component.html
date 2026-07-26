@@ -1,0 +1,49 @@
+@if (autoResolving()) {
+  <div class="pl-autoresolve">
+    <div class="pl-spinner"></div>
+    <span>Setting up your workspace…</span>
+  </div>
+} @else {
+<div class="pl-switcher">
+  <div class="pl-field">
+    <label>Project</label>
+    <select
+      [ngModel]="selectedProjectId()"
+      (ngModelChange)="onProjectChange($event)"
+      [disabled]="loading() || !projects().length">
+      <option [ngValue]="null" disabled>Select project</option>
+      @for (p of projects(); track p.projectId) {
+        <option [ngValue]="p.projectId">{{ p.projectName }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="pl-field">
+    <label>Location</label>
+    <select
+      [ngModel]="selectedLocationId()"
+      (ngModelChange)="selectedLocationId.set($event)"
+      [disabled]="loading() || !locations().length">
+      <option [ngValue]="null" disabled>Select location</option>
+      @for (l of locations(); track l.locationId) {
+        <option [ngValue]="l.locationId">{{ l.locationName }}</option>
+      }
+    </select>
+  </div>
+
+  @if (!loaded() || projects().length) {
+    <button
+      class="pl-apply"
+      (click)="applyScope()"
+      [disabled]="loading() || !selectedProjectId() || !selectedLocationId()">
+      {{ loading() ? '...' : 'Apply' }}
+    </button>
+  } @else {
+    <button class="pl-apply" (click)="continueWithoutScope()">Continue</button>
+  }
+
+  @if (error()) {
+    <span class="pl-error">{{ error() }}</span>
+  }
+</div>
+}

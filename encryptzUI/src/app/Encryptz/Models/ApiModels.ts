@@ -79,6 +79,26 @@ export interface LoginResponse {
   email:string;
   mobileNumber : string;
   menus: MenuItem[];
+  // Multi-tenant scope baked into the token (Company -> Project -> Location)
+  companyId?: number;
+  projectId?: number;
+  projectKey?: string;   // routing key -> project DB
+  locationId?: number;
+}
+
+// --- Multi-tenant scoping (Company -> Projects -> Locations) ---
+export interface ProjectDto {
+  projectId: number;
+  companyId: number;
+  projectName: string;
+  projectKey: string;
+}
+
+export interface LocationDto {
+  locationId: number;
+  locationName: string;
+  locationCode?: string;
+  city?: string;
 }
 
 export interface MenuItem {

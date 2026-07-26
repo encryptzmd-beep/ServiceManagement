@@ -35,6 +35,36 @@ namespace EncryptzBL.DTO_s
         public string mobileNumber { get; set; } = string.Empty;
         public string Email { get; set; }
         public List<MenuDto> Menus { get; set; } = new();
+
+        // Multi-tenant scope currently baked into the token (Company -> Project -> Location)
+        public int CompanyId { get; set; }
+        public int ProjectId { get; set; }
+        public string ProjectKey { get; set; } = string.Empty;   // routing key -> project DB
+        public int LocationId { get; set; }
+    }
+
+    public class ProjectDto
+    {
+        public int ProjectId { get; set; }
+        public int CompanyId { get; set; }
+        public string ProjectName { get; set; } = string.Empty;
+        public string ProjectKey { get; set; } = string.Empty;
+    }
+
+    public class LocationDto
+    {
+        public int LocationId { get; set; }
+        public string LocationName { get; set; } = string.Empty;
+        public string? LocationCode { get; set; }
+        public string? City { get; set; }
+    }
+
+    public class SetScopeRequestDto
+    {
+        public int UserId { get; set; }
+        public int CompanyId { get; set; }
+        public int ProjectId { get; set; }
+        public int LocationId { get; set; }
     }
 
     public class RegisterDto

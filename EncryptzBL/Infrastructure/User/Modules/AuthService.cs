@@ -1,4 +1,5 @@
 using EncryptzBL.Common;
+using EncryptzBL.Common.Tenant;
 using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using Microsoft.Data.SqlClient;
@@ -16,11 +17,16 @@ namespace EncryptzBL.Infrastructure.User.Modules
     {
         private readonly IConfiguration _config;
         private readonly IEmailService _emailService;
+        private readonly IConnectionResolver _connectionResolver;
 
-        public AuthService(DbHelper db, IConfiguration config, IEmailService emailService) : base(db)
+        // Auth is control-plane: it must run against MainDB (login happens before a
+        // project DB is selected). Users, Roles, Menus, Companies and Projects live in MainDB.
+        // The resolver lets us reach a project's OWN DB to read/validate its locations.
+        public AuthService(MainDbHelper db, IConfiguration config, IEmailService emailService, IConnectionResolver connectionResolver) : base(db)
         {
             _config = config;
             _emailService = emailService;
+            _connectionResolver = connectionResolver;
         }
 
         // ============================================
@@ -559,30 +565,27 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
             var role = row["RoleInCompany"]?.ToString() ?? "User";
             var companyName = row["CompanyName"]?.ToString() ?? "";
-            int technicianId = row["TechnicianId"] != DBNull.Value
-     ? Convert.ToInt32(row["TechnicianId"])
-     : 0;
+            int technicianId = row["TechnicianId"] != DBNull.Value ? Convert.ToInt32(row["TechnicianId"]) : 0;
             var userInfo = await GetUserById(userId);
 
+            // Company token only — NO project yet (no ProjectKey). Business data stays
+            // blocked until the user picks a project + location via set-scope.
             var token = GenerateJwtTokenWithCompany(
-                userId,
-                userInfo.FullName,
-                role,
-                userInfo.Email,
-                userInfo.Mobile,
-                companyId
-            );
+                userId, userInfo.FullName, role, userInfo.Email, userInfo.Mobile,
+                companyId, projectKey: "", projectId: 0, locationId: 0);
 
             var sessionParams = new[]
             {
         SqlParameterHelper.Input("@UserId", userId),
         SqlParameterHelper.Input("@CompanyId", companyId),
-        SqlParameterHelper.Input("@AuthToken", token)
+        SqlParameterHelper.Input("@AuthToken", token),
+        SqlParameterHelper.Input("@ProjectId", (object)DBNull.Value),
+        SqlParameterHelper.Input("@LocationId", (object)DBNull.Value)
     };
 
             await ExecuteAsync("sp_User_UpdateSession", sessionParams);
 
-            // NEW: Load menus for selected company + role
+            // Load menus for selected company + role
             var menuParams = new[]
             {
         SqlParameterHelper.Input("@UserId", userId),
@@ -590,10 +593,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
     };
 
             var menuTable = await GetDataTableAsync("sp_User_GetMenusForCompany", menuParams);
-
-            var menus = menuTable != null
-                ? menuTable.ToList<MenuDto>()
-                : new List<MenuDto>();
+            var menus = menuTable != null ? menuTable.ToList<MenuDto>() : new List<MenuDto>();
 
             var response = new LoginResponseDto
             {
@@ -604,10 +604,169 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 Email = userInfo.Email,
                 technicianId = technicianId,
                 mobileNumber = userInfo.Mobile,
-                Menus = menus
+                Menus = menus,
+                CompanyId = companyId,
+                ProjectKey = "",
+                ProjectId = 0,
+                LocationId = 0
             };
 
             return ApiResponse<LoginResponseDto>.Ok(response, "Company selected successfully");
+        }
+
+        // ============================================
+        // PROJECT (MainDB) -> LOCATION (project DB) SCOPING
+        // Company -> Projects (per-user access in MainDB) -> Locations (in the project DB)
+        // ============================================
+
+        public async Task<ApiResponse<List<ProjectDto>>> GetProjects(int userId, int companyId)
+        {
+            var parameters = new[]
+            {
+                SqlParameterHelper.Input("@UserId", userId),
+                SqlParameterHelper.Input("@CompanyId", companyId)
+            };
+
+            // Projects the user is granted access to (MainDB.UserProjectAccess)
+            var dt = await GetDataTableAsync("sp_User_GetProjects", parameters);
+
+            if (dt == null || dt.Rows.Count == 0)
+                return ApiResponse<List<ProjectDto>>.Ok(new List<ProjectDto>(), "No projects found");
+
+            var projects = dt.Rows.Cast<DataRow>().Select(r => new ProjectDto
+            {
+                ProjectId = Convert.ToInt32(r["ProjectId"]),
+                CompanyId = Convert.ToInt32(r["CompanyId"]),
+                ProjectName = r["ProjectName"]?.ToString() ?? "",
+                ProjectKey = r["ProjectKey"]?.ToString() ?? ""
+            }).ToList();
+
+            return ApiResponse<List<ProjectDto>>.Ok(projects, "Success");
+        }
+
+        public async Task<ApiResponse<List<LocationDto>>> GetLocations(int userId, int projectId)
+        {
+            // Resolve the project's routing key + company (and check access) in MainDB
+            var access = await GetAccessibleProject(userId, projectId);
+            if (access == null)
+                return ApiResponse<List<LocationDto>>.Fail("You don't have access to this project");
+
+            var (projectKey, companyId) = access.Value;
+
+            // Reach the project's service-app DB and read ALL its locations for this
+            // company+project (the DB may be shared, so filter by company+project).
+            var connStr = await _connectionResolver.GetServiceConnectionAsync(projectKey);
+            var projectDb = new ExplicitDbHelper(connStr);
+
+            var dt = await projectDb.ExecuteDataTableAsync("sp_Project_GetLocations", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId),
+                SqlParameterHelper.Input("@ProjectId", projectId)
+            });
+
+            if (dt == null || dt.Rows.Count == 0)
+                return ApiResponse<List<LocationDto>>.Ok(new List<LocationDto>(), "No locations found");
+
+            var locations = dt.Rows.Cast<DataRow>().Select(r => new LocationDto
+            {
+                LocationId = Convert.ToInt32(r["LocationId"]),
+                LocationName = r["LocationName"]?.ToString() ?? "",
+                LocationCode = r["LocationCode"]?.ToString(),
+                City = r["City"]?.ToString()
+            }).ToList();
+
+            return ApiResponse<List<LocationDto>>.Ok(locations, "Success");
+        }
+
+        public async Task<ApiResponse<LoginResponseDto>> SetScope(int userId, int companyId, int projectId, int locationId)
+        {
+            // 1) Validate PROJECT access in MainDB -> returns the ProjectKey (routing key)
+            var vp = await GetDataTableAsync("sp_User_ValidateProject", new[]
+            {
+                SqlParameterHelper.Input("@UserId", userId),
+                SqlParameterHelper.Input("@CompanyId", companyId),
+                SqlParameterHelper.Input("@ProjectId", projectId)
+            });
+
+            if (vp == null || vp.Rows.Count == 0)
+                return ApiResponse<LoginResponseDto>.Fail("You don't have access to this project");
+
+            var projectKey = vp.Rows[0]["ProjectKey"]?.ToString() ?? "";
+            var role = vp.Rows[0]["RoleInCompany"]?.ToString() ?? "User";
+
+            // 2) Confirm the LOCATION exists/active in the PROJECT's OWN DB
+            //    (project access already validated above; locations aren't per-user)
+            var connStr = await _connectionResolver.GetServiceConnectionAsync(projectKey);
+            var projectDb = new ExplicitDbHelper(connStr);
+
+            var vl = await projectDb.ExecuteDataTableAsync("sp_Location_Validate", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId),
+                SqlParameterHelper.Input("@ProjectId", projectId),
+                SqlParameterHelper.Input("@LocationId", locationId)
+            });
+
+            if (vl == null || vl.Rows.Count == 0)
+                return ApiResponse<LoginResponseDto>.Fail("Invalid location for this project");
+
+            var userInfo = await GetUserById(userId);
+
+            // 3) Issue a fully-scoped token (ProjectKey routes every later request)
+            var token = GenerateJwtTokenWithCompany(
+                userId, userInfo.FullName, role, userInfo.Email, userInfo.Mobile,
+                companyId, projectKey, projectId, locationId);
+
+            await ExecuteAsync("sp_User_UpdateSession", new[]
+            {
+                SqlParameterHelper.Input("@UserId", userId),
+                SqlParameterHelper.Input("@CompanyId", companyId),
+                SqlParameterHelper.Input("@AuthToken", token),
+                SqlParameterHelper.Input("@ProjectId", projectId),
+                SqlParameterHelper.Input("@LocationId", locationId)
+            });
+
+            var menuTable = await GetDataTableAsync("sp_User_GetMenusForCompany", new[]
+            {
+                SqlParameterHelper.Input("@UserId", userId),
+                SqlParameterHelper.Input("@CompanyId", companyId)
+            });
+            var menus = menuTable != null ? menuTable.ToList<MenuDto>() : new List<MenuDto>();
+
+            var response = new LoginResponseDto
+            {
+                Token = token,
+                FullName = userInfo.FullName,
+                Role = role,
+                UserId = userId,
+                Email = userInfo.Email,
+                mobileNumber = userInfo.Mobile,
+                Menus = menus,
+                CompanyId = companyId,
+                ProjectKey = projectKey,
+                ProjectId = projectId,
+                LocationId = locationId
+            };
+
+            return ApiResponse<LoginResponseDto>.Ok(response, "Scope updated successfully");
+        }
+
+        /// <summary>Returns (ProjectKey, CompanyId) if the user may access the project, else null.</summary>
+        private async Task<(string ProjectKey, int CompanyId)?> GetAccessibleProject(int userId, int projectId)
+        {
+            var dt = await GetDataTableByQueryAsync(
+                @"SELECT p.ProjectKey, p.CompanyId
+                  FROM dbo.UserProjectAccess upa
+                  INNER JOIN dbo.Projects p ON p.ProjectId = upa.ProjectId
+                  WHERE upa.UserId = @UserId AND upa.ProjectId = @ProjectId
+                    AND upa.IsActive = 1 AND p.IsActive = 1",
+                new[]
+                {
+                    SqlParameterHelper.Input("@UserId", userId),
+                    SqlParameterHelper.Input("@ProjectId", projectId)
+                });
+
+            if (dt == null || dt.Rows.Count == 0) return null;
+            return (dt.Rows[0]["ProjectKey"]?.ToString() ?? "", Convert.ToInt32(dt.Rows[0]["CompanyId"]));
         }
 
         public async Task<ApiResponse<InvitationResponseDto>> InviteUser(int companyId, string email, string roleInCompany, int invitedBy, string remarks = null)
@@ -956,7 +1115,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        private string GenerateJwtTokenWithCompany(int userId, string fullName, string role, string email, string mobile, int companyId)
+        private string GenerateJwtTokenWithCompany(int userId, string fullName, string role, string email, string mobile, int companyId, string projectKey = "", int projectId = 0, int locationId = 0)
         {
             var jwtKey = _config["Jwt:Key"];
             if (string.IsNullOrEmpty(jwtKey))
@@ -971,7 +1130,12 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 new Claim(ClaimTypes.Email, email ?? ""),
                 new Claim(ClaimTypes.MobilePhone, mobile ?? ""),
                 new Claim(ClaimTypes.Role, role),
-                new Claim("CompanyId", companyId.ToString())
+                new Claim("CompanyId", companyId.ToString()),
+                // Tenant routing claims consumed by TenantResolutionMiddleware:
+                new Claim("ClientId", companyId.ToString()),
+                new Claim("ProjectKey", projectKey ?? ""),   // routes to the project's DB
+                new Claim("ProjectId", projectId.ToString()),
+                new Claim("LocationId", locationId.ToString())
             };
 
             var token = new JwtSecurityToken(

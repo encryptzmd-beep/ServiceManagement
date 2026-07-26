@@ -130,6 +130,35 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        // ── PROJECT / LOCATION SCOPING (Client -> Projects -> Locations) ──────
+
+        [HttpGet("projects")]
+        [Authorize]
+        public async Task<IActionResult> GetProjects([FromQuery] int companyId)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var result = await _authService.GetProjects(userId, companyId);
+            return Ok(result);
+        }
+
+        [HttpGet("locations")]
+        [Authorize]
+        public async Task<IActionResult> GetLocations([FromQuery] int projectId)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var result = await _authService.GetLocations(userId, projectId);
+            return Ok(result);
+        }
+
+        [HttpPost("set-scope")]
+        [Authorize]
+        public async Task<IActionResult> SetScope([FromBody] SetScopeRequestDto dto)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var result = await _authService.SetScope(userId, dto.CompanyId, dto.ProjectId, dto.LocationId);
+            return Ok(result);
+        }
+
         [HttpGet("user-companies")]
         [Authorize]
         public async Task<IActionResult> GetUserCompanies()

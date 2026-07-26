@@ -2,7 +2,7 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
-import { ApiResponse, CompanyInfoDto, CompanyUserDetailDto, InvitationDetailDto, JoinRequestDto, LoginResponse, MenuItem, RegisterRequest } from '../Models/ApiModels';
+import { ApiResponse, CompanyInfoDto, CompanyUserDetailDto, InvitationDetailDto, JoinRequestDto, LoginResponse, LocationDto, MenuItem, ProjectDto, RegisterRequest } from '../Models/ApiModels';
 import {environment} from '../../../../src/environments/environment.development'
 import { MenuAccessDto, RoleDto, UserDto } from '../components/auth-management-component/auth-management-component';
 import { LocationMonitorService } from '../Services/location-monitor-service';
@@ -67,6 +67,18 @@ export class AuthService {
   hasSingleCompany = computed(() => this._companies().length === 1);
   hasNoCompany = computed(() => this._companies().length === 0);
 
+  // Project -> Location scoping (within the selected company/client)
+  private _projects = signal<ProjectDto[]>([]);
+  private _locations = signal<LocationDto[]>([]);
+  private _selectedProjectId = signal<number | null>(null);
+  private _selectedLocationId = signal<number | null>(null);
+
+  projects = this._projects.asReadonly();
+  locations = this._locations.asReadonly();
+  selectedProjectId = this._selectedProjectId.asReadonly();
+  selectedLocationId = this._selectedLocationId.asReadonly();
+  hasScope = computed(() => !!this._selectedProjectId() && !!this._selectedLocationId());
+
   constructor(private http: HttpClient, private router: Router) {
     this.loadFromStorage();
   }
@@ -109,6 +121,9 @@ export class AuthService {
     localStorage.removeItem('felix_user');
     localStorage.removeItem('selected_company_id');
     localStorage.removeItem('selected_company_role');
+    localStorage.removeItem('selected_project_key');
+    localStorage.removeItem('selected_project_id');
+    localStorage.removeItem('selected_location_id');
     localStorage.removeItem('felix_menus');
     localStorage.removeItem('temp_login');
     this._currentUser.set(null);
@@ -116,6 +131,10 @@ export class AuthService {
     this._companies.set([]);
     this._selectedCompanyId.set(null);
     this._selectedCompanyRole.set(null);
+    this._projects.set([]);
+    this._locations.set([]);
+    this._selectedProjectId.set(null);
+    this._selectedLocationId.set(null);
   }
 
   getToken(): string | null {
@@ -212,6 +231,9 @@ selectCompany(companyId: number): Observable<ApiResponse<any>> {
           localStorage.setItem('selected_company_id', companyId.toString());
           localStorage.setItem('selected_company_role', data.role);
 
+          // company token has no project scope yet; project/location chosen next
+          this.persistScope(data.projectKey, data.projectId, data.locationId);
+
           localStorage.removeItem('temp_login');
 
           this._selectedCompanyId.set(companyId);
@@ -233,12 +255,81 @@ selectCompany(companyId: number): Observable<ApiResponse<any>> {
     );
 }
 
+// ============================================
+// PROJECT -> LOCATION SCOPING
+// ============================================
+
+/** Projects available to the current user within a company. */
+getProjects(companyId: number): Observable<ApiResponse<ProjectDto[]>> {
+  return this.http
+    .get<ApiResponse<ProjectDto[]>>(`${this.apiUrl}/projects`, { params: { companyId } })
+    .pipe(tap(res => { if (res.success) this._projects.set(res.data || []); }));
+}
+
+/** Locations within a project. */
+getLocations(projectId: number): Observable<ApiResponse<LocationDto[]>> {
+  return this.http
+    .get<ApiResponse<LocationDto[]>>(`${this.apiUrl}/locations`, { params: { projectId } })
+    .pipe(tap(res => { if (res.success) this._locations.set(res.data || []); }));
+}
+
+/**
+ * Set the active project + location. Re-issues a token whose claims carry the new
+ * scope, so every subsequent API call is routed + filtered to it.
+ */
+setScope(projectId: number, locationId: number): Observable<ApiResponse<LoginResponse>> {
+  const companyId = this._selectedCompanyId() ?? this._currentUser()?.companyId ?? 0;
+  return this.http
+    .post<ApiResponse<LoginResponse>>(`${this.apiUrl}/set-scope`, {
+      companyId, projectId, locationId
+    })
+    .pipe(tap(res => {
+      if (res.success && res.data) {
+        const data = res.data;
+        localStorage.setItem('felix_token', data.token);
+        localStorage.setItem('felix_user', JSON.stringify(data));
+        localStorage.setItem('felix_menus', JSON.stringify(data.menus || []));
+        this.persistScope(data.projectKey, data.projectId, data.locationId);
+        this._currentUser.set(data);
+        this._menus.set(data.menus || []);
+      }
+    }));
+}
+
+/** Store the current project/location scope in localStorage + signals. */
+private persistScope(projectKey?: string, projectId?: number, locationId?: number): void {
+  if (projectKey) localStorage.setItem('selected_project_key', projectKey);
+  if (projectId != null) {
+    localStorage.setItem('selected_project_id', projectId.toString());
+    this._selectedProjectId.set(projectId || null);
+  }
+  if (locationId != null) {
+    localStorage.setItem('selected_location_id', locationId.toString());
+    this._selectedLocationId.set(locationId || null);
+  }
+}
+
+getStoredProjectId(): number | null {
+  const id = localStorage.getItem('selected_project_id');
+  return id ? parseInt(id) : null;
+}
+
+getStoredLocationId(): number | null {
+  const id = localStorage.getItem('selected_location_id');
+  return id ? parseInt(id) : null;
+}
+
 private loadFromStorage(): void {
   const storedUser = localStorage.getItem('felix_user');
   const storedMenus = localStorage.getItem('felix_menus');
   const storedCompanyId = localStorage.getItem('selected_company_id');
   const storedCompanyRole = localStorage.getItem('selected_company_role');
+  const storedProjectId = localStorage.getItem('selected_project_id');
+  const storedLocationId = localStorage.getItem('selected_location_id');
   const tempLogin = localStorage.getItem('temp_login');
+
+  if (storedProjectId) this._selectedProjectId.set(+storedProjectId);
+  if (storedLocationId) this._selectedLocationId.set(+storedLocationId);
 
   if (storedUser) {
     try {

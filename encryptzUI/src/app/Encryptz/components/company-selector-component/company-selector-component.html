@@ -140,18 +140,23 @@
 
         <div class="logo-section">
           <div class="logo-icon"><img src="logo.png" alt="Encryptz" /></div>
-          <div class="brand-name">Select Company</div>
-          <div class="brand-sub">Please choose a company to continue</div>
+          @if (stage() === 'company') {
+            <div class="brand-name">Select Company</div>
+            <div class="brand-sub">Please choose a company to continue</div>
+          } @else {
+            <div class="brand-name">Select Project & Location</div>
+            <div class="brand-sub">{{ selectedCompanyName() }} — choose where you'll work</div>
+          }
         </div>
 
-        @if (loading()) {
+        @if (loading() && stage() === 'company') {
           <div class="loading-state">
             <div class="spinner"></div>
             <span>Loading your companies...</span>
           </div>
         }
 
-        @if (!loading() && companies().length === 0) {
+        @if (!loading() && stage() === 'company' && companies().length === 0) {
           <div class="empty-state">
             <span class="material-icons">business_off</span>
             <p>No companies found.</p>
@@ -160,7 +165,7 @@
           </div>
         }
 
-        @if (!loading() && companies().length > 0) {
+        @if (!loading() && stage() === 'company' && companies().length > 0) {
           <div class="company-list">
             @for (company of companies(); track company.companyId) {
               <div class="company-item" (click)="selectCompany(company)">
@@ -177,6 +182,15 @@
                 <span class="material-icons arrow">chevron_right</span>
               </div>
             }
+          </div>
+        }
+
+        @if (stage() === 'scope') {
+          <div class="scope-step">
+            <app-project-location-switcher (scopeApplied)="onScopeApplied()" />
+            <button class="link-back" (click)="backToCompanies()">
+              <span class="material-icons">chevron_left</span> Back to companies
+            </button>
           </div>
         }
 

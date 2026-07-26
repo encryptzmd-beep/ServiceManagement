@@ -1,40 +1,47 @@
-﻿using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using EncryptzBL.Common.Tenant;
+using Microsoft.Data.SqlClient;
 
 namespace EncryptzBL.Common
 {
+    /// <summary>
+    /// Tenant-aware transaction scope over the current client's ServiceDB.
+    /// Resolves its connection string from <see cref="TenantContext"/> at Begin time.
+    /// (For MainDB transactions, use a dedicated main-scoped helper instead — a single
+    /// transaction cannot span MainDB and a ServiceDB.)
+    /// </summary>
     public class DbTransactionHelper : IDisposable
     {
-        public SqlConnection Connection { get; private set; }
-        public SqlTransaction Transaction { get; private set; }
+        public SqlConnection? Connection { get; private set; }
+        public SqlTransaction? Transaction { get; private set; }
 
-        private readonly string _connectionString;
+        private readonly TenantContext _tenant;
 
-        public DbTransactionHelper(IConfiguration configuration)
+        public DbTransactionHelper(TenantContext tenant)
         {
-            _connectionString = configuration.GetConnectionString("DefaultConnection");
+            _tenant = tenant;
         }
 
         public async Task BeginAsync()
         {
-            Connection = new SqlConnection(_connectionString);
+            var connectionString = _tenant.ServiceDbConnectionString
+                ?? throw new InvalidOperationException(
+                    "No ServiceDB resolved for this request; cannot begin a transaction.");
+
+            Connection = new SqlConnection(connectionString);
             await Connection.OpenAsync();
             Transaction = Connection.BeginTransaction();
         }
 
         public async Task CommitAsync()
         {
-            await Transaction.CommitAsync();
-            await Connection.CloseAsync();
+            await Transaction!.CommitAsync();
+            await Connection!.CloseAsync();
         }
 
         public async Task RollbackAsync()
         {
-            await Transaction.RollbackAsync();
-            await Connection.CloseAsync();
+            await Transaction!.RollbackAsync();
+            await Connection!.CloseAsync();
         }
 
         public void Dispose()

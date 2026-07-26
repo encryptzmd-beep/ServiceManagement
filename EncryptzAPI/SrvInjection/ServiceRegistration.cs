@@ -1,6 +1,7 @@
 
 
 using EncryptzBL.Common;
+using EncryptzBL.Common.Tenant;
 using EncryptzBL.Infrastructure.Complients.Modules;
 using EncryptzBL.Infrastructure.Customer.Modules;
 using EncryptzBL.Infrastructure.CustomerPortal.Modules;
@@ -25,7 +26,14 @@ namespace EncryptzAPI.SrvInjection
         // 🔥 SINGLE METHOD TO INJECT EVERYTHING
         public static IServiceCollection AddApplicationServices(this IServiceCollection services)
         {
-            services.AddScoped<DbHelper>();
+            // 🔹 Multi-tenant infrastructure
+            services.AddScoped<TenantContext>();                                   // per-request tenant state
+            services.AddSingleton<ITenantSecretProtector, AesTenantSecretProtector>();
+            services.AddSingleton<IConnectionResolver, ConnectionResolver>();      // ClientKey -> ServiceDB conn (cached)
+            services.AddScoped<MainDbHelper>();                                     // fixed MainDB executor (control-plane)
+
+            services.AddScoped<DbHelper>();                                         // tenant ServiceDB executor (business)
+            services.AddScoped<DbTransactionHelper>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IComplaintService, ComplaintService>();
             services.AddScoped<IDashboardService, DashboardService>();
