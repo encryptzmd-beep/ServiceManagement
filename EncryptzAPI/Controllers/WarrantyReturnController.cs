@@ -1,4 +1,5 @@
-﻿using EncryptzBL.DTO_s;
+﻿using EncryptzAPI.Middleware;
+using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.WarrantyReturn.Modules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,7 +16,7 @@ namespace EncryptzAPI.Controllers
         private readonly IWarrantyReturnService _service;
         public WarrantyReturnController(IWarrantyReturnService service) => _service = service;
 
-        private int GetUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        private int GetUserId() => User.GetTenantUserId();
 
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] WarrantyReturnFilterDto filter)

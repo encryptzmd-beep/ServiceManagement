@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { Observable, map, tap } from 'rxjs';
 import { ApiResponse, CompanyInfoDto, CompanyUserDetailDto, InvitationDetailDto, JoinRequestDto, LoginResponse, LocationDto, MenuItem, ProjectDto, RegisterRequest } from '../Models/ApiModels';
 import {environment} from '../../../../src/environments/environment.development'
 import { MenuAccessDto, RoleDto, UserDto } from '../components/auth-management-component/auth-management-component';
@@ -16,6 +16,21 @@ export interface Company {
   phoneNumber?: string;
   roleInCompany: string;
   isLinked: boolean;
+}
+
+export interface MyProfile {
+  userId: number;
+  fullName: string;
+  email: string;
+  mobileNumber: string;
+  aadhaarNumber: string;
+  globalRole: string;
+  roleInCompany: string;
+  companyId: number;
+  companyName: string;
+  companyCode: string;
+  createdAt: string;
+  memberSince?: string;
 }
 
 export interface ExtendedLoginResponse extends LoginResponse {
@@ -80,7 +95,37 @@ export class AuthService {
   hasScope = computed(() => !!this._selectedProjectId() && !!this._selectedLocationId());
 
   constructor(private http: HttpClient, private router: Router) {
+    this.migrateStorageKeys();
     this.loadFromStorage();
+  }
+
+  /**
+   * Storage keys used to carry a client name. Browsers that still hold the old keys
+   * keep their session: the values are moved to the new names once.
+   */
+  private migrateStorageKeys(): void {
+    const legacyPrefix = ['fe', 'lix_'].join('');
+
+    for (const storage of [localStorage, sessionStorage]) {
+      const legacyKeys = Object.keys(storage).filter(k => k.startsWith(legacyPrefix));
+
+      for (const oldKey of legacyKeys) {
+        const newKey = 'encryptz_' + oldKey.substring(legacyPrefix.length);
+        const value = storage.getItem(oldKey);
+        if (value !== null && storage.getItem(newKey) === null) storage.setItem(newKey, value);
+        storage.removeItem(oldKey);
+      }
+    }
+  }
+
+  /** Keeps the stored session in step after the user edited the own profile. */
+  updateCurrentUser(changes: Partial<LoginResponse>): void {
+    const current = this._currentUser();
+    if (!current) return;
+
+    const updated = { ...current, ...changes };
+    localStorage.setItem('encryptz_user', JSON.stringify(updated));
+    this._currentUser.set(updated);
   }
 
   login(email: string, password: string): Observable<ApiResponse<LoginResponse>> {
@@ -117,14 +162,14 @@ export class AuthService {
 
   /** Clear auth state without triggering navigation. Safe to call from /login. */
   clearSession(): void {
-    localStorage.removeItem('felix_token');
-    localStorage.removeItem('felix_user');
+    localStorage.removeItem('encryptz_token');
+    localStorage.removeItem('encryptz_user');
     localStorage.removeItem('selected_company_id');
     localStorage.removeItem('selected_company_role');
     localStorage.removeItem('selected_project_key');
     localStorage.removeItem('selected_project_id');
     localStorage.removeItem('selected_location_id');
-    localStorage.removeItem('felix_menus');
+    localStorage.removeItem('encryptz_menus');
     localStorage.removeItem('temp_login');
     this._currentUser.set(null);
     this._menus.set([]);
@@ -138,7 +183,16 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    return localStorage.getItem('felix_token');
+    const token = localStorage.getItem('encryptz_token');
+    if (token) return token;
+
+    // Between login and company selection only the login token exists; the
+    // select-company / invitation calls are authenticated with it.
+    const temp = localStorage.getItem('temp_login');
+    if (temp) {
+      try { return JSON.parse(temp).token || null; } catch { return null; }
+    }
+    return null;
   }
 
   hasAccess(path: string): boolean {
@@ -155,16 +209,16 @@ export class AuthService {
   }
 
 setSession(data: any): void {
-  localStorage.setItem('felix_token', data.token);
-  localStorage.setItem('felix_user', JSON.stringify(data));
-  localStorage.setItem('felix_menus', JSON.stringify(data.menus || []));
+  localStorage.setItem('encryptz_token', data.token);
+  localStorage.setItem('encryptz_user', JSON.stringify(data));
+  localStorage.setItem('encryptz_menus', JSON.stringify(data.menus || []));
 
   this._currentUser.set(data);
   this._menus.set(data.menus || []);
 }
 
   // private loadFromStorage(): void {
-  //   const stored = localStorage.getItem('felix_user');
+  //   const stored = localStorage.getItem('encryptz_user');
   //   if (stored) {
   //     try {
   //       const user: LoginResponse = JSON.parse(stored);
@@ -225,9 +279,9 @@ selectCompany(companyId: number): Observable<ApiResponse<any>> {
         if (res.success && res.data) {
           const data = res.data;
 
-          localStorage.setItem('felix_token', data.token);
-          localStorage.setItem('felix_user', JSON.stringify(data));
-          localStorage.setItem('felix_menus', JSON.stringify(data.menus || []));
+          localStorage.setItem('encryptz_token', data.token);
+          localStorage.setItem('encryptz_user', JSON.stringify(data));
+          localStorage.setItem('encryptz_menus', JSON.stringify(data.menus || []));
           localStorage.setItem('selected_company_id', companyId.toString());
           localStorage.setItem('selected_company_role', data.role);
 
@@ -286,9 +340,9 @@ setScope(projectId: number, locationId: number): Observable<ApiResponse<LoginRes
     .pipe(tap(res => {
       if (res.success && res.data) {
         const data = res.data;
-        localStorage.setItem('felix_token', data.token);
-        localStorage.setItem('felix_user', JSON.stringify(data));
-        localStorage.setItem('felix_menus', JSON.stringify(data.menus || []));
+        localStorage.setItem('encryptz_token', data.token);
+        localStorage.setItem('encryptz_user', JSON.stringify(data));
+        localStorage.setItem('encryptz_menus', JSON.stringify(data.menus || []));
         this.persistScope(data.projectKey, data.projectId, data.locationId);
         this._currentUser.set(data);
         this._menus.set(data.menus || []);
@@ -320,8 +374,8 @@ getStoredLocationId(): number | null {
 }
 
 private loadFromStorage(): void {
-  const storedUser = localStorage.getItem('felix_user');
-  const storedMenus = localStorage.getItem('felix_menus');
+  const storedUser = localStorage.getItem('encryptz_user');
+  const storedMenus = localStorage.getItem('encryptz_menus');
   const storedCompanyId = localStorage.getItem('selected_company_id');
   const storedCompanyRole = localStorage.getItem('selected_company_role');
   const storedProjectId = localStorage.getItem('selected_project_id');
@@ -360,8 +414,8 @@ private loadFromStorage(): void {
 }
 private setSessionWithCompanies(data: ExtendedLoginResponse): void {
 
-  localStorage.setItem('felix_token', data.token);
-  localStorage.setItem('felix_user', JSON.stringify(data));
+  localStorage.setItem('encryptz_token', data.token);
+  localStorage.setItem('encryptz_user', JSON.stringify(data));
   this._currentUser.set(data);
   this._menus.set(data.menus);
   this._companies.set(data.companies || []);
@@ -373,7 +427,7 @@ private setSessionWithCompanies(data: ExtendedLoginResponse): void {
   //     .pipe(tap(res => {
   //       if (res.success && res.data) {
   //         // Update token with company context
-  //         localStorage.setItem('felix_token', res.data.token);
+  //         localStorage.setItem('encryptz_token', res.data.token);
   //         this._selectedCompanyId.set(companyId);
   //         this._selectedCompanyRole.set(res.data.role);
 
@@ -381,7 +435,7 @@ private setSessionWithCompanies(data: ExtendedLoginResponse): void {
   //         const currentUser = this._currentUser();
   //         if (currentUser) {
   //           const updatedUser = { ...currentUser, role: res.data.role };
-  //           localStorage.setItem('felix_user', JSON.stringify(updatedUser));
+  //           localStorage.setItem('encryptz_user', JSON.stringify(updatedUser));
   //           this._currentUser.set(updatedUser);
   //         }
   //       }
@@ -390,7 +444,9 @@ private setSessionWithCompanies(data: ExtendedLoginResponse): void {
 
   // NEW: Get User's Companies
   getUserCompanies(): Observable<Company[]> {
-    return this.http.get<Company[]>(`${this.apiUrl}/user-companies`).pipe(
+    return this.http.get<any>(`${this.apiUrl}/user-companies`).pipe(
+      // the API answers with { success, data }; callers work with the list
+      map(res => (Array.isArray(res) ? res : (res?.data ?? [])) as Company[]),
       tap(companies => {
         this._companies.set(companies);
         // Check if user has companies in storage
@@ -408,14 +464,13 @@ private setSessionWithCompanies(data: ExtendedLoginResponse): void {
 
   // NEW: Check if user exists (for admin invite)
   checkUserExists(email: string): Observable<{ exists: boolean; userId?: number; fullName?: string }> {
-    return this.http.get<{ exists: boolean; userId?: number; fullName?: string }>(
-      `${this.apiUrl}/check-user`, { params: { email } }
-    );
+    return this.http.get<any>(`${this.apiUrl}/check-user`, { params: { email } })
+      .pipe(map(res => res?.data ?? res));
   }
 
   // NEW: Get Pending Invitations
   getPendingInvitations(email: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/pending-invitations`, { params: { email } });
+    return this.http.get<any>(`${this.apiUrl}/pending-invitations`);
   }
 
   // NEW: Accept Invitation
@@ -448,8 +503,8 @@ private setSessionWithCompanies(data: ExtendedLoginResponse): void {
     return !!this._selectedCompanyId();
   }
 //  private setSessionWithCompanies(data: ExtendedLoginResponse): void {
-//     localStorage.setItem('felix_token', data.token);
-//     localStorage.setItem('felix_user', JSON.stringify(data));
+//     localStorage.setItem('encryptz_token', data.token);
+//     localStorage.setItem('encryptz_user', JSON.stringify(data));
 //     this._currentUser.set(data);
 //     this._menus.set(data.menus);
 //     this._companies.set(data.companies || []);
@@ -489,7 +544,9 @@ updateUserRole(userId: number, newRole: string): Observable<any> {
 removeUserFromCompany(userId: number): Observable<any> {
   return this.http.delete(`${this.companyUrl}/company/users/${userId}`);
 }
-inviteUser(email: string, roleInCompany: string, remarks?: string, projectID : number = 1): Observable<any> {
+inviteUser(email: string, roleInCompany: string, remarks?: string, projectID?: number): Observable<any> {
+  // invitations are for the project the admin is working in
+  projectID = projectID ?? this._selectedProjectId() ?? 0;
   return this.http.post(`${this.companyUrl}/company/invite`, {
     email,
     roleInCompany,
@@ -514,19 +571,20 @@ approveJoinRequest(requestId: number): Observable<any> {
 }
 
 rejectJoinRequest(requestId: number, reason: string): Observable<any> {
-  return this.http.put(`${this.companyUrl}/company/requests/${requestId}/reject`, reason);
+  return this.http.put(`${this.companyUrl}/company/requests/${requestId}/reject`, { reason });
 }
 
 getAllCompanies(): Observable<any> {
   return this.http.get(`${this.companyUrl}/company/all`);
 }
 getMyJoinRequests(): Observable<any[]> {
-  return this.http.get<any[]>(`${this.apiUrl}/company/my-requests`);
+  return this.http.get<any>(`${this.companyUrl}/company/my-requests`)
+    .pipe(map(res => (Array.isArray(res) ? res : (res?.data ?? [])) as any[]));
 }
 
 // Cancel user's own join request
 cancelJoinRequest(requestId: number): Observable<any> {
-  return this.http.delete(`${this.apiUrl}/company/requests/${requestId}`);
+  return this.http.delete(`${this.companyUrl}/company/requests/${requestId}`);
 }
 // auth-service.ts - searchUsers method
 
@@ -552,6 +610,28 @@ forgotPassword(email: string): Observable<ApiResponse<string>> {
 
 resetPassword(data: { email: string; otpCode: string; newPassword: string }): Observable<ApiResponse<string>> {
   return this.http.post<ApiResponse<string>>(`${this.apiUrl}/reset-password`, data);
+}
+
+// ============================================
+// MY PROFILE (the logged-in user, main database)
+// ============================================
+
+getMyProfile(): Observable<ApiResponse<MyProfile>> {
+  return this.http.get<ApiResponse<MyProfile>>(`${this.apiUrl}/me`);
+}
+
+updateMyProfile(data: { fullName: string; mobileNumber: string }): Observable<ApiResponse<MyProfile>> {
+  return this.http.put<ApiResponse<MyProfile>>(`${this.apiUrl}/me`, data).pipe(
+    tap(res => {
+      if (res.success && res.data) {
+        this.updateCurrentUser({ fullName: res.data.fullName, mobileNumber: res.data.mobileNumber });
+      }
+    })
+  );
+}
+
+changeMyPassword(oldPassword: string, newPassword: string): Observable<ApiResponse<string>> {
+  return this.http.post<ApiResponse<string>>(`${this.apiUrl}/me/change-password`, { oldPassword, newPassword });
 }
 
 changePassword(data: { oldPassword: string; newPassword: string ; userId : number, Username: string }): Observable<ApiResponse<string>> {

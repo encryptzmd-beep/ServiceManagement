@@ -1,4 +1,5 @@
-﻿using EncryptzBL.Common;
+﻿using EncryptzAPI.Middleware;
+using EncryptzBL.Common;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Complients.Modules;
 using Microsoft.AspNetCore.Authorization;
@@ -23,7 +24,7 @@ namespace EncryptzAPI.Controllers
 
         private int GetUserId()
         {
-            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            return User.GetTenantUserId();
         }
 
         // 🔹 Helper: Get CustomerId from UserId (SP based)

@@ -1,4 +1,5 @@
 using EncryptzBL.Common;
+using EncryptzBL.Common.Tenant;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Technician.modules;
 using System.Data;
@@ -8,19 +9,30 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
 {
     public class TechnicianService : BaseRepository, ITechnicianService
     {
-        public TechnicianService(DbHelper db) : base(db) { }
+        private readonly MainDbHelper _mainDb;
+        private readonly ITenantUserSyncService _userSync;
+        private readonly TenantContext _tenant;
+
+        // Technicians are MainDB users (company role "Technician" + project access); the
+        // project DB only holds their profile/assignments, linked through Users.MainUserId.
+        public TechnicianService(DbHelper db, MainDbHelper mainDb, ITenantUserSyncService userSync) : base(db)
+        {
+            _mainDb = mainDb;
+            _userSync = userSync;
+            _tenant = db.Tenant;
+        }
 
 
         public async Task<object> GetAll(TechnicianFilterDto filter)
         {
-            var p = new[] {
+            var p = Scoped(
         SqlParameterHelper.Input("@SearchTerm", string.IsNullOrEmpty(filter.SearchTerm) ? (object)DBNull.Value : filter.SearchTerm),
         SqlParameterHelper.Input("@StatusFilter", filter.StatusFilter ?? (object)DBNull.Value),
         SqlParameterHelper.Input("@PageNumber", filter.PageNumber),
         SqlParameterHelper.Input("@PageSize", filter.PageSize),
         SqlParameterHelper.Input("@SortBy", filter.SortBy ?? "FullName"),
         SqlParameterHelper.Input("@SortDir", filter.SortDir ?? "ASC")
-    };
+    );
             var items = await GetListAsync<TechnicianListItem>("sp_Technician_GetAll", p);
             var totalCount = items.FirstOrDefault()?.TotalCount ?? 0;
             return new { items, totalCount };
@@ -71,16 +83,45 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
 
         public async Task<ApiResponse<int>> Create(TechnicianCreateDto dto)
         {
-            var p = new[] {
-        SqlParameterHelper.Input("@FullName", dto.FullName),
-        SqlParameterHelper.Input("@Email", dto.Email ?? (object)DBNull.Value),
-        SqlParameterHelper.Input("@MobileNumber", dto.MobileNumber),
+            if (string.IsNullOrWhiteSpace(dto.Email))
+                return ApiResponse<int>.Fail("Email is required: the technician signs in with it");
+
+            // 1) The login, company role and project access live in MainDB
+            var main = await _mainDb.ExecuteDataTableAsync("sp_Company_CreateTechnicianUser", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", CompanyId),
+                SqlParameterHelper.Input("@ProjectId", ProjectId),
+                SqlParameterHelper.Input("@FullName", dto.FullName),
+                SqlParameterHelper.Input("@Email", dto.Email.Trim()),
+                SqlParameterHelper.Input("@MobileNumber", dto.MobileNumber ?? (object)DBNull.Value),
+                SqlParameterHelper.Input("@CreatedBy", _tenant.MainUserId)
+            });
+
+            if (main == null || main.Rows.Count == 0) return ApiResponse<int>.Fail("Creation failed");
+            if (Convert.ToInt32(main.Rows[0]["Success"]) != 1)
+                return ApiResponse<int>.Fail(main.Rows[0]["Message"]?.ToString() ?? "Creation failed");
+
+            var mainUserId = Convert.ToInt32(main.Rows[0]["UserId"]);
+
+            // 2) Mirror the user into this project's DB (creates the technician rows)
+            try
+            {
+                await _userSync.SyncProjectUsersAsync(ProjectId, LocationId);
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<int>.Fail("Technician user was created, but syncing it to this project failed: " + ex.Message);
+            }
+
+            // 3) Fill in the technician profile
+            var p = Scoped(
+        SqlParameterHelper.Input("@MainUserId", mainUserId),
         SqlParameterHelper.Input("@Specialization", dto.Specialization),
         SqlParameterHelper.Input("@ExperienceYears", dto.ExperienceYears),
         SqlParameterHelper.Input("@CertificationDetails", dto.CertificationDetails ?? (object)DBNull.Value),
         SqlParameterHelper.Input("@MaxDailyAssignments", dto.MaxDailyAssignments),
         SqlParameterHelper.Input("@JoinDate", dto.JoinDate ?? (object)DBNull.Value)
-    };
+    );
             var dt = await GetDataTableAsync("sp_Technician_Create", p);
             if (dt.Rows.Count == 0) return ApiResponse<int>.Fail("Creation failed");
             var profileId = Convert.ToInt32(dt.Rows[0]["ProfileId"]);

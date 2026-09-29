@@ -388,7 +388,7 @@ retryLocation(): void {
 }
 
 logoutFromLocation(): void {
-  sessionStorage.setItem('felix_location_error',
+  sessionStorage.setItem('encryptz_location_error',
     'Location permission is required. Please enable it and log in again.');
   this.auth.logout();
 }
@@ -550,8 +550,8 @@ private getGeo(): Promise<{ latitude: number; longitude: number }> {
           resolve({ latitude: last.lat, longitude: last.lng });
         } else {
           // Fallback: use stored coords from check-in
-          const lat = localStorage.getItem('felix_last_lat');
-          const lng = localStorage.getItem('felix_last_lng');
+          const lat = localStorage.getItem('encryptz_last_lat');
+          const lng = localStorage.getItem('encryptz_last_lng');
           if (lat && lng) {
             resolve({ latitude: parseFloat(lat), longitude: parseFloat(lng) });
           } else {
@@ -1536,7 +1536,7 @@ submitRepairRequest(): void {
   const payload = {
     complaintId: wo.complaintId,
     assignmentId: wo.assignmentId,
-    technicianId: this.auth.currentUser()?.userId ?? 0,
+    technicianId: this.auth.technicianId(),
     customerId: customer.CustomerId,
     productId: product.productId,
     partName: this.repairForm.partName || wo.productName,

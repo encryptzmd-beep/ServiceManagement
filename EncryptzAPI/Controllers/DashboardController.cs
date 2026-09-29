@@ -1,3 +1,4 @@
+using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Dashboard.Modules;
 using EncryptzBL.Infrastructure.Spareparts.Modules;
@@ -51,7 +52,7 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> ManageComplaintDetails([FromBody] ManageComplaintRequestModel request)
         {
             // Stamp the user on every master-endpoint call too
-            if (!request.UserId.HasValue) request.UserId = GetUserId();
+            request.UserId = GetUserId();
 
             var result = await _service.ManageComplaintDetails(request);
             if (!result.Success)
@@ -102,7 +103,7 @@ namespace EncryptzAPI.Controllers
 
         private int GetUserId()
         {
-            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            return User.GetTenantUserId();
         }
 
         // ============================================

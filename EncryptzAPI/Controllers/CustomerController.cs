@@ -187,7 +187,7 @@ namespace EncryptzAPI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> GetExistingUserCompanies([FromBody] InsertCustomerForExistingUserDto dto)
         {
-            var result = await _svc.GetExistingUserCompanies(dto.UserId);
+            var result = await _svc.GetExistingUserCompanies(dto.UserId, dto.Password);
             return Ok(result);
         }
 

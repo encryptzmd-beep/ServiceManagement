@@ -78,7 +78,15 @@ editTech(tech: TechnicianListItem) {
     if (this.showEditModal) {
       this.techService.updateTechnician(this.formData).subscribe({ next: () => { this.closeModals(); this.loadData(); } });
     } else {
-      this.techService.createTechnician(this.formData).subscribe({ next: () => { this.closeModals(); this.loadData(); } });
+      // Technicians are login users in the main DB, so the email is mandatory
+      if (!this.formData.email?.trim()) {
+        alert('Email is required: the technician signs in with it');
+        return;
+      }
+      this.techService.createTechnician(this.formData).subscribe({
+        next: () => { this.closeModals(); this.loadData(); },
+        error: (err) => alert(err?.error?.message || 'Could not create technician')
+      });
     }
   }
 

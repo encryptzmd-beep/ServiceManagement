@@ -32,6 +32,8 @@ namespace EncryptzBL.Common
         protected int ProjectId => Tenant.ProjectId;
         /// <summary>Current location id.</summary>
         protected int LocationId => Tenant.LocationId;
+        /// <summary>Routing key of the current project DB.</summary>
+        protected string ProjectKey => Tenant.ProjectKey ?? string.Empty;
 
         /// <summary>
         /// Prepends @CompanyId, @ProjectId, @LocationId (from TenantContext) to a proc's

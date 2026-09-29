@@ -1,4 +1,5 @@
-﻿using EncryptzBL.DTO_s;
+﻿using EncryptzAPI.Middleware;
+using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Tracking.Modules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,7 +15,7 @@ namespace EncryptzAPI.Controllers
         private readonly ITrackingService _svc;
         public TrackingController(ITrackingService svc) => _svc = svc;
 
-        private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        private int UserId => User.GetTenantUserId();
 
         // ── Check In ─────────────────────────────────────────────────────────
         // FIXED: Was [HttpPost("checkin")] using JWT UserId only.

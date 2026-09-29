@@ -1,0 +1,519 @@
+<!-- ═══════════ ACCESS CODE ═══════════ -->
+@if (unlocked() === null) {
+  <div class="pa-lock"><div class="pa-lock-card"><div class="pa-lock-sub">Checking access…</div></div></div>
+}
+
+@if (unlocked() === false) {
+  <div class="pa-lock">
+    <div class="pa-lock-card">
+      <span class="material-icons pa-lock-icon">lock</span>
+      <div class="pa-lock-title">Platform Admin is locked</div>
+
+      @if (!otpSent()) {
+        <div class="pa-lock-sub">
+          An access code will be e-mailed to the platform owner. Enter it here to open this screen.
+        </div>
+        <button class="fx-btn-navy pa-lock-btn" (click)="sendOtp()" [disabled]="otpSending()">
+          {{ otpSending() ? 'Sending…' : 'Send access code' }}
+        </button>
+      } @else {
+        <div class="pa-lock-sub">{{ otpMessage() }}</div>
+        <input class="pa-otp-input" type="text" inputmode="numeric" maxlength="4" autocomplete="one-time-code"
+               placeholder="••••" [(ngModel)]="otpCode" (keyup.enter)="verifyOtp()" />
+        <button class="fx-btn-navy pa-lock-btn" (click)="verifyOtp()" [disabled]="otpVerifying() || otpCode.length !== 4">
+          {{ otpVerifying() ? 'Checking…' : 'Open Platform Admin' }}
+        </button>
+        <button class="pa-link" (click)="sendOtp()" [disabled]="otpSending()">
+          {{ otpSending() ? 'Sending…' : 'Send a new code' }}
+        </button>
+      }
+
+      @if (otpError()) { <div class="pa-error">{{ otpError() }}</div> }
+    </div>
+  </div>
+}
+
+@if (unlocked()) {
+<div class="fx-page">
+
+  <div class="fx-page-header">
+    <div>
+      <div class="fx-page-title">Platform Admin</div>
+      <div class="fx-page-sub">
+        @if (isPlatformAdmin()) {
+          Companies, projects, databases, locations, access and menus of the main database
+        } @else {
+          Locations and project access of your company
+        }
+      </div>
+    </div>
+    <button class="btn-secondary" (click)="lockNow()">Lock</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="fx-stats-row">
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Companies</div>
+      <div class="fx-stat-val">{{ companies().length }}</div>
+      <div class="fx-stat-pill pill-green">{{ activeCompanies() }} active</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Projects</div>
+      <div class="fx-stat-val">{{ projects().length }}</div>
+      <div class="fx-stat-pill pill-green">{{ activeProjects() }} active</div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="pa-tabs">
+    <button [class.active]="tab() === 'companies'" (click)="setTab('companies')">Companies</button>
+    <button [class.active]="tab() === 'projects'" (click)="setTab('projects')">Projects &amp; Databases</button>
+    <button [class.active]="tab() === 'locations'" (click)="setTab('locations')">Locations</button>
+    <button [class.active]="tab() === 'access'" (click)="setTab('access')">Project Access</button>
+    @if (isPlatformAdmin()) {
+      <button [class.active]="tab() === 'menus'" (click)="setTab('menus')">Menus</button>
+    }
+  </div>
+
+  <!-- ═══════════ COMPANIES ═══════════ -->
+  @if (tab() === 'companies') {
+    <div class="fx-table-wrap">
+      <div class="fx-table-toolbar">
+        <div class="fx-toolbar-left">
+          <span class="fx-table-title">Companies</span>
+          <span class="fx-table-count">{{ companies().length }}</span>
+        </div>
+        <div class="fx-toolbar-right">
+          @if (isPlatformAdmin()) {
+            <button class="fx-btn-new" (click)="newCompany()">+ New Company</button>
+          }
+        </div>
+      </div>
+
+      <table class="fx-table">
+        <thead>
+          <tr>
+            <th>Company</th><th>Code</th><th>City</th><th>Phone</th>
+            <th class="fx-num">Projects</th><th class="fx-num">Users</th><th>Status</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of companies(); track c.companyId) {
+            <tr>
+              <td><strong>{{ c.companyName }}</strong></td>
+              <td>{{ c.companyCode }}</td>
+              <td>{{ c.city || '—' }}</td>
+              <td>{{ c.phoneNumber || '—' }}</td>
+              <td class="fx-num">{{ c.projectCount }}</td>
+              <td class="fx-num">{{ c.userCount }}</td>
+              <td><span class="pa-status" [class.off]="!c.isActive">{{ c.isActive ? 'Active' : 'Inactive' }}</span></td>
+              <td class="pa-actions"><button class="fx-action-btn" (click)="editCompany(c)">Edit</button></td>
+            </tr>
+          } @empty {
+            <tr class="fx-empty-row"><td colspan="8">{{ loading() ? 'Loading…' : 'No companies yet' }}</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- ═══════════ PROJECTS ═══════════ -->
+  @if (tab() === 'projects') {
+    <div class="fx-table-wrap">
+      <div class="fx-table-toolbar">
+        <div class="fx-toolbar-left">
+          <span class="fx-table-title">Projects</span>
+          <span class="fx-table-count">{{ projects().length }}</span>
+        </div>
+        <div class="fx-toolbar-right">
+          @if (isPlatformAdmin()) {
+            <select class="fx-filter-select" [ngModel]="companyFilter()" (ngModelChange)="onCompanyFilter($event)">
+              <option [ngValue]="0">All companies</option>
+              @for (c of companies(); track c.companyId) {
+                <option [ngValue]="c.companyId">{{ c.companyName }}</option>
+              }
+            </select>
+            <button class="fx-btn-new" (click)="newProject()" [disabled]="!companies().length">+ New Project</button>
+          }
+        </div>
+      </div>
+
+      <table class="fx-table">
+        <thead>
+          <tr>
+            <th>Project</th><th>Key</th><th>Company</th>
+            @if (isPlatformAdmin()) { <th>Server</th><th>Database</th> }
+            <th class="fx-num">Users</th><th>Status</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of projects(); track p.projectId) {
+            <tr>
+              <td><strong>{{ p.projectName }}</strong></td>
+              <td><code>{{ p.projectKey }}</code></td>
+              <td>{{ p.companyName }}</td>
+              @if (isPlatformAdmin()) {
+                <td>{{ p.serverName || '—' }}</td>
+                <td>
+                  {{ p.databaseName || '—' }}
+                  @if (!p.hasPassword) { <span class="pa-warn" title="No database password stored">password missing</span> }
+                </td>
+              }
+              <td class="fx-num">{{ p.userCount }}</td>
+              <td><span class="pa-status" [class.off]="!p.isActive">{{ p.isActive ? 'Active' : 'Inactive' }}</span></td>
+              <td class="pa-actions">
+                @if (isPlatformAdmin()) {
+                  <button class="fx-action-btn" (click)="editProject(p)">Edit</button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr class="fx-empty-row"><td [attr.colspan]="isPlatformAdmin() ? 8 : 6">No projects yet</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- ═══════════ LOCATIONS / ACCESS share the project picker ═══════════ -->
+  @if (tab() === 'locations' || tab() === 'access') {
+    <div class="fx-table-wrap">
+      <div class="fx-table-toolbar">
+        <div class="fx-toolbar-left">
+          <span class="fx-table-title">{{ tab() === 'locations' ? 'Locations' : 'Who can enter the project' }}</span>
+          <span class="fx-table-count">
+            @if (tab() === 'locations') { {{ locations().length }} }
+            @else { {{ usersWithAccess() }} of {{ access().length }} }
+          </span>
+        </div>
+        <div class="fx-toolbar-right">
+          <select class="fx-filter-select" [ngModel]="selectedProjectId()" (ngModelChange)="onProjectPicked($event)">
+            <option [ngValue]="null" disabled>Select project</option>
+            @for (p of projects(); track p.projectId) {
+              <option [ngValue]="p.projectId">{{ p.companyName }} — {{ p.projectName }}</option>
+            }
+          </select>
+          @if (tab() === 'locations') {
+            <button class="fx-btn-new" (click)="newLocation()" [disabled]="!selectedProjectId()">+ New Location</button>
+          }
+        </div>
+      </div>
+
+      @if (!selectedProjectId()) {
+        <div class="pa-hint">Select a project.</div>
+      } @else if (tab() === 'locations') {
+        <table class="fx-table">
+          <thead>
+            <tr><th>Location</th><th>Code</th><th>City</th><th>Address</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            @for (l of locations(); track l.locationId) {
+              <tr>
+                <td><strong>{{ l.locationName }}</strong></td>
+                <td>{{ l.locationCode || '—' }}</td>
+                <td>{{ l.city || '—' }}</td>
+                <td>{{ l.address || '—' }}</td>
+                <td><span class="pa-status" [class.off]="!l.isActive">{{ l.isActive ? 'Active' : 'Inactive' }}</span></td>
+                <td class="pa-actions"><button class="fx-action-btn" (click)="editLocation(l)">Edit</button></td>
+              </tr>
+            } @empty {
+              <tr class="fx-empty-row">
+                <td colspan="6">{{ loading() ? 'Loading…' : 'No locations yet — users cannot enter the project without one' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <table class="fx-table">
+          <thead>
+            <tr><th>User</th><th>Email</th><th>Mobile</th><th>Role in company</th><th>Access</th></tr>
+          </thead>
+          <tbody>
+            @for (a of access(); track a.userId) {
+              <tr>
+                <td><strong>{{ a.fullName }}</strong></td>
+                <td>{{ a.email }}</td>
+                <td>{{ a.mobileNumber || '—' }}</td>
+                <td><span class="fx-badge">{{ a.roleInCompany }}</span></td>
+                <td>
+                  <label class="pa-switch">
+                    <input type="checkbox" [checked]="a.hasAccess" (change)="toggleAccess(a)" />
+                    <span>{{ a.hasAccess ? 'Allowed' : 'No access' }}</span>
+                  </label>
+                </td>
+              </tr>
+            } @empty {
+              <tr class="fx-empty-row">
+                <td colspan="5">{{ loading() ? 'Loading…' : 'The company has no members yet — invite users from Access Management' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+
+  <!-- ═══════════ MENUS ═══════════ -->
+  @if (tab() === 'menus' && isPlatformAdmin()) {
+    <div class="fx-table-wrap">
+      <div class="fx-table-toolbar">
+        <div class="fx-toolbar-left">
+          <span class="fx-table-title">Menu tree</span>
+          <span class="fx-table-count">{{ menus().length }}</span>
+        </div>
+        <div class="fx-toolbar-right">
+          <button class="fx-btn-new" (click)="newMenu()">+ New Menu</button>
+        </div>
+      </div>
+
+      <table class="fx-table">
+        <thead>
+          <tr><th>Menu</th><th>Path</th><th>Icon</th><th>Module</th><th class="fx-num">Order</th><th class="fx-num">Roles</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+          @for (m of menus(); track m.menuId) {
+            <tr>
+              <td [class.pa-child]="m.parentMenuId"><strong>{{ m.menuName }}</strong></td>
+              <td><code>{{ m.menuPath || '—' }}</code></td>
+              <td>{{ m.icon || '—' }}</td>
+              <td>{{ m.module || '—' }}</td>
+              <td class="fx-num">{{ m.sortOrder }}</td>
+              <td class="fx-num">{{ m.roleCount }}</td>
+              <td><span class="pa-status" [class.off]="!m.isActive">{{ m.isActive ? 'Active' : 'Hidden' }}</span></td>
+              <td class="pa-actions"><button class="fx-action-btn" (click)="editMenu(m)">Edit</button></td>
+            </tr>
+          } @empty {
+            <tr class="fx-empty-row"><td colspan="8">{{ loading() ? 'Loading…' : 'No menus yet' }}</td></tr>
+          }
+        </tbody>
+      </table>
+      <div class="pa-hint">Which role sees a menu is set in Settings → Access Management. A new menu is given to Admin.</div>
+    </div>
+  }
+</div>
+}
+
+<!-- ═══════════ COMPANY DIALOG ═══════════ -->
+@if (companyForm; as f) {
+  <div class="modal-overlay" (click)="closeForms()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ f.companyId ? 'Edit Company' : 'New Company' }}</h2>
+        <button class="modal-close" (click)="closeForms()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Company Name *</label>
+            <input class="form-input" [(ngModel)]="f.companyName" placeholder="Felix Fitness" />
+          </div>
+          <div class="form-group">
+            <label>Company Code *</label>
+            <input class="form-input" [(ngModel)]="f.companyCode" placeholder="C002" />
+          </div>
+          <div class="form-group">
+            <label>City</label>
+            <input class="form-input" [(ngModel)]="f.city" />
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input class="form-input" [(ngModel)]="f.phoneNumber" />
+          </div>
+          <div class="form-group full-width">
+            <label>Address</label>
+            <input class="form-input" [(ngModel)]="f.address" />
+          </div>
+          @if (isPlatformAdmin() && f.companyId) {
+            <div class="form-group full-width">
+              <label class="pa-check"><input type="checkbox" [(ngModel)]="f.isActive" /> Active (users can log in to this company)</label>
+            </div>
+          }
+        </div>
+        @if (!f.companyId) {
+          <div class="form-note">You are added to the new company as Admin so you can set it up. Next: create its project.</div>
+        }
+        @if (formError()) { <div class="pa-error">{{ formError() }}</div> }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeForms()">Cancel</button>
+        <button class="fx-btn-navy" (click)="saveCompany()" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══════════ PROJECT DIALOG ═══════════ -->
+@if (projectForm; as f) {
+  <div class="modal-overlay" (click)="closeForms()">
+    <div class="modal-content wide" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ f.projectId ? 'Edit Project' : 'New Project' }}</h2>
+        <button class="modal-close" (click)="closeForms()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Company *</label>
+            <select class="form-input" [(ngModel)]="f.companyId" [disabled]="!!f.projectId">
+              @for (c of companies(); track c.companyId) {
+                <option [ngValue]="c.companyId">{{ c.companyName }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Project Name *</label>
+            <input class="form-input" [(ngModel)]="f.projectName" placeholder="Service Management" />
+          </div>
+          <div class="form-group">
+            <label>Project Key *</label>
+            <input class="form-input" [(ngModel)]="f.projectKey" placeholder="C002-P001" />
+          </div>
+          <div class="form-group">
+            <label class="pa-check pa-check-top"><input type="checkbox" [(ngModel)]="f.isActive" /> Active</label>
+          </div>
+        </div>
+
+        <div class="pa-section">Database of this project</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Server *</label>
+            <input class="form-input" [(ngModel)]="f.serverName" placeholder="server name or IP" />
+          </div>
+          <div class="form-group">
+            <label>Database *</label>
+            <input class="form-input" [(ngModel)]="f.databaseName" placeholder="FelixProject_C002" />
+          </div>
+          <div class="form-group">
+            <label>Database User *</label>
+            <input class="form-input" [(ngModel)]="f.dbUser" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>Password {{ f.projectId ? '' : '*' }}</label>
+            <input class="form-input" type="password" [(ngModel)]="f.dbPassword" autocomplete="new-password"
+                   [placeholder]="f.projectId && f.hasPassword ? 'leave empty to keep the current one' : ''" />
+          </div>
+          <div class="form-group full-width">
+            <label>Extra connection options</label>
+            <input class="form-input" [(ngModel)]="f.extraOptions" placeholder="optional, e.g. Encrypt=True" />
+          </div>
+        </div>
+
+        @if (f.projectId && f.projectKey) {
+          <div class="form-note">Changing the key or the database moves where this project's users work. People who are logged in must log in again.</div>
+        }
+
+        @if (testResult(); as t) {
+          <div class="pa-test" [class.ok]="t.connected && t.schemaReady" [class.warn]="t.connected && !t.schemaReady" [class.bad]="!t.connected">
+            {{ t.message }}
+          </div>
+        }
+        @if (formError()) { <div class="pa-error">{{ formError() }}</div> }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary pa-left" (click)="testProjectConnection()" [disabled]="testing()">
+          {{ testing() ? 'Testing…' : 'Test connection' }}
+        </button>
+        <button class="btn-secondary" (click)="closeForms()">Cancel</button>
+        <button class="fx-btn-navy" (click)="saveProject()" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══════════ LOCATION DIALOG ═══════════ -->
+@if (locationForm; as f) {
+  <div class="modal-overlay" (click)="closeForms()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ f.locationId ? 'Edit Location' : 'New Location' }} · {{ selectedProject()?.projectName }}</h2>
+        <button class="modal-close" (click)="closeForms()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Location Name *</label>
+            <input class="form-input" [(ngModel)]="f.locationName" placeholder="Head Office" />
+          </div>
+          <div class="form-group">
+            <label>Code</label>
+            <input class="form-input" [(ngModel)]="f.locationCode" placeholder="HO" />
+          </div>
+          <div class="form-group">
+            <label>City</label>
+            <input class="form-input" [(ngModel)]="f.city" />
+          </div>
+          <div class="form-group">
+            <label class="pa-check pa-check-top"><input type="checkbox" [(ngModel)]="f.isActive" /> Active</label>
+          </div>
+          <div class="form-group full-width">
+            <label>Address</label>
+            <input class="form-input" [(ngModel)]="f.address" />
+          </div>
+        </div>
+        @if (formError()) { <div class="pa-error">{{ formError() }}</div> }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeForms()">Cancel</button>
+        <button class="fx-btn-navy" (click)="saveLocation()" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══════════ MENU DIALOG ═══════════ -->
+@if (menuForm; as f) {
+  <div class="modal-overlay" (click)="closeForms()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ f.menuId ? 'Edit Menu' : 'New Menu' }}</h2>
+        <button class="modal-close" (click)="closeForms()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Menu Name *</label>
+            <input class="form-input" [(ngModel)]="f.menuName" />
+          </div>
+          <div class="form-group">
+            <label>Parent</label>
+            <select class="form-input" [(ngModel)]="f.parentMenuId">
+              <option [ngValue]="null">Top level</option>
+              @for (p of topLevelMenus(); track p.menuId) {
+                @if (p.menuId !== f.menuId) { <option [ngValue]="p.menuId">{{ p.menuName }}</option> }
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Path</label>
+            <input class="form-input" [(ngModel)]="f.menuPath" placeholder="/settings/platform" />
+          </div>
+          <div class="form-group">
+            <label>Icon</label>
+            <input class="form-input" [(ngModel)]="f.icon" placeholder="settings" />
+          </div>
+          <div class="form-group">
+            <label>Order</label>
+            <input class="form-input" type="number" [(ngModel)]="f.sortOrder" />
+          </div>
+          <div class="form-group">
+            <label>Module</label>
+            <input class="form-input" [(ngModel)]="f.module" placeholder="Services" />
+          </div>
+          <div class="form-group full-width">
+            <label class="pa-check"><input type="checkbox" [(ngModel)]="f.isActive" /> Active (shown in the sidebar)</label>
+          </div>
+        </div>
+        <div class="form-note">The path must be a page that exists in the application. A group heading has no path.</div>
+        @if (formError()) { <div class="pa-error">{{ formError() }}</div> }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeForms()">Cancel</button>
+        <button class="fx-btn-navy" (click)="saveMenu()" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (toast(); as t) {
+  <div class="pa-toast" [class.bad]="!t.ok">{{ t.text }}</div>
+}

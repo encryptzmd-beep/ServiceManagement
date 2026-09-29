@@ -37,7 +37,7 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
 
         Task<ApiResponse<RegisterResponse_Dto>> Register_Customer(CustomerRegister_Dto dto);
         Task<ApiResponse<CustomerLoginResponse_Dto>> Login(CustomerLogin_Dto dto);
-        Task<ApiResponse<List<ExistingUserCompanyDto>>> GetExistingUserCompanies(int userId);
+        Task<ApiResponse<List<ExistingUserCompanyDto>>> GetExistingUserCompanies(int userId, string? password);
 
         Task<ApiResponse<bool>> InsertCustomerForExistingUser(InsertCustomerForExistingUserDto dto);
         // Profile

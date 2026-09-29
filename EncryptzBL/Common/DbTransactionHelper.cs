@@ -29,6 +29,7 @@ namespace EncryptzBL.Common
 
             Connection = new SqlConnection(connectionString);
             await Connection.OpenAsync();
+            await TenantSessionContext.ApplyAsync(Connection, _tenant);
             Transaction = Connection.BeginTransaction();
         }
 

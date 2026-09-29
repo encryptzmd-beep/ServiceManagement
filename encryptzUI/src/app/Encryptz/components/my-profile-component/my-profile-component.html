@@ -1,0 +1,104 @@
+<div class="fx-page">
+
+  <div class="fx-page-header">
+    <div>
+      <div class="fx-page-title">My Profile</div>
+      <div class="fx-page-sub">Your account details and password</div>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="mp-state">Loading your profile…</div>
+  } @else if (loadError()) {
+    <div class="mp-state mp-bad">{{ loadError() }}</div>
+  } @else if (profile(); as p) {
+
+    <div class="mp-grid">
+
+      <!-- WHO -->
+      <div class="mp-card mp-summary">
+        <div class="mp-avatar">{{ initials }}</div>
+        <div class="mp-name">{{ p.fullName }}</div>
+        <div class="mp-role">{{ role }}</div>
+
+        <dl class="mp-facts">
+          <div><dt>Email (login)</dt><dd>{{ p.email }}</dd></div>
+          <div><dt>Mobile</dt><dd>{{ p.mobileNumber || '—' }}</dd></div>
+          @if (p.companyName) {
+            <div><dt>Company</dt><dd>{{ p.companyName }} <span class="mp-code">{{ p.companyCode }}</span></dd></div>
+          }
+          @if (p.memberSince) {
+            <div><dt>Member since</dt><dd>{{ p.memberSince | date: 'dd MMM yyyy' }}</dd></div>
+          }
+          <div><dt>Account created</dt><dd>{{ p.createdAt | date: 'dd MMM yyyy' }}</dd></div>
+        </dl>
+      </div>
+
+      <div class="mp-forms">
+
+        <!-- DETAILS -->
+        <div class="mp-card">
+          <div class="mp-card-title">Details</div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Full Name *</label>
+              <input class="form-input" [(ngModel)]="fullName" />
+            </div>
+            <div class="form-group">
+              <label>Mobile Number</label>
+              <input class="form-input" [(ngModel)]="mobileNumber" inputmode="tel" />
+            </div>
+            <div class="form-group full-width">
+              <label>Email</label>
+              <input class="form-input" [value]="p.email" disabled />
+              <span class="mp-help">You sign in with this email, so it cannot be changed here.</span>
+            </div>
+          </div>
+
+          @if (detailsMessage(); as m) {
+            <div class="mp-msg" [class.bad]="!m.ok">{{ m.text }}</div>
+          }
+
+          <div class="mp-actions">
+            <button class="btn-secondary" (click)="resetDetails()" [disabled]="saving() || !detailsChanged">Reset</button>
+            <button class="fx-btn-navy" (click)="saveDetails()" [disabled]="saving() || !detailsChanged">
+              {{ saving() ? 'Saving…' : 'Save changes' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- PASSWORD -->
+        <div class="mp-card">
+          <div class="mp-card-title">Change password</div>
+
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label>Current Password *</label>
+              <input class="form-input" type="password" [(ngModel)]="oldPassword" autocomplete="current-password" />
+            </div>
+            <div class="form-group">
+              <label>New Password *</label>
+              <input class="form-input" type="password" [(ngModel)]="newPassword" autocomplete="new-password" />
+            </div>
+            <div class="form-group">
+              <label>Confirm New Password *</label>
+              <input class="form-input" type="password" [(ngModel)]="confirmPassword" autocomplete="new-password" />
+            </div>
+          </div>
+
+          @if (passwordMessage(); as m) {
+            <div class="mp-msg" [class.bad]="!m.ok">{{ m.text }}</div>
+          }
+
+          <div class="mp-actions">
+            <button class="fx-btn-navy" (click)="changePassword()" [disabled]="changingPassword()">
+              {{ changingPassword() ? 'Changing…' : 'Change password' }}
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  }
+</div>

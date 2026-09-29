@@ -1,4 +1,5 @@
 using EncryptzBL.Common.Tenant;
+using Microsoft.Data.SqlClient;
 
 namespace EncryptzBL.Common
 {
@@ -25,5 +26,8 @@ namespace EncryptzBL.Common
             ?? throw new InvalidOperationException(
                 "No project DB resolved for this request. A project must be selected " +
                 "(ProjectKey claim / set-scope) before accessing business data.");
+
+        protected override Task OnConnectionOpenedAsync(SqlConnection conn)
+            => TenantSessionContext.ApplyAsync(conn, _tenant);
     }
 }

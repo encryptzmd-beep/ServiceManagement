@@ -39,10 +39,10 @@ login(email: string, password: string): Observable<LoginResponseCustomer> {
       })
     );
 }
-getExistingUserCompanies(userId: number) {
+getExistingUserCompanies(userId: number, password: string) {
   return this.http.post<any[]>(
     `${this.apiUrl}/get-existing-user-companies`,
-    { userId }
+    { userId, password }
   );
 }
 

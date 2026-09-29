@@ -15,6 +15,7 @@ namespace EncryptzBL.Common.Tenant
         private readonly string _mainConnectionString;
         private readonly ITenantSecretProtector _protector;
         private readonly ConcurrentDictionary<string, string> _cache = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, ProjectScope> _scopeCache = new(StringComparer.OrdinalIgnoreCase);
 
         public ConnectionResolver(IConfiguration config, ITenantSecretProtector protector)
         {
@@ -36,10 +37,59 @@ namespace EncryptzBL.Common.Tenant
             return connStr;
         }
 
+        public async Task<ProjectScope?> GetProjectScopeAsync(string projectKey)
+        {
+            if (string.IsNullOrWhiteSpace(projectKey))
+                return null;
+
+            if (_scopeCache.TryGetValue(projectKey, out var cached))
+                return cached;
+
+            var scope = new ProjectScope();
+
+            await using (var conn = new SqlConnection(_mainConnectionString))
+            {
+                await conn.OpenAsync();
+
+                await using var cmd = new SqlCommand(
+                    @"SELECT TOP 1 p.ProjectId, p.CompanyId, p.ProjectKey
+                      FROM dbo.Projects p
+                      INNER JOIN dbo.ProjectConnections pc ON pc.ProjectId = p.ProjectId AND pc.IsActive = 1
+                      INNER JOIN dbo.Companies c ON c.CompanyId = p.CompanyId AND c.IsActive = 1
+                      WHERE p.ProjectKey = @ProjectKey AND p.IsActive = 1", conn);
+                cmd.Parameters.AddWithValue("@ProjectKey", projectKey);
+
+                await using var reader = await cmd.ExecuteReaderAsync();
+                if (!await reader.ReadAsync())
+                    return null;
+
+                scope.ProjectId = Convert.ToInt32(reader["ProjectId"]);
+                scope.CompanyId = Convert.ToInt32(reader["CompanyId"]);
+                scope.ProjectKey = reader["ProjectKey"]?.ToString() ?? projectKey;
+            }
+
+            // Locations live in the project's own DB
+            var projectDb = new ExplicitDbHelper(await GetServiceConnectionAsync(scope.ProjectKey));
+            var locations = await projectDb.ExecuteDataTableAsync("sp_Project_GetLocations", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", scope.CompanyId),
+                SqlParameterHelper.Input("@ProjectId", scope.ProjectId)
+            });
+
+            if (locations.Rows.Count > 0)
+                scope.DefaultLocationId = locations.Rows.Cast<DataRow>().Min(r => Convert.ToInt32(r["LocationId"]));
+
+            _scopeCache[projectKey] = scope;
+            return scope;
+        }
+
         public void Evict(string projectKey)
         {
             if (!string.IsNullOrWhiteSpace(projectKey))
+            {
                 _cache.TryRemove(projectKey, out _);
+                _scopeCache.TryRemove(projectKey, out _);
+            }
         }
 
         private async Task<string> BuildFromRegistryAsync(string projectKey)

@@ -1,4 +1,5 @@
-﻿using EncryptzBL.DTO_s;
+﻿using EncryptzAPI.Middleware;
+using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Schedule.Modules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -16,7 +17,7 @@ namespace EncryptzAPI.Controllers
         private readonly IScheduleService _service;
         public ScheduleController(IScheduleService service) => _service = service;
 
-        private int GetUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        private int GetUserId() => User.GetTenantUserId();
 
         [HttpGet("daily")]
         public async Task<IActionResult> GetDaily([FromQuery] DateTime? date, [FromQuery] int? technicianId)

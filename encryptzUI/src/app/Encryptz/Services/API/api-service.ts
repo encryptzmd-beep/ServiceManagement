@@ -480,6 +480,19 @@ getComplaintDetail(id: number): Observable<M.ApiResponse<M.ComplaintDetail>> {
   return this.http.get<M.ApiResponse<M.ComplaintDetail>>(`${this.api}/customer/complaints/${id}`);
 }
 
+// Customer actions on the own complaint (ownership is checked by the API)
+updateMyComplaint(id: number, data: { subject?: string; description?: string; priority?: string }): Observable<M.ApiResponse> {
+  return this.http.put<M.ApiResponse>(`${this.api}/customer/complaints/${id}`, data);
+}
+
+deleteMyComplaint(id: number): Observable<M.ApiResponse> {
+  return this.http.delete<M.ApiResponse>(`${this.api}/customer/complaints/${id}`);
+}
+
+confirmMyComplaintClosure(id: number): Observable<M.ApiResponse> {
+  return this.http.post<M.ApiResponse>(`${this.api}/customer/complaints/${id}/confirm-closure`, {});
+}
+
 replyToComplaint(id: number, message: string): Observable<M.ApiResponse<number>> {
   return this.http.post<M.ApiResponse<number>>(`${this.api}/customer/complaints/${id}/reply`, { message });
 }

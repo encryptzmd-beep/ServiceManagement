@@ -1,3 +1,4 @@
+using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.User.Modules;
 using EncryptzBL.Infrastructure.Payments.Modules;
@@ -24,8 +25,7 @@ namespace EncryptzAPI.Controllers
 
         private int GetUserId()
         {
-            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            return int.TryParse(userIdStr, out var id) ? id : 0;
+            return User.GetTenantUserId();
         }
 
         [HttpGet("ServiceCharge")]

@@ -24,35 +24,24 @@ export class HeaderComponent {
       .toUpperCase()
       .slice(0, 2);
   }
-   get companyName(): string {
+  /** Name of the selected company, as stored in the main database. */
+  private get selectedCompanyName(): string {
+    const fromLogin = this.auth.currentUser()?.companyName;
+    if (fromLogin) return fromLogin.trim();
 
     const companyId = this.auth.selectedCompanyId();
-    const companies = this.auth.companies();
+    return this.auth.companies().find(c => c.companyId === companyId)?.companyName?.trim() ?? '';
+  }
 
-    const selected = companies.find(c => c.companyId === companyId);
-
-    if (!selected?.companyName) {
-      return 'Felix';
-    }
-
-    const words = selected.companyName.split(' ');
-
-    return words[0];
+  /** First word of the company name (the rest is shown in the accent colour). */
+  get companyName(): string {
+    return this.selectedCompanyName.split(' ')[0] || 'Encryptz';
   }
 
   get companySuffix(): string {
+    const name = this.selectedCompanyName;
+    if (!name) return 'Service';
 
-    const companyId = this.auth.selectedCompanyId();
-    const companies = this.auth.companies();
-
-    const selected = companies.find(c => c.companyId === companyId);
-
-    if (!selected?.companyName) {
-      return 'Service';
-    }
-
-    const words = selected.companyName.split(' ');
-
-    return words.slice(1).join(' ') || 'Service';
+    return name.split(' ').slice(1).join(' ');
   }
 }

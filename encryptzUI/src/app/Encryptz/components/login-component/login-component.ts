@@ -42,11 +42,11 @@ export class LoginComponent {
     this.auth.clearSession();
 
     // Show location-error message if redirected here due to location denial
-    const msg = sessionStorage.getItem('felix_location_error')
+    const msg = sessionStorage.getItem('encryptz_location_error')
               || sessionStorage.getItem('encryptz_location_logout');
     if (msg) {
       this.locationLogoutMsg.set(msg);
-      sessionStorage.removeItem('felix_location_error');
+      sessionStorage.removeItem('encryptz_location_error');
       sessionStorage.removeItem('encryptz_location_logout');
     }
   }

@@ -299,6 +299,19 @@ export const routes: Routes = [
     .then(m => m.AuthManagementComponent)
 },
    {
+  path: 'profile',
+  loadComponent: () => import('./Encryptz/components/my-profile-component/my-profile-component')
+    .then(m => m.MyProfileComponent),
+  data: { title: 'My Profile', icon: 'person' }
+},
+   {
+  path: 'settings/platform',
+  loadComponent: () => import('./Encryptz/components/platform-admin-component/platform-admin-component')
+    .then(m => m.PlatformAdminComponent),
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin'])],
+  data: { title: 'Platform Admin', icon: 'admin_panel_settings', menu: 'settings' }
+},
+   {
   path: 'settings/roles',
   loadComponent: () => import('./Encryptz/components/user-roles/user-roles')
     .then(m => m.UserRoles)
@@ -346,7 +359,7 @@ export const routes: Routes = [
 
 
       // Fallback
-      { path: '**', redirectTo: 'dashboard' },
+      { path: '**', redirectTo: 'complaints/dashboard' },
     ],
   },
 

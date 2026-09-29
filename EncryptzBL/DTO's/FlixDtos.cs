@@ -40,6 +40,12 @@ namespace EncryptzBL.DTO_s
         public int CompanyId { get; set; }
         public int ProjectId { get; set; }
         public string ProjectKey { get; set; } = string.Empty;   // routing key -> project DB
+
+        /// <summary>Name of the selected company (MainDB.Companies) shown in the header.</summary>
+        public string CompanyName { get; set; } = string.Empty;
+
+        /// <summary>Global role Admin: may open Platform Admin for every company.</summary>
+        public bool IsPlatformAdmin { get; set; }
         public int LocationId { get; set; }
     }
 
@@ -328,6 +334,11 @@ namespace EncryptzBL.DTO_s
         public string RoleName { get; set; } = "";
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; }
+    }
+
+    public class RejectJoinRequestDto
+    {
+        public string? Reason { get; set; }
     }
 
     public class SaveUserRequest
@@ -1460,6 +1471,8 @@ namespace EncryptzBL.DTO_s
         public DateTime? SLADeadline { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsCustomerConfirmed { get; set; }
+        public string StatusName { get; set; }
+        public string StatusColor { get; set; }
         public string ProductName { get; set; }
         public string SerialNumber { get; set; }
         public string Brand { get; set; }
@@ -1485,6 +1498,13 @@ namespace EncryptzBL.DTO_s
 
     public class TimelineItemDto
     {
+        // status-change shape read by the customer tracking screen
+        public int TimelineId { get; set; }
+        public string StatusName { get; set; }
+        public string StatusColor { get; set; }
+        public DateTime? ActionAt { get; set; }
+        public string ActionByName { get; set; }
+
         public int AuditId { get; set; }
         public string Action { get; set; }
         public string Remarks { get; set; }
@@ -1571,6 +1591,9 @@ namespace EncryptzBL.DTO_s
     public class InsertCustomerForExistingUserDto
     {
         public int UserId { get; set; }
+
+        /// <summary>Password of that existing user: proves the caller owns the account.</summary>
+        public string? Password { get; set; }
 
         public int? CompanyId { get; set; }
 

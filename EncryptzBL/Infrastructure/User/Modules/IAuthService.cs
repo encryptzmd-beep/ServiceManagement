@@ -17,8 +17,11 @@ namespace EncryptzBL.Infrastructure.User.Modules
         Task<ApiResponse<string>> ChangePasswordAsync(ChangePasswordRequestDto dto);
         Task<List<MenuDto>> GetMenusByRole(int roleId);
         // management
-        Task<ApiResponse<List<UserDto>>> GetUsers();
-        Task<ApiResponse<object>> SaveUser(SaveUserRequest req);
+        Task<ApiResponse<MyProfileDto>> GetMyProfile(int userId, int companyId);
+        Task<ApiResponse<MyProfileDto>> UpdateMyProfile(int userId, int companyId, UpdateMyProfileDto dto);
+        Task<ApiResponse<string>> ChangeMyPassword(int userId, ChangeMyPasswordDto dto);
+        Task<ApiResponse<List<UserDto>>> GetUsers(int companyId);
+        Task<ApiResponse<object>> SaveUser(SaveUserRequest req, int companyId, int projectId, int savedBy);
         Task<ApiResponse<List<RoleDto>>> GetRoles();
         Task<ApiResponse<object>> SaveRole(SaveRoleRequest req);
         Task<ApiResponse<List<MenuAccessDto>>> GetMenuAccess(int roleId);
@@ -49,7 +52,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
         Task<ApiResponse<bool>> UpdateUserRoleInCompany(int companyId, int userId, string newRole, int updatedBy);
         Task<ApiResponse<bool>> RemoveUserFromCompany(int companyId, int userId, int removedBy);
         Task<ApiResponse<List<InvitationDetailDto>>> GetPendingInvitationsForCompany(int companyId);
-        Task<ApiResponse<bool>> CancelInvitation(int invitationId, int cancelledBy);
+        Task<ApiResponse<bool>> CancelInvitation(int invitationId, int cancelledBy, int companyId);
         Task<ApiResponse<JoinRequestDto>> CreateJoinRequest(int userId, int companyId, string requestedRole, string remarks = null);
         Task<ApiResponse<List<JoinRequestDto>>> GetPendingJoinRequests(int companyId);
         Task<ApiResponse<bool>> ApproveJoinRequest(int requestId, int companyId, int reviewedBy);

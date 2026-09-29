@@ -84,6 +84,10 @@ export interface LoginResponse {
   projectId?: number;
   projectKey?: string;   // routing key -> project DB
   locationId?: number;
+  // Name of the selected company (main database), shown in the header
+  companyName?: string;
+  // Global role Admin: may manage every company in Platform Admin
+  isPlatformAdmin?: boolean;
 }
 
 // --- Multi-tenant scoping (Company -> Projects -> Locations) ---

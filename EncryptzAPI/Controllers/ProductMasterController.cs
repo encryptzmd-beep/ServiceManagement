@@ -1,4 +1,5 @@
-﻿using EncryptzBL.DTO_s;
+﻿using EncryptzAPI.Middleware;
+using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Products.Modules;
 using Microsoft.AspNetCore.Mvc;
@@ -86,8 +87,7 @@ namespace EncryptzAPI.Controllers
 
         private int GetUserId()
         {
-            var userIdClaim = User.FindFirst("UserId") ?? User.FindFirst(ClaimTypes.NameIdentifier);
-            return userIdClaim != null ? int.Parse(userIdClaim.Value) : 1;
+            return User.GetTenantUserId();
         }
     }
 

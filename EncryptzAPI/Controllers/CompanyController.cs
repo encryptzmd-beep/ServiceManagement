@@ -96,7 +96,12 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> CancelInvitation(int invitationId)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            var result = await _authService.CancelInvitation(invitationId, userId);
+            var companyId = await GetCurrentCompanyId();
+
+            if (companyId == 0)
+                return BadRequest(ApiResponse<object>.Fail("No company selected"));
+
+            var result = await _authService.CancelInvitation(invitationId, userId, companyId);
             return Ok(result);
         }
 
@@ -143,7 +148,7 @@ namespace EncryptzAPI.Controllers
 
         [HttpPut("requests/{requestId}/reject")]
         [Authorize(Roles = "Admin,CompanyAdmin")]
-        public async Task<IActionResult> RejectJoinRequest(int requestId, [FromBody] string reason)
+        public async Task<IActionResult> RejectJoinRequest(int requestId, [FromBody] RejectJoinRequestDto dto)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
             var companyId = await GetCurrentCompanyId();
@@ -151,7 +156,7 @@ namespace EncryptzAPI.Controllers
             if (companyId == 0)
                 return BadRequest(ApiResponse<object>.Fail("No company selected"));
 
-            var result = await _authService.RejectJoinRequest(requestId, companyId, userId, reason);
+            var result = await _authService.RejectJoinRequest(requestId, companyId, userId, dto?.Reason);
             return Ok(result);
         }
 

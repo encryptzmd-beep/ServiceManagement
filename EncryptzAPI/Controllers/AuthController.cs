@@ -27,6 +27,7 @@ namespace EncryptzAPI.Controllers
             => Ok(await _authService.Login(dto.Email, dto.Password));
 
         [HttpPost("register")]
+        [Authorize(Roles = "Admin,CompanyAdmin")]   // creates a login WITH a role: never anonymous (self-register has no role)
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
             => Ok(await _authService.Register(dto));
 
@@ -54,28 +55,59 @@ namespace EncryptzAPI.Controllers
             return Ok(await _authService.ChangePasswordAsync(dto));
         }
 
+        // ── MY PROFILE ────────────────────────
+
+        [HttpGet("me")]
+        [Authorize]
+        public async Task<IActionResult> GetMyProfile()
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            return Ok(await _authService.GetMyProfile(userId, GetCurrentCompanyId()));
+        }
+
+        [HttpPut("me")]
+        [Authorize]
+        public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateMyProfileDto dto)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            return Ok(await _authService.UpdateMyProfile(userId, GetCurrentCompanyId(), dto));
+        }
+
+        [HttpPost("me/change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangeMyPassword([FromBody] ChangeMyPasswordDto dto)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            return Ok(await _authService.ChangeMyPassword(userId, dto));
+        }
+
         [HttpGet("menus/{roleId}")]
         [Authorize]
         public async Task<IActionResult> GetMenus(int roleId)
             => Ok(await _authService.GetMenusByRole(roleId));
 
         [HttpGet("users")]
+        [Authorize(Roles = "Admin,CompanyAdmin")]
         public async Task<IActionResult> GetUsers()
         {
-            var result = await _authService.GetUsers();
+            var result = await _authService.GetUsers(GetCurrentCompanyId());
             return Ok(result);
         }
 
         [HttpPost("users/save")]
+        [Authorize(Roles = "Admin,CompanyAdmin")]
         public async Task<IActionResult> SaveUser([FromBody] SaveUserRequest req)
         {
-            var result = await _authService.SaveUser(req);
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var projectId = int.Parse(User.FindFirst("ProjectId")?.Value ?? "0");
+            var result = await _authService.SaveUser(req, GetCurrentCompanyId(), projectId, userId);
             return Ok(result);
         }
 
         // ── ROLES ─────────────────────────────
 
         [HttpGet("roles")]
+        [Authorize]
         public async Task<IActionResult> GetRoles()
         {
             var result = await _authService.GetRoles();
@@ -83,6 +115,7 @@ namespace EncryptzAPI.Controllers
         }
 
         [HttpPost("roles/save")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SaveRole([FromBody] SaveRoleRequest req)
         {
             var result = await _authService.SaveRole(req);
@@ -92,6 +125,7 @@ namespace EncryptzAPI.Controllers
         // ── MENU ACCESS ───────────────────────
 
         [HttpGet("menu-access/{roleId}")]
+        [Authorize(Roles = "Admin,CompanyAdmin")]
         public async Task<IActionResult> GetMenuAccess(int roleId)
         {
             var result = await _authService.GetMenuAccess(roleId);
@@ -99,6 +133,7 @@ namespace EncryptzAPI.Controllers
         }
 
         [HttpPost("menu-access/save-bulk")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SaveMenuAccessBulk([FromBody] SaveMenuAccessBulkRequest req)
         {
             var result = await _authService.SaveMenuAccessBulk(req);
@@ -123,10 +158,12 @@ namespace EncryptzAPI.Controllers
         }
 
         [HttpPost("select-company")]
-        [AllowAnonymous]
+        [Authorize]
         public async Task<IActionResult> SelectCompany([FromBody] SelectCompanyRequestDto dto)
         {
-            var result = await _authService.SelectCompany(dto.UserId, dto.CompanyId);
+            // The user is the one who logged in (token), never a userId sent by the client
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var result = await _authService.SelectCompany(userId, dto.CompanyId);
             return Ok(result);
         }
 
@@ -182,11 +219,12 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
-        [AllowAnonymous]
+        [Authorize]
         [HttpPost("accept-invitation")]
         public async Task<IActionResult> AcceptInvitation([FromBody] AcceptInvitationRequestDto dto)
         {
-            var result = await _authService.AcceptInvitation(dto.Token, dto.UserId,dto.projectId);
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var result = await _authService.AcceptInvitation(dto.Token, userId, dto.projectId);
             return Ok(result);
         }
         // CompanyController.cs - ADD THIS METHOD (based on your existing pattern)
@@ -200,13 +238,17 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
         [HttpGet("pending-invitations")]
-        public async Task<IActionResult> GetPendingInvitations([FromQuery] string email)
+        [Authorize]
+        public async Task<IActionResult> GetPendingInvitations()
         {
+            // Only the logged-in user's own invitations
+            var email = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
             var result = await _authService.GetPendingInvitations(email);
             return Ok(result);
         }
 
         [HttpGet("check-user")]
+        [Authorize(Roles = "Admin,CompanyAdmin")]
         public async Task<IActionResult> CheckUserExists([FromQuery] string email)
         {
             var result = await _authService.CheckUserExists(email);
@@ -234,6 +276,7 @@ namespace EncryptzAPI.Controllers
         }
 
         [HttpPost("create-company")]
+        [Authorize]
         public async Task<IActionResult> CreateCompany([FromBody] CreateCompanyDto dto)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");

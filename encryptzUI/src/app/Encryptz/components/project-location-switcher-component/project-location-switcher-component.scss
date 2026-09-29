@@ -72,3 +72,70 @@
 }
 
 @keyframes pl-spin { to { transform: rotate(360deg); } }
+
+/* Inside the login card: one field per row on the dark glass background */
+:host { display: block; }
+
+:host(.dark) {
+  .pl-switcher {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+
+    .pl-field {
+      gap: 6px;
+
+      label { color: rgba(255, 255, 255, 0.60); }
+
+      select {
+        width: 100%;
+        min-width: 0;
+        padding: 11px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 11px;
+        background: rgba(255, 255, 255, 0.07);
+        font-size: 14px;
+        color: #fff;
+
+        option { background: #12294a; color: #fff; }
+
+        &:disabled { background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.40); }
+        &:focus { border-color: rgba(212, 43, 43, 0.65); box-shadow: 0 0 0 3px rgba(212, 43, 43, 0.18); }
+      }
+    }
+
+    .pl-apply {
+      width: 100%;
+      padding: 11px;
+      border-radius: 11px;
+      background: linear-gradient(135deg, #d42b2b 0%, #b31f1f 100%);
+      font-size: 14px;
+
+      &:hover:not(:disabled) { background: linear-gradient(135deg, #b31f1f 0%, #8e1515 100%); }
+    }
+
+    .pl-error {
+      align-self: stretch;
+      padding: 10px 14px;
+      border: 1px solid rgba(212, 43, 43, 0.35);
+      border-radius: 10px;
+      background: rgba(212, 43, 43, 0.15);
+      font-size: 12.5px;
+      color: #ffb4b4;
+    }
+  }
+
+  .pl-autoresolve {
+    justify-content: center;
+    padding: 24px 10px;
+    font-size: 13.5px;
+    color: rgba(255, 255, 255, 0.75);
+
+    .pl-spinner {
+      width: 22px;
+      height: 22px;
+      border: 2.5px solid rgba(255, 255, 255, 0.25);
+      border-top-color: #d42b2b;
+    }
+  }
+}

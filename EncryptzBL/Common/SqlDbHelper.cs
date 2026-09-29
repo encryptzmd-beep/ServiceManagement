@@ -14,6 +14,9 @@ namespace EncryptzBL.Common
         /// <summary>The connection string to use for the current operation.</summary>
         protected abstract string ConnectionString { get; }
 
+        /// <summary>Runs right after a connection is opened, before the command executes.</summary>
+        protected virtual Task OnConnectionOpenedAsync(SqlConnection conn) => Task.CompletedTask;
+
         private SqlCommand CreateCommand(
             SqlConnection conn,
             string commandText,
@@ -43,6 +46,7 @@ namespace EncryptzBL.Common
         {
             using var conn = new SqlConnection(ConnectionString);
             await conn.OpenAsync();
+            await OnConnectionOpenedAsync(conn);
 
             using var cmd = CreateCommand(conn, spName, parameters, transaction);
             using var reader = await cmd.ExecuteReaderAsync();
@@ -68,6 +72,7 @@ namespace EncryptzBL.Common
             var ds = new DataSet();
 
             await conn.OpenAsync();
+            await OnConnectionOpenedAsync(conn);
             da.Fill(ds);
 
             return ds;
@@ -78,6 +83,7 @@ namespace EncryptzBL.Common
         {
             using var conn = new SqlConnection(ConnectionString);
             await conn.OpenAsync();
+            await OnConnectionOpenedAsync(conn);
 
             using var cmd = CreateCommand(conn, spName, parameters);
             return await cmd.ExecuteScalarAsync();
@@ -88,6 +94,7 @@ namespace EncryptzBL.Common
         {
             using var conn = new SqlConnection(ConnectionString);
             await conn.OpenAsync();
+            await OnConnectionOpenedAsync(conn);
 
             using var cmd = CreateCommand(conn, spName, parameters);
             return await cmd.ExecuteNonQueryAsync();
@@ -97,6 +104,7 @@ namespace EncryptzBL.Common
         {
             using var conn = new SqlConnection(ConnectionString);
             await conn.OpenAsync();
+            await OnConnectionOpenedAsync(conn);
 
             using var cmd = CreateCommand(conn, query, parameters, CommandType.Text);
             return await cmd.ExecuteNonQueryAsync();
@@ -106,6 +114,7 @@ namespace EncryptzBL.Common
         {
             using var conn = new SqlConnection(ConnectionString);
             await conn.OpenAsync();
+            await OnConnectionOpenedAsync(conn);
 
             using var cmd = new SqlCommand(query, conn)
             {

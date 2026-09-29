@@ -843,7 +843,7 @@ export class CustomerRegisterComponent {
       City: this.city,
       State: this.state,
       PinCode: this.pinCode,
-      CompanyId: this.selectedCompanyId ?? null
+      CompanyId: this.selectedCompanyId() ?? null
     };
 
     this.isLoading.set(true);
@@ -874,7 +874,7 @@ export class CustomerRegisterComponent {
     const data = this.existingUserId();
 
     this.authService
-      .getExistingUserCompanies(data)
+      .getExistingUserCompanies(data, this.password)
       .subscribe({
         next: (res: any) => {
           if (!res?.success) {
@@ -910,6 +910,7 @@ export class CustomerRegisterComponent {
 
     const payload = {
       UserId: this.existingUserId(),
+      Password: this.password,   // proves the existing account is the caller's
       CompanyId: this.selectedCompanyId(),
       Address: this.address,
       City: this.city,

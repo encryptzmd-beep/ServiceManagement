@@ -24,8 +24,8 @@ export class LocationMonitorService {
         this.currentLat.set(pos.coords.latitude);
         this.currentLng.set(pos.coords.longitude);
         this.isTracking.set(true);
-        localStorage.setItem('felix_last_lat', pos.coords.latitude.toString());
-        localStorage.setItem('felix_last_lng', pos.coords.longitude.toString());
+        localStorage.setItem('encryptz_last_lat', pos.coords.latitude.toString());
+        localStorage.setItem('encryptz_last_lng', pos.coords.longitude.toString());
       },
       (err) => {
         // Temporary GPS loss — mark as not tracking but keep session alive

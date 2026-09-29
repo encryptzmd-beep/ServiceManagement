@@ -18,15 +18,21 @@ namespace EncryptzBL.Infrastructure.User.Modules
         private readonly IConfiguration _config;
         private readonly IEmailService _emailService;
         private readonly IConnectionResolver _connectionResolver;
+        private readonly ITenantUserSyncService _userSync;
+
+        // A user whose GLOBAL role (Users.RoleId) is Admin administers the platform: every company.
+        private const string PlatformAdminRole = "Admin";
 
         // Auth is control-plane: it must run against MainDB (login happens before a
         // project DB is selected). Users, Roles, Menus, Companies and Projects live in MainDB.
         // The resolver lets us reach a project's OWN DB to read/validate its locations.
-        public AuthService(MainDbHelper db, IConfiguration config, IEmailService emailService, IConnectionResolver connectionResolver) : base(db)
+        // The user sync mirrors MainDB users (and their technician rows) into that project DB.
+        public AuthService(MainDbHelper db, IConfiguration config, IEmailService emailService, IConnectionResolver connectionResolver, ITenantUserSyncService userSync) : base(db)
         {
             _config = config;
             _emailService = emailService;
             _connectionResolver = connectionResolver;
+            _userSync = userSync;
         }
 
         // ============================================
@@ -148,7 +154,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 SqlParameterHelper.Input("@Email", dto.Email),
                 SqlParameterHelper.Input("@MobileNumber", dto.MobileNumber),
                 SqlParameterHelper.Input("@PasswordHash", BCrypt.Net.BCrypt.HashPassword(dto.Password)),
-                SqlParameterHelper.Input("@RoleId", dto.RoleId),
+                SqlParameterHelper.Input("@RoleId", dto.RoleId > 0 ? dto.RoleId : (object)DBNull.Value),
                 outputUserId
             };
 
@@ -158,7 +164,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
             if (newUserId <= 0)
             {
-                return new ApiResponse(false, "Mobile number already registered");
+                return new ApiResponse(false, "Email or mobile number already registered");
             }
 
             return new ApiResponse(true, "Registration successful");
@@ -297,6 +303,61 @@ namespace EncryptzBL.Infrastructure.User.Modules
         }
 
 
+        // ============================================
+        // MY PROFILE (the logged-in user)
+        // ============================================
+
+        public async Task<ApiResponse<MyProfileDto>> GetMyProfile(int userId, int companyId)
+        {
+            var profile = await GetSingleAsync<MyProfileDto>("sp_User_GetProfile", new[]
+            {
+                SqlParameterHelper.Input("@UserId", userId),
+                SqlParameterHelper.Input("@CompanyId", companyId)
+            });
+
+            return profile == null
+                ? ApiResponse<MyProfileDto>.Fail("User not found")
+                : ApiResponse<MyProfileDto>.Ok(profile);
+        }
+
+        public async Task<ApiResponse<MyProfileDto>> UpdateMyProfile(int userId, int companyId, UpdateMyProfileDto dto)
+        {
+            var dt = await GetDataTableAsync("sp_User_UpdateProfile", new[]
+            {
+                SqlParameterHelper.Input("@UserId", userId),
+                SqlParameterHelper.Input("@FullName", dto.FullName ?? ""),
+                SqlParameterHelper.Input("@MobileNumber", string.IsNullOrWhiteSpace(dto.MobileNumber) ? (object)DBNull.Value : dto.MobileNumber.Trim())
+            });
+
+            if (dt == null || dt.Rows.Count == 0)
+                return ApiResponse<MyProfileDto>.Fail("Update failed");
+
+            var message = dt.Rows[0]["Message"]?.ToString() ?? "";
+            if (Convert.ToInt32(dt.Rows[0]["Success"]) != 1)
+                return ApiResponse<MyProfileDto>.Fail(message);
+
+            // the project DBs show the user by name (technician lists, timelines)
+            if (companyId > 0)
+                await _userSync.TrySyncCompanyProjectsAsync(companyId);
+
+            var profile = await GetMyProfile(userId, companyId);
+            profile.Message = message;
+            return profile;
+        }
+
+        public async Task<ApiResponse<string>> ChangeMyPassword(int userId, ChangeMyPasswordDto dto)
+        {
+            if (string.IsNullOrEmpty(dto.NewPassword) || dto.NewPassword.Length < 6)
+                return ApiResponse<string>.Fail("The new password must have at least 6 characters");
+
+            return await ChangePasswordAsync(new ChangePasswordRequestDto
+            {
+                UserId = userId,
+                OldPassword = dto.OldPassword,
+                NewPassword = dto.NewPassword
+            });
+        }
+
         public async Task<List<MenuDto>> GetMenusByRole(int roleId)
         {
             var parameters = new[]
@@ -312,12 +373,16 @@ namespace EncryptzBL.Infrastructure.User.Modules
         // MANAGEMENT METHODS (Users, Roles, Menu Access)
         // ============================================
 
-        public async Task<ApiResponse<List<UserDto>>> GetUsers()
+        public async Task<ApiResponse<List<UserDto>>> GetUsers(int companyId)
         {
-            var dt = await GetDataTableAsync("sp_Mgmt_GetUsers");
+            // Company admins manage the members of their own company, with the role they hold in it
+            var dt = await GetDataTableAsync("sp_Mgmt_GetUsers", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId)
+            });
 
             if (dt == null || dt.Rows.Count == 0)
-                return ApiResponse<List<UserDto>>.Fail("No users found");
+                return ApiResponse<List<UserDto>>.Ok(new List<UserDto>(), "No users found");
 
             var list = dt.Rows.Cast<DataRow>().Select(r => new UserDto
             {
@@ -334,7 +399,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             return ApiResponse<List<UserDto>>.Ok(list, "Success");
         }
 
-        public async Task<ApiResponse<object>> SaveUser(SaveUserRequest req)
+        public async Task<ApiResponse<object>> SaveUser(SaveUserRequest req, int companyId, int projectId, int savedBy)
         {
             var parameters = new[]
             {
@@ -345,7 +410,10 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 SqlParameterHelper.Input("@RoleId", req.RoleId),
                 SqlParameterHelper.Input("@IsActive", req.IsActive),
                 SqlParameterHelper.Input("@PasswordHash",
-                    string.IsNullOrEmpty(req.Password) ? (object)DBNull.Value : BCrypt.Net.BCrypt.HashPassword(req.Password))
+                    string.IsNullOrEmpty(req.Password) ? (object)DBNull.Value : BCrypt.Net.BCrypt.HashPassword(req.Password)),
+                SqlParameterHelper.Input("@CompanyId", companyId),
+                SqlParameterHelper.Input("@ProjectId", projectId),
+                SqlParameterHelper.Input("@SavedBy", savedBy > 0 ? savedBy : (object)DBNull.Value)
             };
 
             var dt = await GetDataTableAsync("sp_Mgmt_SaveUser", parameters);
@@ -354,6 +422,13 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 return ApiResponse<object>.Fail("Save failed");
 
             var row = dt.Rows[0];
+
+            // UserId 0 = nothing saved; Status carries the reason (duplicate email/mobile, ...)
+            if (Convert.ToInt32(row["UserId"]) <= 0)
+                return ApiResponse<object>.Fail(row["Status"]?.ToString() ?? "Save failed");
+
+            if (companyId > 0)
+                await _userSync.TrySyncCompanyProjectsAsync(companyId);
             return ApiResponse<object>.Ok(new
             {
                 userId = Convert.ToInt32(row["UserId"]),
@@ -366,7 +441,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             var dt = await GetDataTableAsync("sp_Mgmt_GetRoles");
 
             if (dt == null || dt.Rows.Count == 0)
-                return ApiResponse<List<RoleDto>>.Fail("No roles found");
+                return ApiResponse<List<RoleDto>>.Ok(new List<RoleDto>(), "No roles found");
 
             var list = dt.Rows.Cast<DataRow>().Select(r => new RoleDto
             {
@@ -413,7 +488,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             var dt = await GetDataTableAsync("sp_Mgmt_GetMenuAccess", parameters);
 
             if (dt == null || dt.Rows.Count == 0)
-                return ApiResponse<List<MenuAccessDto>>.Fail("No menu access found");
+                return ApiResponse<List<MenuAccessDto>>.Ok(new List<MenuAccessDto>(), "No menu access found");
 
             var list = dt.Rows.Cast<DataRow>().Select(r => new MenuAccessDto
             {
@@ -572,7 +647,8 @@ namespace EncryptzBL.Infrastructure.User.Modules
             // blocked until the user picks a project + location via set-scope.
             var token = GenerateJwtTokenWithCompany(
                 userId, userInfo.FullName, role, userInfo.Email, userInfo.Mobile,
-                companyId, projectKey: "", projectId: 0, locationId: 0);
+                companyId, projectKey: "", projectId: 0, locationId: 0,
+                platformAdmin: userInfo.Role == PlatformAdminRole);
 
             var sessionParams = new[]
             {
@@ -604,6 +680,8 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 Email = userInfo.Email,
                 technicianId = technicianId,
                 mobileNumber = userInfo.Mobile,
+                IsPlatformAdmin = userInfo.Role == PlatformAdminRole,
+                CompanyName = companyName,
                 Menus = menus,
                 CompanyId = companyId,
                 ProjectKey = "",
@@ -709,12 +787,30 @@ namespace EncryptzBL.Infrastructure.User.Modules
             if (vl == null || vl.Rows.Count == 0)
                 return ApiResponse<LoginResponseDto>.Fail("Invalid location for this project");
 
+            // 3) Users/technicians are owned by MainDB: refresh the project DB's mirror and
+            //    resolve this user's ids inside it (business procs + FKs use the local ids)
+            TenantUserMap? me;
+            try
+            {
+                var map = await _userSync.SyncProjectUsersAsync(projectId, locationId);
+                me = map.FirstOrDefault(m => m.MainUserId == userId);
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<LoginResponseDto>.Fail("Could not prepare your user in this project: " + ex.Message);
+            }
+
+            if (me == null)
+                return ApiResponse<LoginResponseDto>.Fail("Your user is not set up for this project");
+
             var userInfo = await GetUserById(userId);
 
-            // 3) Issue a fully-scoped token (ProjectKey routes every later request)
+            // 4) Issue a fully-scoped token (ProjectKey routes every later request)
             var token = GenerateJwtTokenWithCompany(
                 userId, userInfo.FullName, role, userInfo.Email, userInfo.Mobile,
-                companyId, projectKey, projectId, locationId);
+                companyId, projectKey, projectId, locationId,
+                me.TenantUserId, me.TechnicianId,
+                platformAdmin: userInfo.Role == PlatformAdminRole);
 
             await ExecuteAsync("sp_User_UpdateSession", new[]
             {
@@ -739,7 +835,10 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 Role = role,
                 UserId = userId,
                 Email = userInfo.Email,
+                technicianId = me.TechnicianId,
                 mobileNumber = userInfo.Mobile,
+                IsPlatformAdmin = userInfo.Role == PlatformAdminRole,
+                CompanyName = await GetCompanyName(companyId),
                 Menus = menus,
                 CompanyId = companyId,
                 ProjectKey = projectKey,
@@ -748,6 +847,15 @@ namespace EncryptzBL.Infrastructure.User.Modules
             };
 
             return ApiResponse<LoginResponseDto>.Ok(response, "Scope updated successfully");
+        }
+
+        private async Task<string> GetCompanyName(int companyId)
+        {
+            var dt = await GetDataTableByQueryAsync(
+                "SELECT CompanyName FROM dbo.Companies WHERE CompanyId = @CompanyId",
+                new[] { SqlParameterHelper.Input("@CompanyId", companyId) });
+
+            return dt != null && dt.Rows.Count > 0 ? dt.Rows[0]["CompanyName"]?.ToString() ?? "" : "";
         }
 
         /// <summary>Returns (ProjectKey, CompanyId) if the user may access the project, else null.</summary>
@@ -856,8 +964,11 @@ namespace EncryptzBL.Infrastructure.User.Modules
             var companyId = Convert.ToInt32(row["CompanyId"]);
             var role = row["RoleInCompany"]?.ToString() ?? "User";
 
+            // The new member (e.g. a technician) must show up in the project DB right away
+            await _userSync.TrySyncProjectUsersAsync(projectId);
+
             var userInfo = await GetUserById(userId);
-            var newToken = GenerateJwtTokenWithCompany(userId, userInfo.FullName, role, userInfo.Email, userInfo.Mobile, companyId);
+            var newToken = GenerateJwtTokenWithCompany(userId, userInfo.FullName, role, userInfo.Email, userInfo.Mobile, companyId, platformAdmin: userInfo.Role == PlatformAdminRole);
 
             var redirectUrl = role switch
             {
@@ -1106,7 +1217,8 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 new Claim(ClaimTypes.Name, fullName),
                 new Claim(ClaimTypes.Email, email ?? ""),
                 new Claim(ClaimTypes.MobilePhone, mobile ?? ""),
-                new Claim(ClaimTypes.Role, role)
+                new Claim(ClaimTypes.Role, role),
+                new Claim("PlatformAdmin", role == PlatformAdminRole ? "true" : "false")
             };
 
             var token = new JwtSecurityToken(
@@ -1120,7 +1232,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        private string GenerateJwtTokenWithCompany(int userId, string fullName, string role, string email, string mobile, int companyId, string projectKey = "", int projectId = 0, int locationId = 0)
+        private string GenerateJwtTokenWithCompany(int userId, string fullName, string role, string email, string mobile, int companyId, string projectKey = "", int projectId = 0, int locationId = 0, int tenantUserId = 0, int technicianId = 0, bool platformAdmin = false)
         {
             var jwtKey = _config["Jwt:Key"];
             if (string.IsNullOrEmpty(jwtKey))
@@ -1135,12 +1247,17 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 new Claim(ClaimTypes.Email, email ?? ""),
                 new Claim(ClaimTypes.MobilePhone, mobile ?? ""),
                 new Claim(ClaimTypes.Role, role),
+                // Global role Admin = platform administrator (manages every company in MainDB)
+                new Claim("PlatformAdmin", platformAdmin ? "true" : "false"),
                 new Claim("CompanyId", companyId.ToString()),
                 // Tenant routing claims consumed by TenantResolutionMiddleware:
                 new Claim("ClientId", companyId.ToString()),
                 new Claim("ProjectKey", projectKey ?? ""),   // routes to the project's DB
                 new Claim("ProjectId", projectId.ToString()),
-                new Claim("LocationId", locationId.ToString())
+                new Claim("LocationId", locationId.ToString()),
+                // The user's ids inside the project DB (NameIdentifier stays the MainDB UserId):
+                new Claim("TenantUserId", tenantUserId.ToString()),
+                new Claim("TechnicianId", technicianId.ToString())
             };
 
             var token = new JwtSecurityToken(
@@ -1267,6 +1384,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
             if (dt != null && dt.Rows.Count > 0 && Convert.ToInt32(dt.Rows[0]["UpdatedCount"]) > 0)
             {
+                await _userSync.TrySyncCompanyProjectsAsync(companyId);
                 return ApiResponse<bool>.Ok(true, "Role updated successfully");
             }
 
@@ -1286,6 +1404,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
             if (dt != null && dt.Rows.Count > 0 && Convert.ToInt32(dt.Rows[0]["RemovedCount"]) > 0)
             {
+                await _userSync.TrySyncCompanyProjectsAsync(companyId);
                 return ApiResponse<bool>.Ok(true, "User removed from company");
             }
 
@@ -1320,15 +1439,19 @@ namespace EncryptzBL.Infrastructure.User.Modules
             return ApiResponse<List<InvitationDetailDto>>.Ok(invitations, "Success");
         }
 
-        public async Task<ApiResponse<bool>> CancelInvitation(int invitationId, int cancelledBy)
+        public async Task<ApiResponse<bool>> CancelInvitation(int invitationId, int cancelledBy, int companyId)
         {
             var parameters = new[]
             {
         SqlParameterHelper.Input("@InvitationId", invitationId),
-        SqlParameterHelper.Input("@CancelledBy", cancelledBy)
+        SqlParameterHelper.Input("@CancelledBy", cancelledBy),
+        SqlParameterHelper.Input("@CompanyId", companyId)
     };
 
             var dt = await GetDataTableAsync("sp_Company_CancelInvitation", parameters);
+
+            if (dt == null || dt.Rows.Count == 0 || Convert.ToInt32(dt.Rows[0]["CancelledCount"]) == 0)
+                return ApiResponse<bool>.Fail("Invitation not found or already handled");
 
             return ApiResponse<bool>.Ok(true, "Invitation cancelled");
         }
@@ -1417,6 +1540,9 @@ namespace EncryptzBL.Infrastructure.User.Modules
             var row = ds.Tables[0].Rows[0];
             var success = Convert.ToInt32(row["Success"]) == 1;
 
+            if (success)
+                await _userSync.TrySyncCompanyProjectsAsync(companyId);
+
             return success ? ApiResponse<bool>.Ok(true, row["Message"]?.ToString())
                            : ApiResponse<bool>.Fail(row["Message"]?.ToString());
         }
@@ -1431,7 +1557,10 @@ namespace EncryptzBL.Infrastructure.User.Modules
         SqlParameterHelper.Input("@RejectionReason", (object?)reason ?? DBNull.Value)
     };
 
-            var ds = await GetDataSetAsync("sp_Company_RejectRequest", parameters);
+            var dt = await GetDataTableAsync("sp_Company_RejectRequest", parameters);
+
+            if (dt == null || dt.Rows.Count == 0 || Convert.ToInt32(dt.Rows[0]["RejectedCount"]) == 0)
+                return ApiResponse<bool>.Fail("Request not found or already handled");
 
             return ApiResponse<bool>.Ok(true, "Request rejected");
         }

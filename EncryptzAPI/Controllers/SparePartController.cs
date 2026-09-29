@@ -1,4 +1,5 @@
-﻿using EncryptzBL.DTO_s;
+﻿using EncryptzAPI.Middleware;
+using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Spareparts.Modules;
 using Microsoft.AspNet.Identity;
@@ -16,7 +17,7 @@ using System.Security.Claims;
         private readonly ISparePartService _svc;
         public SparePartController(ISparePartService svc) => _svc = svc;
 
-        private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        private int UserId => User.GetTenantUserId();
     // GET  api/spare-parts/dashboard-summary
     [HttpGet("dashboard-summary")]
     public async Task<IActionResult> GetDashboardSummary()
@@ -133,7 +134,7 @@ using System.Security.Claims;
             }
 
             if (dto.TechnicianId <= 0)
-                dto.TechnicianId = UserId;
+                dto.TechnicianId = User.GetTechnicianId();
         }
 
         var results = new List<int>();
@@ -165,7 +166,7 @@ using System.Security.Claims;
             return BadRequest(new { success = false, message = "Part name required" });
 
         // Inject logged-in user as technician if not provided
-        if (dto.TechnicianId <= 0) dto.TechnicianId = UserId;
+        if (dto.TechnicianId <= 0) dto.TechnicianId = User.GetTechnicianId();
 
         var result = await _svc.CreateRequest(dto);
 

@@ -241,7 +241,8 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
                 SqlParameterHelper.Input("@City", dto.City),
                 SqlParameterHelper.Input("@State", dto.State),
                 SqlParameterHelper.Input("@PinCode", dto.PinCode),
-                SqlParameterHelper.Input("@CompanyId", dto.CompanyId)
+                // the company is the one of the project the request is routed to (scope), not a client value
+                SqlParameterHelper.Input("@CompanyId", DBNull.Value)
             };
 
             var dt = await GetDataTableAsync("sp_Customer_Register", parameters);
@@ -267,7 +268,12 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
                     new Claim(ClaimTypes.NameIdentifier, customer.UserId.ToString()),
                     new Claim(ClaimTypes.Email, customer.Email),
                     new Claim(ClaimTypes.Role, "Customer"),
-                    new Claim("CustomerId", customer.CustomerId.ToString())
+                    new Claim("CustomerId", customer.CustomerId.ToString()),
+                    // Route every later customer request to the project the customer logged in to
+                    new Claim("ProjectKey", ProjectKey),
+                    new Claim("CompanyId", CompanyId.ToString()),
+                    new Claim("ProjectId", ProjectId.ToString()),
+                    new Claim("LocationId", LocationId.ToString())
                 }),
                 Expires = TimeHelper.IndianNow.AddDays(7),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
@@ -440,8 +446,37 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
 
             return ApiResponse<List<ProductMasterDto>>.Ok(data, "Success", data.Count);
         }
-        public async Task<ApiResponse<List<ExistingUserCompanyDto>>> GetExistingUserCompanies(int userId)
+        /// <summary>
+        /// These endpoints are anonymous and name a user by id, so the caller must prove the
+        /// account is theirs with its password. Staff logins (mirrored from MainDB) have no
+        /// password here and cannot be turned into customer accounts.
+        /// </summary>
+        private async Task<string?> VerifyExistingUser(int userId, string? password)
         {
+            var dt = await GetDataTableByQueryAsync(
+                "SELECT PasswordHash, MainUserId FROM dbo.Users WHERE UserId = @UserId AND IsActive = 1",
+                new[] { SqlParameterHelper.Input("@UserId", userId) });
+
+            if (dt == null || dt.Rows.Count == 0)
+                return "User not found";
+
+            var hash = dt.Rows[0]["PasswordHash"]?.ToString();
+
+            if (string.IsNullOrEmpty(hash))
+                return "This email or mobile number belongs to a staff login. Please register with a different email and mobile number.";
+
+            if (string.IsNullOrEmpty(password) || !BCrypt.Net.BCrypt.Verify(password, hash))
+                return "This email or mobile number is already registered. Enter the password of that account to continue.";
+
+            return null;
+        }
+
+        public async Task<ApiResponse<List<ExistingUserCompanyDto>>> GetExistingUserCompanies(int userId, string? password)
+        {
+            var denied = await VerifyExistingUser(userId, password);
+            if (denied != null)
+                return ApiResponse<List<ExistingUserCompanyDto>>.Fail(denied);
+
             var parameters = new[]
             {
         SqlParameterHelper.Input("@UserId", userId)
@@ -469,6 +504,10 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
 
         public async Task<ApiResponse<bool>> InsertCustomerForExistingUser(InsertCustomerForExistingUserDto dto)
         {
+            var denied = await VerifyExistingUser(dto.UserId, dto.Password);
+            if (denied != null)
+                return ApiResponse<bool>.Fail(denied);
+
             var parameters = new[]
             {
         SqlParameterHelper.Input("@UserId", dto.UserId),
@@ -598,15 +637,14 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
             {
                 var p = new[]
                 {
-            SqlParameterHelper.Input("@OperationType", "UPDATE_COMPLAINT"),
-            SqlParameterHelper.Input("@ComplaintId", complaintId),
             SqlParameterHelper.Input("@UserId", userId),
+            SqlParameterHelper.Input("@ComplaintId", complaintId),
             SqlParameterHelper.Input("@Subject", dto.Subject ?? (object)DBNull.Value),
             SqlParameterHelper.Input("@Description", dto.Description ?? (object)DBNull.Value),
             SqlParameterHelper.Input("@Priority", dto.Priority ?? (object)DBNull.Value)
         };
 
-                var dt = await GetDataTableAsync("sp_ManageComplaintDetails", p);
+                var dt = await GetDataTableAsync("sp_Customer_UpdateComplaint", p);
 
                 if (dt != null && dt.Rows.Count > 0)
                 {
@@ -629,12 +667,11 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
             {
                 var p = new[]
                 {
-            SqlParameterHelper.Input("@OperationType", "DELETE_COMPLAINT"),
-            SqlParameterHelper.Input("@ComplaintId", complaintId),
-            SqlParameterHelper.Input("@UserId", userId)
+            SqlParameterHelper.Input("@UserId", userId),
+            SqlParameterHelper.Input("@ComplaintId", complaintId)
         };
 
-                var dt = await GetDataTableAsync("sp_ManageComplaintDetails", p);
+                var dt = await GetDataTableAsync("sp_Customer_DeleteComplaint", p);
 
                 if (dt != null && dt.Rows.Count > 0)
                 {
@@ -662,13 +699,11 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
 
                 var p = new[]
                 {
-            SqlParameterHelper.Input("@OperationType", "CONFIRM_CLOSURE"),
-            SqlParameterHelper.Input("@ComplaintId", complaintId),
             SqlParameterHelper.Input("@UserId", userId),
-            SqlParameterHelper.Input("@CustomerId", customerId.Value)
+            SqlParameterHelper.Input("@ComplaintId", complaintId)
         };
 
-                var dt = await GetDataTableAsync("sp_ManageComplaintDetails", p);
+                var dt = await GetDataTableAsync("sp_Customer_ConfirmClosure", p);
 
                 if (dt != null && dt.Rows.Count > 0)
                 {

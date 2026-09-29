@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, inject, signal, OnInit, Input, Output, EventEmitter, HostBinding } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../Auth/auth-service';
@@ -20,6 +20,11 @@ import { ProjectDto, LocationDto } from '../../Models/ApiModels';
 })
 export class ProjectLocationSwitcherComponent implements OnInit {
   private auth = inject(AuthService);
+
+  /** "dark" = inside the login card (stacked, light text); "light" = on a white toolbar. */
+  @Input() variant: 'light' | 'dark' = 'light';
+
+  @HostBinding('class.dark') get isDark(): boolean { return this.variant === 'dark'; }
 
   /** Emitted after the scope is applied (or skipped when no projects exist). */
   @Output() scopeApplied = new EventEmitter<void>();
@@ -109,10 +114,19 @@ export class ProjectLocationSwitcherComponent implements OnInit {
     this.auth.setScope(projectId, locationId).subscribe({
       next: (res) => {
         this.loading.set(false);
-        if (res.success) this.scopeApplied.emit();
-        else this.error.set(res.message || 'Failed to switch scope');
+        if (res.success) {
+          this.scopeApplied.emit();
+          return;
+        }
+        // leave the "setting up" spinner so the reason and the manual picker are visible
+        this.autoResolving.set(false);
+        this.error.set(res.message || 'Failed to switch scope');
       },
-      error: () => { this.loading.set(false); this.error.set('Failed to switch scope'); }
+      error: (err) => {
+        this.loading.set(false);
+        this.autoResolving.set(false);
+        this.error.set(err?.error?.message || 'Failed to switch scope');
+      }
     });
   }
 }

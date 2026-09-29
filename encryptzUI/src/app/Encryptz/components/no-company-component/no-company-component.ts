@@ -48,7 +48,7 @@ export class NoCompanyComponent implements OnInit {
       if ((currentUser as any).email) {
         this.userEmail.set((currentUser as any).email);
       } else {
-        const storedUser = localStorage.getItem('felix_user');
+        const storedUser = localStorage.getItem('encryptz_user');
         if (storedUser) {
           try {
             const userData = JSON.parse(storedUser);
@@ -122,7 +122,11 @@ export class NoCompanyComponent implements OnInit {
       next: (res) => {
         if (res.success) {
           alert('Invitation accepted! You can now select your company.');
-          this.router.navigate(['/select-company']);
+          // refresh the company list first: the one from login does not have the new company
+          this.auth.getUserCompanies().subscribe({
+            next: () => this.router.navigate(['/select-company']),
+            error: () => this.router.navigate(['/select-company'])
+          });
         } else {
           alert(res.message || 'Failed to accept invitation');
         }

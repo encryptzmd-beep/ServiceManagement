@@ -102,7 +102,7 @@ export class ComplaintTrackingComponent implements OnInit {
 
   confirmClosure(complaintId: number): void {
     this.confirming.set(true);
-    this.api.confirmClosure(complaintId).subscribe({
+    this.api.confirmMyComplaintClosure(complaintId).subscribe({
       next: (res) => {
         this.confirming.set(false);
         if (res.success) this.loadComplaints();
@@ -126,7 +126,7 @@ export class ComplaintTrackingComponent implements OnInit {
     if (!complaint) return;
 
     this.saving.set(true);
-    this.api.updateComplaintDetails(complaint.complaintId, this.editForm).subscribe({
+    this.api.updateMyComplaint(complaint.complaintId, this.editForm).subscribe({
       next: (res) => {
         this.saving.set(false);
         if (res.success) {
@@ -153,7 +153,7 @@ export class ComplaintTrackingComponent implements OnInit {
     this.openConfirm(
       `Are you sure you want to delete complaint "${complaint.complaintNumber} - ${complaint.subject}"? This action cannot be undone.`,
       () => {
-        this.api.deleteComplaint(complaint.complaintId).subscribe({
+        this.api.deleteMyComplaint(complaint.complaintId).subscribe({
           next: (res) => {
             if (res.success) {
               this.showToast('Complaint deleted successfully', 'success');

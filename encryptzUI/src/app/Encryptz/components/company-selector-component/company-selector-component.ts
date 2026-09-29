@@ -113,10 +113,10 @@ loadCompanies() {
         this.router.navigate(['/technicians/work-orders']);
         break;
       case 'Storekeeper':
-        this.router.navigate(['/store/inventory']);
+        this.router.navigate(['/spare-parts']);
         break;
       default:
-        this.router.navigate(['/dashboard']);
+        this.router.navigate(['/complaints/dashboard']);
     }
   }
 

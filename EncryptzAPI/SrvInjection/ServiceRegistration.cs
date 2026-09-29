@@ -31,10 +31,13 @@ namespace EncryptzAPI.SrvInjection
             services.AddSingleton<ITenantSecretProtector, AesTenantSecretProtector>();
             services.AddSingleton<IConnectionResolver, ConnectionResolver>();      // ClientKey -> ServiceDB conn (cached)
             services.AddScoped<MainDbHelper>();                                     // fixed MainDB executor (control-plane)
+            services.AddScoped<ITenantUserSyncService, TenantUserSyncService>();    // MainDB users -> project DB mirror
 
             services.AddScoped<DbHelper>();                                         // tenant ServiceDB executor (business)
             services.AddScoped<DbTransactionHelper>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IPlatformService, PlatformService>();                // MainDB registry administration
+            services.AddScoped<IPlatformUnlockService, PlatformUnlockService>();    // e-mailed access code for Platform Admin
             services.AddScoped<IComplaintService, ComplaintService>();
             services.AddScoped<IDashboardService, DashboardService>();
             services.AddScoped<ITechnicianService, TechnicianService>();

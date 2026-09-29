@@ -1,3 +1,4 @@
+using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Technician.modules;
 using Microsoft.AspNetCore.Authorization;
@@ -22,7 +23,7 @@ namespace EncryptzAPI.Controllers
             _service = service;
             _env = env;
         }
-        private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        private int UserId => User.GetTenantUserId();
 
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] TechnicianFilterDto filter)
@@ -91,10 +92,9 @@ namespace EncryptzAPI.Controllers
                 return BadRequest(new { success = false, message = "Invalid assignment ID" });
 
             // Get logged-in user ID from JWT claims
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                           ?? User.FindFirst("UserId")?.Value;
+            var userId = UserId;
 
-            if (!int.TryParse(userIdClaim, out int userId))
+            if (userId <= 0)
                 return Unauthorized(new { success = false, message = "Invalid user token" });
 
             var response = await _service.UnAssignTechnicianAsync(
