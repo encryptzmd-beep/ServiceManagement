@@ -117,8 +117,8 @@ export class NoCompanyComponent implements OnInit {
     });
   }
 
-  acceptInvitation(token: string) {
-    this.auth.acceptInvitation(token).subscribe({
+  acceptInvitation(token: string, projectId: number) {
+    this.auth.acceptInvitation(token, projectId).subscribe({
       next: (res) => {
         if (res.success) {
           alert('Invitation accepted! You can now select your company.');

@@ -73,7 +73,7 @@ namespace EncryptzAPI.Controllers
             if (companyId == 0)
                 return BadRequest(ApiResponse<object>.Fail("No company selected"));
 
-            var result = await _authService.InviteUser(companyId, dto.Email, dto.RoleInCompany, userId, dto.Remarks);
+            var result = await _authService.InviteUser(companyId, dto.Email, dto.RoleInCompany, userId, dto.projectID, dto.Remarks);
             return Ok(result);
         }
    

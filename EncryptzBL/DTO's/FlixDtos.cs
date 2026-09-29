@@ -1538,12 +1538,14 @@ namespace EncryptzBL.DTO_s
         {
             public string Email { get; set; }
             public string RoleInCompany { get; set; }
-            public string Remarks { get; set; }
-        }
+        public string Remarks { get; set; }
+         public int projectID { get; set; }
+    }
     public class AcceptInvitationRequestDto
     {
         public Guid Token { get; set; }
         public int UserId { get; set; }
+        public int projectId { get; set; }
     }
 
     public class CompanyUserResponseDto
@@ -1583,8 +1585,9 @@ namespace EncryptzBL.DTO_s
     public class InvitationResponseDto
         {
             public int InvitationId { get; set; }
-            public int CompanyId { get; set; }
-            public string CompanyName { get; set; }
+        public int CompanyId { get; set; }
+        public int ProjectId { get; set; }
+        public string CompanyName { get; set; }
             public string RoleInCompany { get; set; }
             public Guid Token { get; set; }
             public DateTime ExpiresAt { get; set; }

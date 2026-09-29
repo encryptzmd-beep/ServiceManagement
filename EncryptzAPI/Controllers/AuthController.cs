@@ -178,7 +178,7 @@ namespace EncryptzAPI.Controllers
             if (companyId == 0)
                 return BadRequest(ApiResponse<object>.Fail("No company selected"));
 
-            var result = await _authService.InviteUser(companyId, dto.Email, dto.RoleInCompany, userId, dto.Remarks);
+            var result = await _authService.InviteUser(companyId, dto.Email, dto.RoleInCompany, userId, dto.projectID, dto.Remarks);
             return Ok(result);
         }
 
@@ -186,7 +186,7 @@ namespace EncryptzAPI.Controllers
         [HttpPost("accept-invitation")]
         public async Task<IActionResult> AcceptInvitation([FromBody] AcceptInvitationRequestDto dto)
         {
-            var result = await _authService.AcceptInvitation(dto.Token, dto.UserId);
+            var result = await _authService.AcceptInvitation(dto.Token, dto.UserId,dto.projectId);
             return Ok(result);
         }
         // CompanyController.cs - ADD THIS METHOD (based on your existing pattern)

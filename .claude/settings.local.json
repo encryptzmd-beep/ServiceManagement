@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(Get-ChildItem -Path \"c:\\\\Felix\\\\ServiceManagement\\\\encryptzUI\\\\src\" -Recurse -Filter \"*.module.ts\")",
-      "Bash(Select-Object FullName)"
-    ]
-  }
-}

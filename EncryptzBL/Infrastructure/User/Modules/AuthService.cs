@@ -769,7 +769,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             return (dt.Rows[0]["ProjectKey"]?.ToString() ?? "", Convert.ToInt32(dt.Rows[0]["CompanyId"]));
         }
 
-        public async Task<ApiResponse<InvitationResponseDto>> InviteUser(int companyId, string email, string roleInCompany, int invitedBy, string remarks = null)
+        public async Task<ApiResponse<InvitationResponseDto>> InviteUser(int companyId, string email, string roleInCompany, int invitedBy, int projectID, string remarks = null)
         {
             var parameters = new[]
             {
@@ -777,6 +777,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 SqlParameterHelper.Input("@Email", email),
                 SqlParameterHelper.Input("@RoleInCompany", roleInCompany),
                 SqlParameterHelper.Input("@InvitedBy", invitedBy),
+                SqlParameterHelper.Input("@projectID",@projectID),
                 SqlParameterHelper.Input("@Remarks", (object?)remarks ?? DBNull.Value)
             };
 
@@ -826,12 +827,15 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
             return ApiResponse<bool>.Fail("Failed to reject invitation");
         }
-        public async Task<ApiResponse<SelectCompanyResponseDto>> AcceptInvitation(Guid token, int userId)
+        public async Task<ApiResponse<SelectCompanyResponseDto>> AcceptInvitation(Guid token, int userId,int projectId)
         {
             var parameters = new[]
             {
                 SqlParameterHelper.Input("@Token", token),
-                SqlParameterHelper.Input("@UserId", userId)
+                SqlParameterHelper.Input("@UserId", userId),
+                 SqlParameterHelper.Input("@projectId", projectId)
+
+                
             };
 
             var ds = await GetDataSetAsync("sp_Company_AcceptInvitation", parameters);
@@ -890,6 +894,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             {
                 InvitationId = Convert.ToInt32(r["InvitationId"]),
                 CompanyId = Convert.ToInt32(r["CompanyId"]),
+                ProjectId = Convert.ToInt32(r["ProjectId"]),
                 CompanyName = r["CompanyName"]?.ToString() ?? "",
                 RoleInCompany = r["RoleInCompany"]?.ToString() ?? "",
                 Token = Guid.Parse(r["Token"]?.ToString()),
@@ -1223,7 +1228,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             var parameters = new[]
             {
         SqlParameterHelper.Input("@CompanyId", companyId)
-    };
+         };
 
             var dt = await GetDataTableAsync("sp_Company_GetUsersWithDetails", parameters);
 

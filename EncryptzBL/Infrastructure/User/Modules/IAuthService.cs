@@ -32,8 +32,8 @@ namespace EncryptzBL.Infrastructure.User.Modules
         Task<ApiResponse<List<ProjectDto>>> GetProjects(int userId, int companyId);
         Task<ApiResponse<List<LocationDto>>> GetLocations(int userId, int projectId);
         Task<ApiResponse<LoginResponseDto>> SetScope(int userId, int companyId, int projectId, int locationId);
-        Task<ApiResponse<InvitationResponseDto>> InviteUser(int companyId, string email, string roleInCompany, int invitedBy, string remarks = null);
-        Task<ApiResponse<SelectCompanyResponseDto>> AcceptInvitation(Guid token, int userId);
+        Task<ApiResponse<InvitationResponseDto>> InviteUser(int companyId, string email, string roleInCompany, int invitedBy, int projectID, string remarks = null);
+        Task<ApiResponse<SelectCompanyResponseDto>> AcceptInvitation(Guid token, int userId,int projectId);
         Task<ApiResponse<bool>> RejectInvitation(int invitationId, int userId);
         Task<ApiResponse<List<InvitationResponseDto>>> GetPendingInvitations(string email);
         Task<ApiResponse<CheckUserExistsResponseDto>> CheckUserExists(string email);

@@ -419,12 +419,12 @@ private setSessionWithCompanies(data: ExtendedLoginResponse): void {
   }
 
   // NEW: Accept Invitation
- acceptInvitation(token: string): Observable<ApiResponse<{ companyId: number; role: string }>> {
+  acceptInvitation(token: string, projectId: number): Observable<ApiResponse<{ companyId: number; role: string }>> {
   const currentUser = this._currentUser();
 
   return this.http.post<ApiResponse<{ companyId: number; role: string }>>(
     `${this.apiUrl}/accept-invitation`,
-    { token, userId: currentUser?.userId }   // ✅ correct
+    { token, userId: currentUser?.userId, projectId }   // ✅ correct
   );
 }
 
@@ -489,11 +489,12 @@ updateUserRole(userId: number, newRole: string): Observable<any> {
 removeUserFromCompany(userId: number): Observable<any> {
   return this.http.delete(`${this.companyUrl}/company/users/${userId}`);
 }
-inviteUser(email: string, roleInCompany: string, remarks?: string): Observable<any> {
+inviteUser(email: string, roleInCompany: string, remarks?: string, projectID : number = 1): Observable<any> {
   return this.http.post(`${this.companyUrl}/company/invite`, {
     email,
     roleInCompany,
-    remarks
+    remarks,
+    projectID
   });
 }
 // ============================================
