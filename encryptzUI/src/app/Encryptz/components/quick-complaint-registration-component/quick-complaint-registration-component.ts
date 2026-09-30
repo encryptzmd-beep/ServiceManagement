@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, Output, ViewChild, signal, AfterViewInit, NgZone } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Output, ViewChild, signal, AfterViewInit, OnInit, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../Services/API/api-service';
@@ -68,21 +68,9 @@ declare var L: any;
                 </label>
                 <select [(ngModel)]="complaintData.category" name="category" class="input-field">
                   <option value="">Select category (optional)</option>
-                  <option value="Treadmill">🏃 Treadmill</option>
-                  <option value="Elliptical">🔄 Elliptical Trainer</option>
-                  <option value="Exercise Bike">🚲 Exercise Bike</option>
-                  <option value="Rowing Machine">🚣 Rowing Machine</option>
-                  <option value="Weight Bench">🏋️ Weight Bench</option>
-                  <option value="Dumbbells">💪 Dumbbells</option>
-                  <option value="Barbell">🏋️ Barbell</option>
-                  <option value="Pull Up Bar">📊 Pull Up Bar</option>
-                  <option value="Cable Machine">🔗 Cable Machine</option>
-                  <option value="Leg Press">🦵 Leg Press</option>
-                  <option value="Smith Machine">⚙️ Smith Machine</option>
-                  <option value="Cross Trainer">🎯 Cross Trainer</option>
-                  <option value="Yoga Mat">🧘 Yoga Mat</option>
-                  <option value="Kettlebell">🔔 Kettlebell</option>
-                  <option value="Other Gym Equipment">🏋️ Other Gym Equipment</option>
+                  @for (category of categories(); track category) {
+                    <option [value]="category">{{ category }}</option>
+                  }
                 </select>
               </div>
 
@@ -910,7 +898,7 @@ declare var L: any;
     }
   `]
 })
-export class QuickComplaintRegistrationComponent implements AfterViewInit {
+export class QuickComplaintRegistrationComponent implements AfterViewInit, OnInit {
   @ViewChild('miniMap') miniMapContainer!: ElementRef;
   @Output() complaintSubmitted = new EventEmitter<any>();
 
@@ -920,6 +908,7 @@ export class QuickComplaintRegistrationComponent implements AfterViewInit {
   successMessage= signal('');
   loadingStatus = signal('');
   searchResults = signal<any[]>([]);
+  categories = signal<string[]>([]);
   isSearching   = signal(false);
   photoPreview  = signal<string | null>(null);
   uploadProgress= signal(0);            // 0–100 for progress bar
@@ -940,6 +929,15 @@ export class QuickComplaintRegistrationComponent implements AfterViewInit {
   position: 'floating' | 'inline' = 'floating';
 
   constructor(private apiService: ApiService, private ngZone: NgZone) {}
+
+  ngOnInit(): void {
+    this.apiService.getComplaintCategories().subscribe({
+      next: (res: any) => {
+        this.categories.set(res?.data ?? []);
+      },
+      error: () => this.categories.set([])
+    });
+  }
 
   ngAfterViewInit(): void {}
 

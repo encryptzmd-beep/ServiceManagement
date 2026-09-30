@@ -381,6 +381,45 @@ UNIQUE NONCLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
+/****** Object:  Table [dbo].[ComplaintCategories] ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ComplaintCategories](
+    [ComplaintCategoryId] [int] IDENTITY(1,1) NOT NULL,
+    [CategoryName] [nvarchar](100) NOT NULL,
+    [SortOrder] [int] NOT NULL,
+    [IsActive] [bit] NOT NULL,
+    [CreatedAt] [datetime2](7) NOT NULL CONSTRAINT [DF_ComplaintCategories_CreatedAt] DEFAULT (SYSUTCDATETIME()),
+PRIMARY KEY CLUSTERED
+(
+    [ComplaintCategoryId] ASC
+),
+UNIQUE NONCLUSTERED
+(
+    [CategoryName] ASC
+)
+) ON [PRIMARY]
+GO
+INSERT INTO [dbo].[ComplaintCategories] ([CategoryName], [SortOrder], [IsActive])
+VALUES
+    (N'Treadmill', 1, 1),
+    (N'Elliptical', 2, 1),
+    (N'Exercise Bike', 3, 1),
+    (N'Rowing Machine', 4, 1),
+    (N'Weight Bench', 5, 1),
+    (N'Dumbbells', 6, 1),
+    (N'Barbell', 7, 1),
+    (N'Pull Up Bar', 8, 1),
+    (N'Cable Machine', 9, 1),
+    (N'Leg Press', 10, 1),
+    (N'Smith Machine', 11, 1),
+    (N'Cross Trainer', 12, 1),
+    (N'Yoga Mat', 13, 1),
+    (N'Kettlebell', 14, 1),
+    (N'Other Gym Equipment', 15, 1)
+GO
 /****** Object:  Table [dbo].[ComplaintTimeline]    Script Date: 29-09-2026 20:26:58 ******/
 SET ANSI_NULLS ON
 GO

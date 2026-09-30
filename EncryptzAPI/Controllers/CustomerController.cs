@@ -149,6 +149,10 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetProductMaster([FromQuery] string search = null, [FromQuery] string category = null)
     => Ok(await _svc.GetProductMaster(search, category));
 
+        [HttpGet("complaint-categories")]
+        public async Task<IActionResult> GetComplaintCategories()
+            => Ok(await _svc.GetComplaintCategories());
+
 
         [HttpPost("complaints")]
         public async Task<IActionResult> CreateComplaint([FromBody] ComplaintCreateDto dto)

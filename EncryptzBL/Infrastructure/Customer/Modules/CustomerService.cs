@@ -446,6 +446,20 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
 
             return ApiResponse<List<ProductMasterDto>>.Ok(data, "Success", data.Count);
         }
+
+        public async Task<ApiResponse<List<string>>> GetComplaintCategories()
+        {
+            var dt = await GetDataTableByQueryAsync(
+                "SELECT CategoryName FROM dbo.ComplaintCategories WHERE IsActive = 1 ORDER BY SortOrder, CategoryName");
+            var categories = dt.Rows.Cast<DataRow>()
+                .Select(row => row["CategoryName"]?.ToString())
+                .Where(category => !string.IsNullOrWhiteSpace(category))
+                .Select(category => category!)
+                .ToList();
+
+            return ApiResponse<List<string>>.Ok(categories, "Success", categories.Count);
+        }
+
         /// <summary>
         /// These endpoints are anonymous and name a user by id, so the caller must prove the
         /// account is theirs with its password. Staff logins (mirrored from MainDB) have no

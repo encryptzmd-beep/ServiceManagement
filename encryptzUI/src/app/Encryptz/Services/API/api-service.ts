@@ -413,6 +413,10 @@ getProductMaster(search?: string, category?: string): Observable<M.ProductMaster
   return this.http.get<M.ProductMaster[]>(`${this.api}/customer/product-master`, { params });
 }
 
+getComplaintCategories(): Observable<M.ApiResponse<string[]>> {
+  return this.http.get<M.ApiResponse<string[]>>(`${this.api}/customer/complaint-categories`);
+}
+
 // Customer Profile
 getOrCreateProfile(): Observable<M.ApiResponse<any>> {
   return this.http.get<M.ApiResponse<any>>(`${this.api}/customer/my-profile`);
