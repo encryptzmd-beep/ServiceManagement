@@ -21,10 +21,14 @@ export const authGuard: CanActivateFn = (route, state) => {
 
 
 export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
-  return () => {
+  return (_, state) => {
     const auth = inject(AuthService);
     const router = inject(Router);
     if (!auth.isLoggedIn()) return router.createUrlTree(['/login']);
+
+    const routePath = state.url.split(/[?#]/, 1)[0].replace(/\/+$/, '') || '/';
+    if (auth.hasAccess(routePath)) return true;
+
     if (allowedRoles.includes(auth.userRole())) return true;
     return router.createUrlTree(['/select-company']);
   };
