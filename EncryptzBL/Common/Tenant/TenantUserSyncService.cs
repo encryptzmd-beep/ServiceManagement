@@ -59,6 +59,60 @@ namespace EncryptzBL.Common.Tenant
             return dt?.ToList<TenantUserMap>() ?? new List<TenantUserMap>();
         }
 
+        public async Task<TenantUserMap?> SyncProjectUserAsync(int projectId, int locationId, int mainUserId)
+        {
+            var timer = System.Diagnostics.Stopwatch.StartNew();
+            _logger.LogInformation("Single-user sync: loading project {ProjectId} and user {UserId} from MainDB", projectId, mainUserId);
+            var ds = await _mainDb.ExecuteDataSetAsync("sp_Project_GetUsersForSync", new[]
+            {
+                SqlParameterHelper.Input("@ProjectId", projectId),
+                SqlParameterHelper.Input("@UserId", mainUserId)
+            });
+            _logger.LogInformation("Single-user sync: MainDB lookup completed in {ElapsedMilliseconds} ms", timer.ElapsedMilliseconds);
+
+            if (ds == null || ds.Tables.Count < 2 || ds.Tables[0].Rows.Count == 0)
+                throw new InvalidOperationException($"Project {projectId} was not found in MainDB.");
+
+            var project = ds.Tables[0].Rows[0];
+            var companyId = Convert.ToInt32(project["CompanyId"]);
+            var projectKey = project["ProjectKey"]?.ToString() ?? string.Empty;
+            var userRow = ds.Tables[1].Rows.Cast<DataRow>()
+                .FirstOrDefault(row => Convert.ToInt32(row["UserId"]) == mainUserId);
+
+            if (userRow == null)
+                throw new InvalidOperationException("Your user does not have active access to this project.");
+
+            var user = new[]
+            {
+                new
+                {
+                    userId = mainUserId,
+                    fullName = userRow["FullName"]?.ToString() ?? string.Empty,
+                    email = userRow["Email"] == DBNull.Value ? null : userRow["Email"]?.ToString(),
+                    mobileNumber = userRow["MobileNumber"] == DBNull.Value ? null : userRow["MobileNumber"]?.ToString(),
+                    role = userRow["RoleInCompany"]?.ToString() ?? string.Empty
+                }
+            };
+
+            timer.Restart();
+            var tenantConnection = await _connectionResolver.GetServiceConnectionAsync(projectKey);
+            _logger.LogInformation("Single-user sync: tenant connection resolved in {ElapsedMilliseconds} ms", timer.ElapsedMilliseconds);
+            var projectDb = new ExplicitDbHelper(tenantConnection);
+            timer.Restart();
+            _logger.LogInformation("Single-user sync: executing tenant sync procedure for project {ProjectId}", projectId);
+            var result = await projectDb.ExecuteDataTableAsync("sp_Tenant_SyncUsers", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId),
+                SqlParameterHelper.Input("@ProjectId", projectId),
+                SqlParameterHelper.Input("@LocationId", locationId),
+                SqlParameterHelper.Input("@UsersJson", JsonSerializer.Serialize(user)),
+                SqlParameterHelper.Input("@SyncSingleUser", true)
+            });
+            _logger.LogInformation("Single-user sync: tenant procedure completed in {ElapsedMilliseconds} ms", timer.ElapsedMilliseconds);
+
+            return result?.ToList<TenantUserMap>().FirstOrDefault();
+        }
+
         public async Task TrySyncProjectUsersAsync(int projectId)
         {
             try

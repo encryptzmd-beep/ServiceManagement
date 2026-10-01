@@ -26,7 +26,7 @@ export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
     const router = inject(Router);
     if (!auth.isLoggedIn()) return router.createUrlTree(['/login']);
     if (allowedRoles.includes(auth.userRole())) return true;
-    return router.createUrlTree(['/unauthorized']);
+    return router.createUrlTree(['/select-company']);
   };
 };
 // guard-guard.ts — update authGuard

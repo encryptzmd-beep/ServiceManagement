@@ -19,7 +19,8 @@
    Table[1]: every active user who may enter the project, with the company role
    ----------------------------------------------------------------------------- */
 CREATE OR ALTER PROCEDURE dbo.sp_Project_GetUsersForSync
-    @ProjectId INT
+    @ProjectId INT,
+    @UserId INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -42,6 +43,7 @@ BEGIN
     WHERE upa.ProjectId = @ProjectId
       AND upa.IsActive  = 1
       AND p.IsActive    = 1
+            AND (@UserId IS NULL OR u.UserId = @UserId)
     ORDER BY u.UserId;
 END
 GO

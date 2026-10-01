@@ -14224,7 +14224,8 @@ CREATE OR ALTER PROCEDURE dbo.sp_Tenant_SyncUsers
     @CompanyId  INT,
     @ProjectId  INT,
     @LocationId INT = 0,
-    @UsersJson  NVARCHAR(MAX)
+    @UsersJson  NVARCHAR(MAX),
+    @SyncSingleUser BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -14376,6 +14377,7 @@ BEGIN
       AND u.CompanyId = @CompanyId
       AND u.ProjectId = @ProjectId
       AND u.IsActive  = 1
+            AND @SyncSingleUser = 0
       AND NOT EXISTS (SELECT 1 FROM @src s WHERE s.MainUserId = u.MainUserId);
 
     UPDATE t SET t.IsActive = 0, t.UpdatedAt = @Now

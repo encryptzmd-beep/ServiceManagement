@@ -107,7 +107,7 @@ export const routes: Routes = [
           import('../app/Encryptz/components/check-in-component/check-in-component').then(
             (m) => m.CheckInComponent,
           ),
-        canActivate: [roleGuard(['Admin', 'ServiceManager', 'Technician'])],
+        canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Technician'])],
       },
       {
         path: 'tracking/geo',
@@ -151,7 +151,7 @@ export const routes: Routes = [
           import('../app/Encryptz/components/attendance-report-component/attendance-report-component').then(
             (m) => m.AttendanceReportComponent,
           ),
-        canActivate: [roleGuard(['Admin', 'ServiceManager'])],
+        canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager'])],
       },
       {
         path: 'technicians/spare-requests',
@@ -159,7 +159,7 @@ export const routes: Routes = [
           import('../app/Encryptz/components/spare-request-component/spare-request-component').then(
             (m) => m.SpareRequestComponent,
           ),
-        canActivate: [roleGuard(['Admin', 'ServiceManager', 'Technician'])],
+        canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Technician'])],
       },
       {
         path: 'tracking/travel',
@@ -207,7 +207,7 @@ export const routes: Routes = [
           import('../app/Encryptz/components/complaint-dashboard-component/complaint-dashboard-component').then(
             (m) => m.ComplaintDashboardComponent,
           ),
-        canActivate: [roleGuard(['Admin', 'ServiceManager'])],
+        canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
       },
 
       // 2. Customer Portal

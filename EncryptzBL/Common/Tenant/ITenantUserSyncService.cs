@@ -21,6 +21,9 @@ namespace EncryptzBL.Common.Tenant
         /// </summary>
         Task<List<TenantUserMap>> SyncProjectUsersAsync(int projectId, int locationId = 0);
 
+        /// <summary>Refreshes only the selected MainDB user without deactivating other tenant users.</summary>
+        Task<TenantUserMap?> SyncProjectUserAsync(int projectId, int locationId, int mainUserId);
+
         /// <summary>Best-effort variant for membership changes: failures are logged, not thrown.</summary>
         Task TrySyncProjectUsersAsync(int projectId);
 

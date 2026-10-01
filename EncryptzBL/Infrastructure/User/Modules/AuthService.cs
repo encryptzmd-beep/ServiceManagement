@@ -4,8 +4,10 @@ using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using System.Data;
+using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Reflection;
 using System.Security.Claims;
@@ -19,6 +21,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
         private readonly IEmailService _emailService;
         private readonly IConnectionResolver _connectionResolver;
         private readonly ITenantUserSyncService _userSync;
+        private readonly ILogger<AuthService> _logger;
 
         // A user whose GLOBAL role (Users.RoleId) is Admin administers the platform: every company.
         private const string PlatformAdminRole = "Admin";
@@ -27,12 +30,13 @@ namespace EncryptzBL.Infrastructure.User.Modules
         // project DB is selected). Users, Roles, Menus, Companies and Projects live in MainDB.
         // The resolver lets us reach a project's OWN DB to read/validate its locations.
         // The user sync mirrors MainDB users (and their technician rows) into that project DB.
-        public AuthService(MainDbHelper db, IConfiguration config, IEmailService emailService, IConnectionResolver connectionResolver, ITenantUserSyncService userSync) : base(db)
+        public AuthService(MainDbHelper db, IConfiguration config, IEmailService emailService, IConnectionResolver connectionResolver, ITenantUserSyncService userSync, ILogger<AuthService> logger) : base(db)
         {
             _config = config;
             _emailService = emailService;
             _connectionResolver = connectionResolver;
             _userSync = userSync;
+            _logger = logger;
         }
 
         // ============================================
@@ -758,13 +762,19 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
         public async Task<ApiResponse<LoginResponseDto>> SetScope(int userId, int companyId, int projectId, int locationId)
         {
+            var stageTimer = Stopwatch.StartNew();
+            _logger.LogInformation("SetScope started for user {UserId}, company {CompanyId}, project {ProjectId}, location {LocationId}",
+                userId, companyId, projectId, locationId);
+
             // 1) Validate PROJECT access in MainDB -> returns the ProjectKey (routing key)
+            _logger.LogInformation("SetScope validating project access in MainDB for project {ProjectId}", projectId);
             var vp = await GetDataTableAsync("sp_User_ValidateProject", new[]
             {
                 SqlParameterHelper.Input("@UserId", userId),
                 SqlParameterHelper.Input("@CompanyId", companyId),
                 SqlParameterHelper.Input("@ProjectId", projectId)
             });
+            _logger.LogInformation("SetScope project validation completed in {ElapsedMilliseconds} ms", stageTimer.ElapsedMilliseconds);
 
             if (vp == null || vp.Rows.Count == 0)
                 return ApiResponse<LoginResponseDto>.Fail("You don't have access to this project");
@@ -774,15 +784,21 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
             // 2) Confirm the LOCATION exists/active in the PROJECT's OWN DB
             //    (project access already validated above; locations aren't per-user)
+            stageTimer.Restart();
+            _logger.LogInformation("SetScope resolving tenant connection for project {ProjectId}", projectId);
             var connStr = await _connectionResolver.GetServiceConnectionAsync(projectKey);
+            _logger.LogInformation("SetScope tenant connection resolved in {ElapsedMilliseconds} ms", stageTimer.ElapsedMilliseconds);
             var projectDb = new ExplicitDbHelper(connStr);
 
+            stageTimer.Restart();
+            _logger.LogInformation("SetScope validating tenant location {LocationId}", locationId);
             var vl = await projectDb.ExecuteDataTableAsync("sp_Location_Validate", new[]
             {
                 SqlParameterHelper.Input("@CompanyId", companyId),
                 SqlParameterHelper.Input("@ProjectId", projectId),
                 SqlParameterHelper.Input("@LocationId", locationId)
             });
+            _logger.LogInformation("SetScope location validation completed in {ElapsedMilliseconds} ms", stageTimer.ElapsedMilliseconds);
 
             if (vl == null || vl.Rows.Count == 0)
                 return ApiResponse<LoginResponseDto>.Fail("Invalid location for this project");
@@ -792,18 +808,24 @@ namespace EncryptzBL.Infrastructure.User.Modules
             TenantUserMap? me;
             try
             {
-                var map = await _userSync.SyncProjectUsersAsync(projectId, locationId);
-                me = map.FirstOrDefault(m => m.MainUserId == userId);
+                stageTimer.Restart();
+                _logger.LogInformation("SetScope synchronizing user {UserId} into tenant project {ProjectId}", userId, projectId);
+                me = await _userSync.SyncProjectUserAsync(projectId, locationId, userId);
+                _logger.LogInformation("SetScope tenant user sync completed in {ElapsedMilliseconds} ms", stageTimer.ElapsedMilliseconds);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "SetScope tenant user sync failed for user {UserId}, project {ProjectId}", userId, projectId);
                 return ApiResponse<LoginResponseDto>.Fail("Could not prepare your user in this project: " + ex.Message);
             }
 
             if (me == null)
                 return ApiResponse<LoginResponseDto>.Fail("Your user is not set up for this project");
 
+            stageTimer.Restart();
+            _logger.LogInformation("SetScope loading user details for user {UserId}", userId);
             var userInfo = await GetUserById(userId);
+            _logger.LogInformation("SetScope user details loaded in {ElapsedMilliseconds} ms", stageTimer.ElapsedMilliseconds);
 
             // 4) Issue a fully-scoped token (ProjectKey routes every later request)
             var token = GenerateJwtTokenWithCompany(
@@ -812,6 +834,8 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 me.TenantUserId, me.TechnicianId,
                 platformAdmin: userInfo.Role == PlatformAdminRole);
 
+            stageTimer.Restart();
+            _logger.LogInformation("SetScope updating MainDB session for user {UserId}", userId);
             await ExecuteAsync("sp_User_UpdateSession", new[]
             {
                 SqlParameterHelper.Input("@UserId", userId),
@@ -820,13 +844,21 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 SqlParameterHelper.Input("@ProjectId", projectId),
                 SqlParameterHelper.Input("@LocationId", locationId)
             });
+            _logger.LogInformation("SetScope session updated in {ElapsedMilliseconds} ms", stageTimer.ElapsedMilliseconds);
 
+            stageTimer.Restart();
+            _logger.LogInformation("SetScope loading company menus for user {UserId}", userId);
             var menuTable = await GetDataTableAsync("sp_User_GetMenusForCompany", new[]
             {
                 SqlParameterHelper.Input("@UserId", userId),
                 SqlParameterHelper.Input("@CompanyId", companyId)
             });
+            _logger.LogInformation("SetScope company menus loaded in {ElapsedMilliseconds} ms", stageTimer.ElapsedMilliseconds);
             var menus = menuTable != null ? menuTable.ToList<MenuDto>() : new List<MenuDto>();
+
+            stageTimer.Restart();
+            var companyName = await GetCompanyName(companyId);
+            _logger.LogInformation("SetScope company name loaded in {ElapsedMilliseconds} ms", stageTimer.ElapsedMilliseconds);
 
             var response = new LoginResponseDto
             {
@@ -838,7 +870,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 technicianId = me.TechnicianId,
                 mobileNumber = userInfo.Mobile,
                 IsPlatformAdmin = userInfo.Role == PlatformAdminRole,
-                CompanyName = await GetCompanyName(companyId),
+                CompanyName = companyName,
                 Menus = menus,
                 CompanyId = companyId,
                 ProjectKey = projectKey,
@@ -846,6 +878,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 LocationId = locationId
             };
 
+            _logger.LogInformation("SetScope completed successfully for user {UserId}, project {ProjectId}", userId, projectId);
             return ApiResponse<LoginResponseDto>.Ok(response, "Scope updated successfully");
         }
 
