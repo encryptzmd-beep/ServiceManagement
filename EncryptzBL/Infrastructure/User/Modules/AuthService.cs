@@ -1083,6 +1083,32 @@ namespace EncryptzBL.Infrastructure.User.Modules
         // CUSTOMER PORTAL METHODS
         // ============================================
 
+        public async Task<ApiResponse<List<CustomerTenantProjectDto>>> ResolveCustomerTenant(string companyCode)
+        {
+            if (string.IsNullOrWhiteSpace(companyCode))
+                return ApiResponse<List<CustomerTenantProjectDto>>.Fail("Company code is required");
+
+            var dt = await GetDataTableByQueryAsync(
+                @"SELECT c.CompanyName, p.ProjectName, p.ProjectKey
+                  FROM dbo.Companies c
+                  INNER JOIN dbo.Projects p ON p.CompanyId = c.CompanyId AND p.IsActive = 1
+                  INNER JOIN dbo.ProjectConnections pc ON pc.ProjectId = p.ProjectId AND pc.IsActive = 1
+                  WHERE c.CompanyCode = @CompanyCode AND c.IsActive = 1
+                  ORDER BY p.ProjectName",
+                new[] { SqlParameterHelper.Input("@CompanyCode", companyCode.Trim()) });
+
+            var projects = dt.Rows.Cast<DataRow>().Select(row => new CustomerTenantProjectDto
+            {
+                CompanyName = row["CompanyName"]?.ToString() ?? string.Empty,
+                ProjectName = row["ProjectName"]?.ToString() ?? string.Empty,
+                ProjectKey = row["ProjectKey"]?.ToString() ?? string.Empty
+            }).ToList();
+
+            return projects.Count == 0
+                ? ApiResponse<List<CustomerTenantProjectDto>>.Fail("Company code not found or no active projects are configured")
+                : ApiResponse<List<CustomerTenantProjectDto>>.Ok(projects, "Company found", projects.Count);
+        }
+
         public async Task<ApiResponse<CustomerLoginResponseDto>> CustomerRegister(CustomerRegisterDto dto)
         {
             var parameters = new[]

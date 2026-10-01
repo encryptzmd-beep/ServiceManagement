@@ -15,22 +15,35 @@ const PROJECT_KEY_STORAGE = 'customer_project_key';
 function customerProjectKey(): string {
   const fromUrl = new URLSearchParams(window.location.search).get('project');
   if (fromUrl) {
+    const current = localStorage.getItem(PROJECT_KEY_STORAGE);
+    if (current && current !== fromUrl) {
+      localStorage.removeItem('customer_token');
+      localStorage.removeItem('customer_data');
+      localStorage.removeItem('customer_menus');
+    }
     localStorage.setItem(PROJECT_KEY_STORAGE, fromUrl);
     return fromUrl;
   }
-  return localStorage.getItem(PROJECT_KEY_STORAGE) || environment.customerProjectKey || '';
+  const stored = localStorage.getItem(PROJECT_KEY_STORAGE);
+  if (stored) return stored;
+
+  const sharedTenantEntry = /^\/customer\/(login|register)(?:\/[^/]+)?\/?$/.test(window.location.pathname);
+  return sharedTenantEntry ? '' : environment.customerProjectKey || '';
 }
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
   const router = inject(Router);
+  const isTenantResolverRequest = req.url.toLowerCase().includes('/api/auth/customer/resolve-tenant');
 
-  const isCustomerRequest =
+  const isCustomerRequest = !isTenantResolverRequest && (
     req.url.toLowerCase().includes('/api/customer') ||
     router.url.startsWith('/customer') ||
-    window.location.pathname.startsWith('/customer');
+    window.location.pathname.startsWith('/customer'));
 
-  const token = isCustomerRequest
+  const token = isTenantResolverRequest
+    ? null
+    : isCustomerRequest
     ? localStorage.getItem('customer_token')
     : auth.getToken();
 

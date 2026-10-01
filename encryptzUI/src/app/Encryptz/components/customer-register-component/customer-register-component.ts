@@ -1,8 +1,8 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
-import { CustomerAuthService } from '../../Services/customer-auth-service';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { CustomerAuthService, CustomerTenantProject } from '../../Services/customer-auth-service';
 
 
 @Component({
@@ -24,11 +24,36 @@ import { CustomerAuthService } from '../../Services/customer-auth-service';
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
             </svg>
           </div>
-          <span class="brand-name">Felix Fitness</span>
+          <span class="brand-name">{{ tenantCompanyName() }}</span>
         </div>
 
         <h1 class="heading">Create account</h1>
         <p class="subheading">Register as a customer to get started</p>
+
+        @if (!tenantSelected()) {
+          <div class="tenant-form">
+            @if (tenantProjects().length > 0) {
+              <div class="field">
+                <label for="tenantProject">Project</label>
+                <select id="tenantProject" name="tenantProject" class="tenant-project-select" [(ngModel)]="selectedProjectKey" required>
+                  <option value="" disabled>Select your project</option>
+                  @for (project of tenantProjects(); track project.projectKey) {
+                    <option [value]="project.projectKey">{{ project.projectName }}</option>
+                  }
+                </select>
+              </div>
+              <button type="button" class="register-btn" [disabled]="!selectedProjectKey" (click)="useTenantProject()">Continue</button>
+            } @else if (tenantLoading()) {
+              <div class="tenant-prompt">Checking company link…</div>
+            } @else {
+              <div class="tenant-prompt">Open the customer registration link provided by your company.</div>
+            }
+            @if (tenantError()) { <div class="error-hint">{{ tenantError() }}</div> }
+          </div>
+        } @else {
+          <div class="tenant-current">
+            <span>{{ tenantCompanyName() }}</span>
+          </div>
 
         @if (successMessage()) {
           <div class="alert alert-success">
@@ -234,10 +259,11 @@ import { CustomerAuthService } from '../../Services/customer-auth-service';
             }
           </button>
         </form>
+        }
 
         <div class="divider"><span>or</span></div>
 
-        <p class="login-link">Already have an account? <a routerLink="/customer/login">Login here</a></p>
+        <p class="login-link">Already have an account? <a [routerLink]="loginUrl()">Login here</a></p>
 
       </div>
     </main>
@@ -614,6 +640,15 @@ import { CustomerAuthService } from '../../Services/customer-auth-service';
     }
     .login-link a:hover { color: #fff; }
 
+    .tenant-form { text-align: left; }
+    .tenant-project-select {
+      width: 100%; padding: 12px 42px; border: 1px solid rgba(255,255,255,0.25);
+      border-radius: var(--radius); background: var(--input-bg); color: #fff; font: inherit;
+    }
+    .tenant-project-select option { color: #111; }
+    .tenant-prompt { margin: 0 0 18px; color: var(--text-muted); text-align: center; font-size: 0.84rem; }
+    .tenant-current { margin-bottom: 18px; color: var(--text-muted); text-align: center; font-size: 0.84rem; }
+
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(12px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -794,8 +829,9 @@ import { CustomerAuthService } from '../../Services/customer-auth-service';
     }
   `]
 })
-export class CustomerRegisterComponent {
+export class CustomerRegisterComponent implements OnInit {
   private authService = inject(CustomerAuthService);
+  private route = inject(ActivatedRoute);
   private router = inject(Router);
 
   // Form fields
@@ -820,8 +856,81 @@ export class CustomerRegisterComponent {
   showCompanyPopup = signal(false);
   selectedCompanyId = signal<number | null>(null);
   companyList = signal<any[]>([]);
+  tenantCompanyName = signal('Customer Portal');
+  tenantSelected = signal(false);
+  tenantProjects = signal<CustomerTenantProject[]>([]);
+  tenantLoading = signal(false);
+  tenantError = signal('');
+  companyCode = '';
+  selectedProjectKey = '';
 
-  ngOnInit() { this.resetForm(); }
+  ngOnInit() {
+    this.resetForm();
+    const companyCode = this.route.snapshot.paramMap.get('companyCode');
+    if (companyCode) {
+      this.companyCode = companyCode;
+      this.authService.clearTenantSelection();
+      this.resolveTenant();
+      return;
+    }
+
+    if (!this.authService.hasTenantProject()) return;
+
+    this.tenantSelected.set(true);
+    const savedName = localStorage.getItem('customer_company_name');
+    if (savedName) this.tenantCompanyName.set(savedName);
+
+    this.authService.getTenantCompanyName().subscribe({
+      next: response => {
+        if (response.success && response.data?.trim()) {
+          this.tenantCompanyName.set(response.data);
+          localStorage.setItem('customer_company_name', response.data);
+        }
+      },
+      error: () => {
+        this.tenantSelected.set(false);
+        this.authService.clearTenantSelection();
+        this.tenantError.set('Company link is unavailable. Reopen the registration link provided by your company.');
+      }
+    });
+  }
+
+  resolveTenant(): void {
+    this.tenantLoading.set(true);
+    this.tenantError.set('');
+    this.authService.resolveTenant(this.companyCode).subscribe({
+      next: response => {
+        this.tenantLoading.set(false);
+        if (!response.success || !response.data?.length) {
+          this.tenantError.set(response.message || 'Company code was not found.');
+          return;
+        }
+        this.tenantProjects.set(response.data);
+        if (response.data.length === 1) this.useTenantProject(response.data[0]);
+      },
+      error: err => {
+        this.tenantLoading.set(false);
+        this.tenantError.set(err?.error?.message || 'Could not find that company. Try again.');
+      }
+    });
+  }
+
+  useTenantProject(project?: CustomerTenantProject): void {
+    const selected = project ?? this.tenantProjects().find(item => item.projectKey === this.selectedProjectKey);
+    if (!selected) return;
+    this.authService.setTenantProject(selected, this.companyCode);
+    this.tenantCompanyName.set(selected.companyName);
+    this.tenantSelected.set(true);
+    this.tenantError.set('');
+  }
+
+  loginUrl(): string {
+    const companyCode = this.route.snapshot.paramMap.get('companyCode') || localStorage.getItem('customer_company_code');
+    if (companyCode) return `/customer/login/${encodeURIComponent(companyCode)}`;
+
+    const projectKey = new URLSearchParams(window.location.search).get('project');
+    return projectKey ? `/customer/login?project=${encodeURIComponent(projectKey)}` : '/customer/login';
+  }
 
   onSubmit() {
     if (this.password !== this.confirmPassword) {

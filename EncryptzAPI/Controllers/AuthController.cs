@@ -288,6 +288,11 @@ namespace EncryptzAPI.Controllers
 
         #region Customer Portal Actions
 
+        [AllowAnonymous]
+        [HttpGet("customer/resolve-tenant")]
+        public async Task<IActionResult> ResolveCustomerTenant([FromQuery] string companyCode)
+            => Ok(await _authService.ResolveCustomerTenant(companyCode));
+
         [HttpPost("customer/register")]
         public async Task<IActionResult> CustomerRegister([FromBody] CustomerRegisterDto dto)
         {

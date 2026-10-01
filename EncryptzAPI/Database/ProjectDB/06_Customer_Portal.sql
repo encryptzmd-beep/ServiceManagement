@@ -27,6 +27,184 @@ IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = 'Customer')
     VALUES ('Customer', 'Customer portal user', 1, 0, 0, 0);
 GO
 
+CREATE OR ALTER PROCEDURE dbo.sp_Customer_Register
+    @FullName NVARCHAR(150),
+    @Email NVARCHAR(200) = NULL,
+    @MobileNumber NVARCHAR(15),
+    @PasswordHash NVARCHAR(500),
+    @Address NVARCHAR(500) = NULL,
+    @City NVARCHAR(100) = NULL,
+    @State NVARCHAR(100) = NULL,
+    @PinCode NVARCHAR(10) = NULL,
+    @CompanyId INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    IF ISNULL(LTRIM(RTRIM(@FullName)), '') = ''
+    BEGIN
+        SELECT 0 AS Success, 'Full name is required.' AS Message, NULL AS UserId, NULL AS CustomerId;
+        RETURN;
+    END
+
+    IF ISNULL(LTRIM(RTRIM(@MobileNumber)), '') = ''
+    BEGIN
+        SELECT 0 AS Success, 'Mobile number is required.' AS Message, NULL AS UserId, NULL AS CustomerId;
+        RETURN;
+    END
+
+    IF ISNULL(LTRIM(RTRIM(@PasswordHash)), '') = ''
+    BEGIN
+        SELECT 0 AS Success, 'Password is required.' AS Message, NULL AS UserId, NULL AS CustomerId;
+        RETURN;
+    END
+
+    DECLARE @ExistingUserId INT;
+    SELECT TOP 1 @ExistingUserId = UserId
+    FROM dbo.Users
+    WHERE Email = @Email OR MobileNumber = @MobileNumber;
+
+    IF @ExistingUserId IS NOT NULL
+    BEGIN
+        SELECT 1 AS Success, 'UserAlreadyExists' AS Message, @ExistingUserId AS UserId, NULL AS CustomerId;
+        RETURN;
+    END
+
+    DECLARE @CustomerRoleId INT;
+    SELECT TOP 1 @CustomerRoleId = RoleId
+    FROM dbo.Roles
+    WHERE RoleName = N'Customer' AND IsActive = 1
+    ORDER BY RoleId;
+
+    IF @CustomerRoleId IS NULL
+    BEGIN
+        SELECT 0 AS Success, 'Customer role is not configured in this tenant.' AS Message, NULL AS UserId, NULL AS CustomerId;
+        RETURN;
+    END
+
+    IF @CompanyId IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.Companies WHERE CompanyId = @CompanyId)
+    BEGIN
+        SELECT 0 AS Success, 'Invalid CompanyId.' AS Message, NULL AS UserId, NULL AS CustomerId;
+        RETURN;
+    END
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        INSERT INTO dbo.Users
+            (FullName, Email, MobileNumber, PasswordHash, RoleId, IsActive, CreatedAt, UpdatedAt, UserType)
+        VALUES
+            (@FullName, @Email, @MobileNumber, @PasswordHash, @CustomerRoleId, 1,
+             DATEADD(MINUTE, 330, GETUTCDATE()), DATEADD(MINUTE, 330, GETUTCDATE()), 'Customer');
+
+        DECLARE @UserId INT = SCOPE_IDENTITY();
+
+        INSERT INTO dbo.Customers
+            (UserId, CustomerName, MobileNumber, Email, Address, City, State, PinCode, CompanyId,
+             IsActive, CreatedAt, UpdatedAt)
+        VALUES
+            (@UserId, @FullName, @MobileNumber, @Email, @Address, @City, @State, @PinCode, @CompanyId,
+             1, DATEADD(MINUTE, 330, GETUTCDATE()), DATEADD(MINUTE, 330, GETUTCDATE()));
+
+        DECLARE @CustomerId INT = SCOPE_IDENTITY();
+        COMMIT TRANSACTION;
+
+        SELECT 1 AS Success, 'Registration successful. Please login.' AS Message,
+               @UserId AS UserId, @CustomerId AS CustomerId;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        SELECT 0 AS Success, ERROR_MESSAGE() AS Message, NULL AS UserId, NULL AS CustomerId;
+    END CATCH
+END
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_Customer_ForgotPassword
+    @CompanyId INT,
+    @ProjectId INT,
+    @LocationId INT,
+    @Email NVARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF NOT EXISTS
+    (
+        SELECT 1
+        FROM dbo.Users u
+        INNER JOIN dbo.Customers c ON c.UserId = u.UserId AND c.IsActive = 1
+        WHERE u.Email = @Email AND u.IsActive = 1
+    )
+    BEGIN
+        SELECT 1 AS Success, 'Reset request accepted' AS Message, CAST(NULL AS NVARCHAR(10)) AS OtpCode;
+        RETURN;
+    END
+
+    DECLARE @OtpCode NVARCHAR(10) = RIGHT('000000' + CAST(ABS(CHECKSUM(NEWID())) % 1000000 AS NVARCHAR(6)), 6);
+
+    UPDATE dbo.EmailOtpLog
+    SET IsUsed = 1
+    WHERE Email = @Email AND Purpose = 'CustomerForgotPassword' AND IsUsed = 0
+      AND CompanyId = @CompanyId AND ProjectId = @ProjectId;
+
+    INSERT INTO dbo.EmailOtpLog
+        (Email, OtpCode, Purpose, ExpiresAt, CreatedAt, IsUsed, CompanyId, ProjectId, LocationId)
+    VALUES
+        (@Email, @OtpCode, 'CustomerForgotPassword', DATEADD(MINUTE, 10, DATEADD(MINUTE, 330, GETUTCDATE())),
+         GETUTCDATE(), 0, @CompanyId, @ProjectId, @LocationId);
+
+    SELECT 1 AS Success, 'Reset code created' AS Message, @OtpCode AS OtpCode;
+END
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_Customer_ResetPassword
+    @CompanyId INT,
+    @ProjectId INT,
+    @LocationId INT,
+    @Email NVARCHAR(255),
+    @OtpCode NVARCHAR(10),
+    @NewPasswordHash NVARCHAR(500)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @OtpId INT, @UserId INT;
+    SELECT TOP 1 @OtpId = OtpId
+    FROM dbo.EmailOtpLog
+    WHERE Email = @Email AND OtpCode = @OtpCode AND Purpose = 'CustomerForgotPassword'
+      AND IsUsed = 0 AND ExpiresAt > DATEADD(MINUTE, 330, GETUTCDATE())
+      AND CompanyId = @CompanyId AND ProjectId = @ProjectId
+    ORDER BY OtpId DESC;
+
+    SELECT TOP 1 @UserId = u.UserId
+    FROM dbo.Users u
+    INNER JOIN dbo.Customers c ON c.UserId = u.UserId AND c.IsActive = 1
+    WHERE u.Email = @Email AND u.IsActive = 1;
+
+    IF @OtpId IS NULL OR @UserId IS NULL
+    BEGIN
+        SELECT 0 AS Success, 'Invalid or expired reset code' AS Message;
+        RETURN;
+    END
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        UPDATE dbo.Users SET PasswordHash = @NewPasswordHash, UpdatedAt = GETDATE() WHERE UserId = @UserId;
+        UPDATE dbo.EmailOtpLog SET IsUsed = 1 WHERE OtpId = @OtpId;
+
+        COMMIT TRANSACTION;
+        SELECT 1 AS Success, 'Password reset successfully' AS Message;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        SELECT 0 AS Success, ERROR_MESSAGE() AS Message;
+    END CATCH
+END
+GO
+
 DECLARE @menus TABLE (MenuName NVARCHAR(100), MenuPath NVARCHAR(200), Icon NVARCHAR(100), SortOrder INT);
 INSERT INTO @menus VALUES
     ('My Complaints',   '/customer/complaints',     'assignment',  1),

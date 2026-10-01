@@ -1,7 +1,9 @@
 using EncryptzBL.Common;
+using EncryptzBL.Common.Tenant;
 using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Customer.Modules;
+using EncryptzAPI.Middleware;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -14,16 +16,30 @@ namespace EncryptzAPI.Controllers
     public class CustomerController : ControllerBase
     {
         private readonly ICustomerService _svc;
+        private readonly IConnectionResolver _connectionResolver;
 
-        public CustomerController(ICustomerService svc)
+        public CustomerController(ICustomerService svc, IConnectionResolver connectionResolver)
         {
             _svc = svc;
+            _connectionResolver = connectionResolver;
         }
         private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
         // ============================================
         // AUTHENTICATION (Public endpoints - no Authorize)
         // ============================================
+
+        [HttpGet("tenant-info")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetTenantInfo()
+        {
+            var projectKey = Request.Headers[TenantResolutionMiddleware.ProjectKeyHeader].FirstOrDefault() ?? string.Empty;
+            var scope = await _connectionResolver.GetProjectScopeAsync(projectKey);
+            if (scope == null)
+                return BadRequest(ApiResponse<string>.Fail("Unknown project"));
+
+            return Ok(ApiResponse<string>.Ok(scope.CompanyName));
+        }
 
         [HttpPost("register")]
         [AllowAnonymous]
@@ -42,6 +58,16 @@ namespace EncryptzAPI.Controllers
             if (!result.Success) return Unauthorized(result);
             return Ok(result);
         }
+
+        [HttpPost("forgot-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ForgotPassword([FromBody] CustomerForgotPasswordDto dto)
+            => Ok(await _svc.RequestCustomerPasswordReset(dto.Email));
+
+        [HttpPost("reset-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ResetPassword([FromBody] CustomerResetPasswordDto dto)
+            => Ok(await _svc.ResetCustomerPassword(dto.Email, dto.OtpCode, dto.NewPassword));
 
         // ============================================
         // PROFILE

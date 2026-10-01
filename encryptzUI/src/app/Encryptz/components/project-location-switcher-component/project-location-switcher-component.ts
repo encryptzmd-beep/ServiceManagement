@@ -125,7 +125,9 @@ export class ProjectLocationSwitcherComponent implements OnInit {
       error: (err) => {
         this.loading.set(false);
         this.autoResolving.set(false);
-        this.error.set(err?.error?.message || 'Failed to switch scope');
+        this.error.set(err?.name === 'TimeoutError'
+          ? 'Workspace setup timed out. Please try again.'
+          : err?.error?.message || 'Failed to switch scope');
       }
     });
   }

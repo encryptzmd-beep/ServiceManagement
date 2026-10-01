@@ -45,6 +45,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
         Task<ApiResponse<string>> CreateCompany(string companyName, string companyCode, int createdBy, object address = null); // Disabled for now
 
         // Customer Portal Methods
+        Task<ApiResponse<List<CustomerTenantProjectDto>>> ResolveCustomerTenant(string companyCode);
         Task<ApiResponse<CustomerLoginResponseDto>> CustomerRegister(CustomerRegisterDto dto);
         Task<ApiResponse<CustomerLoginResponseDto>> CustomerLogin(string email, string password);
         Task<ApiResponse<CustomerDashboardDto>> GetCustomerDashboard(int customerPortalId);

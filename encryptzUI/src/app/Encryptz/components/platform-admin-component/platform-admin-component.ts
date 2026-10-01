@@ -108,7 +108,7 @@ export class PlatformAdminComponent implements OnInit {
 
   verifyOtp(): void {
     const code = (this.otpCode || '').trim();
-    if (!/^d{4}$/.test(code)) { this.otpError.set('Enter the 4-digit code'); return; }
+    if (!/^\d{4}$/.test(code)) { this.otpError.set('Enter the 4-digit code'); return; }
 
     this.otpError.set('');
     this.otpVerifying.set(true);

@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, map, tap, timeout } from 'rxjs';
 import { ApiResponse, CompanyInfoDto, CompanyUserDetailDto, InvitationDetailDto, JoinRequestDto, LoginResponse, LocationDto, MenuItem, ProjectDto, RegisterRequest } from '../Models/ApiModels';
 import {environment} from '../../../../src/environments/environment.development'
 import { MenuAccessDto, RoleDto, UserDto } from '../components/auth-management-component/auth-management-component';
@@ -337,7 +337,7 @@ setScope(projectId: number, locationId: number): Observable<ApiResponse<LoginRes
     .post<ApiResponse<LoginResponse>>(`${this.apiUrl}/set-scope`, {
       companyId, projectId, locationId
     })
-    .pipe(tap(res => {
+    .pipe(timeout({ first: 45_000 }), tap(res => {
       if (res.success && res.data) {
         const data = res.data;
         localStorage.setItem('encryptz_token', data.token);

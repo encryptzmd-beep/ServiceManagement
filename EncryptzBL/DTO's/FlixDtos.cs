@@ -57,6 +57,13 @@ namespace EncryptzBL.DTO_s
         public string ProjectKey { get; set; } = string.Empty;
     }
 
+    public class CustomerTenantProjectDto
+    {
+        public string CompanyName { get; set; } = string.Empty;
+        public string ProjectName { get; set; } = string.Empty;
+        public string ProjectKey { get; set; } = string.Empty;
+    }
+
     public class LocationDto
     {
         public int LocationId { get; set; }
@@ -168,6 +175,18 @@ namespace EncryptzBL.DTO_s
         public string? State { get; set; }
         public string? PinCode { get; set; }
         public string? AlternatePhone { get; set; }
+    }
+
+    public class CustomerForgotPasswordDto
+    {
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class CustomerResetPasswordDto
+    {
+        public string Email { get; set; } = string.Empty;
+        public string OtpCode { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
     }
 
     // --- PRODUCT ---

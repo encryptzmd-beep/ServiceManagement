@@ -2,8 +2,14 @@ import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
-import { Customer, CustomerMenu, RegisterResponse, LoginResponse, LoginResponseCustomer } from '../Models/ApiModels';
+import { ApiResponse, Customer, CustomerMenu, RegisterResponse, LoginResponse, LoginResponseCustomer } from '../Models/ApiModels';
 import { environment } from '../../../environments/environment.development';
+
+export interface CustomerTenantProject {
+  companyName: string;
+  projectName: string;
+  projectKey: string;
+}
 
 
 @Injectable({ providedIn: 'root' })
@@ -16,6 +22,47 @@ export class CustomerAuthService {
   currentCustomer = signal<Customer | null>(null);
   isLoggedIn = signal<boolean>(false);
   customerMenus = signal<CustomerMenu[]>([]);
+
+  getTenantCompanyName(): Observable<ApiResponse<string>> {
+    return this.http.get<ApiResponse<string>>(`${this.apiUrl}/tenant-info`);
+  }
+
+  resolveTenant(companyCode: string): Observable<ApiResponse<CustomerTenantProject[]>> {
+    return this.http.get<ApiResponse<CustomerTenantProject[]>>(
+      `${environment.apiUrl}/api/auth/customer/resolve-tenant`,
+      { params: { companyCode: companyCode.trim() } }
+    );
+  }
+
+  hasTenantProject(): boolean {
+    return !!new URLSearchParams(window.location.search).get('project')
+      || sessionStorage.getItem('customer_tenant_selected') === 'true';
+  }
+
+  setTenantProject(project: CustomerTenantProject, companyCode = ''): void {
+    const currentProjectKey = localStorage.getItem('customer_project_key');
+    if (currentProjectKey && currentProjectKey !== project.projectKey) this.clearSession();
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('project');
+    window.history.replaceState({}, '', url.toString());
+    localStorage.setItem('customer_project_key', project.projectKey);
+    localStorage.setItem('customer_company_name', project.companyName);
+    if (companyCode) localStorage.setItem('customer_company_code', companyCode);
+    sessionStorage.setItem('customer_tenant_selected', 'true');
+  }
+
+  clearTenantSelection(): void {
+    this.clearSession();
+    localStorage.removeItem('customer_project_key');
+    localStorage.removeItem('customer_company_name');
+    localStorage.removeItem('customer_company_code');
+    sessionStorage.removeItem('customer_tenant_selected');
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('project');
+    window.history.replaceState({}, '', url.toString());
+  }
 
   constructor() {
     this.checkSession();
@@ -39,6 +86,15 @@ login(email: string, password: string): Observable<LoginResponseCustomer> {
       })
     );
 }
+
+requestPasswordReset(email: string): Observable<ApiResponse<string>> {
+  return this.http.post<ApiResponse<string>>(`${this.apiUrl}/forgot-password`, { email });
+}
+
+resetPassword(email: string, otpCode: string, newPassword: string): Observable<ApiResponse<string>> {
+  return this.http.post<ApiResponse<string>>(`${this.apiUrl}/reset-password`, { email, otpCode, newPassword });
+}
+
 getExistingUserCompanies(userId: number, password: string) {
   return this.http.post<any[]>(
     `${this.apiUrl}/get-existing-user-companies`,

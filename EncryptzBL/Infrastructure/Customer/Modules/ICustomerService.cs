@@ -15,6 +15,8 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
         Task<ApiResponse<string>> UploadProductImage(int userId, int productId, string imagePath, string imageType);
         Task<ApiResponse<List<ProductMasterDto>>> GetProductMaster(string search, string category);
         Task<ApiResponse<List<string>>> GetComplaintCategories();
+        Task<ApiResponse<string>> RequestCustomerPasswordReset(string email);
+        Task<ApiResponse<string>> ResetCustomerPassword(string email, string otpCode, string newPassword);
         Task<ApiResponse<dynamic>> CreateComplaint(int userId, ComplaintCreateDto dto);
         Task<ApiResponse<PagedResult<ComplaintListDto>>> GetMyComplaints(int userId, int? statusFilter, int page, int size);
         Task<ApiResponse> UpdateComplaint(int userId, int complaintId, ComplaintUpdateDto dto);

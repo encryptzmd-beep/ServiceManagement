@@ -16,11 +16,62 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
     public class CustomerService : BaseRepository, ICustomerService
     {
         private readonly IConfiguration _configuration;
+        private readonly IEmailService _emailService;
 
-        public CustomerService(DbHelper db, IConfiguration configuration) : base(db)
+        public CustomerService(DbHelper db, IConfiguration configuration, IEmailService emailService) : base(db)
         {
             _configuration = configuration;
+            _emailService = emailService;
         }
+
+        public async Task<ApiResponse<string>> RequestCustomerPasswordReset(string email)
+        {
+            var dt = await GetDataTableAsync("sp_Customer_ForgotPassword", Scoped(
+                SqlParameterHelper.Input("@Email", email.Trim())));
+
+            if (dt == null || dt.Rows.Count == 0 || Convert.ToInt32(dt.Rows[0]["Success"]) != 1)
+                return ApiResponse<string>.Fail("Could not process the password reset request");
+
+            var otpCode = dt.Rows[0]["OtpCode"]?.ToString();
+            if (!string.IsNullOrWhiteSpace(otpCode))
+            {
+                var body = $@"<h3>Customer password reset</h3>
+                    <p>Use this code to reset your customer portal password:</p>
+                    <p style='font-size:24px;font-weight:bold'>{otpCode}</p>
+                    <p>This code expires in 10 minutes. If you did not request a reset, ignore this email.</p>";
+
+                try
+                {
+                    await _emailService.SendEmailAsync(email, "Customer password reset code", body);
+                }
+                catch
+                {
+                    return ApiResponse<string>.Fail("Could not send the reset code. Please try again later.");
+                }
+            }
+
+            return ApiResponse<string>.Ok(null, "If a customer account exists for that email, a reset code has been sent.");
+        }
+
+        public async Task<ApiResponse<string>> ResetCustomerPassword(string email, string otpCode, string newPassword)
+        {
+            if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
+                return ApiResponse<string>.Fail("Password must be at least 6 characters");
+
+            var passwordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            var dt = await GetDataTableAsync("sp_Customer_ResetPassword", Scoped(
+                SqlParameterHelper.Input("@Email", email.Trim()),
+                SqlParameterHelper.Input("@OtpCode", otpCode.Trim()),
+                SqlParameterHelper.Input("@NewPasswordHash", passwordHash)));
+
+            if (dt == null || dt.Rows.Count == 0 || Convert.ToInt32(dt.Rows[0]["Success"]) != 1)
+                return ApiResponse<string>.Fail(dt?.Rows.Count > 0
+                    ? dt.Rows[0]["Message"]?.ToString() ?? "Invalid or expired reset code"
+                    : "Invalid or expired reset code");
+
+            return ApiResponse<string>.Ok(null, dt.Rows[0]["Message"]?.ToString() ?? "Password reset successfully");
+        }
+
         public async Task<ApiResponse<Customer_DTO>> GetProfile_Customer(int userId)
         {
             var parameters = new[]

@@ -8,7 +8,9 @@ import { ComplaintDetailComponent } from '../components/complaint-detail-compone
 
 
 export const CUSTOMER_ROUTES: Routes = [
+  { path: 'login/:companyCode', component: CustomerLoginComponent },
   { path: 'login', component: CustomerLoginComponent },
+  { path: 'register/:companyCode', component: CustomerRegisterComponent },
   { path: 'register', component: CustomerRegisterComponent },
   {
     path: 'public-complaint',

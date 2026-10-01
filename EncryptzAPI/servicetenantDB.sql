@@ -4996,18 +4996,15 @@ BEGIN
 
         BEGIN TRANSACTION;
 
-        DECLARE @CustomerRoleId INT = 4;
+        DECLARE @CustomerRoleId INT;
+        SELECT TOP 1 @CustomerRoleId = RoleId
+        FROM dbo.Roles
+        WHERE RoleName = N'Customer' AND IsActive = 1
+        ORDER BY RoleId;
 
-        IF NOT EXISTS
-        (
-            SELECT 1
-            FROM dbo.Roles
-            WHERE RoleId = @CustomerRoleId
-        )
+        IF @CustomerRoleId IS NULL
         BEGIN
-            ROLLBACK TRANSACTION;
-
-            SELECT 0 AS Success, 'Customer role not found.' AS Message, NULL AS UserId, NULL AS CustomerId;
+            SELECT 0 AS Success, 'Customer role is not configured in this tenant.' AS Message, NULL AS UserId, NULL AS CustomerId;
             RETURN;
         END
 

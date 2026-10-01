@@ -79,7 +79,7 @@ export const routes: Routes = [
           import('../app/Encryptz/components/complaint-list-component/complaint-list-component').then(
             (m) => m.ComplaintListComponent,
           ),
-        canActivate: [roleGuard(['Admin', 'ServiceManager'])],
+        canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager'])],
       },
       {
         path: 'complaints/assign',

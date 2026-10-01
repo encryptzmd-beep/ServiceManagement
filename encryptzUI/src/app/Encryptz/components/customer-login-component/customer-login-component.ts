@@ -1,8 +1,8 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
-import { CustomerAuthService } from '../../Services/customer-auth-service';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { CustomerAuthService, CustomerTenantProject } from '../../Services/customer-auth-service';
 
 
 @Component({
@@ -24,11 +24,36 @@ import { CustomerAuthService } from '../../Services/customer-auth-service';
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
             </svg>
           </div>
-          <span class="brand-name">Felix Fitness</span>
+          <span class="brand-name">{{ tenantCompanyName() }}</span>
         </div>
 
         <h1 class="heading">Welcome back</h1>
         <p class="subheading">Sign in to your customer portal</p>
+
+        @if (!tenantSelected()) {
+          <div class="tenant-form">
+            @if (tenantProjects().length > 0) {
+              <div class="field">
+                <label for="tenantProject">Project</label>
+                <select id="tenantProject" name="tenantProject" class="tenant-project-select" [(ngModel)]="selectedProjectKey" required>
+                  <option value="" disabled>Select your project</option>
+                  @for (project of tenantProjects(); track project.projectKey) {
+                    <option [value]="project.projectKey">{{ project.projectName }}</option>
+                  }
+                </select>
+              </div>
+              <button type="button" class="login-btn" [disabled]="!selectedProjectKey" (click)="useTenantProject()">Continue</button>
+            } @else if (tenantLoading()) {
+              <div class="tenant-prompt">Checking company link…</div>
+            } @else {
+              <div class="tenant-prompt">Open the customer login link provided by your company.</div>
+            }
+            @if (tenantError()) { <div class="error-hint">{{ tenantError() }}</div> }
+          </div>
+        } @else {
+          <div class="tenant-current">
+            <span>{{ tenantCompanyName() }}</span>
+          </div>
 
         @if (errorMessage()) {
           <div class="alert-error">
@@ -121,7 +146,7 @@ import { CustomerAuthService } from '../../Services/customer-auth-service';
               </span>
               Remember me
             </label>
-            <a href="#" class="forgot">Forgot password?</a>
+            <button type="button" class="forgot" (click)="openForgotPassword()">Forgot password?</button>
           </div>
 
           <button
@@ -138,13 +163,43 @@ import { CustomerAuthService } from '../../Services/customer-auth-service';
             }
           </button>
         </form>
+        }
 
         <div class="divider"><span>or</span></div>
 
-        <p class="register">Don't have an account? <a routerLink="/customer/register">Register here</a></p>
+        <p class="register">Don't have an account? <a [routerLink]="registerUrl()">Register here</a></p>
 
       </div>
     </main>
+
+    @if (forgotPasswordOpen()) {
+      <div class="forgot-backdrop" (click)="closeForgotPassword()">
+        <section class="forgot-panel" role="dialog" aria-modal="true" aria-labelledby="forgotTitle" (click)="$event.stopPropagation()">
+          <button type="button" class="forgot-close" (click)="closeForgotPassword()" aria-label="Close">×</button>
+          <h2 id="forgotTitle">Reset customer password</h2>
+          <p class="forgot-copy">{{ tenantCompanyName() }}</p>
+
+          @if (forgotPasswordStep() === 'email') {
+            <label for="resetEmail">Email</label>
+            <input id="resetEmail" type="email" [(ngModel)]="forgotEmail" name="resetEmail" autocomplete="email" placeholder="you&#64;example.com" />
+            <button type="button" class="login-btn" [disabled]="forgotPasswordLoading()" (click)="requestPasswordReset()">
+              {{ forgotPasswordLoading() ? 'Sending…' : 'Send reset code' }}
+            </button>
+          } @else {
+            <label for="resetOtp">Email code</label>
+            <input id="resetOtp" type="text" [(ngModel)]="forgotOtp" name="resetOtp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-digit code" />
+            <label for="resetNewPassword">New password</label>
+            <input id="resetNewPassword" type="password" [(ngModel)]="forgotNewPassword" name="resetNewPassword" autocomplete="new-password" minlength="6" placeholder="At least 6 characters" />
+            <button type="button" class="login-btn" [disabled]="forgotPasswordLoading()" (click)="resetCustomerPassword()">
+              {{ forgotPasswordLoading() ? 'Resetting…' : 'Reset password' }}
+            </button>
+          }
+
+          @if (forgotPasswordMessage()) { <p class="forgot-message">{{ forgotPasswordMessage() }}</p> }
+          @if (forgotPasswordError()) { <p class="forgot-error">{{ forgotPasswordError() }}</p> }
+        </section>
+      </div>
+    }
   `,
   styles: [`
     :host {
@@ -427,13 +482,38 @@ import { CustomerAuthService } from '../../Services/customer-auth-service';
     .remember input:checked + .check-box svg { display: block; }
 
     .forgot {
+      border: 0;
+      background: transparent;
+      padding: 0;
       font-size: 0.84rem;
       color: rgba(210,228,255,0.62);
       text-decoration: none;
       font-weight: 500;
       transition: color 0.2s;
+      cursor: pointer;
     }
     .forgot:hover { color: #ffffff; }
+
+    .forgot-backdrop {
+      position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
+      padding: 20px; background: rgba(2, 8, 24, 0.72); backdrop-filter: blur(8px);
+    }
+    .forgot-panel {
+      position: relative; width: min(100%, 390px); padding: 28px; border-radius: 16px;
+      border: 1px solid var(--glass-border); background: #20335f; box-shadow: 0 24px 70px rgba(0,0,0,.4);
+    }
+    .forgot-panel h2 { margin: 0 0 6px; font-size: 1.15rem; color: #fff; }
+    .forgot-copy { margin: 0 0 20px; color: var(--text-muted); font-size: .85rem; }
+    .forgot-panel label { margin: 14px 0 7px; }
+    .forgot-panel input {
+      width: 100%; padding: 12px; border: 1px solid rgba(255,255,255,.25); border-radius: var(--radius);
+      background: var(--input-bg); color: #fff; font: inherit; box-sizing: border-box;
+    }
+    .forgot-panel .login-btn { margin: 18px 0 0; }
+    .forgot-close { position: absolute; top: 12px; right: 14px; border: 0; background: transparent; color: #fff; font-size: 24px; cursor: pointer; }
+    .forgot-message, .forgot-error { margin: 14px 0 0; font-size: .83rem; }
+    .forgot-message { color: #a7f3d0; }
+    .forgot-error { color: #ff9aa5; }
 
     .login-btn {
       width: 100%;
@@ -524,6 +604,15 @@ import { CustomerAuthService } from '../../Services/customer-auth-service';
     }
     .register a:hover { color: #fff; }
 
+    .tenant-form { text-align: left; }
+    .tenant-project-select {
+      width: 100%; padding: 12px 42px; border: 1px solid rgba(255,255,255,0.25);
+      border-radius: var(--radius); background: var(--input-bg); color: #fff; font: inherit;
+    }
+    .tenant-project-select option { color: #111; }
+    .tenant-prompt { margin: 0 0 18px; color: var(--text-muted); text-align: center; font-size: 0.84rem; }
+    .tenant-current { margin-bottom: 18px; color: var(--text-muted); text-align: center; font-size: 0.84rem; }
+
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(12px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -534,8 +623,9 @@ import { CustomerAuthService } from '../../Services/customer-auth-service';
     }
   `]
 })
-export class CustomerLoginComponent {
+export class CustomerLoginComponent implements OnInit {
   private authService = inject(CustomerAuthService);
+  private route = inject(ActivatedRoute);
   private router = inject(Router);
 
   email = '';
@@ -545,6 +635,154 @@ export class CustomerLoginComponent {
 
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
+  forgotPasswordOpen = signal(false);
+  forgotPasswordStep = signal<'email' | 'otp'>('email');
+  forgotPasswordLoading = signal(false);
+  forgotPasswordMessage = signal('');
+  forgotPasswordError = signal('');
+  forgotEmail = '';
+  forgotOtp = '';
+  forgotNewPassword = '';
+  tenantCompanyName = signal('Customer Portal');
+  tenantSelected = signal(false);
+  tenantProjects = signal<CustomerTenantProject[]>([]);
+  tenantLoading = signal(false);
+  tenantError = signal('');
+  companyCode = '';
+  selectedProjectKey = '';
+
+  ngOnInit(): void {
+    const companyCode = this.route.snapshot.paramMap.get('companyCode');
+    if (companyCode) {
+      this.companyCode = companyCode;
+      this.authService.clearTenantSelection();
+      this.resolveTenant();
+      return;
+    }
+
+    if (!this.authService.hasTenantProject()) return;
+
+    this.tenantSelected.set(true);
+    const savedName = localStorage.getItem('customer_company_name');
+    if (savedName) this.tenantCompanyName.set(savedName);
+
+    this.authService.getTenantCompanyName().subscribe({
+      next: response => {
+        if (response.success && response.data?.trim()) {
+          this.tenantCompanyName.set(response.data);
+          localStorage.setItem('customer_company_name', response.data);
+        }
+      },
+      error: () => {
+        this.tenantSelected.set(false);
+        this.authService.clearTenantSelection();
+        this.tenantError.set('Company link is unavailable. Enter your company code.');
+      }
+    });
+  }
+
+  resolveTenant(): void {
+    this.tenantLoading.set(true);
+    this.tenantError.set('');
+    this.authService.resolveTenant(this.companyCode).subscribe({
+      next: response => {
+        this.tenantLoading.set(false);
+        if (!response.success || !response.data?.length) {
+          this.tenantError.set(response.message || 'Company code was not found.');
+          return;
+        }
+        this.tenantProjects.set(response.data);
+        if (response.data.length === 1) this.useTenantProject(response.data[0]);
+      },
+      error: err => {
+        this.tenantLoading.set(false);
+        this.tenantError.set(err?.error?.message || 'Could not find that company. Try again.');
+      }
+    });
+  }
+
+  useTenantProject(project?: CustomerTenantProject): void {
+    const selected = project ?? this.tenantProjects().find(item => item.projectKey === this.selectedProjectKey);
+    if (!selected) return;
+    this.authService.setTenantProject(selected, this.companyCode);
+    this.tenantCompanyName.set(selected.companyName);
+    this.tenantSelected.set(true);
+    this.tenantError.set('');
+  }
+
+  registerUrl(): string {
+    const companyCode = this.route.snapshot.paramMap.get('companyCode') || localStorage.getItem('customer_company_code');
+    if (companyCode) return `/customer/register/${encodeURIComponent(companyCode)}`;
+
+    const projectKey = new URLSearchParams(window.location.search).get('project');
+    return projectKey ? `/customer/register?project=${encodeURIComponent(projectKey)}` : '/customer/register';
+  }
+
+  openForgotPassword(): void {
+    this.forgotEmail = this.email;
+    this.forgotOtp = '';
+    this.forgotNewPassword = '';
+    this.forgotPasswordStep.set('email');
+    this.forgotPasswordMessage.set('');
+    this.forgotPasswordError.set('');
+    this.forgotPasswordOpen.set(true);
+  }
+
+  closeForgotPassword(): void {
+    this.forgotPasswordOpen.set(false);
+    this.forgotPasswordLoading.set(false);
+  }
+
+  requestPasswordReset(): void {
+    if (!this.forgotEmail.trim()) {
+      this.forgotPasswordError.set('Enter your account email');
+      return;
+    }
+
+    this.forgotPasswordLoading.set(true);
+    this.forgotPasswordError.set('');
+    this.authService.requestPasswordReset(this.forgotEmail.trim()).subscribe({
+      next: response => {
+        this.forgotPasswordLoading.set(false);
+        if (!response.success) {
+          this.forgotPasswordError.set(response.message || 'Could not send reset code');
+          return;
+        }
+        this.forgotPasswordStep.set('otp');
+        this.forgotPasswordMessage.set(response.message);
+      },
+      error: err => {
+        this.forgotPasswordLoading.set(false);
+        this.forgotPasswordError.set(err?.error?.message || 'Could not send reset code. Try again.');
+      }
+    });
+  }
+
+  resetCustomerPassword(): void {
+    if (!this.forgotOtp.trim() || this.forgotNewPassword.length < 6) {
+      this.forgotPasswordError.set('Enter the email code and a password of at least 6 characters');
+      return;
+    }
+
+    this.forgotPasswordLoading.set(true);
+    this.forgotPasswordError.set('');
+    this.authService.resetPassword(this.forgotEmail.trim(), this.forgotOtp.trim(), this.forgotNewPassword).subscribe({
+      next: response => {
+        this.forgotPasswordLoading.set(false);
+        if (!response.success) {
+          this.forgotPasswordError.set(response.message || 'Could not reset password');
+          return;
+        }
+        this.email = this.forgotEmail.trim();
+        this.password = '';
+        this.forgotPasswordMessage.set('Password reset. Close this panel and sign in with your new password.');
+      },
+      error: err => {
+        this.forgotPasswordLoading.set(false);
+        this.forgotPasswordError.set(err?.error?.message || 'Could not reset password. Try again.');
+      }
+    });
+  }
 
   onSubmit(): void {
     if (!this.email || !this.password) {

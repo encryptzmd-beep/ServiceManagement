@@ -52,7 +52,7 @@ namespace EncryptzBL.Common.Tenant
                 await conn.OpenAsync();
 
                 await using var cmd = new SqlCommand(
-                    @"SELECT TOP 1 p.ProjectId, p.CompanyId, p.ProjectKey
+                                        @"SELECT TOP 1 p.ProjectId, p.CompanyId, p.ProjectKey, c.CompanyName
                       FROM dbo.Projects p
                       INNER JOIN dbo.ProjectConnections pc ON pc.ProjectId = p.ProjectId AND pc.IsActive = 1
                       INNER JOIN dbo.Companies c ON c.CompanyId = p.CompanyId AND c.IsActive = 1
@@ -66,6 +66,7 @@ namespace EncryptzBL.Common.Tenant
                 scope.ProjectId = Convert.ToInt32(reader["ProjectId"]);
                 scope.CompanyId = Convert.ToInt32(reader["CompanyId"]);
                 scope.ProjectKey = reader["ProjectKey"]?.ToString() ?? projectKey;
+                scope.CompanyName = reader["CompanyName"]?.ToString() ?? string.Empty;
             }
 
             // Locations live in the project's own DB

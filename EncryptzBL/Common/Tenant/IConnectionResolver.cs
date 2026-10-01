@@ -1,10 +1,11 @@
 namespace EncryptzBL.Common.Tenant
 {
-    /// <summary>The ids a project key stands for (MainDB) plus the project's default location.</summary>
+    /// <summary>The company/project a key identifies, plus the project's default location.</summary>
     public class ProjectScope
     {
         public string ProjectKey { get; set; } = string.Empty;
         public int CompanyId { get; set; }
+        public string CompanyName { get; set; } = string.Empty;
         public int ProjectId { get; set; }
         public int DefaultLocationId { get; set; }
     }
