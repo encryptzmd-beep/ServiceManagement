@@ -8,12 +8,14 @@ import { ComplaintDetailComponent } from '../components/complaint-detail-compone
 
 
 export const CUSTOMER_ROUTES: Routes = [
-  { path: 'login/:companyCode', component: CustomerLoginComponent },
-  { path: 'login', component: CustomerLoginComponent },
-  { path: 'register/:companyCode', component: CustomerRegisterComponent },
-  { path: 'register', component: CustomerRegisterComponent },
+  // `title` = browser tab title (AppTitleStrategy) and the heading of the portal top bar
+  { path: 'login/:companyCode', component: CustomerLoginComponent, title: 'Customer Login' },
+  { path: 'login', component: CustomerLoginComponent, title: 'Customer Login' },
+  { path: 'register/:companyCode', component: CustomerRegisterComponent, title: 'Customer Registration' },
+  { path: 'register', component: CustomerRegisterComponent, title: 'Customer Registration' },
   {
     path: 'public-complaint',
+    title: 'Quick Complaint',
     loadComponent: () =>
       import('../components/public-quick-complaint-component/public-quick-complaint-component')
         .then(m => m.PublicQuickComplaintComponent)
@@ -28,6 +30,7 @@ export const CUSTOMER_ROUTES: Routes = [
 
       {
         path: 'complaints',
+        title: 'My Complaints',
         loadComponent: () =>
           import('../components/complaint-tracking-component/complaint-tracking-component')
             .then(m => m.ComplaintTrackingComponent)
@@ -35,6 +38,7 @@ export const CUSTOMER_ROUTES: Routes = [
 
       {
         path: 'complaints/new',
+        title: 'Register a Complaint',
         loadComponent: () =>
           import('../components/complaint-registration-component/complaint-registration-component')
             .then(m => m.ComplaintRegistrationComponent)
@@ -42,6 +46,7 @@ export const CUSTOMER_ROUTES: Routes = [
 
       {
         path: 'complaint/:id',
+        title: 'Complaint Details',
         loadComponent: () =>
           import('../components/complaint-detail-component/complaint-detail-component')
             .then(m => m.ComplaintDetailComponent)
@@ -49,6 +54,7 @@ export const CUSTOMER_ROUTES: Routes = [
 
       {
         path: 'products',
+        title: 'My Products',
         loadComponent: () =>
           import('../components/product-registration-component/product-registration-component')
             .then(m => m.ProductRegistrationComponent)
@@ -56,6 +62,7 @@ export const CUSTOMER_ROUTES: Routes = [
 
       {
         path: 'profile',
+        title: 'My Profile',
         loadComponent: () =>
           import('../components/profile-component/profile-component')
             .then(m => m.ProfileComponent)

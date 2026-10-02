@@ -1,39 +1,44 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { ApiService } from '../../Services/API/api-service';
-import { ConflictResolveDto, Schedule, ScheduleConflictItem } from '../../Models/ApiModels';
+import { ConflictResolveDto, ScheduleConflictItem } from '../../Models/ApiModels';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
+/**
+ * Two open assignments of one technician that overlap on the selected day.
+ * Shows what the API returns — nothing is made up when the call fails.
+ */
 @Component({
   selector: 'app-schedule-conflicts-component',
   imports: [CommonModule, FormsModule],
   templateUrl: './schedule-conflicts-component.html',
   styleUrl: './schedule-conflicts-component.scss',
 })
-export class ScheduleConflictsComponent {
-load() {
-throw new Error('Method not implemented.');
-}
-  conflicts = signal<any[]>([]);
+export class ScheduleConflictsComponent implements OnInit {
+  conflicts = signal<ScheduleConflictItem[]>([]);
   loading = signal(true);
+  loadError = signal('');
+  resolvingId = signal<number | null>(null);
   selectedDate = new Date().toISOString().split('T')[0];
   resolutionTexts: Record<number, string> = {};
-date: any;
 
   constructor(private scheduleService: ApiService) {}
+
   ngOnInit() {
     this.loadData();
   }
 
   loadData() {
     this.loading.set(true);
+    this.loadError.set('');
     this.scheduleService.detectConflicts(this.selectedDate).subscribe({
       next: (data) => {
-        this.conflicts.set(data);
+        this.conflicts.set(Array.isArray(data) ? data : []);
         this.loading.set(false);
       },
       error: () => {
-        this.loadDemo();
+        this.conflicts.set([]);
+        this.loadError.set('Schedule conflicts could not be loaded. Please try again.');
         this.loading.set(false);
       },
     });
@@ -42,69 +47,36 @@ date: any;
   resolveConflict(c: ScheduleConflictItem) {
     const dto: ConflictResolveDto = {
       conflictId: c.conflictId,
-      resolution: this.resolutionTexts[c.conflictId] || 'Resolved by admin',
+      resolution: this.resolutionTexts[c.conflictId]?.trim() || 'Resolved by admin',
     };
-    this.scheduleService.resolveConflict(dto).subscribe({ next: () => this.loadData() });
+    this.resolvingId.set(c.conflictId);
+    this.scheduleService.resolveConflict(dto).subscribe({
+      next: () => { this.resolvingId.set(null); this.loadData(); },
+      error: () => {
+        this.resolvingId.set(null);
+        this.loadError.set('The conflict could not be marked as resolved.');
+      },
+    });
   }
 
+  getOpenCount(): number {
+    return this.conflicts().filter((c) => !c.isResolved).length;
+  }
   getCriticalCount(): number {
-    return this.conflicts().filter((c) => c.severity === 1).length;
+    return this.conflicts().filter((c) => !c.isResolved && c.severity === 1).length;
   }
   getWarningCount(): number {
-    return this.conflicts().filter((c) => c.severity === 2).length;
+    return this.conflicts().filter((c) => !c.isResolved && c.severity === 2).length;
   }
-  getInfoCount(): number {
-    return this.conflicts().filter((c) => c.severity === 3).length;
+  getResolvedCount(): number {
+    return this.conflicts().filter((c) => c.isResolved).length;
   }
   getSeverityLabel(s: number): string {
     return { 1: 'Critical', 2: 'Warning', 3: 'Info' }[s] || 'Unknown';
   }
-  getTaskTypeLabel(t: number): string {
-    return { 1: 'Service Visit', 2: 'Installation', 3: 'Inspection', 4: 'Follow Up' }[t] || 'Task';
-  }
 
-  private loadDemo() {
-    this.conflicts.set([
-      {
-        conflictId: 1,
-        schedule1Id: 10,
-        schedule2Id: 11,
-        technicianId: 10,
-        technicianName: 'Arun Murugan',
-        employeeCode: 'EMP-001',
-        conflictDate: this.selectedDate,
-        conflictType: 1,
-        severity: 1,
-        schedule1Start: '09:00',
-        schedule1End: '11:00',
-        schedule1Type: 1,
-        schedule2Start: '10:00',
-        schedule2End: '12:00',
-        schedule2Type: 2,
-        complaint1No: 'CMP-001',
-        complaint2No: 'CMP-003',
-        isResolved: false,
-      },
-      {
-        conflictId: 2,
-        schedule1Id: 14,
-        schedule2Id: 15,
-        technicianId: 11,
-        technicianName: 'Karthik Rajan',
-        employeeCode: 'EMP-002',
-        conflictDate: this.selectedDate,
-        conflictType: 1,
-        severity: 2,
-        schedule1Start: '14:00',
-        schedule1End: '15:30',
-        schedule1Type: 1,
-        schedule2Start: '15:00',
-        schedule2End: '16:30',
-        schedule2Type: 4,
-        complaint1No: 'CMP-005',
-        complaint2No: 'CMP-008',
-        isResolved: false,
-      },
-    ]);
+  /** "09:00:00" -> "09:00"; assignments without a time show a dash. */
+  formatTime(value: string | null | undefined): string {
+    return value ? String(value).substring(0, 5) : '—';
   }
 }

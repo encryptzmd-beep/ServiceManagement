@@ -8,6 +8,7 @@
       - 05_Scope_RowFilter.sql         project/location row filter
       - 06_Customer_Portal.sql         customer portal
       - 07_Locations_Admin.sql         locations administration
+      - 08_Backoffice_Technician_Fixes.sql   status sync, spare approvals, conflicts, reports
 
     Re-run after changing any of them:
         powershell -ExecutionPolicy Bypass -File .\Build-NewTenantScript.ps1
@@ -302,6 +303,8 @@ $parts = @(
     (Read-Script (Join-Path $here '06_Customer_Portal.sql'))
     (Section '7. LOCATIONS ADMINISTRATION  (07_Locations_Admin.sql)')
     (Read-Script (Join-Path $here '07_Locations_Admin.sql'))
+    (Section '8. BACK-OFFICE / TECHNICIAN FIXES  (08_Backoffice_Technician_Fixes.sql)')
+    (Read-Script (Join-Path $here '08_Backoffice_Technician_Fixes.sql'))
     $footer
 )
 

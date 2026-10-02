@@ -1570,3 +1570,33 @@ large-modal-overlay {
     flex: 1 1 calc(50% - 6px);
   }
 }
+
+/* role delete: inline confirmation + result message */
+.action-btn.action-danger:hover { color: #dc2626; }
+.role-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #b91c1c;
+}
+.role-confirm-btn {
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  &.yes { background: #dc2626; border-color: #dc2626; color: #fff; }
+}
+.role-action-msg {
+  margin: 12px 0 0;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 13px;
+  &.err { background: #fef2f2; color: #b91c1c; }
+}

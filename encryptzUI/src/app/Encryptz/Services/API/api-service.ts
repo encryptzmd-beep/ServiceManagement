@@ -386,11 +386,15 @@ trackComplaint(complaintNo: string): Observable<M.ComplaintTrackingDetail> {
   completeAssignment(data: { assignmentId: number; remarks?: string }): Observable<M.ApiResponse<number>> {
   return this.http.post<M.ApiResponse<number>>(`${this.api}/technician/complete-assignment`, data);
 }
-getComplaintsLookup(search?: string): Observable<M.ComplaintLookup[]> {
+// includeClosed: also completed / closed complaints (a warranty return is raised after the job)
+getComplaintsLookup(search?: string, includeClosed = false): Observable<M.ComplaintLookup[]> {
   let params = new HttpParams();
 
   if (search) {
     params = params.set('search', search);
+  }
+  if (includeClosed) {
+    params = params.set('includeClosed', true);
   }
 
   return this.http.get<M.ComplaintLookup[]>(
@@ -565,11 +569,14 @@ getSpareByComplaint(complaintId: number): Observable<any> {
   return this.http.get(`${this.api}/spare-parts/by-complaint/${complaintId}`);
 }
 
-updateSpareStatus(requestId: number, status: string): Observable<any> {
-  return this.http.patch(`${this.api}/spare-parts/request/${requestId}/status`, { status });
+// extra: rejectReason (required to reject), unitPrice (cost fixed at approval),
+// approveWithoutStock (approve a catalog part that is short of stock)
+updateSpareStatus(requestId: number, status: string,
+                  extra: { rejectReason?: string; unitPrice?: number | null; approveWithoutStock?: boolean } = {}): Observable<any> {
+  return this.http.patch(`${this.api}/spare-parts/request/${requestId}/status`, { status, ...extra });
 }
 
-bulkUpdateSpareStatus(payload: { requestIds: number[]; status: string }): Observable<any> {
+bulkUpdateSpareStatus(payload: { requestIds: number[]; status: string; rejectReason?: string }): Observable<any> {
   return this.http.post(`${this.api}/spare-parts/bulk-status`, payload);
 }
 

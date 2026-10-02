@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { ApiService } from '../../Services/API/api-service';
-import { WarrantyReturn, WarrantyReturnFilter, WarrantyReturnListItem, WarrantyReturnStatusDto } from '../../Models/ApiModels';
+import { ComplaintLookup, WarrantyReturnFilter, WarrantyReturnListItem, WarrantyReturnStatusDto } from '../../Models/ApiModels';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -15,8 +15,18 @@ export class WarrantyReturnsComponent {
   selectedReturn = signal<WarrantyReturnListItem | null>(null);
   loading = signal(true);
   totalCount = signal(0);
-  showCreateModal = false;
+  loadError = signal('');
   searchTimeout: any;
+
+  // ── New Return ──────────────────────────────────────────
+  showCreateModal = signal(false);
+  saving = signal(false);
+  createError = signal('');
+  complaintSearch = '';
+  complaintResults = signal<ComplaintLookup[]>([]);
+  selectedComplaint = signal<ComplaintLookup | null>(null);
+  private complaintSearchTimeout: any;
+  newReturn = { returnType: 1, returnReason: '', pickupAddress: '' };
   filter: WarrantyReturnFilter = { pageNumber: 1, pageSize: 10 };
 
   // Stats from current page
@@ -32,8 +42,18 @@ export class WarrantyReturnsComponent {
   loadData() {
     this.loading.set(true);
     this.wrService.getAllWarranty(this.filter).subscribe({
-      next: (res) => { this.returns.set(res.items); this.totalCount.set(res.totalCount); this.loading.set(false); },
-      error: () => { this.loadDemo(); this.loading.set(false); }
+      next: (res) => {
+        this.returns.set(res?.items ?? []);
+        this.totalCount.set(res?.totalCount ?? 0);
+        this.loadError.set('');
+        this.loading.set(false);
+      },
+      error: () => {
+        this.returns.set([]);
+        this.totalCount.set(0);
+        this.loadError.set('Warranty returns could not be loaded. Please try again.');
+        this.loading.set(false);
+      }
     });
   }
 
@@ -45,14 +65,74 @@ export class WarrantyReturnsComponent {
     this.wrService.updateStatus(dto).subscribe({ next: () => this.loadData() });
   }
 
+  openCreate() {
+    this.newReturn = { returnType: 1, returnReason: '', pickupAddress: '' };
+    this.complaintSearch = '';
+    this.complaintResults.set([]);
+    this.selectedComplaint.set(null);
+    this.createError.set('');
+    this.showCreateModal.set(true);
+  }
+
+  closeCreate() {
+    if (this.saving()) return;
+    this.showCreateModal.set(false);
+  }
+
+  onComplaintSearch() {
+    clearTimeout(this.complaintSearchTimeout);
+    this.selectedComplaint.set(null);
+    const term = this.complaintSearch.trim();
+    if (term.length < 2) { this.complaintResults.set([]); return; }
+
+    this.complaintSearchTimeout = setTimeout(() => {
+      this.wrService.getComplaintsLookup(term, true).subscribe({
+        next: (list) => this.complaintResults.set(list ?? []),
+        error: () => this.complaintResults.set([])
+      });
+    }, 300);
+  }
+
+  pickComplaint(c: ComplaintLookup) {
+    this.selectedComplaint.set(c);
+    this.complaintSearch = c.complaintNumber + ' — ' + c.subject;
+    this.complaintResults.set([]);
+  }
+
+  canSaveReturn(): boolean {
+    return !!this.selectedComplaint() && this.newReturn.returnReason.trim().length > 0 && !this.saving();
+  }
+
+  saveReturn() {
+    const complaint = this.selectedComplaint();
+    if (!complaint || !this.canSaveReturn()) return;
+
+    this.saving.set(true);
+    this.createError.set('');
+    this.wrService.createWarranty({
+      complaintId: complaint.complaintId,
+      returnType: +this.newReturn.returnType,
+      returnReason: this.newReturn.returnReason.trim(),
+      pickupAddress: this.newReturn.pickupAddress.trim()
+    }).subscribe({
+      next: (res) => {
+        this.saving.set(false);
+        if (res?.success === false) {
+          this.createError.set(res.message || 'The return could not be created.');
+          return;
+        }
+        this.showCreateModal.set(false);
+        this.filter.pageNumber = 1;
+        this.loadData();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.createError.set(err?.error?.message || 'The return could not be created. Please try again.');
+      }
+    });
+  }
+
   getTypeLabel(t: number): string { return { 1: 'Replacement', 2: 'Repair', 3: 'Refund' }[t] || 'Unknown'; }
   getWStatusLabel(s: number): string { return { 1: 'Pending', 2: 'Approved', 3: 'Rejected', 4: 'In Transit', 5: 'Completed' }[s] || 'Unknown'; }
 
-  private loadDemo() {
-    this.returns.set([
-      { returnId: 1, returnNo: 'WR-20260225-0001', complaintId: 1, complaintNo: 'CMP-001', complaintSubject: 'AC not cooling', customerId: 5, customerName: 'Raj Kumar', customerPhone: '9876543210', productId: 1, productSerialNo: 'SN-AC-2024-001', warrantyStartDate: '2025-01-01', warrantyEndDate: '2026-12-31', returnReason: 'Compressor defective', returnType: 1, statusId: 1, approvedBy: null, approvedDate: null, pickupDate: null, pickupAddress: '123 Main St, Nagercoil', trackingNumber: '', resolutionNotes: '', refundAmount: null, createdDate: '2026-02-25', totalCount: 2 },
-      { returnId: 2, returnNo: 'WR-20260224-0002', complaintId: 3, complaintNo: 'CMP-003', complaintSubject: 'Fridge leak', customerId: 8, customerName: 'Suresh V', customerPhone: '9876543212', productId: 3, productSerialNo: 'SN-FR-2024-003', warrantyStartDate: '2024-06-15', warrantyEndDate: '2025-06-15', returnReason: 'Coolant leak - manufacturing defect', returnType: 2, statusId: 2, approvedBy: 1, approvedDate: '2026-02-24', pickupDate: null, pickupAddress: '456 South St, Nagercoil', trackingNumber: 'TRK-12345', resolutionNotes: 'Approved for repair', refundAmount: null, createdDate: '2026-02-24', totalCount: 2 },
-    ]);
-    this.totalCount.set(2);
-  }
 }

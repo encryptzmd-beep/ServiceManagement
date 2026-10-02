@@ -54,15 +54,22 @@ namespace EncryptzBL.Infrastructure.Tracking.Modules
             return ApiResponse<List<TrackingLogEntry>>.Ok(list);
         }
 
+        /// <summary>
+        /// An entry made by the back office for a technician carries no position: the
+        /// coordinates sent are those of the admin's browser, not of the technician.
+        /// </summary>
+        private static string OnBehalfNote(string recordedBy) => $"Recorded by {recordedBy} (back office)";
+
         // ── Check In ─────────────────────────────────────────────────────────
-        public async Task<ApiResponse<int>> CheckIn(CheckInDto dto, int userId)
+        public async Task<ApiResponse<int>> CheckIn(CheckInDto dto, int userId, string? recordedBy = null)
         {
+            var onBehalf = recordedBy != null;
             var p = new[]
             {
                 SqlParameterHelper.Input("@TechnicianId", userId),
-                SqlParameterHelper.Input("@Latitude",     dto.Latitude),
-                SqlParameterHelper.Input("@Longitude",    dto.Longitude),
-                SqlParameterHelper.Input("@Address",      dto.Address ?? (object)DBNull.Value)
+                SqlParameterHelper.Input("@Latitude",     onBehalf ? DBNull.Value : dto.Latitude),
+                SqlParameterHelper.Input("@Longitude",    onBehalf ? DBNull.Value : dto.Longitude),
+                SqlParameterHelper.Input("@Address",      onBehalf ? OnBehalfNote(recordedBy!) : dto.Address ?? (object)DBNull.Value)
             };
 
             var dt = await GetDataTableAsync("sp_Technician_CheckIn", p);
@@ -79,14 +86,15 @@ namespace EncryptzBL.Infrastructure.Tracking.Modules
         }
 
         // ── Check Out ─────────────────────────────────────────────────────────
-        public async Task<ApiResponse> CheckOut(CheckOutDto dto, int userId)
+        public async Task<ApiResponse> CheckOut(CheckOutDto dto, int userId, string? recordedBy = null)
         {
+            var onBehalf = recordedBy != null;
             var p = new[]
             {
                 SqlParameterHelper.Input("@TechnicianId", userId),
-                SqlParameterHelper.Input("@Latitude",     dto.Latitude),
-                SqlParameterHelper.Input("@Longitude",    dto.Longitude),
-                SqlParameterHelper.Input("@Address",      dto.Address ?? (object)DBNull.Value)
+                SqlParameterHelper.Input("@Latitude",     onBehalf ? DBNull.Value : dto.Latitude),
+                SqlParameterHelper.Input("@Longitude",    onBehalf ? DBNull.Value : dto.Longitude),
+                SqlParameterHelper.Input("@Address",      onBehalf ? OnBehalfNote(recordedBy!) : dto.Address ?? (object)DBNull.Value)
             };
 
             var dt = await GetDataTableAsync("sp_Technician_CheckOut", p);
@@ -100,15 +108,17 @@ namespace EncryptzBL.Infrastructure.Tracking.Modules
         }
 
         // ── Record Site Arrival ───────────────────────────────────────────────
-        public async Task<ApiResponse> RecordSiteArrival(SiteArrivalDto dto, int userId)
+        public async Task<ApiResponse> RecordSiteArrival(SiteArrivalDto dto, int userId, string? recordedBy = null)
         {
+            // the site-arrival position is mandatory in the table, so an entry made for the
+            // technician keeps the coordinates sent and is labelled instead
             var p = new[]
             {
                 SqlParameterHelper.Input("@TechnicianId", userId),
                 SqlParameterHelper.Input("@ComplaintId",  dto.ComplaintId),
                 SqlParameterHelper.Input("@Latitude",     dto.Latitude),
                 SqlParameterHelper.Input("@Longitude",    dto.Longitude),
-                SqlParameterHelper.Input("@Address",      dto.Address ?? (object)DBNull.Value)
+                SqlParameterHelper.Input("@Address",      recordedBy != null ? OnBehalfNote(recordedBy) : dto.Address ?? (object)DBNull.Value)
             };
 
             var dt = await GetDataTableAsync("sp_Technician_RecordSiteArrival", p);

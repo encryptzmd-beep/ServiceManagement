@@ -459,8 +459,30 @@ namespace EncryptzBL.Infrastructure.User.Modules
             return ApiResponse<List<RoleDto>>.Ok(list, "Success");
         }
 
+        public async Task<ApiResponse<object>> DeleteRole(int roleId)
+        {
+            var dt = await GetDataTableAsync("sp_Mgmt_DeleteRole", new[]
+            {
+                SqlParameterHelper.Input("@RoleId", roleId)
+            });
+
+            if (dt == null || dt.Rows.Count == 0)
+                return ApiResponse<object>.Fail("Delete failed");
+
+            var message = dt.Rows[0]["Message"]?.ToString() ?? "Done";
+            return Convert.ToInt32(dt.Rows[0]["Success"]) == 1
+                ? ApiResponse<object>.Ok(new { roleId }, message)
+                : ApiResponse<object>.Fail(message);
+        }
+
         public async Task<ApiResponse<object>> SaveRole(SaveRoleRequest req)
         {
+            if (string.IsNullOrWhiteSpace(req.RoleName))
+                return ApiResponse<object>.Fail("Role name is required");
+            var invalid = InputSanitizer.Validate(("Role name", req.RoleName), ("Description", req.Description));
+            if (invalid != null)
+                return ApiResponse<object>.Fail(invalid);
+
             var parameters = new[]
             {
                 SqlParameterHelper.Input("@RoleId", req.RoleId ?? 0),

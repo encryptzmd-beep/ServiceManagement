@@ -325,6 +325,30 @@ openRoleForm(role?: RoleDto) {
     });
   }
 
+  // ── Delete (asked in the row, no browser dialog) ─────────────────
+  confirmDeleteRoleId = signal<number | null>(null);
+  roleActionMsg = signal('');
+  roleActionErr = signal(false);
+
+  askDeleteRole(roleId: number) { this.roleActionMsg.set(''); this.confirmDeleteRoleId.set(roleId); }
+  cancelDeleteRole() { this.confirmDeleteRoleId.set(null); }
+
+  deleteRole(roleId: number) {
+    this.confirmDeleteRoleId.set(null);
+    this.svc.deleteRole(roleId).subscribe({
+      next: (res: any) => {
+        this.roleActionErr.set(res?.success === false);
+        this.roleActionMsg.set(res?.message || 'Role deleted');
+        this.loadRoles();
+      },
+      // a role that is still in use (or built in) is refused with the reason
+      error: (err: any) => {
+        this.roleActionErr.set(true);
+        this.roleActionMsg.set(err?.error?.message || 'The role could not be deleted.');
+      }
+    });
+  }
+
   // ============================================
   // TAB 3: MENU ACCESS OPERATIONS
   // ============================================

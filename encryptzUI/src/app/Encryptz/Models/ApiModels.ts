@@ -551,7 +551,8 @@ export interface SlaData {
   total: number;
   withinSla: number;
   breached: number;
-  compliancePercent: number;
+  /** null = no complaints in the range: nothing to measure (not 0 %). */
+  compliancePercent: number | null;
   avgResolutionHours: number;
   slaTargetHours: number;
 }
@@ -737,16 +738,17 @@ export interface WarrantyReturnListItem {
   totalCount: number;
 }
 
+// customer, product and warranty dates are taken from the complaint by the server
 export interface WarrantyReturnCreateDto {
   complaintId: number;
-  customerId: number;
-  productId: number;
-  productSerialNo: string;
-  warrantyStartDate: string;
-  warrantyEndDate: string;
+  customerId?: number;
+  productId?: number;
+  productSerialNo?: string;
+  warrantyStartDate?: string;
+  warrantyEndDate?: string;
   returnReason: string;
   returnType: number;
-  pickupAddress: string;
+  pickupAddress?: string;
 }
 
 export interface WarrantyReturnStatusDto {

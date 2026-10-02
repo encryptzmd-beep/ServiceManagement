@@ -54,6 +54,17 @@ namespace EncryptzBL.Infrastructure.WarrantyReturn.Modules
         // 🔥 CREATE WARRANTY RETURN
         public async Task<ApiResponse<object>> Create(WarrantyReturnCreateDto dto, int createdBy)
         {
+            if (dto.ComplaintId <= 0)
+                return ApiResponse<object>.Fail("Select the complaint the return is for");
+            if (string.IsNullOrWhiteSpace(dto.ReturnReason))
+                return ApiResponse<object>.Fail("Return reason is required");
+
+            var invalid = InputSanitizer.Validate(
+                ("Return reason", dto.ReturnReason), ("Pickup address", dto.PickupAddress),
+                ("Serial number", dto.ProductSerialNo));
+            if (invalid != null)
+                return ApiResponse<object>.Fail(invalid);
+
             var parameters = new[]
             {
                 SqlParameterHelper.Input("@ComplaintId", dto.ComplaintId),
@@ -76,6 +87,10 @@ namespace EncryptzBL.Infrastructure.WarrantyReturn.Modules
             var returnId = Convert.ToInt32(dt.Rows[0]["ReturnId"]);
             var returnNo = dt.Rows[0]["ReturnNo"]?.ToString();
             var message = dt.Rows[0]["Message"]?.ToString() ?? "Created";
+
+            // the proc answers ReturnId 0 + a message when it refuses the return
+            if (returnId <= 0)
+                return ApiResponse<object>.Fail(message);
 
             var data = new
             {

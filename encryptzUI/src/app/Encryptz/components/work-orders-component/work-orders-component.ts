@@ -262,6 +262,27 @@ repairAdvanceMethod = signal<'Cash' | 'UPI'>('Cash');
   // ── Location Device Prompt ────────────────────────────
   showLocationPrompt = signal(false);
   locationDeviceChoice = signal<'mobile' | 'computer' | 'tablet' | null>(null);
+  locationRetryMsg = signal('');
+
+  /** Device in hand, so the right steps show first ("Back" still offers the others). */
+  private detectDevice(): 'mobile' | 'computer' | 'tablet' {
+    const ua = navigator.userAgent || '';
+    if (/iPad|Tablet|PlayBook|Silk/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) return 'tablet';
+    if (/Mobi|Android|iPhone|iPod/i.test(ua)) return 'mobile';
+    return 'computer';
+  }
+
+  private openLocationPrompt(): void {
+    if (!this.showLocationPrompt()) {
+      this.locationDeviceChoice.set(this.detectDevice());
+      this.locationRetryMsg.set('');
+    }
+    this.showLocationPrompt.set(true);
+  }
+
+  deviceLabel(d: string | null): string {
+    return ({ mobile: 'Mobile', tablet: 'Tablet', computer: 'Computer' } as any)[d ?? ''] || '';
+  }
 
   // ── Repair Image Modal ──────────────────────────────
   showRepairImagesModal = signal(false);
@@ -361,17 +382,17 @@ isAnyDialogOpen(): boolean {
 }
 
 private checkTechnicianLocation(): void {
-  if (!navigator.geolocation) { this.showLocationPrompt.set(true); return; }
-  if (!navigator.permissions) { this.showLocationPrompt.set(true); return; }
+  if (!navigator.geolocation) { this.openLocationPrompt(); return; }
+  if (!navigator.permissions) { this.openLocationPrompt(); return; }
   navigator.permissions.query({ name: 'geolocation' }).then(status => {
     if (status.state === 'denied') {
-      this.showLocationPrompt.set(true);
+      this.openLocationPrompt();
     }
     status.onchange = () => {
       if (status.state === 'granted') this.showLocationPrompt.set(false);
-      if (status.state === 'denied')  this.showLocationPrompt.set(true);
+      if (status.state === 'denied')  this.openLocationPrompt();
     };
-  }).catch(() => { this.showLocationPrompt.set(true); });
+  }).catch(() => { this.openLocationPrompt(); });
 }
 
 retryLocation(): void {
@@ -382,8 +403,10 @@ retryLocation(): void {
       localStorage.setItem('encryptz_last_lng', pos.coords.longitude.toString());
       this.showLocationPrompt.set(false);
       this.locationDeviceChoice.set(null);
+      this.locationRetryMsg.set('');
     },
-    () => { /* stay on prompt */ }
+    // stay on the prompt, with the steps of the chosen device, and say why
+    () => this.locationRetryMsg.set('Location is still blocked. Follow the steps above, then tap Retry.')
   );
 }
 
@@ -454,7 +477,7 @@ checkIn(): void {
             this.showCheckInMsg(res.message || 'Check-in failed', true);
           }
         },
-        error: () => { this.checkInBusy.set(false); this.showCheckInMsg('Check-in failed', true); }
+        error: (err: any) => { this.checkInBusy.set(false); this.showCheckInMsg(err?.error?.message || 'Check-in failed', true); }
       });
     }).catch(() => {
       this.checkInBusy.set(false);
@@ -486,7 +509,7 @@ checkOut(): void {
             this.showCheckInMsg(res.message || 'Check-out failed', true);
           }
         },
-        error: () => { this.checkInBusy.set(false); this.showCheckInMsg('Check-out failed', true); }
+        error: (err: any) => { this.checkInBusy.set(false); this.showCheckInMsg(err?.error?.message || 'Check-out failed', true); }
       });
     }).catch(() => {
       this.checkInBusy.set(false);
@@ -513,7 +536,7 @@ startWork(wo: WorkOrder): void {
         this.show(r.message, true);
       }
     },
-    error: () => this.show('Failed to update status.', true),
+    error: (err: any) => this.show(err?.error?.message || 'Failed to update status.', true),
   });
 }
 
@@ -643,7 +666,7 @@ private showCheckInMsg(m: string, err: boolean): void {
           this.show(r.message, true);
         }
       },
-      error: () => this.show('Failed to update status.', true),
+      error: (err: any) => this.show(err?.error?.message || 'Failed to update status.', true),
     });
   }
 
@@ -882,9 +905,9 @@ private showCheckInMsg(m: string, err: boolean): void {
         this.loadPayments(cid);
         this.initPaymentForm();
       },
-      error: () => {
+      error: (err: any) => {
         this.paymentSubmitting.set(false);
-        this.paymentMsg.set('Failed to record payment');
+        this.paymentMsg.set(err?.error?.message || 'Failed to record payment');
         this.paymentMsgErr.set(true);
       }
     });
@@ -933,9 +956,9 @@ private showCheckInMsg(m: string, err: boolean): void {
         this.paymentMsg.set('');
         this.completePaymentStep.set(false);
       },
-      error: () => {
+      error: (err: any) => {
         this.paymentSubmitting.set(false);
-        this.paymentMsg.set('Failed to record payment');
+        this.paymentMsg.set(err?.error?.message || 'Failed to record payment');
         this.paymentMsgErr.set(true);
       }
     });
@@ -1304,9 +1327,9 @@ submitSpareRequest(): void {
       };
       uploadNext(0);
     },
-    error: () => {
+    error: (err: any) => {
       this.spareSubmitting.set(false);
-      this.spareMsg.set('Failed to submit request');
+      this.spareMsg.set(err?.error?.message || 'Failed to submit request');
       this.spareMsgErr.set(true);
     }
   });
@@ -1651,6 +1674,7 @@ openCompleteDialog(wo: WorkOrder, event?: Event): void {
   event?.stopPropagation();
   this.completeWo.set(wo);
   this.completeForm = { remarks: '', workDone: '', partsUsed: '', customerFeedback: '' };
+  this.workDoneTouched.set(false);
   this.uploadQueue.set([]);
   this.completeMsg.set('');
   this.uploadProgress.set(0);
@@ -1740,12 +1764,16 @@ formatSize(bytes: number): string {
 }
 
 // ── Submit completion ───────────────────────────────────
+/** Set once the technician left the field or pressed Complete: shows the "required" message. */
+workDoneTouched = signal(false);
+
 submitCompletion(): void {
   const wo = this.completeWo();
   if (!wo) return;
 
   if (!this.completeForm.workDone.trim()) {
-    this.completeMsg.set('Please describe the work done');
+    this.workDoneTouched.set(true);
+    this.completeMsg.set('Please describe the work performed');
     this.completeMsgErr.set(true);
     return;
   }
@@ -1832,9 +1860,10 @@ private finalizeCompletion(wo: WorkOrder, updateProgress: () => void): void {
         this.completeMsgErr.set(true);
       }
     },
-    error: () => {
+    error: (err: any) => {
       this.completeBusy.set(false);
-      this.completeMsg.set('Failed to complete work order');
+      // e.g. "Upload at least one service photo…", "Please check in…"
+      this.completeMsg.set(err?.error?.message || 'Failed to complete work order');
       this.completeMsgErr.set(true);
     }
   });

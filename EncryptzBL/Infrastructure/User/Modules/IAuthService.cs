@@ -24,6 +24,8 @@ namespace EncryptzBL.Infrastructure.User.Modules
         Task<ApiResponse<object>> SaveUser(SaveUserRequest req, int companyId, int projectId, int savedBy);
         Task<ApiResponse<List<RoleDto>>> GetRoles();
         Task<ApiResponse<object>> SaveRole(SaveRoleRequest req);
+        /// <summary>Deletes a role nobody uses (built-in roles and roles in use are refused).</summary>
+        Task<ApiResponse<object>> DeleteRole(int roleId);
         Task<ApiResponse<List<MenuAccessDto>>> GetMenuAccess(int roleId);
         Task<ApiResponse<string>> SaveMenuAccessBulk(SaveMenuAccessBulkRequest req);
         Task<ApiResponse<ExtendedLoginResponseDto>> SelfRegister(SelfRegisterDto dto);

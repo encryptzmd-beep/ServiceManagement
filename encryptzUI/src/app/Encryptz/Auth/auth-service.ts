@@ -149,6 +149,7 @@ export class AuthService {
   saveUser(payload: any): Observable<any>   { return this.http.post(`${this.apiUrl}/users/save`, payload); }
   getRoles(): Observable<RoleDto[]>         { return this.http.get<RoleDto[]>(`${this.apiUrl}/roles`); }
   saveRole(payload: any): Observable<any>   { return this.http.post(`${this.apiUrl}/roles/save`, payload); }
+  deleteRole(roleId: number): Observable<any> { return this.http.delete(`${this.apiUrl}/roles/${roleId}`); }
   getMenuAccess(roleId: number): Observable<MenuAccessDto[]> {
     return this.http.get<MenuAccessDto[]>(`${this.apiUrl}/menu-access/${roleId}`);
   }

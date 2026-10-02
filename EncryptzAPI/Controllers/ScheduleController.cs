@@ -22,6 +22,8 @@ namespace EncryptzAPI.Controllers
         [HttpGet("daily")]
         public async Task<IActionResult> GetDaily([FromQuery] DateTime? date, [FromQuery] int? technicianId)
         {
+            if (User.IsTechnicianScoped()) technicianId = User.GetTechnicianId();
+
             var result = await _service.GetDaily(date, technicianId);
             return Ok(result);
         }

@@ -37,7 +37,10 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> Create([FromBody] WarrantyReturnCreateDto dto)
         {
             var result = await _service.Create(dto, GetUserId());
-            return CreatedAtAction(nameof(GetById), new { id = ((dynamic)result.Data).ReturnId }, result);
+            if (!result.Success) return BadRequest(result);
+            // (the id used to be read with "dynamic" from an anonymous object of another assembly,
+            //  which throws at run time: every create answered 500)
+            return StatusCode(StatusCodes.Status201Created, result);
         }
 
         [HttpPut("status")]

@@ -32,6 +32,19 @@
   margin-bottom: 20px;
 }
 
+/* back link on the left, Quick Complaint button on the right (in the page flow, so
+   it can never sit on top of the wizard buttons) */
+.header-breadcrumb {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+
+  .back-link { margin-bottom: 0; }
+}
+
 .back-link {
   display: inline-flex;
   align-items: center;
@@ -185,7 +198,8 @@
 /* ——— Product Selection ——— */
 .product-select-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  /* minmax(0, …): plain 1fr grows with a long product name and overflows on mobile */
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 
@@ -199,6 +213,7 @@
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
   background: #fff;
+  min-width: 0;
 }
 
 .product-option:hover {
@@ -677,8 +692,7 @@
   > span:nth-child(2) {
     flex: 1;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-wrap: anywhere;
   }
 }
 
@@ -885,13 +899,13 @@
 /* ——— Wide screens (2 cols for product grid) ——— */
 @media (min-width: 900px) {
   .product-select-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1400px) {
   .product-select-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

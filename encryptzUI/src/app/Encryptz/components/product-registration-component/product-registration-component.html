@@ -2,7 +2,7 @@
   <div class="page-header">
     <div class="header-left">
       <h1 class="page-title">My Products</h1>
-      <p class="page-subtitle">Register and manage your fitness equipment</p>
+      <p class="page-subtitle">Register and manage your products</p>
     </div>
     <button class="btn-primary" (click)="toggleForm()">
       <span class="material-icons">{{ showForm() ? 'close' : 'add_circle' }}</span>
@@ -30,7 +30,7 @@
           <div class="input-wrapper">
             <span class="material-icons input-icon">search</span>
             <input type="text" [(ngModel)]="masterSearch" name="masterSearch" class="input"
-              placeholder="Search treadmill, spin bike, gym station..."
+              placeholder="Search the product catalog by name, brand or model..."
               (input)="onMasterSearch()" (focus)="showMasterDropdown = true" autocomplete="off" />
             @if (selectedMaster) {
             <button type="button" class="clear-btn" (click)="clearMaster()">
@@ -54,7 +54,7 @@
           <div class="autocomplete-dropdown">
             @for (m of productMasterList(); track m.productMasterId) {
             <div class="ac-item" (click)="selectMaster(m)">
-              <div class="ac-icon"><span class="material-icons">fitness_center</span></div>
+              <div class="ac-icon"><span class="material-icons">inventory_2</span></div>
               <div class="ac-info">
                 <strong>{{ m.productName }}</strong>
                 <small>{{ m.brand }} &bull; {{ m.model }}</small>
@@ -76,7 +76,7 @@
         <div class="input-wrapper">
           <span class="material-icons input-icon">devices</span>
           <input id="pname" [(ngModel)]="form.productName" name="productName" class="input"
-            placeholder="e.g. Treadmill X500" required />
+            placeholder="Product name" required />
         </div>
       </div>
 
@@ -93,7 +93,7 @@
         <label for="brand">Brand</label>
         <div class="input-wrapper">
           <span class="material-icons input-icon">business</span>
-          <input id="brand" [(ngModel)]="form.brand" name="brand" class="input" placeholder="e.g. Felix Fitness" />
+          <input id="brand" [(ngModel)]="form.brand" name="brand" class="input" placeholder="Brand" />
         </div>
       </div>
 
@@ -149,7 +149,7 @@
     <div class="product-card">
       <div class="product-card-header">
         <div class="product-icon-wrap">
-          <span class="material-icons">fitness_center</span>
+          <span class="material-icons">inventory_2</span>
         </div>
         <div class="product-title-area">
           <h4>{{ product.productName }}</h4>

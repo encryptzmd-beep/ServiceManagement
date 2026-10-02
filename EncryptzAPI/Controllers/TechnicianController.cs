@@ -18,12 +18,40 @@ namespace EncryptzAPI.Controllers
     {
         private readonly ITechnicianService _service;
         private readonly IWebHostEnvironment _env;
-        public TechnicianController(ITechnicianService service, IWebHostEnvironment env)
+        private readonly IConfiguration _config;
+        public TechnicianController(ITechnicianService service, IWebHostEnvironment env, IConfiguration config)
         {
             _service = service;
             _env = env;
+            _config = config;
         }
+
+        /// <summary>WorkOrders:RequireCompletionPhoto (default true): no completion without a service photo.</summary>
+        private bool RequireCompletionPhoto
+            => !string.Equals(_config["WorkOrders:RequireCompletionPhoto"], "false", StringComparison.OrdinalIgnoreCase);
         private int UserId => User.GetTenantUserId();
+
+        private const string CheckInRequired = "Please check in before working on a job";
+
+        /// <summary>
+        /// Technicians may only touch their own assignment; back office any.
+        /// Returns the error result, or null when the caller may go on.
+        /// </summary>
+        private async Task<IActionResult?> GuardAssignment(int assignmentId, bool requireCheckIn = false)
+        {
+            if (!User.IsTechnicianScoped()) return null;
+
+            var owner = await _service.GetAssignmentTechnicianId(assignmentId);
+            if (owner == null)
+                return NotFound(new { success = false, message = "Assignment not found" });
+            if (owner != User.GetTechnicianId())
+                return this.Forbidden("This work order is assigned to another technician");
+
+            if (requireCheckIn && !await _service.IsCheckedIn(owner.Value))
+                return BadRequest(new { success = false, message = CheckInRequired });
+
+            return null;
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] TechnicianFilterDto filter)
@@ -66,7 +94,11 @@ namespace EncryptzAPI.Controllers
         }
         [HttpPost("assign")]
         public async Task<IActionResult> Assign([FromBody] AssignTechnicianDto dto)
-            => Ok(await _service.AssignTechnician(dto, UserId));
+        {
+            // dispatching is a back-office action
+            if (User.IsTechnicianScoped()) return this.Forbidden();
+            return Ok(await _service.AssignTechnician(dto, UserId));
+        }
 
         [HttpGet("audit-log/{complaintId}")]
         public async Task<IActionResult> GetAuditLog(int complaintId)
@@ -74,11 +106,15 @@ namespace EncryptzAPI.Controllers
 
         [HttpPost("complete-assignment")]
         public async Task<IActionResult> CompleteAssignment([FromBody] CompleteAssignmentDto dto)
-           => Ok(await _service.CompleteAssignment(dto, UserId));
+        {
+            var denied = await GuardAssignment(dto.AssignmentId, requireCheckIn: true);
+            if (denied != null) return denied;
+            return Ok(await _service.CompleteAssignment(dto, UserId));
+        }
 
         [HttpGet("complaints-lookup")]
-        public async Task<IActionResult> GetComplaintsForAssignment([FromQuery] string search = null)
-        => Ok(await _service.GetComplaintsForAssignment(search));
+        public async Task<IActionResult> GetComplaintsForAssignment([FromQuery] string search = null, [FromQuery] bool includeClosed = false)
+        => Ok(await _service.GetComplaintsForAssignment(search, includeClosed));
 
         [HttpGet("active-assignments")]
         public async Task<IActionResult> GetActiveAssignments()
@@ -90,6 +126,10 @@ namespace EncryptzAPI.Controllers
         {
             if (request.AssignmentId <= 0)
                 return BadRequest(new { success = false, message = "Invalid assignment ID" });
+
+            // a technician may hand back (put on hold) only the own work order
+            var denied = await GuardAssignment(request.AssignmentId);
+            if (denied != null) return denied;
 
             // Get logged-in user ID from JWT claims
             var userId = UserId;
@@ -114,6 +154,10 @@ namespace EncryptzAPI.Controllers
         [HttpGet("{technicianId}/work-orders")]
         public async Task<IActionResult> GetWorkOrders(int technicianId)
         {
+            // the id comes from the URL: a technician may only ask for the own list
+            if (!User.CanActAsTechnician(technicianId))
+                return this.Forbidden("You can only view your own work orders");
+
             var data = await _service.GetWorkOrders(technicianId);
             return Ok(new { success = true, data });
         }
@@ -128,6 +172,19 @@ namespace EncryptzAPI.Controllers
             var validStatuses = new[] { "InProgress", "Completed" };
             if (!validStatuses.Contains(dto.Status))
                 return BadRequest(new { success = false, message = "Invalid status. Use: InProgress or Completed" });
+
+            var denied = await GuardAssignment(dto.AssignmentId, requireCheckIn: true);
+            if (denied != null) return denied;
+
+            if (dto.Status == "Completed")
+            {
+                if (string.IsNullOrWhiteSpace(dto.WorkDone))
+                    return BadRequest(new { success = false, message = "Work performed is required to complete a work order" });
+
+                // the screen uploads the photos first, then completes
+                if (RequireCompletionPhoto && User.IsTechnicianScoped() && !await _service.HasServiceImage(dto.AssignmentId))
+                    return BadRequest(new { success = false, message = "Upload at least one service photo before completing the work order" });
+            }
 
             var result = await _service.UpdateAssignmentStatus(dto, UserId);
             return Ok(new { success = result.Success, message = result.Message });
@@ -151,6 +208,9 @@ namespace EncryptzAPI.Controllers
         [HttpGet("work-order-details/{assignmentId}")]
         public async Task<IActionResult> GetWorkOrderDetails(int assignmentId)
         {
+            var denied = await GuardAssignment(assignmentId);
+            if (denied != null) return denied;
+
             var detail = await _service.GetWorkOrderDetails(assignmentId);
             if (detail == null)
                 return NotFound(new { success = false, message = "Assignment not found" });
@@ -173,6 +233,16 @@ namespace EncryptzAPI.Controllers
             var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
             if (!allowed.Contains(ext))
                 return BadRequest(new { success = false, message = "Only JPG, PNG, and WEBP files are allowed" });
+
+            // the technician id comes from the URL and the complaint id from the form:
+            // a technician uploads only as himself, and only to a complaint assigned to him
+            if (User.IsTechnicianScoped())
+            {
+                if (!User.CanActAsTechnician(technicianId))
+                    return this.Forbidden("You can only upload images as yourself");
+                if (!await _service.IsComplaintAssignedTo(complaintId, technicianId))
+                    return this.Forbidden("This complaint is not assigned to you");
+            }
 
             // Convert file to base64 data URI
             using var ms = new MemoryStream();

@@ -1,7 +1,8 @@
-import { Component, ElementRef, ViewChild, signal, AfterViewInit, NgZone } from '@angular/core';
+import { Component, ElementRef, ViewChild, signal, AfterViewInit, OnInit, NgZone, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../Services/API/api-service';
+import { LeafletLoaderService } from '../../Services/leaflet-loader-service';
 
 declare var L: any;
 
@@ -159,7 +160,7 @@ declare var L: any;
                   [(ngModel)]="subject"
                   name="subject"
                   required
-                  placeholder="e.g., Treadmill not working, Dumbbell damaged..."
+                  placeholder="e.g., Not working, damaged part..."
                   class="input-field"
                   (blur)="subjectTouched = true"
                 />
@@ -174,26 +175,14 @@ declare var L: any;
               <!-- Category -->
               <div class="form-field">
                 <label>
-                  <span class="material-icons">fitness_center</span>
+                  <span class="material-icons">category</span>
                   Category
                 </label>
                 <select [(ngModel)]="category" name="category" class="input-field">
                   <option value="">Select category (optional)</option>
-                  <option value="Treadmill">Treadmill</option>
-                  <option value="Elliptical">Elliptical Trainer</option>
-                  <option value="Exercise Bike">Exercise Bike</option>
-                  <option value="Rowing Machine">Rowing Machine</option>
-                  <option value="Weight Bench">Weight Bench</option>
-                  <option value="Dumbbells">Dumbbells</option>
-                  <option value="Barbell">Barbell</option>
-                  <option value="Pull Up Bar">Pull Up Bar</option>
-                  <option value="Cable Machine">Cable Machine</option>
-                  <option value="Leg Press">Leg Press</option>
-                  <option value="Smith Machine">Smith Machine</option>
-                  <option value="Cross Trainer">Cross Trainer</option>
-                  <option value="Yoga Mat">Yoga Mat</option>
-                  <option value="Kettlebell">Kettlebell</option>
-                  <option value="Other Gym Equipment">Other Gym Equipment</option>
+                  @for (c of categories(); track c) {
+                    <option [value]="c">{{ c }}</option>
+                  }
                 </select>
               </div>
 
@@ -207,7 +196,7 @@ declare var L: any;
                   type="text"
                   [(ngModel)]="brandName"
                   name="brandName"
-                  placeholder="e.g., NordicTrack, Bowflex, Life Fitness..."
+                  placeholder="Brand of the product"
                   class="input-field"
                 />
               </div>
@@ -222,7 +211,7 @@ declare var L: any;
                   type="text"
                   [(ngModel)]="modelNumber"
                   name="modelNumber"
-                  placeholder="e.g., T-9.5, 1750, RW900..."
+                  placeholder="Model number, if you know it"
                   class="input-field"
                 />
               </div>
@@ -237,7 +226,7 @@ declare var L: any;
                   [(ngModel)]="description"
                   name="description"
                   rows="3"
-                  placeholder="What's the problem? (e.g., 'Belt slipping', 'Display not working', 'Making noise')"
+                  placeholder="What's the problem? (e.g., 'Not switching on', 'Display not working', 'Making noise')"
                   class="textarea-field"
                 ></textarea>
               </div>
@@ -1001,7 +990,10 @@ declare var L: any;
     }
   `]
 })
-export class PublicQuickComplaintComponent implements AfterViewInit {
+export class PublicQuickComplaintComponent implements OnInit, AfterViewInit {
+  /** Complaint categories of the tenant (configured per project, not hardcoded). */
+  categories = signal<string[]>([]);
+
   @ViewChild('miniMap') miniMapContainer!: ElementRef;
 
   // Identity state
@@ -1049,7 +1041,16 @@ export class PublicQuickComplaintComponent implements AfterViewInit {
   showSuccess   = signal(false);
   successMessage = signal('');
 
+  private leaflet = inject(LeafletLoaderService);
+
   constructor(private apiService: ApiService, private ngZone: NgZone) {}
+
+  ngOnInit(): void {
+    this.apiService.getComplaintCategories().subscribe({
+      next: (res: any) => this.categories.set(res?.data ?? []),
+      error: () => this.categories.set([])
+    });
+  }
 
   ngAfterViewInit(): void {}
 
@@ -1108,7 +1109,7 @@ export class PublicQuickComplaintComponent implements AfterViewInit {
     this.nameTouched = true;
     if (!this.isValidMobile() || !this.name.trim()) return;
     this.identityConfirmed.set(true);
-    setTimeout(() => this.initMiniMap(), 150);
+    setTimeout(() => this.leaflet.load().then(() => this.initMiniMap()).catch(() => {}), 150);
   }
 
   resetIdentity(): void {
@@ -1364,6 +1365,6 @@ export class PublicQuickComplaintComponent implements AfterViewInit {
     this.removePhoto();
     if (this.map) { this.map.remove(); this.map = null; }
     // Re-init map after brief delay so the form is still visible
-    setTimeout(() => this.initMiniMap(), 200);
+    setTimeout(() => this.leaflet.load().then(() => this.initMiniMap()).catch(() => {}), 200);
   }
 }

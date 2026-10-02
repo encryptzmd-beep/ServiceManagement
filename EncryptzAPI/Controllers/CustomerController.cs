@@ -13,6 +13,7 @@ namespace EncryptzAPI.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
+    [CustomerPortal]
     public class CustomerController : ControllerBase
     {
         private readonly ICustomerService _svc;
@@ -24,6 +25,9 @@ namespace EncryptzAPI.Controllers
             _connectionResolver = connectionResolver;
         }
         private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+        /// <summary>Largest page a customer list returns in one request.</summary>
+        private const int MaxCustomerPageSize = 100;
 
         // ============================================
         // AUTHENTICATION (Public endpoints - no Authorize)
@@ -175,13 +179,19 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetProductMaster([FromQuery] string search = null, [FromQuery] string category = null)
     => Ok(await _svc.GetProductMaster(search, category));
 
+        // also read by the public complaint page, before anyone is signed in
         [HttpGet("complaint-categories")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetComplaintCategories()
             => Ok(await _svc.GetComplaintCategories());
 
         [HttpPost("complaints")]
         public async Task<IActionResult> CreateComplaint([FromBody] ComplaintCreateDto dto)
-            => Ok(await _svc.CreateComplaint(GetUserId(), dto));
+        {
+            var result = await _svc.CreateComplaint(GetUserId(), dto);
+            if (!result.Success) return BadRequest(result);
+            return Ok(result);
+        }
 
         [HttpPut("complaints/{id}")]
         public async Task<IActionResult> UpdateComplaint(int id, [FromBody] ComplaintUpdateDto dto)
@@ -203,9 +213,10 @@ namespace EncryptzAPI.Controllers
         // Rest of the code remains the same
 
 
+        // page / size below 1 are refused with 400 by PagingGuardFilter
         [HttpGet("my-complaints")]
         public async Task<IActionResult> GetMyComplaints([FromQuery] int? statusFilter, [FromQuery] int page = 1, [FromQuery] int size = 10)
-            => Ok(await _svc.GetMyComplaints(GetUserId(), statusFilter, page, size));
+            => Ok(await _svc.GetMyComplaints(GetUserId(), statusFilter, page, Math.Min(size, MaxCustomerPageSize)));
 
         [HttpGet("complaints/{id}")]
         public async Task<IActionResult> GetComplaintDetail(int id)
@@ -240,6 +251,7 @@ namespace EncryptzAPI.Controllers
 
 
         [HttpPost("complaints/{id}/images")]
+        [RequestSizeLimit(10 * 1024 * 1024)]
         public async Task<IActionResult> UploadComplaintImage(
      int id,
      [FromForm] IFormFile file,
@@ -247,6 +259,15 @@ namespace EncryptzAPI.Controllers
         {
             if (file == null || file.Length == 0)
                 return BadRequest("No file");
+
+            var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+            if (!allowed.Contains(Path.GetExtension(file.FileName).ToLowerInvariant()))
+                return BadRequest(ApiResponse<string>.Fail("Only JPG, PNG, and WEBP files are allowed"));
+
+            // the complaint id comes from the URL: it has to be one of the customer's own
+            var complaint = await _svc.GetComplaintDetail(id, GetUserId());
+            if (!complaint.Success)
+                return NotFound(ApiResponse<string>.Fail("Complaint not found"));
 
             // 🔥 Convert to Base64
             using var ms = new MemoryStream();

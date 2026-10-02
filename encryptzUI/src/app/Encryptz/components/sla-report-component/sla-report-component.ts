@@ -18,11 +18,22 @@ export class SlaReportComponent  implements OnInit{
 
   data = signal<SlaData[]>([]);
   loading = signal(false);
-fromDate = new Date(new Date().setDate(new Date().getDate() - 30))
-  .toISOString()
-  .substring(0, 10);
+  // local calendar dates: toISOString() is UTC, which is still "yesterday" in India
+  // until 05:30 and left the complaints of today out of the default range
+  fromDate = this.localDate(-30);
+  toDate = this.localDate(0);
 
-toDate = new Date().toISOString().substring(0, 10);
+  private localDate(offsetDays: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  /** A priority (or the whole range) without complaints has no compliance figure. */
+  hasData(d: SlaData): boolean {
+    return d.total > 0 && d.compliancePercent != null;
+  }
 
   // GET api/report/sla-compliance?startDate=&endDate=
   // Returns: List<SlaData> or ApiResponse wrapping it
@@ -71,7 +82,8 @@ loadReport(): void {
     return this.data().reduce((s, d) => s + d.breached, 0);
   }
 
-  getComplianceClass(pct: number): string {
+  getComplianceClass(pct: number | null): string {
+    if (pct == null) return 'none';
     if (pct >= 90) return 'good';
     if (pct >= 70) return 'warn';
     return 'critical';

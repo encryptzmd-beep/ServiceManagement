@@ -17,6 +17,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../Services/API/api-service';
 import { AuthService } from '../../Auth/auth-service';
+import { LeafletLoaderService } from '../../Services/leaflet-loader-service';
 import { environment } from '../../../../environments/environment.development';
 
 declare var L: any;
@@ -42,6 +43,7 @@ export class ComplaintDetailPopupComponent implements OnInit, AfterViewChecked, 
   @ViewChild('locationMap') locationMapRef?: ElementRef<HTMLDivElement>;
 
   private api = inject(ApiService);
+  private leaflet = inject(LeafletLoaderService);
 
   // ── state ────────────────────────────────────────────
   loading        = signal(true);
@@ -145,10 +147,10 @@ activeTab = signal<'overview'|'customer'|'product'|'location'|'assignments'|'spa
 
   ngAfterViewChecked() {
     if (this.editing.customer && this.customerMapRef?.nativeElement && !this.customerMap) {
-      setTimeout(() => this.initCustomerMap(), 50);
+      setTimeout(() => this.leaflet.load().then(() => this.initCustomerMap()).catch(() => {}), 50);
     }
     if (this.editing.location && this.locationMapRef?.nativeElement && !this.locationMap) {
-      setTimeout(() => this.initLocationMap(), 50);
+      setTimeout(() => this.leaflet.load().then(() => this.initLocationMap()).catch(() => {}), 50);
     }
   }
 

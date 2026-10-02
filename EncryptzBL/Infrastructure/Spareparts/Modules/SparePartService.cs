@@ -42,14 +42,15 @@ namespace EncryptzBL.Infrastructure.Spareparts.Modules
             return await GetListAsync<SpareRequestByComplaintDto>("sp_SparePart_GetByComplaint", p);
         }
 
-        public async Task<ApiResponse> BulkUpdateStatus(List<int> requestIds, string status, int updatedBy)
+        public async Task<ApiResponse> BulkUpdateStatus(List<int> requestIds, string status, int updatedBy, string? rejectReason = null)
         {
             var ids = string.Join(",", requestIds);
             var p = new[]
             {
         SqlParameterHelper.Input("@RequestIds", ids),
         SqlParameterHelper.Input("@Status",     status),
-        SqlParameterHelper.Input("@ApprovedBy", updatedBy)
+        SqlParameterHelper.Input("@ApprovedBy", updatedBy),
+        SqlParameterHelper.Input("@RejectReason", (object?)rejectReason ?? DBNull.Value)
     };
             var dt = await GetDataTableAsync("sp_SparePart_BulkUpdateStatus", p);
             if (dt == null || dt.Rows.Count == 0) return new ApiResponse(false, "Update failed");
@@ -115,25 +116,82 @@ namespace EncryptzBL.Infrastructure.Spareparts.Modules
         }
 
         // PATCH update request status (approve/reject/dispatch)
-        public async Task<ApiResponse> UpdateRequestStatus(
-            int requestId, string status, int updatedBy)
+        public async Task<SpareStatusResult> UpdateRequestStatus(
+            int requestId, string status, int updatedBy,
+            string? rejectReason = null, decimal? unitPrice = null, bool allowNoStock = false)
         {
             var p = new[]
             {
-                SqlParameterHelper.Input("@RequestId",  requestId),
-                SqlParameterHelper.Input("@Status",     status),
-                SqlParameterHelper.Input("@ApprovedBy", updatedBy)
+                SqlParameterHelper.Input("@RequestId",    requestId),
+                SqlParameterHelper.Input("@Status",       status),
+                SqlParameterHelper.Input("@ApprovedBy",   updatedBy),
+                SqlParameterHelper.Input("@RejectReason", (object?)rejectReason ?? DBNull.Value),
+                SqlParameterHelper.Input("@UnitPrice",    (object?)unitPrice ?? DBNull.Value),
+                SqlParameterHelper.Input("@AllowNoStock", allowNoStock)
             };
 
             var dt = await GetDataTableAsync("sp_SparePart_UpdateRequestStatus", p);
 
             if (dt == null || dt.Rows.Count == 0)
-                return new ApiResponse(false, "Update failed");
+                return new SpareStatusResult(false, "Update failed");
 
+            // 1 done · 0 refused · 2 not enough stock: the caller has to confirm
             var result = Convert.ToInt32(dt.Rows[0]["Result"]);
             var message = dt.Rows[0]["Message"]?.ToString() ?? "Done";
-            return new ApiResponse(result == 1, message);
+            return new SpareStatusResult(result == 1, message) { NeedsStockConfirmation = result == 2 };
         }
+
+        public async Task<int?> GetRequestTechnicianId(int requestId)
+        {
+            var dt = await GetDataTableByQueryAsync(
+                "SELECT TechnicianId FROM dbo.SparePartRequests WHERE RequestId = @RequestId",
+                new[] { SqlParameterHelper.Input("@RequestId", requestId) });
+
+            return dt.Rows.Count == 0 ? null : Convert.ToInt32(dt.Rows[0]["TechnicianId"]);
+        }
+
+        // ── spare part master: validation the UI alone cannot guarantee ──────────
+
+        private const decimal MaxUnitPrice = 9_999_999.99m;   // well inside DECIMAL(10,2)
+        private const int MaxStock = 1_000_000;
+
+        private async Task<string?> ValidateSparePart(SparePartRequest_Model request)
+        {
+            request.PartName = request.PartName?.Trim();
+            request.PartNumber = string.IsNullOrWhiteSpace(request.PartNumber) ? null : request.PartNumber.Trim();
+
+            if (string.IsNullOrWhiteSpace(request.PartName))
+                return "Part name is required";
+            if (request.PartName.Length > 200)
+                return "Part name is too long (max 200 characters)";
+            if (request.PartNumber?.Length > 100)
+                return "Part number is too long (max 100 characters)";
+
+            var markup = InputSanitizer.Validate(("Part name", request.PartName), ("Part number", request.PartNumber));
+            if (markup != null) return markup;
+
+            if (request.StockQuantity is < 0 or > MaxStock)
+                return $"Stock quantity must be between 0 and {MaxStock:N0}";
+            if (request.UnitPrice is < 0 or > MaxUnitPrice)
+                return $"Unit price must be between 0 and {MaxUnitPrice:N2}";
+
+            if (request.PartNumber != null)
+            {
+                var dt = await GetDataTableByQueryAsync(
+                    @"SELECT TOP 1 1 AS Found FROM dbo.SpareParts
+                      WHERE PartNumber = @PartNumber AND SparePartId <> @SparePartId",
+                    new[]
+                    {
+                        SqlParameterHelper.Input("@PartNumber", request.PartNumber),
+                        SqlParameterHelper.Input("@SparePartId", request.SparePartId ?? 0)
+                    });
+                if (dt.Rows.Count > 0)
+                    return $"Part number '{request.PartNumber}' is already used by another part";
+            }
+
+            return null;
+        }
+
         public async Task<ApiResponse<ProductMaster>> CreateProduct(ProductMasterRequestDto dto)
         {
             var parameters = new[]
@@ -141,7 +199,7 @@ namespace EncryptzBL.Infrastructure.Spareparts.Modules
                 SqlParameterHelper.Input("@OperationType", "CREATE"),
                 SqlParameterHelper.Input("@ProductCode", dto.ProductCode),
                 SqlParameterHelper.Input("@ProductName", dto.ProductName),
-                SqlParameterHelper.Input("@Brand", dto.Brand ?? "AEROFIT"),
+                SqlParameterHelper.Input("@Brand", dto.Brand),
                 SqlParameterHelper.Input("@Category", dto.Category),
                 SqlParameterHelper.Input("@SubCategory", dto.SubCategory),
                 SqlParameterHelper.Input("@Model", dto.Model),
@@ -496,6 +554,10 @@ namespace EncryptzBL.Infrastructure.Spareparts.Modules
 
         public async Task<ApiResponse<SparePart_Model>> CreateSparePart(SparePartRequest_Model request)
         {
+            var invalid = await ValidateSparePart(request);
+            if (invalid != null)
+                return ApiResponse<SparePart_Model>.Fail(invalid);
+
             try
             {
                 var parameters = new[]
@@ -519,21 +581,34 @@ namespace EncryptzBL.Infrastructure.Spareparts.Modules
 
                     if (success)
                     {
-                        return ApiResponse<SparePart_Model>.Ok(new SparePart_Model { SparePartId = sparePartId }, message);
+                        return ApiResponse<SparePart_Model>.Ok(new SparePart_Model
+                        {
+                            SparePartId = sparePartId,
+                            PartName = request.PartName,
+                            PartNumber = request.PartNumber,
+                            StockQuantity = request.StockQuantity ?? 0,
+                            UnitPrice = request.UnitPrice,
+                            IsActive = request.IsActive ?? true
+                        }, message);
                     }
                     return ApiResponse<SparePart_Model>.Fail(message);
                 }
 
                 return ApiResponse<SparePart_Model>.Fail("Failed to create spare part");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return ApiResponse<SparePart_Model>.Fail($"Error creating spare part: {ex.Message}");
+                // no database error text to the client
+                return ApiResponse<SparePart_Model>.Fail("The spare part could not be saved. Please check the values and try again.");
             }
         }
 
         public async Task<ApiResponse<SparePart_Model>> UpdateSparePart(SparePartRequest_Model request)
         {
+            var invalid = await ValidateSparePart(request);
+            if (invalid != null)
+                return ApiResponse<SparePart_Model>.Fail(invalid);
+
             try
             {
                 var parameters = new[]
@@ -564,9 +639,9 @@ namespace EncryptzBL.Infrastructure.Spareparts.Modules
 
                 return ApiResponse<SparePart_Model>.Fail("Failed to update spare part");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return ApiResponse<SparePart_Model>.Fail($"Error updating spare part: {ex.Message}");
+                return ApiResponse<SparePart_Model>.Fail("The spare part could not be saved. Please check the values and try again.");
             }
         }
 

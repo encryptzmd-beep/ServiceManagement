@@ -5,7 +5,7 @@
       <div class="fx-page-title">Warranty Returns</div>
       <div class="fx-page-sub">Manage product warranty claims and returns</div>
     </div>
-    <button class="fx-btn-new" (click)="showCreateModal = true">
+    <button class="fx-btn-new" (click)="openCreate()">
       <span class="material-icons" style="font-size:18px;">add</span>
       New Return
     </button>
@@ -73,6 +73,7 @@
 
     <!-- Loading -->
     <div class="loading" *ngIf="loading()"><div class="spinner"></div></div>
+    <div class="wr-error" *ngIf="!loading() && loadError()">{{ loadError() }}</div>
 
     <!-- Table -->
     <div class="table-responsive" *ngIf="!loading()">
@@ -133,6 +134,67 @@
         <button [disabled]="filter.pageNumber>=totalPages()"
                 (click)="filter.pageNumber=filter.pageNumber+1; loadData()"
                 class="fx-page-btn">Next ›</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Return Modal -->
+  <div class="modal-overlay" *ngIf="showCreateModal()" (click)="closeCreate()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>New Warranty Return</h2>
+        <button class="modal-close" (click)="closeCreate()" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="wr-form">
+          <div class="wr-field wr-full">
+            <label for="wrComplaint">Complaint <span class="wr-req">*</span></label>
+            <input id="wrComplaint" type="text" class="wr-input" autocomplete="off"
+                   [(ngModel)]="complaintSearch" (input)="onComplaintSearch()"
+                   placeholder="Search by complaint no, subject or customer..." />
+            <div class="wr-suggest" *ngIf="complaintResults().length > 0">
+              <button type="button" class="wr-suggest-item" *ngFor="let c of complaintResults()" (click)="pickComplaint(c)">
+                <strong>{{ c.complaintNumber }}</strong>
+                <span>{{ c.subject }}</span>
+                <small>{{ c.customerName }}</small>
+              </button>
+            </div>
+            <small class="wr-hint" *ngIf="selectedComplaint() as c">
+              Customer: {{ c.customerName }}<ng-container *ngIf="c.customerPhone"> · {{ c.customerPhone }}</ng-container>.
+              Product and warranty dates are taken from the complaint.
+            </small>
+          </div>
+
+          <div class="wr-field">
+            <label for="wrType">Return type <span class="wr-req">*</span></label>
+            <select id="wrType" class="wr-input" [(ngModel)]="newReturn.returnType">
+              <option [ngValue]="1">Replacement</option>
+              <option [ngValue]="2">Repair</option>
+              <option [ngValue]="3">Refund</option>
+            </select>
+          </div>
+
+          <div class="wr-field wr-full">
+            <label for="wrReason">Reason <span class="wr-req">*</span></label>
+            <textarea id="wrReason" class="wr-input" rows="3" maxlength="500"
+                      [(ngModel)]="newReturn.returnReason" placeholder="What is wrong with the product?"></textarea>
+          </div>
+
+          <div class="wr-field wr-full">
+            <label for="wrPickup">Pickup address</label>
+            <textarea id="wrPickup" class="wr-input" rows="2" maxlength="500"
+                      [(ngModel)]="newReturn.pickupAddress" placeholder="Where the product is collected from (optional)"></textarea>
+          </div>
+        </div>
+
+        <div class="wr-error" *ngIf="createError()">{{ createError() }}</div>
+
+        <div class="wr-actions">
+          <button type="button" class="wr-btn-ghost" (click)="closeCreate()" [disabled]="saving()">Cancel</button>
+          <button type="button" class="fx-btn-new" (click)="saveReturn()" [disabled]="!canSaveReturn()">
+            {{ saving() ? 'Saving...' : 'Create Return' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>

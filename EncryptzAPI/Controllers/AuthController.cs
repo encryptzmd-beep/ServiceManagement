@@ -1,8 +1,10 @@
+using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.User.Modules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 namespace EncryptzAPI.Controllers
@@ -119,6 +121,15 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SaveRole([FromBody] SaveRoleRequest req)
         {
             var result = await _authService.SaveRole(req);
+            return Ok(result);
+        }
+
+        [HttpDelete("roles/{roleId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteRole(int roleId)
+        {
+            var result = await _authService.DeleteRole(roleId);
+            if (!result.Success) return BadRequest(result);
             return Ok(result);
         }
 
@@ -288,7 +299,10 @@ namespace EncryptzAPI.Controllers
 
         #region Customer Portal Actions
 
+        // Anonymous by design (the login page needs it before anyone is signed in),
+        // so it is rate limited to stop company codes being enumerated.
         [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.PublicLookup)]
         [HttpGet("customer/resolve-tenant")]
         public async Task<IActionResult> ResolveCustomerTenant([FromQuery] string companyCode)
             => Ok(await _authService.ResolveCustomerTenant(companyCode));

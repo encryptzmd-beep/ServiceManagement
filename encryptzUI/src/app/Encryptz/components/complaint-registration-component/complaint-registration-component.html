@@ -4,7 +4,7 @@
       <a routerLink="/customer/complaints" class="back-link">
         <span class="material-icons">arrow_back</span> My Complaints
       </a>
-       <app-quick-complaint-registration position="floating"></app-quick-complaint-registration>
+       <app-quick-complaint-registration position="inline"></app-quick-complaint-registration>
     </div>
     <h1 class="page-title">Register a Complaint</h1>
     <p class="page-subtitle">Describe your issue and we'll assign a technician to help you</p>
@@ -54,7 +54,7 @@
                 <div class="product-option" [class.selected]="form.productId === p.productId"
                   (click)="form.productId = p.productId">
                   <div class="product-option-icon">
-                    <span class="material-icons">fitness_center</span>
+                    <span class="material-icons">inventory_2</span>
                   </div>
                   <div class="product-option-info">
                     <strong>{{ p.productName }}</strong>
@@ -90,7 +90,7 @@
           <!-- Selected product summary -->
           @if (getSelectedProduct(); as sp) {
             <div class="selected-product-bar">
-              <span class="material-icons">fitness_center</span>
+              <span class="material-icons">inventory_2</span>
               <span>{{ sp.productName }} ({{ sp.serialNumber }})</span>
               <button type="button" class="change-btn" (click)="goToStep(1)">Change</button>
             </div>
@@ -103,7 +103,7 @@
               <div class="input-wrapper">
                 <span class="material-icons input-icon">short_text</span>
                 <input [(ngModel)]="form.subject" name="subject" class="input"
-                  placeholder="Brief summary, e.g. 'Belt not moving'" required />
+                  placeholder="Brief summary, e.g. 'Not switching on'" required />
               </div>
             </div>
 
@@ -133,14 +133,14 @@
               <label>Attach Images (optional)</label>
               <div class="upload-zone" [class.disabled]="isUploading()" (click)="!isUploading() && fileInput.click()" (drop)="!isUploading() && onDrop($event)"
                 (dragover)="!isUploading() && $event.preventDefault()">
-                <input #fileInput type="file" accept="image/*" multiple (change)="onFilesSelected($event)" hidden [disabled]="isUploading()" />
+                <input #fileInput type="file" accept="image/jpeg,image/png,image/webp" multiple (change)="onFilesSelected($event)" hidden [disabled]="isUploading()" />
                 @if (isUploading()) {
                   <span class="material-icons upload-icon spinner-icon">cloud_upload</span>
                   <span class="upload-text">Uploading images...</span>
                 } @else {
                   <span class="material-icons upload-icon">cloud_upload</span>
                   <span class="upload-text">Click or drag images here</span>
-                  <small class="upload-hint">JPG, PNG up to 5MB each</small>
+                  <small class="upload-hint">JPG, PNG or WEBP, up to 10MB each</small>
                 }
               </div>
               @if (files.length > 0) {

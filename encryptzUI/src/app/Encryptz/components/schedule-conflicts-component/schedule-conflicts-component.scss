@@ -21,3 +21,27 @@
   font-weight: 500;
   margin-right: 4px;
 }
+
+.conflict-error { color: #b91c1c; }
+
+tr.is-resolved td { opacity: 0.6; }
+
+.sev-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.sev-1 { background: #fef2f2; color: #b91c1c; }
+.sev-2 { background: #fef3c7; color: #b45309; }
+.sev-3 { background: #dbeafe; color: #1d4ed8; }
+.sev-done { background: #d1fae5; color: #047857; }
+
+.resolve-box {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.resolve-box input { flex: 1; min-width: 160px; }

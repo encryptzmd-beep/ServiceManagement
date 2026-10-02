@@ -5236,3 +5236,9 @@
   .phc-br-item.total { grid-column: span 1; }
 }
 
+
+/* completion form: inline required message; location gate: device label + retry feedback */
+.cmp-textarea.cmp-invalid { border-color: #ef4444; }
+.cmp-field-error { display: block; margin-top: 4px; font-size: 0.78rem; color: #dc2626; }
+.loc-device-current { margin: 0 0 8px; font-size: 0.8rem; color: #666; }
+.loc-retry-msg { margin: 10px 0 0; font-size: 0.82rem; color: #c62828; }

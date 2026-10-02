@@ -10,9 +10,10 @@ namespace EncryptzBL.Infrastructure.Tracking.Modules
         Task<ApiResponse<long>> LogPosition(TrackingLogDto dto);
         Task<ApiResponse<List<TechnicianLivePosition>>> GetLivePositions();
         Task<ApiResponse<List<TrackingLogEntry>>> GetHistory(int technicianId, DateTime? date);
-        Task<ApiResponse<int>> CheckIn(CheckInDto dto, int userId);
-        Task<ApiResponse> CheckOut(CheckOutDto dto, int userId);
-        Task<ApiResponse> RecordSiteArrival(SiteArrivalDto dto, int userId);
+        // recordedBy: name of the back-office user entering it for the technician (null = the technician)
+        Task<ApiResponse<int>> CheckIn(CheckInDto dto, int userId, string? recordedBy = null);
+        Task<ApiResponse> CheckOut(CheckOutDto dto, int userId, string? recordedBy = null);
+        Task<ApiResponse> RecordSiteArrival(SiteArrivalDto dto, int userId, string? recordedBy = null);
         Task<ApiResponse<List<AttendanceDto>>> GetAttendance(DateTime? from, DateTime? to, int? technicianId);
         Task<ApiResponse<List<TravelReportDto>>> GetTravelReport(DateTime? from, DateTime? to, int? technicianId);
 

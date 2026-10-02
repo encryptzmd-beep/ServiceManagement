@@ -22,6 +22,8 @@ export class CustomerAuthService {
   currentCustomer = signal<Customer | null>(null);
   isLoggedIn = signal<boolean>(false);
   customerMenus = signal<CustomerMenu[]>([]);
+  /** Company the portal is opened for (shown as the portal brand and in the tab title). */
+  tenantName = signal<string>(localStorage.getItem('customer_company_name') || '');
 
   getTenantCompanyName(): Observable<ApiResponse<string>> {
     return this.http.get<ApiResponse<string>>(`${this.apiUrl}/tenant-info`);
@@ -32,6 +34,23 @@ export class CustomerAuthService {
       `${environment.apiUrl}/api/auth/customer/resolve-tenant`,
       { params: { companyCode: companyCode.trim() } }
     );
+  }
+
+  /**
+   * Makes sure the company name is known. A portal opened through a ?project= link
+   * (or the configured default project) never went through the company-code step.
+   */
+  ensureTenantName(): void {
+    if (this.tenantName()) return;
+    this.getTenantCompanyName().subscribe({
+      next: res => {
+        if (res?.success && res.data) {
+          localStorage.setItem('customer_company_name', res.data);
+          this.tenantName.set(res.data);
+        }
+      },
+      error: () => {}
+    });
   }
 
   hasTenantProject(): boolean {
@@ -48,6 +67,7 @@ export class CustomerAuthService {
     window.history.replaceState({}, '', url.toString());
     localStorage.setItem('customer_project_key', project.projectKey);
     localStorage.setItem('customer_company_name', project.companyName);
+    this.tenantName.set(project.companyName);
     if (companyCode) localStorage.setItem('customer_company_code', companyCode);
     sessionStorage.setItem('customer_tenant_selected', 'true');
   }
@@ -56,6 +76,7 @@ export class CustomerAuthService {
     this.clearSession();
     localStorage.removeItem('customer_project_key');
     localStorage.removeItem('customer_company_name');
+    this.tenantName.set('');
     localStorage.removeItem('customer_company_code');
     sessionStorage.removeItem('customer_tenant_selected');
 

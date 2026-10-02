@@ -141,6 +141,119 @@
   color: #1a2332;
 }
 
+/* New Return form */
+.wr-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.wr-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.wr-field.wr-full { grid-column: 1 / -1; }
+
+.wr-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.wr-req { color: #e8001c; }
+
+.wr-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #d5dbe5;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13.5px;
+  color: #1a2332;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.wr-input:focus {
+  outline: none;
+  border-color: #e8001c;
+  box-shadow: 0 0 0 3px rgba(232, 0, 28, 0.1);
+}
+
+textarea.wr-input { resize: vertical; }
+
+.wr-suggest {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  margin-top: 4px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.wr-suggest-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  width: 100%;
+  padding: 9px 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  color: #1a2332;
+  cursor: pointer;
+}
+
+.wr-suggest-item:last-child { border-bottom: none; }
+.wr-suggest-item:hover { background: #fef2f4; }
+.wr-suggest-item small { grid-column: 2; color: #8a9ab0; }
+
+.wr-hint { font-size: 12px; color: #64748b; }
+
+.wr-error {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+.wr-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.wr-btn-ghost {
+  padding: 9px 16px;
+  border: 1px solid #d5dbe5;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wr-btn-ghost:disabled,
+.fx-btn-new:disabled { opacity: 0.55; cursor: not-allowed; }
+
 @media (max-width: 768px) {
   .detail-grid { grid-template-columns: 1fr; }
+  .wr-form { grid-template-columns: minmax(0, 1fr); }
 }

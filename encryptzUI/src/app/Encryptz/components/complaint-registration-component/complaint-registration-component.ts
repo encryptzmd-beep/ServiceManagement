@@ -5,6 +5,7 @@ import { Router, RouterModule } from '@angular/router';
 import { ApiService } from '../../Services/API/api-service';
 import { ComplaintCreate, PRIORITIES, Product } from '../../Models/ApiModels';
 import { QuickComplaintRegistrationComponent } from "../quick-complaint-registration-component/quick-complaint-registration-component";
+import { LeafletLoaderService } from '../../Services/leaflet-loader-service';
 
 declare var L: any;
 
@@ -21,6 +22,7 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
 
   private api = inject(ApiService);
   private router = inject(Router);
+  private leaflet = inject(LeafletLoaderService);
 
   products = signal<Product[]>([]);
   priorities = PRIORITIES;
@@ -81,7 +83,9 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
       console.log('Step 2 detected, initializing map with Kochi as default...');
       this.mapInitialized = true;
       setTimeout(() => {
-        this.initMap();
+        this.leaflet.load()
+          .then(() => this.initMap())
+          .catch(() => this.errorMsg.set('The map could not be loaded. Please check your connection and try again.'));
       }, 200);
     }
   }
@@ -372,10 +376,24 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
     );
   }
 
+  private static readonly IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  private static readonly MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+  /** Keeps the images the server accepts (JPG / PNG / WEBP, up to 10MB) and says what was left out. */
+  private acceptedImages(files: File[]): File[] {
+    const ok = files.filter(f =>
+      ComplaintRegistrationComponent.IMAGE_TYPES.includes(f.type) &&
+      f.size <= ComplaintRegistrationComponent.MAX_IMAGE_BYTES);
+    if (ok.length < files.length) {
+      alert('Only JPG, PNG or WEBP images up to 10MB can be attached.');
+    }
+    return ok;
+  }
+
   onFilesSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files) {
-      const newFiles = Array.from(input.files);
+      const newFiles = this.acceptedImages(Array.from(input.files));
       // Limit to 5 files
       if (this.files.length + newFiles.length > 5) {
         alert('Maximum 5 images allowed');
@@ -403,7 +421,7 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
   onDrop(event: DragEvent): void {
     event.preventDefault();
     if (event.dataTransfer?.files) {
-      const newFiles = Array.from(event.dataTransfer.files);
+      const newFiles = this.acceptedImages(Array.from(event.dataTransfer.files));
       if (this.files.length + newFiles.length > 5) {
         alert('Maximum 5 images allowed');
         return;
@@ -572,7 +590,8 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
       error: (err) => {
         console.error('Submit error:', err);
         this.saving.set(false);
-        this.errorMsg.set('An error occurred. Please try again.');
+        // validation failures come back as 400 with the reason in the body
+        this.errorMsg.set(err?.error?.message || 'An error occurred. Please try again.');
       },
     });
   }

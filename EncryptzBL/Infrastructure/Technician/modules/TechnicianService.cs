@@ -218,12 +218,14 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
         // ADD these methods to TechnicianService.cs
         // ============================================================
 
-        public async Task<List<ComplaintAutoCompleteDto>> GetComplaintsForAssignment(string searchTerm)
+        public async Task<List<ComplaintAutoCompleteDto>> GetComplaintsForAssignment(string searchTerm, bool includeClosed = false)
         {
-            var p = new[] {
+            var p = new List<Microsoft.Data.SqlClient.SqlParameter> {
         SqlParameterHelper.Input("@SearchTerm", string.IsNullOrEmpty(searchTerm) ? (object)DBNull.Value : searchTerm)
     };
-            return await GetListAsync<ComplaintAutoCompleteDto>("sp_Complaint_GetForAssignment", p);
+            // only sent when asked for: the proc of a database not yet upgraded does not know it
+            if (includeClosed) p.Add(SqlParameterHelper.Input("@IncludeClosed", true));
+            return await GetListAsync<ComplaintAutoCompleteDto>("sp_Complaint_GetForAssignment", p.ToArray());
         }
 
         public async Task<List<ActiveAssignmentDto>> GetActiveAssignments()
@@ -254,6 +256,57 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
                 Result = -99,
                 Message = "No response from database"
             };
+        }
+
+        // ── ownership / attendance checks ────────────────────────────────────
+
+        public async Task<int?> GetAssignmentTechnicianId(int assignmentId)
+        {
+            var dt = await GetDataTableByQueryAsync(
+                "SELECT TechnicianId FROM dbo.TechnicianAssignments WHERE AssignmentId = @AssignmentId",
+                new[] { SqlParameterHelper.Input("@AssignmentId", assignmentId) });
+
+            return dt.Rows.Count == 0 ? null : Convert.ToInt32(dt.Rows[0]["TechnicianId"]);
+        }
+
+        public async Task<bool> IsComplaintAssignedTo(int complaintId, int technicianId)
+        {
+            var dt = await GetDataTableByQueryAsync(
+                @"SELECT TOP 1 1 AS Found FROM dbo.TechnicianAssignments
+                  WHERE ComplaintId = @ComplaintId AND TechnicianId = @TechnicianId
+                    AND Status NOT IN ('Removed', 'Cancelled')",
+                new[]
+                {
+                    SqlParameterHelper.Input("@ComplaintId", complaintId),
+                    SqlParameterHelper.Input("@TechnicianId", technicianId)
+                });
+
+            return dt.Rows.Count > 0;
+        }
+
+        public async Task<bool> IsCheckedIn(int technicianId)
+        {
+            // same rule as sp_Technician_CheckIn ("already checked in today")
+            var dt = await GetDataTableByQueryAsync(
+                @"SELECT TOP 1 1 AS Found FROM dbo.TechnicianAttendance
+                  WHERE TechnicianId = @TechnicianId
+                    AND AttendanceDate = CAST(DATEADD(MINUTE, 330, GETUTCDATE()) AS DATE)
+                    AND CheckOutTime IS NULL",
+                new[] { SqlParameterHelper.Input("@TechnicianId", technicianId) });
+
+            return dt.Rows.Count > 0;
+        }
+
+        public async Task<bool> HasServiceImage(int assignmentId)
+        {
+            var dt = await GetDataTableByQueryAsync(
+                @"SELECT TOP 1 1 AS Found
+                  FROM dbo.ServiceImages si
+                  INNER JOIN dbo.TechnicianAssignments a ON a.ComplaintId = si.ComplaintId
+                  WHERE a.AssignmentId = @AssignmentId",
+                new[] { SqlParameterHelper.Input("@AssignmentId", assignmentId) });
+
+            return dt.Rows.Count > 0;
         }
 
         public async Task<List<WorkOrderDto>> GetWorkOrders(int technicianId)

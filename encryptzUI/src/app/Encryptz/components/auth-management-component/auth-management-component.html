@@ -165,37 +165,11 @@
 
         <div class="pagination-bar">
           <div class="pagination-info">
-            Showing
-            {{ ((pageNumber - 1) * pageSize) + 1 }}
-            -
-            {{ Math.min(pageNumber * pageSize, totalItems) }}
-            of
-            {{ totalItems }}
-          </div>
-
-          <div class="pagination-actions">
-            <button
-              class="page-btn"
-              [disabled]="pageNumber === 1"
-              (click)="changePage(pageNumber - 1)">
-              ‹
-            </button>
-
-            @for (page of pages; track page) {
-              <button
-                class="page-btn"
-                [class.active]="page === pageNumber"
-                (click)="changePage(page)">
-                {{ page }}
-              </button>
+            @if (filteredTotal() > 0) {
+              Showing 1 - {{ filteredTotal() }} of {{ filteredTotal() }}
+            } @else {
+              No users to show
             }
-
-            <button
-              class="page-btn"
-              [disabled]="pageNumber === totalPages"
-              (click)="changePage(pageNumber + 1)">
-              ›
-            </button>
           </div>
         </div>
       </div>

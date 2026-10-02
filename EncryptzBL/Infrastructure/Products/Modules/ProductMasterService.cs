@@ -19,7 +19,7 @@ namespace EncryptzBL.Infrastructure.Products.Modules
                 SqlParameterHelper.Input("@OperationType", "CREATE"),
                 SqlParameterHelper.Input("@ProductCode", dto.ProductCode),
                 SqlParameterHelper.Input("@ProductName", dto.ProductName),
-                SqlParameterHelper.Input("@Brand", dto.Brand ?? "AEROFIT"),
+                SqlParameterHelper.Input("@Brand", dto.Brand),
                 SqlParameterHelper.Input("@Category", dto.Category),
                 SqlParameterHelper.Input("@SubCategory", dto.SubCategory),
                 SqlParameterHelper.Input("@Model", dto.Model),

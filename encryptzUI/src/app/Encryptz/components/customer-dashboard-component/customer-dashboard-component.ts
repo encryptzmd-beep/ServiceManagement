@@ -1,6 +1,8 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { CustomerAuthService } from '../../Services/customer-auth-service';
 
@@ -22,7 +24,7 @@ import { CustomerAuthService } from '../../Services/customer-auth-service';
           <div class="logo">
             <span class="logo-icon">🔧</span>
             @if (!isSidebarCollapsed()) {
-              <span class="logo-text">Felix Service</span>
+              <span class="logo-text" [title]="tenantName()">{{ tenantName() || 'Customer Portal' }}</span>
             }
           </div>
           <button class="toggle-btn" (click)="toggleSidebar()">
@@ -146,6 +148,8 @@ import { CustomerAuthService } from '../../Services/customer-auth-service';
       letter-spacing: -0.01em;
       color: #fff;
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .toggle-btn {
@@ -409,31 +413,42 @@ export class CustomerDashboardComponent implements OnInit {
   private authService = inject(CustomerAuthService);
   private router = inject(Router);
   private http = inject(HttpClient);
+  private destroyRef = inject(DestroyRef);
 
   currentCustomer = this.authService.currentCustomer;
   customerMenus = this.authService.customerMenus;
+  tenantName = this.authService.tenantName;
   isSidebarCollapsed = signal(false);
   isMobileMenuOpen = signal(false);
   currentTitle = signal('Dashboard');
   activeMenuPath = signal<string>('');
 
   ngOnInit() {
-    // Set up route listener to update title and active menu
-    this.router.events.subscribe(() => {
-      const currentPath = this.router.url.split('?')[0];
-      const menus = [...this.customerMenus()].sort(
-        (a, b) => b.menuPath.length - a.menuPath.length
-      );
-      const menu = menus.find(
-        m => currentPath === m.menuPath || currentPath.startsWith(m.menuPath + '/')
-      );
-      if (menu) {
-        this.currentTitle.set(menu.menuName);
-        this.activeMenuPath.set(menu.menuPath);
-      } else {
-        this.activeMenuPath.set('');
-      }
-    });
+    this.authService.ensureTenantName();
+
+    // The first navigation may already be over when this shell is created
+    this.syncWithRoute();
+    this.router.events
+      .pipe(filter(e => e instanceof NavigationEnd), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.syncWithRoute());
+  }
+
+  /** Header title + highlighted menu for the page that is open. */
+  private syncWithRoute(): void {
+    const currentPath = this.router.url.split('?')[0];
+    const menus = [...this.customerMenus()].sort(
+      (a, b) => b.menuPath.length - a.menuPath.length
+    );
+    const menu = menus.find(
+      m => currentPath === m.menuPath || currentPath.startsWith(m.menuPath + '/')
+    );
+    this.activeMenuPath.set(menu?.menuPath ?? '');
+
+    // the title of the page route (customer.routes.ts) wins: a menu entry can cover
+    // several pages (list / new / detail) and not every page has a menu entry
+    let route: ActivatedRouteSnapshot = this.router.routerState.snapshot.root;
+    while (route.firstChild) route = route.firstChild;
+    this.currentTitle.set(route.title || menu?.menuName || 'Dashboard');
   }
 
   toggleSidebar(): void {

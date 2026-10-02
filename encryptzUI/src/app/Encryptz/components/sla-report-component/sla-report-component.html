@@ -34,10 +34,14 @@
         <circle cx="60" cy="60" r="50" fill="none" stroke="#e2e8f0" stroke-width="10" />
         <circle cx="60" cy="60" r="50" fill="none" [attr.stroke]="getOverallColor()" stroke-width="10"
           stroke-linecap="round" [attr.stroke-dasharray]="314"
-          [attr.stroke-dashoffset]="314 - (314 * getOverallCompliance() / 100)" transform="rotate(-90 60 60)" />
+          [attr.stroke-dashoffset]="getTotalComplaints() > 0 ? 314 - (314 * getOverallCompliance() / 100) : 314" transform="rotate(-90 60 60)" />
       </svg>
       <div class="gauge-label">
+        @if (getTotalComplaints() > 0) {
         <span class="gauge-val" [style.color]="getOverallColor()">{{ getOverallCompliance() | number:'1.0-0' }}%</span>
+        } @else {
+        <span class="gauge-val gauge-na">N/A</span>
+        }
         <span class="gauge-sub">Overall</span>
       </div>
     </div>
@@ -73,11 +77,14 @@
         <div class="compliance-row">
           <div class="compliance-label">
             <span>Compliance</span>
-            <strong [class]="getComplianceClass(d.compliancePercent)">{{ d.compliancePercent | number:'1.0-0'
-              }}%</strong>
+            @if (hasData(d)) {
+            <strong [class]="getComplianceClass(d.compliancePercent)">{{ d.compliancePercent | number:'1.0-0' }}%</strong>
+            } @else {
+            <strong class="none" title="No complaints in this period">N/A</strong>
+            }
           </div>
           <div class="bar-track">
-            <div class="bar-fill" [style.width.%]="d.compliancePercent"
+            <div class="bar-fill" [style.width.%]="hasData(d) ? d.compliancePercent : 0"
               [class]="getComplianceClass(d.compliancePercent)"></div>
           </div>
         </div>
@@ -145,19 +152,24 @@
             <td><span class="text-red">{{ d.breached }}</span></td>
             <td>
               <div class="cell-bar">
-                <span [class]="getComplianceClass(d.compliancePercent)">{{ d.compliancePercent | number:'1.0-0'
-                  }}%</span>
+                @if (hasData(d)) {
+                <span [class]="getComplianceClass(d.compliancePercent)">{{ d.compliancePercent | number:'1.0-0' }}%</span>
+                } @else {
+                <span class="none">N/A</span>
+                }
                 <div class="mini-bar">
-                  <div class="mini-fill" [style.width.%]="d.compliancePercent"
+                  <div class="mini-fill" [style.width.%]="hasData(d) ? d.compliancePercent : 0"
                     [class]="getComplianceClass(d.compliancePercent)"></div>
                 </div>
               </div>
             </td>
             <td>{{ d.avgResolutionHours | number:'1.1-1' }}h</td>
             <td>
-              @if (d.compliancePercent >= 90) {
+              @if (!hasData(d)) {
+              <span class="status-tag none">No data</span>
+              } @else if (d.compliancePercent! >= 90) {
               <span class="status-tag good"><span class="material-icons">thumb_up</span> Good</span>
-              } @else if (d.compliancePercent >= 70) {
+              } @else if (d.compliancePercent! >= 70) {
               <span class="status-tag warn"><span class="material-icons">warning</span> Warning</span>
               } @else {
               <span class="status-tag critical"><span class="material-icons">error</span> Critical</span>

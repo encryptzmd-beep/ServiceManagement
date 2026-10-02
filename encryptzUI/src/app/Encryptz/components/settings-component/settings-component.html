@@ -64,7 +64,7 @@
         </ng-container>
       </div>
     </div>
-    <div class="empty" *ngIf="filteredSettings().length === 0 && activeGroup !== 'Payments'">
+    <div class="empty" *ngIf="filteredSettings().length === 0 && activeGroup !== 'Payments' && settings().length > 0">
       <p>No settings in this group</p>
     </div>
 
@@ -73,17 +73,17 @@
       <div class="setting-item">
         <div class="setting-info">
           <h3>Default Service Charge (₹)</h3>
-          <p>Amount automatically applied to new work order payments</p>
+          <p>Minimum service charge of a final work order payment. A technician cannot bill below it.</p>
         </div>
         <div class="setting-control">
-          <input type="number" [(ngModel)]="defaultServiceCharge" class="fi num" />
+          <input type="number" min="0" step="1" [ngModel]="defaultServiceCharge()" (ngModelChange)="defaultServiceCharge.set($event)" class="fi num" />
         </div>
       </div>
 
       <div class="upi-section">
         <div class="section-header">
           <h3>UPI Configurations</h3>
-          <button class="btn-primary-sm" (click)="showAddUpiModal.set(true)">+ Add UPI ID</button>
+          <button class="btn-primary-sm" (click)="openAddUpi()">+ Add UPI ID</button>
         </div>
 
         <table class="upi-table">
@@ -115,10 +115,22 @@
                 <button class="btn-icon" *ngIf="!u.isDefault && u.isActive" (click)="setDefaultUpi(u.id)" title="Set as Default">
                   <span class="material-icons">star_border</span>
                 </button>
-                <button class="btn-icon danger" (click)="deleteUpi(u.id)" title="Delete">
-                  <span class="material-icons">delete</span>
-                </button>
+                <ng-container *ngIf="confirmDeleteUpiId() !== u.id; else confirmDelete">
+                  <button class="btn-icon danger" (click)="askDeleteUpi(u.id)" title="Delete">
+                    <span class="material-icons">delete</span>
+                  </button>
+                </ng-container>
+                <ng-template #confirmDelete>
+                  <span class="upi-confirm">
+                    Delete?
+                    <button type="button" class="upi-confirm-btn yes" (click)="deleteUpi(u.id)">Yes</button>
+                    <button type="button" class="upi-confirm-btn" (click)="cancelDeleteUpi()">No</button>
+                  </span>
+                </ng-template>
               </td>
+            </tr>
+            <tr *ngIf="upiConfigurations().length === 0">
+              <td colspan="5" class="upi-empty">No UPI ID configured yet</td>
             </tr>
           </tbody>
         </table>
@@ -136,15 +148,20 @@
       </div>
       <div class="form-group">
         <label>UPI ID</label>
-        <input type="text" [(ngModel)]="newUpi.upiId" class="fi" placeholder="e.g. name@bank" />
+        <input type="text" [(ngModel)]="newUpi.upiId" (ngModelChange)="upiError.set('')" class="fi" placeholder="e.g. name@bank"
+               autocomplete="off" autocapitalize="off" spellcheck="false" />
+        <small class="upi-hint" [class.bad]="newUpi.upiId && !isValidUpiId(newUpi.upiId)">Format: name&#64;bank</small>
       </div>
+      <div class="upi-error" *ngIf="upiError()">{{ upiError() }}</div>
       <div class="modal-actions">
-        <button class="btn-secondary" (click)="showAddUpiModal.set(false)">Cancel</button>
-        <button class="btn-primary" (click)="addUpi()" [disabled]="!newUpi.displayName || !newUpi.upiId">Save</button>
+        <button class="btn-secondary" (click)="showAddUpiModal.set(false)" [disabled]="savingUpi()">Cancel</button>
+        <button class="btn-primary" (click)="addUpi()"
+                [disabled]="savingUpi() || !newUpi.displayName.trim() || !isValidUpiId(newUpi.upiId)">Save</button>
       </div>
     </div>
   </div>
 
   <!-- Save Success -->
   <div class="toast" *ngIf="saveSuccess()">✅ Settings saved successfully!</div>
+  <div class="toast toast-error" *ngIf="saveError()">{{ saveError() }}</div>
 </div>

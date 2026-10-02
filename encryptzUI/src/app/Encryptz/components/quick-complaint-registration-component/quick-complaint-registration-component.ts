@@ -1,7 +1,8 @@
-import { Component, ElementRef, EventEmitter, Output, ViewChild, signal, AfterViewInit, OnInit, NgZone } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, Output, ViewChild, signal, AfterViewInit, OnInit, NgZone, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../Services/API/api-service';
+import { LeafletLoaderService } from '../../Services/leaflet-loader-service';
 
 declare var L: any;
 
@@ -48,7 +49,7 @@ declare var L: any;
                   [(ngModel)]="complaintData.subject"
                   name="subject"
                   required
-                  placeholder="e.g., Treadmill not working, Dumbbell damaged..."
+                  placeholder="e.g., Not working, damaged part..."
                   class="input-field"
                   (blur)="subjectTouched = true"
                 />
@@ -63,7 +64,7 @@ declare var L: any;
               <!-- Category -->
               <div class="form-field">
                 <label>
-                  <span class="material-icons">fitness_center</span>
+                  <span class="material-icons">category</span>
                   Category
                 </label>
                 <select [(ngModel)]="complaintData.category" name="category" class="input-field">
@@ -84,7 +85,7 @@ declare var L: any;
                   type="text"
                   [(ngModel)]="complaintData.brandName"
                   name="brandName"
-                  placeholder="e.g., NordicTrack, Bowflex, Life Fitness..."
+                  placeholder="Brand of the product"
                   class="input-field"
                 />
               </div>
@@ -99,7 +100,7 @@ declare var L: any;
                   type="text"
                   [(ngModel)]="complaintData.modelNumber"
                   name="modelNumber"
-                  placeholder="e.g., T-9.5, 1750, RW900..."
+                  placeholder="Model number, if you know it"
                   class="input-field"
                 />
               </div>
@@ -114,7 +115,7 @@ declare var L: any;
                   [(ngModel)]="complaintData.description"
                   name="description"
                   rows="3"
-                  placeholder="What's the problem? (e.g., 'Belt slipping', 'Display not working', 'Making noise')"
+                  placeholder="What's the problem? (e.g., 'Not switching on', 'Display not working', 'Making noise')"
                   class="textarea-field"
                 ></textarea>
               </div>
@@ -926,7 +927,10 @@ export class QuickComplaintRegistrationComponent implements AfterViewInit, OnIni
   private readonly DEFAULT_LAT = 9.9312;
   private readonly DEFAULT_LNG = 76.2673;
 
-  position: 'floating' | 'inline' = 'floating';
+  /** 'floating' pins the button to the bottom-right corner; 'inline' leaves it in the page flow. */
+  @Input() position: 'floating' | 'inline' = 'floating';
+
+  private leaflet = inject(LeafletLoaderService);
 
   constructor(private apiService: ApiService, private ngZone: NgZone) {}
 
@@ -953,7 +957,7 @@ export class QuickComplaintRegistrationComponent implements AfterViewInit, OnIni
   openModal(): void {
     this.isOpen.set(true);
     this.subjectTouched = false;
-    setTimeout(() => this.initMiniMap(), 150);
+    setTimeout(() => this.leaflet.load().then(() => this.initMiniMap()).catch(() => {}), 150);
   }
 
   closeModal(): void {

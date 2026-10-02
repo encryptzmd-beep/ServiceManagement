@@ -51,7 +51,9 @@
               <div class="header-left">
                 <h3>{{ editingRole() ? 'Edit Role' : 'Create New Role' }}</h3>
                 <p class="modal-subtitle">
-                  Manage role details and permissions together
+                  {{ editingRole()
+                      ? 'Manage role details and permissions together'
+                      : 'Enter the role details. Menu permissions are set by editing the role after it is created.' }}
                 </p>
               </div>
 
@@ -314,9 +316,20 @@
                   </span>
                 </td>
                 <td>
-                  <button class="action-btn" title="Edit" (click)="openRoleForm(r)">
-                    <span class="material-icons">edit</span>
-                  </button>
+                  @if (confirmDeleteRoleId() !== r.roleId) {
+                    <button class="action-btn" title="Edit" (click)="openRoleForm(r)">
+                      <span class="material-icons">edit</span>
+                    </button>
+                    <button class="action-btn action-danger" title="Delete (only a role nobody uses)" (click)="askDeleteRole(r.roleId)">
+                      <span class="material-icons">delete</span>
+                    </button>
+                  } @else {
+                    <span class="role-confirm">
+                      Delete?
+                      <button type="button" class="role-confirm-btn yes" (click)="deleteRole(r.roleId)">Yes</button>
+                      <button type="button" class="role-confirm-btn" (click)="cancelDeleteRole()">No</button>
+                    </span>
+                  }
                 </td>
               </tr>
             }
@@ -327,6 +340,9 @@
             }
           </tbody>
         </table>
+        @if (roleActionMsg()) {
+          <div class="role-action-msg" [class.err]="roleActionErr()">{{ roleActionMsg() }}</div>
+        }
       </div>
     </div>
   }

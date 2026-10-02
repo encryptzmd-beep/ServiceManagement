@@ -15,6 +15,8 @@
      7. sp_Customer_UpdateComplaint / DeleteComplaint / ConfirmClosure
         (sp_ManageComplaintDetails has no DELETE_COMPLAINT / CONFIRM_CLOSURE
          operation and does not check that the complaint is the customer's)
+     8. sp_Complaint_Create / sp_QuickComplaint_Create  complaint number unique
+        across the projects / locations sharing the database
 
    Run AFTER 04 and 05. SAFE TO RE-RUN.
    ============================================================================= */
@@ -376,6 +378,12 @@ CREATE OR ALTER PROCEDURE dbo.sp_Customer_GetMyComplaints
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    -- OFFSET / FETCH raise an error on zero or negative values, and the page is bounded
+    IF ISNULL(@PageNumber, 0) < 1 SET @PageNumber = 1;
+    IF ISNULL(@PageSize, 0)   < 1 SET @PageSize   = 10;
+    IF @PageSize > 100            SET @PageSize   = 100;
+
     DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
 
     SELECT
@@ -627,6 +635,161 @@ BEGIN
     COMMIT TRANSACTION;
 
     SELECT CAST(1 AS BIT) AS Success, 'Complaint closed. Thank you for confirming.' AS Message;
+END
+GO
+
+/* =============================================================================
+   8. Complaint registration
+   -----------------------------------------------------------------------------
+   The complaint number used to be MAX(ComplaintId) + 1. The row filter hides the
+   complaints of the other projects / locations of the database, so the second
+   project (or location) computed a number that was already taken and EVERY
+   insert failed on the UNIQUE key of ComplaintNumber (HTTP 500 in the portal).
+   The number is now built from the row's own identity, which is unique across
+   the whole database.
+   ============================================================================= */
+CREATE OR ALTER PROCEDURE dbo.sp_Complaint_Create
+    @CustomerId      INT,
+    @ProductId       INT,
+    @Subject         NVARCHAR(200),
+    @Description     NVARCHAR(2000) = NULL,
+    @Priority        NVARCHAR(20)   = 'Medium',
+    @Latitude        DECIMAL(10,7)  = NULL,
+    @Longitude       DECIMAL(10,7)  = NULL,
+    @LocationAddress NVARCHAR(500)  = NULL,
+    @PickedLocation  NVARCHAR(300)  = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    SET @Subject = LTRIM(RTRIM(ISNULL(@Subject, '')));
+    IF @Subject = ''
+    BEGIN
+        SELECT 0 AS ComplaintId, CAST(NULL AS NVARCHAR(20)) AS ComplaintNumber, 'Subject is required' AS [Message]; RETURN;
+    END
+
+    -- the product must be one of the customer's own
+    IF NOT EXISTS (SELECT 1 FROM dbo.Products WHERE ProductId = @ProductId AND CustomerId = @CustomerId)
+    BEGIN
+        SELECT 0 AS ComplaintId, CAST(NULL AS NVARCHAR(20)) AS ComplaintNumber, 'Product not found' AS [Message]; RETURN;
+    END
+
+    IF ISNULL(@Priority, '') NOT IN ('Low', 'Medium', 'High', 'Critical') SET @Priority = 'Medium';
+
+    DECLARE @Now DATETIME2 = DATEADD(MINUTE, 330, GETUTCDATE());
+    DECLARE @SLAHours INT = CASE @Priority
+        WHEN 'Critical' THEN 4 WHEN 'High' THEN 12
+        WHEN 'Medium' THEN 24 ELSE 48 END;
+    DECLARE @StatusId INT = ISNULL((SELECT TOP 1 StatusId FROM dbo.ComplaintStatuses WHERE StatusName = 'New'), 1);
+    DECLARE @NewId INT, @CmpNo NVARCHAR(20);
+
+    BEGIN TRANSACTION;
+
+    -- placeholder number first: the real one needs the identity of the row
+    INSERT INTO dbo.Complaints (
+        ComplaintNumber, CustomerId, ProductId, Subject, Description,
+        Priority, StatusId, SLADeadline, IsActive,
+        CreatedAt, UpdatedAt,
+        Latitude, Longitude, LocationAddress, LocationName
+    )
+    VALUES (
+        'TMP-' + LEFT(REPLACE(CONVERT(NVARCHAR(36), NEWID()), '-', ''), 16),
+        @CustomerId, @ProductId, @Subject, @Description,
+        @Priority, @StatusId, DATEADD(HOUR, @SLAHours, @Now), 1,
+        @Now, @Now,
+        @Latitude, @Longitude, @LocationAddress, LEFT(@PickedLocation, 200)
+    );
+
+    SET @NewId = SCOPE_IDENTITY();
+    SET @CmpNo = 'CMP-' + FORMAT(@Now, 'yyyyMMdd') + '-'
+               + CASE WHEN @NewId < 10000 THEN RIGHT('0000' + CAST(@NewId AS VARCHAR(10)), 4)
+                      ELSE CAST(@NewId AS VARCHAR(10)) END;
+
+    UPDATE dbo.Complaints SET ComplaintNumber = @CmpNo WHERE ComplaintId = @NewId;
+
+    COMMIT TRANSACTION;
+
+    SELECT @NewId AS ComplaintId, @CmpNo AS ComplaintNumber, 'Complaint registered' AS [Message];
+END
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_QuickComplaint_Create
+    @CustomerId   INT,
+    @Subject      NVARCHAR(200),
+    @Description  NVARCHAR(2000) = NULL,
+    @Category     NVARCHAR(100) = NULL,
+    @BrandName    NVARCHAR(100) = NULL,
+    @ModelNumber  NVARCHAR(100) = NULL,
+    @Latitude     DECIMAL(10,7) = NULL,
+    @Longitude    DECIMAL(10,7) = NULL,
+    @LocationName NVARCHAR(200) = NULL,
+    @ImageBase64  NVARCHAR(MAX) = NULL,
+    @ImageName    NVARCHAR(200) = NULL,
+    @ContentType  NVARCHAR(100) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        IF LTRIM(RTRIM(ISNULL(@Subject, ''))) = ''
+        BEGIN
+            SELECT 0 AS ComplaintId, CAST(NULL AS NVARCHAR(20)) AS ComplaintNumber, 'Subject is required' AS [Message]; RETURN;
+        END
+
+        DECLARE @Now DATETIME2 = DATEADD(MINUTE, 330, GETUTCDATE());
+        DECLARE @StatusId INT = ISNULL((SELECT TOP 1 StatusId FROM dbo.ComplaintStatuses WHERE StatusName = 'New'), 1);
+        DECLARE @NewComplaintId INT, @CmpNo NVARCHAR(20);
+
+        BEGIN TRANSACTION;
+
+        -- ProductId is NULL for quick complaints; placeholder number, see sp_Complaint_Create
+        INSERT INTO dbo.Complaints (
+            ComplaintNumber, CustomerId, ProductId, Subject, Description,
+            Priority, StatusId, SLADeadline, IsActive,
+            CreatedAt, UpdatedAt,
+            Latitude, Longitude, LocationAddress,
+            Category, BrandName, ModelNumber, LocationName
+        )
+        VALUES (
+            'TMP-' + LEFT(REPLACE(CONVERT(NVARCHAR(36), NEWID()), '-', ''), 16),
+            @CustomerId, NULL, LTRIM(RTRIM(@Subject)), @Description,
+            'Medium', @StatusId, DATEADD(HOUR, 24, @Now), 1,
+            @Now, @Now,
+            @Latitude, @Longitude, @LocationName,
+            @Category, @BrandName, @ModelNumber, @LocationName
+        );
+
+        SET @NewComplaintId = SCOPE_IDENTITY();
+        SET @CmpNo = 'CMP-' + FORMAT(@Now, 'yyyyMMdd') + '-'
+                   + CASE WHEN @NewComplaintId < 10000 THEN RIGHT('0000' + CAST(@NewComplaintId AS VARCHAR(10)), 4)
+                          ELSE CAST(@NewComplaintId AS VARCHAR(10)) END;
+
+        UPDATE dbo.Complaints SET ComplaintNumber = @CmpNo WHERE ComplaintId = @NewComplaintId;
+
+        IF @ImageBase64 IS NOT NULL AND @ImageBase64 != ''
+        BEGIN
+            -- UploadedBy references Users: the customer's login, not the customer id
+            INSERT INTO dbo.ComplaintImages (
+                ComplaintId, ImagePath, ImageType, UploadedAt,
+                ImageData, ImageName, ContentType, UploadedBy
+            )
+            SELECT @NewComplaintId, 'Base64_Image', 1, @Now,
+                   @ImageBase64, @ImageName, @ContentType,
+                   (SELECT UserId FROM dbo.Customers WHERE CustomerId = @CustomerId);
+        END
+
+        COMMIT TRANSACTION;
+
+        SELECT @NewComplaintId AS ComplaintId, @CmpNo AS ComplaintNumber,
+               'Quick complaint registered successfully' AS [Message];
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        SELECT 0 AS ComplaintId, CAST(NULL AS NVARCHAR(20)) AS ComplaintNumber, ERROR_MESSAGE() AS [Message];
+    END CATCH
 END
 GO
 

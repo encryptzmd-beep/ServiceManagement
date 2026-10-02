@@ -201,7 +201,7 @@
             <th class="col-amt">Bill Amount</th>
             <th class="col-amt">Advance Collected</th>
             <th class="col-amt">Discount</th>
-            <th class="col-amt">Net Payable<div class="th-sub">(Final – Discount)</div></th>
+            <th class="col-amt">Net Payable<div class="th-sub">(Bill – Discount)</div></th>
             <th class="col-amt">Final Payment<div class="th-sub">Received</div></th>
             <th>Collected By<div class="th-sub">(Technician)</div></th>
             <th class="col-amt">Cash</th>
@@ -258,7 +258,7 @@
               </td>
 
               <!-- Bill Amount -->
-              <td class="col-amt">{{ formatINR(p.totalAmount) }}</td>
+              <td class="col-amt">{{ formatINR(getBillAmount(p)) }}</td>
 
               <!-- Advance Collected -->
               <td class="col-amt">
@@ -273,7 +273,7 @@
               <td class="col-amt">{{ formatINR(p.discountAmount) }}</td>
 
               <!-- Net Payable -->
-              <td class="col-amt fw-bold">{{ formatINR(p.totalAmount - p.discountAmount) }}</td>
+              <td class="col-amt fw-bold">{{ formatINR(getNetPayable(p)) }}</td>
 
               <!-- Final Payment Received -->
               <td class="col-amt">

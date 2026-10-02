@@ -1,6 +1,8 @@
+using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.RepairPart.Modules;
+using EncryptzBL.Infrastructure.Technician.modules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -20,16 +22,25 @@ namespace EncryptzAPI.Controllers
     {
         private readonly IRepairPartService _service;
         private readonly IWebHostEnvironment _env;
+        private readonly ITechnicianService _technicians;
 
-        public RepairPartController(IRepairPartService service, IWebHostEnvironment env)
+        public RepairPartController(IRepairPartService service, IWebHostEnvironment env, ITechnicianService technicians)
         {
             _service = service;
             _env = env;
+            _technicians = technicians;
         }
 
         [HttpPost("create")]
         public async Task<IActionResult> Create([FromBody] RepairPartRequestCreateDto dto)
         {
+            if (User.IsTechnicianScoped())
+            {
+                dto.TechnicianId = User.GetTechnicianId();   // never the id from the body
+                if (!await _technicians.IsComplaintAssignedTo(dto.ComplaintId, dto.TechnicianId))
+                    return this.Forbidden("This complaint is not assigned to you");
+            }
+
             var result = await _service.CreateRequest(dto);
             return Ok(result);
         }

@@ -111,10 +111,8 @@ import { ProductService } from '../../Services/product-service';
 
                 <div class="form-group">
                   <label class="form-label">Organization</label>
-                  <select class="form-control" [(ngModel)]="formData.org" name="org">
-                    <option value="SOFPL">SOFPL</option>
-                    <option value="NFPL">NFPL</option>
-                  </select>
+                  <input type="text" class="form-control" [(ngModel)]="formData.org" name="org" maxlength="50"
+                    placeholder="Organization / business unit (optional)">
                 </div>
               </div>
 
@@ -494,13 +492,13 @@ export class ProductFormComponent implements OnInit {
   formData: ProductMasterRequest = {
     productCode: '',
     productName: '',
-    brand: 'AEROFIT',
+    brand: '',
     category: '',
     subCategory: '',
     model: '',
     description: '',
     mrp: 0,
-    org: 'SOFPL',
+    org: '',
     priceChangeStatus: '',
     priceEffectiveDate: new Date(),
     warrantyMonths: 12,

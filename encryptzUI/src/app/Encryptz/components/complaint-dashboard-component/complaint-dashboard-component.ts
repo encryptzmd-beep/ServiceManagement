@@ -194,7 +194,7 @@ private _scrollTileTop(): void {
     this.dashboardData.set(null);
     this.api.getStats().subscribe({
       next: d => { this.dashboardData.set(d); this.loading.set(false); },
-      error: () => { this.loadDemoData(); this.loading.set(false); },
+      error: () => { this.dashboardData.set(null); this.loading.set(false); },
     });
     this.loadChartData();
   }
@@ -229,7 +229,7 @@ private _scrollTileTop(): void {
     this.chartData.set(null);
     this.api.getChartData(this.chartDays).subscribe({
       next: d => this.chartData.set(d),
-      error: () => this.chartData.set({ complaintsByDate:this.demoDates(), complaintsByStatus:[], complaintsByPriority:[] }),
+      error: () => this.chartData.set({ complaintsByDate:[], complaintsByStatus:[], complaintsByPriority:[] }),
     });
   }
 
@@ -470,24 +470,7 @@ get pagedItems(): any[] {
   getPriorityClass(id: number): string { return ({1:'priority-urgent',2:'priority-high',3:'priority-normal',4:'priority-low'} as any)[id]||'priority-normal'; }
   getPriorityLabel(id: number): string { return ({1:'Urgent',2:'High',3:'Normal',4:'Low'} as any)[id]||'Normal'; }
 
-  private loadDemoData(): void {
-    this.dashboardData.set({
-      stats:{totalComplaints:248,newComplaints:42,inProgressComplaints:65,resolvedComplaints:112,closedComplaints:29,slaBreached:8,warrantyComplaints:34,availableTechnicians:12,todaySchedules:18,pendingReturns:6},
-      recentComplaints:[
-        {complaintId:1,complaintNo:'CMP-2026-0001',subject:'AC not cooling',createdDate:'2026-02-25',statusId:1,priorityId:1,customerName:'Raj Kumar',technicianName:''},
-        {complaintId:2,complaintNo:'CMP-2026-0002',subject:'Washing machine',createdDate:'2026-02-24',statusId:2,priorityId:3,customerName:'Priya Sharma',technicianName:'Arun M'},
-        {complaintId:3,complaintNo:'CMP-2026-0003',subject:'Fridge water leak',createdDate:'2026-02-23',statusId:3,priorityId:2,customerName:'Suresh V',technicianName:'Karthik R'},
-      ],
-      slaBreaches:[
-        {complaintNo:'CMP-2026-0045',subject:'Motor failure',slaDeadline:'2026-02-20',hoursOverdue:168,customerName:'Lakshmi N'},
-        {complaintNo:'CMP-2026-0052',subject:'Display broken',slaDeadline:'2026-02-22',hoursOverdue:120,customerName:'Mohan K'},
-      ],
-    });
-  }
 
-  private demoDates(): {date:string;count:number}[] {
-    return Array.from({length:15},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(14-i));return{date:d.toISOString().split('T')[0],count:Math.floor(Math.random()*15)+3};});
-  }
 
 
 // --- new state signals (add alongside assigning/completing signals) ---
@@ -632,17 +615,94 @@ isAllSelected(): boolean {
 
 
 
+// ── Spare decision dialog ────────────────────────────────
+// Every status change is confirmed first. Approving fixes the unit cost of the
+// part (the technician's bill is checked against it), rejecting needs a reason.
+spareDecision = signal<{ status: string; request: any | null; ids: number[] } | null>(null);
+spareDecisionError = signal('');
+spareStockWarning = signal('');       // set when the server holds the approval back: not enough stock
+spareRejectReason = '';
+spareUnitPrice: number | null = null;
+
+isCatalogPart(r: any): boolean {
+  return r?.isCatalogPart ?? !!r?.sparePartId;
+}
+
 singleAction(requestId: number, status: string, event: Event): void {
   event.stopPropagation();
+  const request = this.spareRequests().find((r: any) => r.requestId === requestId) ?? null;
+  this.openSpareDecision(status, request, [requestId]);
+}
+
+private openSpareDecision(status: string, request: any | null, ids: number[]): void {
+  this.spareRejectReason = '';
+  this.spareUnitPrice = request?.unitPrice ?? request?.catalogUnitPrice ?? null;
+  this.spareDecisionError.set('');
+  this.spareStockWarning.set('');
+  this.spareDecision.set({ status, request, ids });
+}
+
+closeSpareDecision(): void {
+  if (this.spareActioning()) return;
+  this.spareDecision.set(null);
+}
+
+spareDecisionVerb(status: string): string {
+  return ({ Approved: 'Approve', Rejected: 'Reject', Dispatched: 'Dispatch', Used: 'Mark as used' } as any)[status] || status;
+}
+
+confirmSpareDecision(approveWithoutStock = false): void {
+  const d = this.spareDecision();
+  if (!d) return;
+
+  if (d.status === 'Rejected' && !this.spareRejectReason.trim()) {
+    this.spareDecisionError.set('Please enter the reason for rejecting.');
+    return;
+  }
+  if (d.status === 'Approved' && d.request && this.spareUnitPrice != null && this.spareUnitPrice < 0) {
+    this.spareDecisionError.set('Unit cost cannot be negative.');
+    return;
+  }
+
   this.spareActioning.set(true);
-  this.api.updateSpareStatus(requestId, status).subscribe({
-    next: (r: any) => {
-      this.spareActioning.set(false);
-      this.loadSpareRequests();
-      this.loadSpareSummary();
-    },
-    error: () => this.spareActioning.set(false)
-  });
+  this.spareDecisionError.set('');
+
+  const done = (r: any) => {
+    this.spareActioning.set(false);
+    if (r?.needsStockConfirmation) {            // ask before approving a part that is short of stock
+      this.spareStockWarning.set(r.message || 'Not enough stock for this part.');
+      return;
+    }
+    if (r?.success === false) {
+      this.spareDecisionError.set(r.message || 'The request could not be updated.');
+      return;
+    }
+    this.spareDecision.set(null);
+    this.spareActionMsg.set(r?.message || `${d.status} applied`);
+    this.spareActionErr.set(false);
+    this.selectedSpareIds.set(new Set());
+    this.loadSpareRequests();
+    this.loadSpareSummary();
+    setTimeout(() => this.spareActionMsg.set(''), 4000);
+  };
+  const failed = (err: any) => {
+    this.spareActioning.set(false);
+    this.spareDecisionError.set(err?.error?.message || 'The request could not be updated.');
+  };
+
+  if (d.request) {
+    this.api.updateSpareStatus(d.request.requestId, d.status, {
+      rejectReason: d.status === 'Rejected' ? this.spareRejectReason.trim() : undefined,
+      unitPrice: d.status === 'Approved' ? this.spareUnitPrice : undefined,
+      approveWithoutStock
+    }).subscribe({ next: done, error: failed });
+  } else {
+    this.api.bulkUpdateSpareStatus({
+      requestIds: d.ids,
+      status: d.status,
+      rejectReason: d.status === 'Rejected' ? this.spareRejectReason.trim() : undefined
+    }).subscribe({ next: done, error: failed });
+  }
 }
 
 getSpareStatusClass(s: string): string {
@@ -833,32 +893,9 @@ bulkAction(targetStatus: string): void {
     return;
   }
 
-  this.spareActioning.set(true);
+  // confirmed (and, for a rejection, given a reason) in the decision dialog
   this.spareActionMsg.set('');
-
-  this.api
-    .bulkUpdateSpareStatus({ requestIds: validIds, status: targetStatus })
-    .subscribe({
-      next: (r: any) => {
-        this.spareActioning.set(false);
-        const skipped = ids.length - validIds.length;
-        let msg = r.message || `${targetStatus} applied to ${validIds.length} items`;
-        if (skipped > 0) {
-          msg += ` (${skipped} skipped — wrong status)`;
-        }
-        this.spareActionMsg.set(msg);
-        this.spareActionErr.set(!r.success);
-        this.selectedSpareIds.set(new Set());
-        this.loadSpareRequests();
-        this.loadSpareSummary();
-        if (r.success) setTimeout(() => this.spareActionMsg.set(''), 4000);
-      },
-      error: () => {
-        this.spareActioning.set(false);
-        this.spareActionMsg.set('Action failed');
-        this.spareActionErr.set(true);
-      },
-    });
+  this.openSpareDecision(targetStatus, null, validIds);
 }
 
 // NEW: Helper to filter valid IDs based on current status → target status

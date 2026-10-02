@@ -23,6 +23,7 @@
         </div>
       } @else {
         <div class="loc-instructions">
+          <p class="loc-device-current">Steps for: <strong>{{ deviceLabel(locationDeviceChoice()) }}</strong></p>
           @if (locationDeviceChoice() === 'mobile') {
             <ol class="loc-steps">
               <li>Open your phone <strong>Settings</strong></li>
@@ -47,13 +48,14 @@
           }
         </div>
         <div class="loc-actions">
-          <button class="loc-btn-back" (click)="locationDeviceChoice.set(null)">
-            <span class="material-icons">arrow_back</span> Back
+          <button class="loc-btn-back" (click)="locationDeviceChoice.set(null); locationRetryMsg.set('')">
+            <span class="material-icons">arrow_back</span> Other device
           </button>
           <button class="loc-btn-retry" (click)="retryLocation()">
             <span class="material-icons">refresh</span> Retry
           </button>
         </div>
+        @if (locationRetryMsg()) { <p class="loc-retry-msg">{{ locationRetryMsg() }}</p> }
       }
 
       <button class="loc-btn-logout" (click)="logoutFromLocation()">Log out</button>
@@ -322,7 +324,7 @@
  </div>
  <div class="meta-separator">·</div>
  <div class="info-item compact-item">
- <span class="material-icons">fitness_center</span>
+ <span class="material-icons">inventory_2</span>
  <div>
  <span class="info-value product-nature-line">
  {{ wo.productName }}
@@ -506,7 +508,7 @@
  [style.background]="detailData()?.statusColor ? detailData()?.statusColor + '20' : '#f1f5f9'"
  [style.color]="detailData()?.statusColor || '#475569'"
  >
- {{ detailData()?.statusName || detailData()?.status }}
+ {{ detailData()?.status || detailData()?.statusName }}
  </span>
  <span class="role-pill" [class.primary]="detailData()?.assignmentRole === 'Primary'">
  {{ detailData()?.assignmentRole }}
@@ -593,7 +595,7 @@
  </div>
  }
  <div class="dm-info-item">
- <span class="material-icons">fitness_center</span>
+ <span class="material-icons">inventory_2</span>
 <div>
 <span class="dmi-label">Product</span>
 <span class="dmi-val">{{ detailData()?.productName }}</span>
@@ -1226,7 +1228,7 @@
  <span>{{ spareDialogWo()?.customerName }}</span>
  </div>
  <div class="sp-wo-row">
- <span class="material-icons">fitness_center</span>
+ <span class="material-icons">inventory_2</span>
  <span>{{ spareDialogWo()?.productName }}</span>
  </div>
  </div>
@@ -1906,7 +1908,7 @@
  <span>{{ completeWo()?.customerName }}</span>
  </div>
  <div class="cmp-wo-row">
- <span class="material-icons">fitness_center</span>
+ <span class="material-icons">inventory_2</span>
  <span>{{ completeWo()?.productName }}</span>
  </div>
  @if (completeWo()?.customerAddress || $any(completeWo()).customerPlace || $any(completeWo()).locationName || $any(completeWo()).locationAddress) {
@@ -1925,8 +1927,13 @@
  [(ngModel)]="completeForm.workDone"
  rows="3"
  class="cmp-textarea"
+ [class.cmp-invalid]="workDoneTouched() && !completeForm.workDone.trim()"
+ (blur)="workDoneTouched.set(true)"
  placeholder="Describe the service work performed..."
  ></textarea>
+ @if (workDoneTouched() && !completeForm.workDone.trim()) {
+ <small class="cmp-field-error">Work performed is required to complete the work order.</small>
+ }
  </div>
 
  <!--PartsUsed-->
@@ -1964,8 +1971,8 @@
 
  <!--â•â•â•IMAGEUPLOADSECTIONâ•â•â•-->
  <div class="cmp-upload-section">
- <label>Service Images</label>
- <p class="cmp-upload-hint">Upload before/after photos, parts, or customer signature</p>
+ <label>Service Images <span class="cmp-req">*</span></label>
+ <p class="cmp-upload-hint">At least one photo is required: before/after photos, parts, or customer signature</p>
 
  <!--Dropzone-->
  <div class="cmp-upload-row">
@@ -1977,14 +1984,14 @@
  >
  <input #fileInput
  type="file"
- accept="image/*"
+ accept="image/jpeg,image/png,image/webp"
  multiple
  hidden
  (change)="onFilesSelected($event)"
  />
  <span class="material-icons cmp-dz-icon">photo_library</span>
  <p class="cmp-dz-text">Drop or <strong>browse gallery</strong></p>
- <p class="cmp-dz-sub">JPG, PNG up to 10MB</p>
+ <p class="cmp-dz-sub">JPG, PNG or WEBP, up to 10MB each</p>
  </div>
  <button type="button" class="cmp-camera-btn" (click)="cameraInput.click()">
  <input #cameraInput type="file" accept="image/*" capture="environment" hidden (change)="onFilesSelected($event)" />
@@ -2076,7 +2083,7 @@
  <button
  class="cmp-submit"
  (click)="submitCompletion()"
- [disabled]="completeBusy() || !completeForm.workDone.trim()"
+ [disabled]="completeBusy()"
  >
  @if (completeBusy()) {
  <span class="mini-spin white"></span>

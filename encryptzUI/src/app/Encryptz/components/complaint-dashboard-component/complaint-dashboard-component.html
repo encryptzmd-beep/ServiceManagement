@@ -625,6 +625,60 @@
 </div><!-- /assign-panel -->
 }
 
+<!-- ═══ SPARE DECISION DIALOG (confirm / cost / reject reason) ═══ -->
+@if (spareDecision(); as d) {
+<div class="sd-overlay" (click)="closeSpareDecision()">
+  <div class="sd-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+    <h3>{{ spareDecisionVerb(d.status) }} spare request{{ d.ids.length > 1 ? 's' : '' }}</h3>
+
+    @if (d.request; as r) {
+    <p class="sd-line"><strong>{{ r.partName }}</strong> × {{ r.quantity }} — {{ r.complaintNumber }}, {{ r.technicianName }}</p>
+    } @else {
+    <p class="sd-line">{{ d.ids.length }} request(s) selected.</p>
+    }
+
+    @if (d.status === 'Approved' && d.request; as r) {
+    <label class="sd-label" for="sdUnitPrice">Unit cost (₹)</label>
+    <input id="sdUnitPrice" type="number" min="0" step="0.01" class="sd-input" [(ngModel)]="spareUnitPrice"
+           [placeholder]="isCatalogPart(r) ? 'Catalog price' : 'Cost of this part'" />
+    <small class="sd-hint">
+      Fixed at approval. The technician cannot bill the spare parts of this job below the approved cost.
+      @if (isCatalogPart(r)) { Stock: {{ r.stockQuantity }}. } @else { Custom part — no stock is tracked. }
+    </small>
+    }
+    @if (d.status === 'Approved' && !d.request) {
+    <small class="sd-hint">Catalog parts are approved at their catalog price; parts short of stock are left for a one-by-one decision.</small>
+    }
+
+    @if (d.status === 'Rejected') {
+    <label class="sd-label" for="sdReason">Reason <span class="sd-req">*</span></label>
+    <textarea id="sdReason" class="sd-input" rows="3" maxlength="500" [(ngModel)]="spareRejectReason"
+              placeholder="Why is the request rejected? The technician sees this."></textarea>
+    }
+
+    @if (spareStockWarning()) {
+    <div class="sd-warning">
+      <span class="material-icons">warning</span>
+      <span>{{ spareStockWarning() }} Approve anyway (to be purchased)?</span>
+    </div>
+    }
+    @if (spareDecisionError()) { <div class="sd-error">{{ spareDecisionError() }}</div> }
+
+    <div class="sd-actions">
+      <button type="button" class="sd-btn ghost" (click)="closeSpareDecision()" [disabled]="spareActioning()">Cancel</button>
+      @if (spareStockWarning()) {
+      <button type="button" class="sd-btn primary" (click)="confirmSpareDecision(true)" [disabled]="spareActioning()">Approve anyway</button>
+      } @else {
+      <button type="button" class="sd-btn" [class.primary]="d.status !== 'Rejected'" [class.danger]="d.status === 'Rejected'"
+              (click)="confirmSpareDecision()" [disabled]="spareActioning()">
+        {{ spareActioning() ? 'Saving...' : spareDecisionVerb(d.status) }}
+      </button>
+      }
+    </div>
+  </div>
+</div>
+}
+
 <!-- ═══ SPARE APPROVAL PANEL ═════════════════════════════ -->
 @if (showSparePanel()) {
 <div class="panel-overlay" (click)="closeSparePanel()"></div>
@@ -730,9 +784,17 @@
               <div class="sp-part-cell">
                 <strong>{{ r.partName }}</strong>
                 @if (r.partNumber) { <small>{{ r.partNumber }}</small> }
-                <span class="sp-stock" [class.low]="r.stockQuantity < 3">
+                @if (isCatalogPart(r)) {
+                <span class="sp-stock" [class.low]="r.stockQuantity < r.quantity">
                   <span class="material-icons">inventory_2</span>{{ r.stockQuantity }} in stock
                 </span>
+                } @else {
+                <span class="sp-stock" title="Entered by the technician: not in the spare part master, so no stock is tracked">
+                  <span class="material-icons">edit_note</span>Custom part
+                </span>
+                }
+                @if (r.unitPrice != null) { <small>Cost ₹{{ r.unitPrice | number:'1.0-2' }} / unit</small> }
+                @if (r.rejectReason) { <small class="sp-reject-reason">Rejected: {{ r.rejectReason }}</small> }
               </div>
             </td>
             <td><span class="sp-qty">× {{ r.quantity }}</span></td>

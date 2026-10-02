@@ -28,7 +28,7 @@ export class TrackingComponent {
     this.loading.set(true);
     this.svc.getLivePositions().subscribe({
       next: (d:any) => { this.positions.set(d.data); this.loading.set(false); this.lastRefresh=new Date(); },
-      error: () => { this.loadDemoLive(); this.loading.set(false); this.lastRefresh=new Date(); }
+      error: () => { this.positions.set([]); this.loading.set(false); this.lastRefresh=new Date(); }
     });
   }
 
@@ -39,7 +39,7 @@ export class TrackingComponent {
     this.histLoading.set(true);
     this.svc.getHistory(this.histTechId, this.histDate).subscribe({
       next: d => { this.historyData.set(d); this.histLoading.set(false); },
-      error: () => { this.loadDemoHistory(); this.histLoading.set(false); }
+      error: () => { this.historyData.set([]); this.histLoading.set(false); }
     });
   }
 
@@ -48,20 +48,5 @@ export class TrackingComponent {
   getAvailColor(s:number):string { return {1:'#10b981',2:'#f59e0b',3:'#6366f1',4:'#ef4444'}[s]||'#6b7280'; }
   getAvailLabel(s:number):string { return {1:'Available',2:'On Job',3:'On Leave',4:'Inactive'}[s]||'Unknown'; }
 
-  private loadDemoLive() {
-    this.positions.set([
-      { technicianId:10,fullName:'Arun Murugan',employeeCode:'EMP-001',specialization:'AC Repair',currentLatitude:8.1833,currentLongitude:77.4119,lastLocationUpdate:new Date().toISOString(),availabilityStatus:2,currentComplaint:'CMP-001' },
-      { technicianId:11,fullName:'Karthik Rajan',employeeCode:'EMP-002',specialization:'Electrical',currentLatitude:8.1900,currentLongitude:77.4200,lastLocationUpdate:new Date().toISOString(),availabilityStatus:1,currentComplaint:'' },
-      { technicianId:12,fullName:'Priya Lakshmi',employeeCode:'EMP-003',specialization:'Plumbing',currentLatitude:8.1750,currentLongitude:77.4050,lastLocationUpdate:new Date().toISOString(),availabilityStatus:2,currentComplaint:'CMP-005' },
-    ]);
-  }
 
-  private loadDemoHistory() {
-    const logs: TrackingLogEntry[] = [];
-    for (let i=0; i<20; i++) {
-      const d = new Date(); d.setHours(9,0,0,0); d.setMinutes(d.getMinutes() + i*15);
-      logs.push({ logId:i+1, latitude:8.1833+Math.random()*0.01, longitude:77.4119+Math.random()*0.01, accuracy:5+Math.random()*10, speed:Math.random()*40, batteryLevel:100-i*3, logTime:d.toISOString() });
-    }
-    this.historyData.set(logs);
-  }
 }

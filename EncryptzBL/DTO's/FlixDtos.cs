@@ -886,8 +886,8 @@ namespace EncryptzBL.DTO_s
         public string CustomerPhone { get; set; }
         public int ProductId { get; set; }
         public string ProductSerialNo { get; set; }
-        public DateTime WarrantyStartDate { get; set; }
-        public DateTime WarrantyEndDate { get; set; }
+        public DateTime? WarrantyStartDate { get; set; }
+        public DateTime? WarrantyEndDate { get; set; }
         public string ReturnReason { get; set; }
         public int ReturnType { get; set; }
         public int StatusId { get; set; }
@@ -904,17 +904,21 @@ namespace EncryptzBL.DTO_s
 
 
 
+    /// <summary>
+    /// Only the complaint, the reason and the type are needed: customer, product and
+    /// warranty dates are taken from the complaint when they are not sent.
+    /// </summary>
     public class WarrantyReturnCreateDto
     {
         public int ComplaintId { get; set; }
-        public int CustomerId { get; set; }
-        public int ProductId { get; set; }
-        public string ProductSerialNo { get; set; }
-        public DateTime WarrantyStartDate { get; set; }
-        public DateTime WarrantyEndDate { get; set; }
+        public int? CustomerId { get; set; }
+        public int? ProductId { get; set; }
+        public string? ProductSerialNo { get; set; }
+        public DateTime? WarrantyStartDate { get; set; }
+        public DateTime? WarrantyEndDate { get; set; }
         public string ReturnReason { get; set; }
         public int ReturnType { get; set; }
-        public string PickupAddress { get; set; }
+        public string? PickupAddress { get; set; }
     }
 
     public class WarrantyReturnStatusDto
@@ -973,11 +977,12 @@ namespace EncryptzBL.DTO_s
         public DateTime ConflictDate { get; set; }
         public int ConflictType { get; set; }
         public int Severity { get; set; }
-        public TimeSpan Schedule1Start { get; set; }
-        public TimeSpan Schedule1End { get; set; }
+        // null when the assignment has only a time slot, no start / end time
+        public TimeSpan? Schedule1Start { get; set; }
+        public TimeSpan? Schedule1End { get; set; }
         public int Schedule1Type { get; set; }
-        public TimeSpan Schedule2Start { get; set; }
-        public TimeSpan Schedule2End { get; set; }
+        public TimeSpan? Schedule2Start { get; set; }
+        public TimeSpan? Schedule2End { get; set; }
         public int Schedule2Type { get; set; }
         public string Complaint1No { get; set; }
         public string Complaint2No { get; set; }
@@ -1060,6 +1065,12 @@ namespace EncryptzBL.DTO_s
         public string PartName { get; set; } = string.Empty;
         public string? PartNumber { get; set; }
         public int StockQuantity { get; set; }
+        /// <summary>false = custom part: no catalog entry, so no stock to check.</summary>
+        public bool IsCatalogPart { get; set; }
+        public decimal? CatalogUnitPrice { get; set; }
+        /// <summary>Cost per unit fixed at approval.</summary>
+        public decimal? UnitPrice { get; set; }
+        public string? RejectReason { get; set; }
         public int Quantity { get; set; }
         public string Status { get; set; } = string.Empty;
         public string? UrgencyLevel { get; set; }
@@ -1083,6 +1094,7 @@ namespace EncryptzBL.DTO_s
         public string? CustomPartName { get; set; }
         public string? CustomPartNumber { get; set; }
         public decimal? UnitPrice { get; set; }
+        public string? RejectReason { get; set; }
         public int Quantity { get; set; }
         public string Status { get; set; } = string.Empty;
         public string? UrgencyLevel { get; set; }
@@ -1105,6 +1117,15 @@ namespace EncryptzBL.DTO_s
         public int CriticalPending { get; set; }
     }
 
+    /// <summary>Outcome of a spare request status change.</summary>
+    public class SpareStatusResult : ApiResponse
+    {
+        public SpareStatusResult(bool success, string message) : base(success, message) { }
+
+        /// <summary>Approval was held back: the catalog part is short of stock. Ask, then resend with ApproveWithoutStock.</summary>
+        public bool NeedsStockConfirmation { get; set; }
+    }
+
     public class SpareFilterDto
     {
         public string? Status { get; set; }
@@ -1118,6 +1139,8 @@ namespace EncryptzBL.DTO_s
     {
         public List<int> RequestIds { get; set; } = new();
         public string Status { get; set; } = string.Empty;
+        /// <summary>Required when Status is Rejected.</summary>
+        public string? RejectReason { get; set; }
     }
     public class SparePartRequestCreateDto
     {
@@ -1306,7 +1329,8 @@ namespace EncryptzBL.DTO_s
         public int Total { get; set; }
         public int WithinSla { get; set; }
         public int Breached { get; set; }
-        public decimal CompliancePercent { get; set; }
+        /// <summary>null = no complaints in the range (nothing to measure), not 0 %.</summary>
+        public decimal? CompliancePercent { get; set; }
         public decimal AvgResolutionHours { get; set; }
         public int SlaTargetHours { get; set; }
     }

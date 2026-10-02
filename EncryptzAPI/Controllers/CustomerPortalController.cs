@@ -24,7 +24,7 @@ namespace EncryptzAPI.Controllers
         [HttpGet("complaints")]
         public async Task<IActionResult> GetMyComplaints([FromQuery] int? statusFilter, [FromQuery] int page = 1, [FromQuery] int size = 10)
         {
-            var result = await _service.GetMyComplaints(GetUserId(), statusFilter, page, size);
+            var result = await _service.GetMyComplaints(GetUserId(), statusFilter, page, Math.Min(size, 100));
             return Ok(result);
         }
 

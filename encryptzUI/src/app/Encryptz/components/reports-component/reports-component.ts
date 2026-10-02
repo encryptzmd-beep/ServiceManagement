@@ -38,7 +38,7 @@ export class ReportsComponent {
           this.loading.set(false);
         },
         error: () => {
-          this.loadDemoComplaint();
+          this.complaintReports.set([]);
           this.loading.set(false);
         },
       });
@@ -49,7 +49,7 @@ export class ReportsComponent {
           this.loading.set(false);
         },
         error: () => {
-          this.loadDemoPerf();
+          this.perfReports.set([]);
           this.loading.set(false);
         },
       });
@@ -89,62 +89,5 @@ export class ReportsComponent {
       .toUpperCase();
   }
 
-  private loadDemoComplaint() {
-    const data: ComplaintSummaryReport[] = [];
-    for (let i = 14; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      data.push({
-        reportDate: d.toISOString().split('T')[0],
-        statusId: 1,
-        priorityId: 1,
-        complaintCount: Math.floor(Math.random() * 10) + 3,
-        warrantyCount: Math.floor(Math.random() * 3),
-        slaBreached: Math.floor(Math.random() * 2),
-        avgResolutionHours: Math.random() * 24 + 4,
-      });
-    }
-    this.complaintReports.set(data);
-  }
 
-  private loadDemoPerf() {
-    this.perfReports.set([
-      {
-        userId: 10,
-        fullName: 'Arun Murugan',
-        employeeCode: 'EMP-001',
-        specialization: 'AC Repair',
-        totalAssigned: 45,
-        resolved: 42,
-        closed: 38,
-        slaBreached: 1,
-        avgResolutionHours: 6.5,
-        rating: 4.8,
-      },
-      {
-        userId: 11,
-        fullName: 'Karthik Rajan',
-        employeeCode: 'EMP-002',
-        specialization: 'Electrical',
-        totalAssigned: 38,
-        resolved: 30,
-        closed: 28,
-        slaBreached: 3,
-        avgResolutionHours: 8.2,
-        rating: 4.5,
-      },
-      {
-        userId: 12,
-        fullName: 'Priya Lakshmi',
-        employeeCode: 'EMP-003',
-        specialization: 'Plumbing',
-        totalAssigned: 52,
-        resolved: 50,
-        closed: 48,
-        slaBreached: 0,
-        avgResolutionHours: 5.1,
-        rating: 4.9,
-      },
-    ]);
-  }
 }

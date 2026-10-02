@@ -14,6 +14,7 @@ export class SettingsComponent {
   settings = signal<SystemSetting[]>([]);
   loading = signal(true);
   saveSuccess = signal(false);
+  saveError = signal('');
   activeGroup = 'SLA';
   changedIds = new Set<number>();
   
@@ -23,6 +24,13 @@ export class SettingsComponent {
   showAddUpiModal = signal(false);
   newUpi = { upiId: '', displayName: '' };
   paymentsLoading = signal(false);
+  upiError = signal('');
+  savingUpi = signal(false);
+  /** Row waiting for "Delete? Yes / No" (asked in the page, not with a browser dialog). */
+  confirmDeleteUpiId = signal<number | null>(null);
+
+  // name@bank, e.g. shop.name@okhdfcbank (the API checks the same)
+  private static readonly UPI_ID = /^[a-zA-Z0-9][a-zA-Z0-9._-]{1,255}@[a-zA-Z][a-zA-Z0-9]{1,63}$/;
 
   groups = computed(() => [...new Set(this.settings().map(s => s.settingGroup)), 'Payments']);
   filteredSettings = computed(() => this.settings().filter(s => s.settingGroup === this.activeGroup));
@@ -37,7 +45,7 @@ export class SettingsComponent {
     this.loading.set(true);
     this.svc.getAll().subscribe({
       next: d => { this.settings.set(d); if(d.length) this.activeGroup=d[0].settingGroup; this.loading.set(false); },
-      error: () => { this.loadDemo(); this.loading.set(false); }
+      error: () => { this.settings.set([]); this.loading.set(false); }
     });
   }
 
@@ -51,17 +59,24 @@ export class SettingsComponent {
 
   saveAll() {
     if (this.activeGroup === 'Payments') {
-      this.svc.updateDefaultServiceCharge(this.defaultServiceCharge()).subscribe({
+      const charge = Number(this.defaultServiceCharge());
+      if (!Number.isFinite(charge) || charge < 0) {
+        this.showError('Default service charge must be zero or more');
+        return;
+      }
+      this.svc.updateDefaultServiceCharge(charge).subscribe({
         next: () => this.showSuccess(),
-        error: () => alert('Failed to save service charge')
+        error: () => this.showError('Failed to save the service charge')
       });
       return;
     }
 
     const updates: SettingUpdateDto[] = this.settings().filter(s => this.changedIds.has(s.settingId)).map(s => ({ settingId: s.settingId, settingValue: s.settingValue }));
+    if (updates.length === 0) { this.showSuccess(); return; }
     this.svc.bulkUpdate(updates).subscribe({
       next: () => { this.changedIds.clear(); this.showSuccess(); },
-      error: () => { this.changedIds.clear(); this.showSuccess(); }
+      // the changes stay marked, so "Save" can be pressed again
+      error: () => this.showError('The settings could not be saved. Please try again.')
     });
   }
 
@@ -77,64 +92,77 @@ export class SettingsComponent {
 
   loadUpiConfigs() {
     this.svc.getUPIConfigurations().subscribe({
-      next: (res) => { this.upiConfigurations.set(res.data); this.paymentsLoading.set(false); },
+      next: (res) => { this.upiConfigurations.set(res?.data ?? []); this.paymentsLoading.set(false); },
       error: () => this.paymentsLoading.set(false)
     });
   }
 
+  openAddUpi() {
+    this.newUpi = { upiId: '', displayName: '' };
+    this.upiError.set('');
+    this.showAddUpiModal.set(true);
+  }
+
+  isValidUpiId(value: string): boolean {
+    return SettingsComponent.UPI_ID.test((value || '').trim());
+  }
+
   addUpi() {
-    if (!this.newUpi.upiId || !this.newUpi.displayName) return;
-    this.svc.addUPIConfiguration(this.newUpi).subscribe({
-      next: () => {
+    const upiId = (this.newUpi.upiId || '').trim();
+    const displayName = (this.newUpi.displayName || '').trim();
+    if (!displayName) { this.upiError.set('Display name is required'); return; }
+    if (!this.isValidUpiId(upiId)) { this.upiError.set('Enter a valid UPI ID in the form name@bank'); return; }
+
+    this.savingUpi.set(true);
+    this.upiError.set('');
+    this.svc.addUPIConfiguration({ upiId, displayName }).subscribe({
+      next: (res: any) => {
+        this.savingUpi.set(false);
+        if (res?.success === false) { this.upiError.set(res.message || 'Failed to add the UPI ID'); return; }
         this.showAddUpiModal.set(false);
         this.newUpi = { upiId: '', displayName: '' };
         this.loadUpiConfigs();
         this.showSuccess();
       },
-      error: () => alert('Failed to add UPI')
+      error: (err) => {
+        this.savingUpi.set(false);
+        this.upiError.set(err?.error?.message || 'Failed to add the UPI ID');
+      }
     });
   }
 
   setDefaultUpi(id: number) {
     this.svc.setDefaultUPI(id).subscribe({
       next: () => { this.loadUpiConfigs(); this.showSuccess(); },
-      error: () => alert('Failed to set default UPI')
+      error: () => this.showError('Failed to set the default UPI')
     });
   }
 
   toggleUpiStatus(id: number) {
     this.svc.toggleUPIStatus(id).subscribe({
       next: () => { this.loadUpiConfigs(); this.showSuccess(); },
-      error: () => alert('Failed to toggle UPI status')
+      error: () => this.showError('Failed to change the UPI status')
     });
   }
 
+  askDeleteUpi(id: number) { this.confirmDeleteUpiId.set(id); }
+  cancelDeleteUpi() { this.confirmDeleteUpiId.set(null); }
+
   deleteUpi(id: number) {
-    if (!confirm('Are you sure you want to delete this UPI ID?')) return;
+    this.confirmDeleteUpiId.set(null);
     this.svc.deleteUPIConfiguration(id).subscribe({
-      next: () => { this.loadUpiConfigs(); this.showSuccess(); },
-      error: () => alert('Failed to delete UPI')
+      next: () => {
+        this.upiConfigurations.update(list => (list ?? []).filter(u => u.id !== id));   // gone at once
+        this.loadUpiConfigs();
+        this.showSuccess();
+      },
+      error: () => this.showError('Failed to delete the UPI ID')
     });
   }
 
   formatKey(key: string): string { return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); }
 
-  private showSuccess() { this.saveSuccess.set(true); setTimeout(() => this.saveSuccess.set(false), 3000); }
+  private showSuccess() { this.saveError.set(''); this.saveSuccess.set(true); setTimeout(() => this.saveSuccess.set(false), 3000); }
+  private showError(message: string) { this.saveSuccess.set(false); this.saveError.set(message); setTimeout(() => this.saveError.set(''), 5000); }
 
-  private loadDemo() {
-    this.settings.set([
-      { settingId:1,settingKey:'SLA_DEFAULT_HOURS',settingValue:'24',settingGroup:'SLA',dataType:'int',description:'Default SLA resolution time in hours',isEditable:true,modifiedDate:'' },
-      { settingId:2,settingKey:'SLA_CRITICAL_HOURS',settingValue:'4',settingGroup:'SLA',dataType:'int',description:'Critical priority SLA hours',isEditable:true,modifiedDate:'' },
-      { settingId:3,settingKey:'MAX_DAILY_ASSIGNMENTS',settingValue:'8',settingGroup:'Schedule',dataType:'int',description:'Max daily assignments per technician',isEditable:true,modifiedDate:'' },
-      { settingId:4,settingKey:'WORKING_HOURS_START',settingValue:'09:00',settingGroup:'Schedule',dataType:'time',description:'Working hours start time',isEditable:true,modifiedDate:'' },
-      { settingId:5,settingKey:'WORKING_HOURS_END',settingValue:'18:00',settingGroup:'Schedule',dataType:'time',description:'Working hours end time',isEditable:true,modifiedDate:'' },
-      { settingId:6,settingKey:'GPS_TRACKING_INTERVAL',settingValue:'30',settingGroup:'Tracking',dataType:'int',description:'GPS tracking interval in seconds',isEditable:true,modifiedDate:'' },
-      { settingId:7,settingKey:'WARRANTY_DEFAULT_MONTHS',settingValue:'12',settingGroup:'Warranty',dataType:'int',description:'Default warranty period in months',isEditable:true,modifiedDate:'' },
-      { settingId:8,settingKey:'NOTIFICATION_EMAIL_ENABLED',settingValue:'true',settingGroup:'Notification',dataType:'bool',description:'Enable email notifications',isEditable:true,modifiedDate:'' },
-      { settingId:9,settingKey:'NOTIFICATION_SMS_ENABLED',settingValue:'false',settingGroup:'Notification',dataType:'bool',description:'Enable SMS notifications',isEditable:true,modifiedDate:'' },
-      { settingId:10,settingKey:'COMPLAINT_AUTO_ASSIGN',settingValue:'false',settingGroup:'Complaint',dataType:'bool',description:'Auto-assign complaints to technicians',isEditable:true,modifiedDate:'' },
-      { settingId:11,settingKey:'CUSTOMER_PORTAL_ENABLED',settingValue:'true',settingGroup:'Portal',dataType:'bool',description:'Enable customer portal access',isEditable:true,modifiedDate:'' },
-    ]);
-    this.activeGroup = 'SLA';
-  }
 }

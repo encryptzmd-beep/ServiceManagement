@@ -2,15 +2,15 @@
   <div class="fx-page-header">
     <div>
       <div class="fx-page-title">Schedule Conflicts</div>
-      <div class="fx-page-sub">Detect technician scheduling conflicts</div>
+      <div class="fx-page-sub">Overlapping assignments of the same technician</div>
     </div>
   </div>
 
   <div class="fx-stats-row">
     <div class="fx-stat-card">
-      <div class="fx-stat-label">Total Conflicts</div>
-      <div class="fx-stat-val">{{ conflicts().length }}</div>
-      <div class="fx-stat-pill pill-navy">Current date</div>
+      <div class="fx-stat-label">Open Conflicts</div>
+      <div class="fx-stat-val">{{ getOpenCount() }}</div>
+      <div class="fx-stat-pill pill-navy">Selected date</div>
     </div>
     <div class="fx-stat-card">
       <div class="fx-stat-label">Critical</div>
@@ -23,9 +23,9 @@
       <div class="fx-stat-pill pill-amber">Overlaps</div>
     </div>
     <div class="fx-stat-card">
-      <div class="fx-stat-label">Info</div>
-      <div class="fx-stat-val is-navy">{{ getInfoCount() }}</div>
-      <div class="fx-stat-pill pill-navy">Notices</div>
+      <div class="fx-stat-label">Resolved</div>
+      <div class="fx-stat-val is-navy">{{ getResolvedCount() }}</div>
+      <div class="fx-stat-pill pill-navy">Handled</div>
     </div>
   </div>
 
@@ -36,31 +36,59 @@
         <span class="fx-table-count">{{ conflicts().length }}</span>
       </div>
       <div class="fx-toolbar-right">
-        <label class="date-label">Date</label>
-        <input type="date" [(ngModel)]="date" (change)="load()" class="fx-filter-select" />
+        <label class="date-label" for="conflictDate">Date</label>
+        <input id="conflictDate" type="date" [(ngModel)]="selectedDate" (change)="loadData()" class="fx-filter-select" />
       </div>
     </div>
 
     <div class="table-responsive">
-      @if (conflicts().length === 0) {
-        <div class="fx-empty-row">No conflicts found</div>
+      @if (loading()) {
+        <div class="fx-empty-row">Loading...</div>
+      } @else if (loadError()) {
+        <div class="fx-empty-row conflict-error">{{ loadError() }}</div>
+      } @else if (conflicts().length === 0) {
+        <div class="fx-empty-row">No conflicts found for this date</div>
       } @else {
         <table class="fx-table">
           <thead>
             <tr>
               <th>Technician</th>
-              <th>Date</th>
-              <th>Time Slot</th>
-              <th>Complaint</th>
+              <th>Severity</th>
+              <th>First job</th>
+              <th>Second job</th>
+              <th>Resolution</th>
             </tr>
           </thead>
           <tbody>
-            @for (c of conflicts(); track c.scheduleId) {
-            <tr>
-              <td>{{ c.technicianName }}</td>
-              <td class="date-cell">{{ c.scheduledDate | date }}</td>
-              <td>{{ c.timeSlotStart }} - {{ c.timeSlotEnd }}</td>
-              <td class="mono">#{{ c.complaintId }}</td>
+            @for (c of conflicts(); track c.conflictId) {
+            <tr [class.is-resolved]="c.isResolved">
+              <td>
+                {{ c.technicianName }}
+                @if (c.employeeCode) { <div class="date-cell">{{ c.employeeCode }}</div> }
+              </td>
+              <td><span class="sev-badge" [class]="'sev-' + c.severity">{{ getSeverityLabel(c.severity) }}</span></td>
+              <td>
+                <span class="mono">{{ c.complaint1No || '#' + c.schedule1Id }}</span>
+                <div class="date-cell">{{ formatTime(c.schedule1Start) }} – {{ formatTime(c.schedule1End) }}</div>
+              </td>
+              <td>
+                <span class="mono">{{ c.complaint2No || '#' + c.schedule2Id }}</span>
+                <div class="date-cell">{{ formatTime(c.schedule2Start) }} – {{ formatTime(c.schedule2End) }}</div>
+              </td>
+              <td>
+                @if (c.isResolved) {
+                  <span class="sev-badge sev-done">Resolved</span>
+                } @else {
+                  <div class="resolve-box">
+                    <input type="text" class="fx-filter-select" maxlength="500" placeholder="How was it resolved?"
+                           [(ngModel)]="resolutionTexts[c.conflictId]" />
+                    <button type="button" class="fx-page-btn" [disabled]="resolvingId() === c.conflictId"
+                            (click)="resolveConflict(c)">
+                      {{ resolvingId() === c.conflictId ? 'Saving...' : 'Mark resolved' }}
+                    </button>
+                  </div>
+                }
+              </td>
             </tr>
             }
           </tbody>

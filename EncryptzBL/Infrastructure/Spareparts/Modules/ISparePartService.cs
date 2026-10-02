@@ -12,11 +12,14 @@ namespace EncryptzBL.Infrastructure.Spareparts.Modules
         Task<List<SparePartDto>> GetAll(string? searchTerm = null, int page = 1, int pageSize = 50);
         Task<List<SparePartRequestListDto>> GetRequests(int? technicianId = null, int? complaintId = null);
         Task<ApiResponse<int>> CreateRequest(SparePartRequestCreateDto dto);
-        Task<ApiResponse> UpdateRequestStatus(int requestId, string status, int updatedBy);
+        Task<SpareStatusResult> UpdateRequestStatus(int requestId, string status, int updatedBy,
+            string? rejectReason = null, decimal? unitPrice = null, bool allowNoStock = false);
+        /// <summary>Technician the request belongs to; null when it does not exist.</summary>
+        Task<int?> GetRequestTechnicianId(int requestId);
         Task<SparePartDashboardSummaryDto?> GetDashboardSummary();
         Task<List<SpareRequestAdminDto>> GetAdminRequests(SpareFilterDto filter);
         Task<List<SpareRequestByComplaintDto>> GetByComplaint(int complaintId);
-        Task<ApiResponse> BulkUpdateStatus(List<int> requestIds, string status, int updatedBy);
+        Task<ApiResponse> BulkUpdateStatus(List<int> requestIds, string status, int updatedBy, string? rejectReason = null);
         Task<ApiResponse<ProductMaster>> CreateProduct(ProductMasterRequestDto dto);
         Task<ApiResponse<ProductMaster>> UpdateProduct(ProductMasterRequestDto dto);
         Task<ApiResponse<bool>> DeleteProduct(int id, int userId);

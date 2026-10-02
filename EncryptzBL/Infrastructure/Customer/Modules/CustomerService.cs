@@ -161,6 +161,12 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
 
         public async Task<ApiResponse<int>> AddProduct(int userId, ProductCreate_Dto dto)
         {
+            var invalid = InputSanitizer.Validate(
+                ("Product name", dto.ProductName), ("Serial number", dto.SerialNumber),
+                ("Brand", dto.Brand), ("Model", dto.Model));
+            if (invalid != null)
+                return ApiResponse<int>.Fail(invalid);
+
             var customerId = await GetCustomerId(userId);
             if (customerId == null)
                 return ApiResponse<int>.Fail("Customer not found");
@@ -193,6 +199,12 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
 
         public async Task<ApiResponse<Customer_DTO>> UpdateProfile(int userId, CustomerProfileUpdate_Dto dto)
         {
+            var invalid = InputSanitizer.Validate(
+                ("Full name", dto.FullName), ("Address", dto.Address), ("City", dto.City),
+                ("State", dto.State), ("Landmark", dto.landmark));
+            if (invalid != null)
+                return ApiResponse<Customer_DTO>.Fail(invalid);
+
             try
             {
                 var parameters = new[]
@@ -282,6 +294,12 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
 
         public async Task<ApiResponse<RegisterResponse_Dto>> Register_Customer(CustomerRegister_Dto dto)
         {
+            var invalid = InputSanitizer.Validate(
+                ("Full name", dto.FullName), ("Address", dto.Address),
+                ("City", dto.City), ("State", dto.State));
+            if (invalid != null)
+                return ApiResponse<RegisterResponse_Dto>.Fail(invalid);
+
             var parameters = new[]
             {
                 SqlParameterHelper.Input("@FullName", dto.FullName),
@@ -308,6 +326,10 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
 
             return ApiResponse<RegisterResponse_Dto>.Fail(result?.Message ?? "Registration failed");
         }
+        /// <summary>Lifetime of a customer session token (Jwt:CustomerTokenHours, default 12).</summary>
+        private int CustomerTokenHours =>
+            int.TryParse(_configuration["Jwt:CustomerTokenHours"], out var hours) && hours > 0 ? hours : 12;
+
         private string GenerateJwtToken(Customer_DTO customer)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -326,7 +348,8 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
                     new Claim("ProjectId", ProjectId.ToString()),
                     new Claim("LocationId", LocationId.ToString())
                 }),
-                Expires = TimeHelper.IndianNow.AddDays(7),
+                // "Expires" is read as UTC. Hours, not days: the token sits in the browser storage.
+                Expires = DateTime.UtcNow.AddHours(CustomerTokenHours),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
@@ -429,6 +452,12 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
         // 🔥 ADD PRODUCT (Output Param Safe)
         public async Task<ApiResponse<int>> AddProduct(int userId, ProductCreateDto dto)
         {
+            var invalid = InputSanitizer.Validate(
+                ("Product name", dto.ProductName), ("Serial number", dto.SerialNumber),
+                ("Brand", dto.Brand), ("Model", dto.Model));
+            if (invalid != null)
+                return ApiResponse<int>.Fail(invalid);
+
             var customerId = await GetCustomerId(userId);
             if (customerId == null)
                 return ApiResponse<int>.Fail("Customer not found");
@@ -618,6 +647,17 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
 
         public async Task<ApiResponse<dynamic>> CreateComplaint(int userId, ComplaintCreateDto dto)
         {
+            if (string.IsNullOrWhiteSpace(dto.Subject))
+                return ApiResponse<dynamic>.Fail("Subject is required");
+            if (dto.ProductId <= 0)
+                return ApiResponse<dynamic>.Fail("Please select a product");
+
+            var invalid = InputSanitizer.Validate(
+                ("Subject", dto.Subject), ("Description", dto.Description),
+                ("Location address", dto.LocationAddress), ("Location", dto.PickedLocation));
+            if (invalid != null)
+                return ApiResponse<dynamic>.Fail(invalid);
+
             var customerId = await GetCustomerId(userId);
             if (customerId == null)
                 return ApiResponse<dynamic>.Fail("Customer not found");
@@ -628,9 +668,9 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
 
     SqlParameterHelper.Input("@CustomerId", customerId),
     SqlParameterHelper.Input("@ProductId", dto.ProductId),
-    SqlParameterHelper.Input("@Subject", dto.Subject),
+    SqlParameterHelper.Input("@Subject", dto.Subject.Trim()),
     SqlParameterHelper.Input("@Description", dto.Description ?? (object)DBNull.Value),
-    SqlParameterHelper.Input("@Priority", dto.Priority),
+    SqlParameterHelper.Input("@Priority", string.IsNullOrWhiteSpace(dto.Priority) ? "Medium" : dto.Priority),
 
     // ✅ new params
     SqlParameterHelper.Input("@Latitude", dto.Latitude ?? (object)DBNull.Value),
@@ -645,14 +685,26 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
             if (dt == null || dt.Rows.Count == 0)
                 return ApiResponse<dynamic>.Fail("Failed to create complaint");
 
-            var id = Convert.ToInt32(dt.Rows[0]["ComplaintId"]);
+            // the proc answers ComplaintId 0 + a message when it refuses the complaint
+            var row = dt.Rows[0];
+            var id = row["ComplaintId"] == DBNull.Value ? 0 : Convert.ToInt32(row["ComplaintId"]);
+            if (id <= 0)
+                return ApiResponse<dynamic>.Fail(row["Message"]?.ToString() ?? "Failed to create complaint");
 
-            return ApiResponse<dynamic>.Ok(id, "Complaint created");
+            return ApiResponse<dynamic>.Ok(new
+            {
+                ComplaintId = id,
+                ComplaintNumber = row["ComplaintNumber"]?.ToString()
+            }, "Complaint created");
         }
 
         public async Task<ApiResponse<PagedResult<ComplaintListDto>>> GetMyComplaints(
       int userId, int? statusFilter, int page, int size)
         {
+            // bounded here too, for callers that do not come through the controller
+            page = Math.Max(page, 1);
+            size = Math.Clamp(size, 1, 100);
+
             var customerId = await GetCustomerId(userId);
             if (customerId == null)
                 return ApiResponse<PagedResult<ComplaintListDto>>.Fail("Customer not found");
@@ -698,6 +750,10 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
         }
         public async Task<ApiResponse> UpdateComplaint(int userId, int complaintId, ComplaintUpdateDto dto)
         {
+            var invalid = InputSanitizer.Validate(("Subject", dto.Subject), ("Description", dto.Description));
+            if (invalid != null)
+                return new ApiResponse(false, invalid);
+
             try
             {
                 var p = new[]
@@ -812,6 +868,13 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
        
             public async Task<ApiResponse<dynamic>> CreateQuickComplaint(int userId, QuickComplaintRequest_Dto request)
             {
+                var invalid = InputSanitizer.Validate(
+                    ("Subject", request.Subject), ("Description", request.Description),
+                    ("Category", request.Category), ("Brand", request.BrandName),
+                    ("Model number", request.ModelNumber), ("Location", request.LocationName));
+                if (invalid != null)
+                    return ApiResponse<dynamic>.Fail(invalid);
+
                 try
                 {
                     // First get customer ID from user ID
@@ -887,6 +950,13 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
 
         public async Task<ApiResponse<dynamic>> CreatePublicQuickComplaint(PublicQuickComplaintRequest_Dto dto)
         {
+            var invalid = InputSanitizer.Validate(
+                ("Full name", dto.FullName), ("Subject", dto.Subject), ("Description", dto.Description),
+                ("Category", dto.Category), ("Brand", dto.BrandName),
+                ("Model number", dto.ModelNumber), ("Location", dto.LocationName));
+            if (invalid != null)
+                return ApiResponse<dynamic>.Fail(invalid);
+
             try
             {
                 int customerId;

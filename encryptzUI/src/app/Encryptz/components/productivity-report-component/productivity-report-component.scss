@@ -35,15 +35,15 @@
 
     .input:focus {
       outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      border-color: #e8001c;
+      box-shadow: 0 0 0 3px rgba(232, 0, 28, 0.1);
     }
 
     .btn-primary {
       display: flex;
       align-items: center;
       gap: 6px;
-      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      background: linear-gradient(135deg, #e8001c, #c0001a);
       color: #fff;
       border: none;
       border-radius: 10px;
@@ -54,7 +54,7 @@
     }
 
     .btn-primary:hover {
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      box-shadow: 0 4px 12px rgba(232, 0, 28, 0.3);
     }
 
     .btn-primary:disabled {
@@ -394,7 +394,7 @@
       width: 30px;
       height: 30px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      background: linear-gradient(135deg, #1b4a7a, #0f2d4a);
       color: #fff;
       display: flex;
       align-items: center;

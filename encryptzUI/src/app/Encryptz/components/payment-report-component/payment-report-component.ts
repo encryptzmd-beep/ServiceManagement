@@ -269,6 +269,17 @@ export class PaymentReportComponent implements OnInit {
     return (p.paymentType || '').toLowerCase() === 'advance' ? p.amountPaid : null;
   }
 
+  // The stored total is NET: service charge + spare parts − discount.
+  /** Bill before discount. */
+  getBillAmount(p: AdminPayment): number {
+    return p.totalAmount + p.discountAmount;
+  }
+
+  /** What the customer has to pay (the discount is already taken off). */
+  getNetPayable(p: AdminPayment): number {
+    return p.totalAmount;
+  }
+
   getFinalAmount(p: AdminPayment): number | null {
     return (p.paymentType || '').toLowerCase() === 'final' ? p.amountPaid : null;
   }
@@ -302,10 +313,10 @@ export class PaymentReportComponent implements OnInit {
         <td class="jn">${p.complaintNumber || '—'}</td>
         <td><b>${p.customerName}</b><br><small>${p.mobileNo}</small></td>
         <td>${svc}</td>
-        <td class="tr">${this.formatINR(p.totalAmount)}</td>
+        <td class="tr">${this.formatINR(this.getBillAmount(p))}</td>
         <td class="tr">${adv !== null ? this.formatINR(adv) : '<span class="dim">—</span>'}</td>
         <td class="tr">${this.formatINR(p.discountAmount)}</td>
-        <td class="tr b">${this.formatINR(p.totalAmount - p.discountAmount)}</td>
+        <td class="tr b">${this.formatINR(this.getNetPayable(p))}</td>
         <td class="tr">${fin !== null ? '<b>' + this.formatINR(fin) + '</b>' : '<span class="dim">—</span>'}</td>
         <td>${p.createdByName || '—'}</td>
         <td class="tr ca">${p.paymentMethod === 'Cash' ? this.formatINR(p.amountPaid) : '<span class="dim">—</span>'}</td>
@@ -411,7 +422,7 @@ tfoot td { padding: 7px 5px; color: #fff; border-top: 2px solid #3730a3; }
       <th class="tr">Bill Amt</th>
       <th class="tr">Advance<span class="ts">Collected</span></th>
       <th class="tr">Disc.</th>
-      <th class="tr">Net Payable<span class="ts">Final – Disc</span></th>
+      <th class="tr">Net Payable<span class="ts">Bill – Disc</span></th>
       <th class="tr">Final Pmt<span class="ts">Received</span></th>
       <th>Collected By</th>
       <th class="tr">Cash</th>
@@ -432,12 +443,18 @@ tfoot td { padding: 7px 5px; color: #fff; border-top: 2px solid #3730a3; }
   </tfoot>
 </table>
 <div class="pf">Printed on ${printedOn}&nbsp;&nbsp;·&nbsp;&nbsp;Encryptz ERP</div>
-<script>window.onload = function () { window.print(); window.onafterprint = function () { window.close(); }; };</script>
 </body>
 </html>`;
 
     const win = window.open('', '_blank', 'width=1400,height=900');
-    if (win) { win.document.write(html); win.document.close(); win.focus(); }
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      // printed from here: the popup inherits the page CSP, which blocks inline scripts
+      win.onafterprint = () => win.close();
+      setTimeout(() => win.print(), 300);
+    }
   }
 
   verifyAll(): void {
