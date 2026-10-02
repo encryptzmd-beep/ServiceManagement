@@ -83,6 +83,11 @@ export class ApiService {
     return this.http.get<M.ApiResponse<M.Complaint>>(`${this.api}/complaint/${id}`);
   }
 
+  /** Complaint statuses of the current tenant database (ids differ between databases). */
+  getComplaintStatuses(): Observable<M.ComplaintStatus[]> {
+    return this.http.get<M.ComplaintStatus[]>(`${this.api}/complaint/statuses`);
+  }
+
   updateComplaintStatus(id: number, statusId: number, remarks?: string): Observable<M.ApiResponse> {
     return this.http.put<M.ApiResponse>(`${this.api}/complaint/${id}/status`, { statusId, remarks });
   }

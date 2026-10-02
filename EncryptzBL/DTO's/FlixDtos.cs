@@ -257,6 +257,15 @@ namespace EncryptzBL.DTO_s
         public string? LocationAddress { get; set; }
         public string? PickedLocation { get; set; }
     }
+    /// <summary>A row of dbo.ComplaintStatuses. The ids differ between tenant databases: look them up, never hardcode them.</summary>
+    public class ComplaintStatusDto
+    {
+        public int StatusId { get; set; }
+        public string StatusName { get; set; } = string.Empty;
+        public string? StatusColor { get; set; }
+        public int SortOrder { get; set; }
+    }
+
     public class ComplaintUpdateStatusDto
     {
         public int StatusId { get; set; }

@@ -40,9 +40,6 @@
         <h3>{{ card.value }}</h3>
         <p>{{ card.label }}</p>
       </div>
-      <div class="stat-trend" [class.up]="card.up" [class.down]="!card.up">
-        {{ card.up ? '▲' : '▼' }} {{ card.pct }}%
-      </div>
       <div class="tile-bar"></div>
       <span class="tile-chevron material-icons">
         {{ activeTile()?.key===card.key ? 'expand_less' : 'expand_more' }}

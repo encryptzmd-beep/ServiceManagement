@@ -525,17 +525,24 @@ export interface ProductivityReport {
 }
 
 // --- Complaint Statuses ---
-export const COMPLAINT_STATUSES = [
-  { id: 1, name: 'New', color: '#3B82F6' },
-  { id: 2, name: 'Assigned', color: '#8B5CF6' },
-  { id: 3, name: 'InProgress', color: '#F59E0B' },
-  { id: 4, name: 'PartsRequested', color: '#EF4444' },
-  { id: 5, name: 'WorkCompleted', color: '#10B981' },
-  { id: 6, name: 'PendingConfirmation', color: '#6366F1' },
-  { id: 7, name: 'Closed', color: '#6B7280' },
-  { id: 8, name: 'Reopened', color: '#DC2626' },
-  { id: 9, name: 'Hold', color: '#F97316' },
-];
+// The status ids live in each tenant database (dbo.ComplaintStatuses) and differ between
+// databases. There is no fixed list here any more: load them with
+// ApiService.getComplaintStatuses() and look an id up by its NAME.
+export interface ComplaintStatus {
+  statusId: number;
+  statusName: string;
+  statusColor?: string | null;
+  sortOrder?: number;
+}
+
+/** Id of the status with this name (first match of the given names); undefined when the tenant has none. */
+export function statusIdByName(statuses: ComplaintStatus[], ...names: string[]): number | undefined {
+  for (const name of names) {
+    const hit = statuses.find(s => (s.statusName || '').toLowerCase() === name.toLowerCase());
+    if (hit) return hit.statusId;
+  }
+  return undefined;
+}
 
 export const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
 

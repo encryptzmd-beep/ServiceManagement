@@ -64,8 +64,13 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        // 🔹 STATUS LOOKUP: the status ids of THIS tenant database (they differ between databases)
+        [HttpGet("statuses")]
+        public async Task<IActionResult> GetStatuses()
+            => Ok(await _svc.GetStatuses());
+
         // 🔹 GET BY ID
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
             var result = await _svc.GetById(id);
@@ -97,11 +102,8 @@ namespace EncryptzAPI.Controllers
         [HttpPost("{id}/hold")]
         public async Task<IActionResult> SetHold(int id, [FromBody] SetHoldDto? dto)
         {
-            var result = await _svc.UpdateStatus(id, GetUserId(), new ComplaintUpdateStatusDto
-            {
-                StatusId = 9,
-                Remarks = dto?.Reason
-            });
+            // by name: "9" was the id of another numbering and is not a status of this database
+            var result = await _svc.UpdateStatusByName(id, GetUserId(), "OnHold", dto?.Reason);
             return Ok(result);
         }
 

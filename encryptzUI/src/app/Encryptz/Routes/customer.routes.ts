@@ -4,7 +4,6 @@ import { CustomerHomeComponent } from '../components/customer-home-component/cus
 import { CustomerLoginComponent } from '../components/customer-login-component/customer-login-component';
 import { CustomerRegisterComponent } from '../components/customer-register-component/customer-register-component';
 import { CustomerAuthGuard } from '../Guard/customer-guard';
-import { ComplaintDetailComponent } from '../components/complaint-detail-component/complaint-detail-component';
 
 
 export const CUSTOMER_ROUTES: Routes = [
@@ -44,13 +43,6 @@ export const CUSTOMER_ROUTES: Routes = [
             .then(m => m.ComplaintRegistrationComponent)
       },
 
-      {
-        path: 'complaint/:id',
-        title: 'Complaint Details',
-        loadComponent: () =>
-          import('../components/complaint-detail-component/complaint-detail-component')
-            .then(m => m.ComplaintDetailComponent)
-      },
 
       {
         path: 'products',

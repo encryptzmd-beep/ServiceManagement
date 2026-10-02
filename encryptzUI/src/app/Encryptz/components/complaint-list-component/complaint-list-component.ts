@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { ApiService } from '../../Services/API/api-service';
 import {
-  COMPLAINT_STATUSES,
+  ComplaintStatus,
   ComplaintFilter,
   ComplaintListItem,
   PRIORITIES,
@@ -23,7 +23,8 @@ export class ComplaintListComponent implements OnInit {
   complaints = signal<ComplaintListItem[]>([]);
   totalPages = signal(1);
   showFilters = signal(true);
-  statuses = COMPLAINT_STATUSES;
+  /** Status filter options: the statuses of this tenant database. */
+  statuses = signal<ComplaintStatus[]>([]);
   priorities = PRIORITIES;
   filter: ComplaintFilter = { pageNumber: 1, pageSize: 20 };
   realTotal = signal(0);
@@ -63,6 +64,10 @@ handleRefresh(): void {
   onTimeCount   = computed(() => this.filteredComplaints().filter(c => !c.isSLABreached).length);
 
   ngOnInit() {
+    this.api.getComplaintStatuses().subscribe({
+      next: list => this.statuses.set(list ?? []),
+      error: () => this.statuses.set([]),
+    });
     this.load();
   }
 

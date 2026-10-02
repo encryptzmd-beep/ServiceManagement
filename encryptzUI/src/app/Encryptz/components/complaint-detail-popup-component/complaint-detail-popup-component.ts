@@ -18,6 +18,7 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../Services/API/api-service';
 import { AuthService } from '../../Auth/auth-service';
 import { LeafletLoaderService } from '../../Services/leaflet-loader-service';
+import { statusIdByName } from '../../Models/ApiModels';
 import { environment } from '../../../../environments/environment.development';
 
 declare var L: any;
@@ -167,7 +168,12 @@ activeTab = signal<'overview'|'customer'|'product'|'location'|'assignments'|'spa
         this.productData.set(this._sanitize(d[2]?.[0]));
         this.assignments.set(Array.isArray(d[3]) ? d[3].map((x: any) => this._sanitize(x)) : []);
         this.spareParts.set(Array.isArray(d[4]) ? d[4].map((x: any) => this._sanitize(x)) : []);
-        this.comments.set(Array.isArray(d[5]) ? d[5].map((x: any) => this._sanitize(x)) : []);
+        // The list is built from timeline remarks, assignment notes, work done and completion
+        // remarks. A field saved as an empty string (not NULL) came through as a comment with
+        // no text: counted in the badge, blank in the list.
+        this.comments.set(Array.isArray(d[5])
+          ? d[5].map((x: any) => this._sanitize(x)).filter((c: any) => String(c?.Comment ?? '').trim() !== '')
+          : []);
         this.loading.set(false);
         this.loadPayments();
         this.loadPhotoCount();
@@ -241,7 +247,12 @@ activeTab = signal<'overview'|'customer'|'product'|'location'|'assignments'|'spa
     this.api.getComplaintPayments(this.complaintId).subscribe({
       next: (res: any) => {
         const rows = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
-        this.payments.set(rows.map((x: any) => this._sanitize(x)));
+        // The payments API answers camelCase (paymentId, amountPaid, …) while this popup
+        // reads the PascalCase names of the complaint-detail data set (PaymentId, AmountPaid, …):
+        // every field came out empty. Both spellings are kept on the row.
+        const pascal = (row: any) => Object.fromEntries(
+          Object.entries(row ?? {}).flatMap(([k, v]) => [[k, v], [k.charAt(0).toUpperCase() + k.slice(1), v]]));
+        this.payments.set(rows.map((x: any) => this._sanitize(pascal(x))));
       },
       error: () => {}
     });
@@ -642,17 +653,29 @@ nextImage()   { if (this.imagePage()   < this.imageTotalPages())   this.imagePag
   markComplaintResolved() {
     if (!confirm('Mark this complaint as completed/resolved?')) return;
     this.saving.set(true);
-    // 5 is WorkCompleted in COMPLAINT_STATUSES
-    this.api.updateComplaintStatus(this.complaintId, 5, 'Manually resolved via detail popup').subscribe({
-      next: (r: any) => {
-        this.saving.set(false);
-        if (r?.Success ?? r?.success) {
-          this.showMessage('Complaint resolved', 'success');
-          this.loadAllData();
-          this.refreshed.emit();
-        } else {
-          this.showMessage(r?.Message || r?.message || 'Failed to resolve', 'error');
+    // the id of "WorkCompleted" is looked up: it used to be sent as 5, which is another
+    // status ("Assigned") in this tenant's database
+    this.api.getComplaintStatuses().subscribe({
+      next: statuses => {
+        const workCompleted = statusIdByName(statuses ?? [], 'WorkCompleted');
+        if (workCompleted === undefined) {
+          this.saving.set(false);
+          this.showMessage("Status 'WorkCompleted' is not configured", 'error');
+          return;
         }
+        this.api.updateComplaintStatus(this.complaintId, workCompleted, 'Manually resolved via detail popup').subscribe({
+          next: (r: any) => {
+            this.saving.set(false);
+            if (r?.Success ?? r?.success) {
+              this.showMessage('Complaint resolved', 'success');
+              this.loadAllData();
+              this.refreshed.emit();
+            } else {
+              this.showMessage(r?.Message || r?.message || 'Failed to resolve', 'error');
+            }
+          },
+          error: () => { this.saving.set(false); this.showMessage('Error resolving complaint', 'error'); }
+        });
       },
       error: () => { this.saving.set(false); this.showMessage('Error resolving complaint', 'error'); }
     });
@@ -969,7 +992,8 @@ nextImage()   { if (this.imagePage()   < this.imageTotalPages())   this.imagePag
           this.showMessage(r?.Message || r?.message || 'Failed to record payment', 'error');
         }
       },
-      error: () => { this.savingPayment.set(false); this.showMessage('Error recording payment', 'error'); }
+      // a refused payment comes back as 400 with the reason
+      error: (err: any) => { this.savingPayment.set(false); this.showMessage(err?.error?.message || 'Error recording payment', 'error'); }
     });
   }
 

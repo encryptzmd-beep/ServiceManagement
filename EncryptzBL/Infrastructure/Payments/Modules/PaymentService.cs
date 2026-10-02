@@ -118,8 +118,9 @@ namespace EncryptzBL.Infrastructure.Payments.Modules
             return dt.Rows.Count > 0 ? dt.ToList<ComplaintPaymentDto>() : new List<ComplaintPaymentDto>();
         }
 
-        private static readonly string[] PaymentTypes = { "Advance", "Final", "ServiceCharge" };
-        private static readonly string[] PaymentMethods = { "Cash", "UPI", "Card", "Online", "BankTransfer" };
+        // Advance / Final: technician screen. ServiceCharge / SpareParts / Both: back-office "Record Payment".
+        private static readonly string[] PaymentTypes = { "Advance", "Final", "ServiceCharge", "SpareParts", "Both" };
+        private static readonly string[] PaymentMethods = { "Cash", "UPI", "Card", "NetBanking", "Online", "BankTransfer" };
         private const decimal MaxAmount = 9_999_999.99m;
 
         /// <summary>

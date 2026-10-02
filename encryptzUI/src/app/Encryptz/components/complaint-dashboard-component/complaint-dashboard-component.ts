@@ -6,7 +6,7 @@ import { RouterModule } from '@angular/router';
 import { debounceTime, forkJoin, Subject } from 'rxjs';
 import {
   ActiveAssignment, AuditLog, ComplaintFilter, ComplaintListItem,
-  ComplaintLookup, DashboardChartData, DashboardResponse, Technician,
+  ComplaintLookup, DashboardChartData, DashboardResponse, Technician, statusIdByName,
 } from '../../Models/ApiModels';
 import { ApiService } from '../../Services/API/api-service';
 import { DashboardStateService } from '../../Services/dashboard-state-service';
@@ -137,22 +137,39 @@ private _scrollTileTop(): void {
 
   realCounts = signal<Record<string, number>>({});
 
+  // Status tile -> status NAME in the tenant database. The ids are looked up at load
+  // time; the tiles used fixed ids (3, 5, 7, 9) that belong to another numbering, so
+  // "In Progress" counted the WorkCompleted complaints and so on.
+  private static readonly TILE_STATUS_NAMES: Record<string, string[]> = {
+    new: ['New'],
+    inprogress: ['InProgress'],
+    workcompleted: ['WorkCompleted'],
+    closed: ['Closed'],
+    hold: ['OnHold', 'Hold'],
+  };
+  private static readonly NO_SUCH_STATUS = -1;       // filter value that matches nothing
+  statusIds = signal<Record<string, number>>({});
+
+  private sid(key: string): number {
+    return this.statusIds()[key] ?? ComplaintDashboardComponent.NO_SUCH_STATUS;
+  }
+
   statCards = computed(() => {
     const s = this.dashboardData()?.stats;
     const rc = this.realCounts();
     if (!s) return [];
     return [
-      { key:'spare',         label:'Spare Requests',    value: this.spareSummary()?.pendingCount ?? 0,  icon:'🔩', bg:'#fef9c3', accent:'#ca8a04', up:false, pct:0,  isSpare:true },
-      { key:'total',         label:'Total',             value: rc['total']        ?? s.totalComplaints,          icon:'📋', bg:'#ede9fe', accent:'#7c3aed', up:true,  pct:12 },
-      { key:'new',           label:'New',               value: rc['new']          ?? s.newComplaints,            icon:'🆕', bg:'#dbeafe', accent:'#2563eb', up:true,  pct:8,  statusId:1 },
-      { key:'inprogress',    label:'In Progress',       value: rc['inprogress']   ?? s.inProgressComplaints,     icon:'🔧', bg:'#fef3c7', accent:'#d97706', up:false, pct:3,  statusId:3 },
-      { key:'workcompleted', label:'Work Completed',    value: rc['workcompleted']?? s.resolvedComplaints,       icon:'✅', bg:'#d1fae5', accent:'#059669', up:true,  pct:15, statusId:5 },
-      { key:'closed',        label:'Closed',            value: rc['closed']       ?? (s.closedComplaints ?? 0),  icon:'🔒', bg:'#f3f4f6', accent:'#6b7280', up:false, pct:2,  statusId:7 },
-      { key:'sla',           label:'SLA Breached',      value: s.slaBreached,                                    icon:'⚠️', bg:'#fef2f2', accent:'#dc2626', up:false, pct:5,  isSLA:true },
-      { key:'warranty',      label:'Warranty',          value: s.warrantyComplaints,                             icon:'🛡️', bg:'#fce7f3', accent:'#be185d', up:true,  pct:2,  isWarranty:true },
-      { key:'schedules',     label:'Today Schedules',   value: s.todaySchedules,                                 icon:'📅', bg:'#ccfbf1', accent:'#0d9488', up:true,  pct:10, isScheduled:true },
-      { key:'assignments',   label:'Active Assignments', value: this.activeAssignments().length,                 icon:'👷', bg:'#e0e7ff', accent:'#6366f1', up:true,  pct:0,  isActiveAssign:true },
-      { key:'hold',          label:'On Hold',            value: rc['hold'] ?? 0,                                  icon:'⏸️', bg:'#ffedd5', accent:'#ea580c', up:false, pct:0,  statusId:9 },
+      { key:'spare',         label:'Spare Requests',    value: this.spareSummary()?.pendingCount ?? 0,  icon:'🔩', bg:'#fef9c3', accent:'#ca8a04',  isSpare:true },
+      { key:'total',         label:'Total',             value: rc['total']        ?? s.totalComplaints,          icon:'📋', bg:'#ede9fe', accent:'#7c3aed' },
+      { key:'new',           label:'New',               value: rc['new']          ?? s.newComplaints,            icon:'🆕', bg:'#dbeafe', accent:'#2563eb',  statusId: this.sid('new') },
+      { key:'inprogress',    label:'In Progress',       value: rc['inprogress']   ?? s.inProgressComplaints,     icon:'🔧', bg:'#fef3c7', accent:'#d97706',  statusId: this.sid('inprogress') },
+      { key:'workcompleted', label:'Work Completed',    value: rc['workcompleted']?? s.resolvedComplaints,       icon:'✅', bg:'#d1fae5', accent:'#059669', statusId: this.sid('workcompleted') },
+      { key:'closed',        label:'Closed',            value: rc['closed']       ?? (s.closedComplaints ?? 0),  icon:'🔒', bg:'#f3f4f6', accent:'#6b7280',  statusId: this.sid('closed') },
+      { key:'sla',           label:'SLA Breached',      value: s.slaBreached,                                    icon:'⚠️', bg:'#fef2f2', accent:'#dc2626',  isSLA:true },
+      { key:'warranty',      label:'Warranty',          value: s.warrantyComplaints,                             icon:'🛡️', bg:'#fce7f3', accent:'#be185d',  isWarranty:true },
+      { key:'schedules',     label:'Today Schedules',   value: s.todaySchedules,                                 icon:'📅', bg:'#ccfbf1', accent:'#0d9488', isScheduled:true },
+      { key:'assignments',   label:'Active Assignments', value: this.activeAssignments().length,                 icon:'👷', bg:'#e0e7ff', accent:'#6366f1',  isActiveAssign:true },
+      { key:'hold',          label:'On Hold',            value: rc['hold'] ?? 0,                                  icon:'⏸️', bg:'#ffedd5', accent:'#ea580c',  statusId: this.sid('hold') },
     ];
   });
 
@@ -166,10 +183,10 @@ private _scrollTileTop(): void {
     const wc = rc['workcompleted']?? s.resolvedComplaints;
     const cl = rc['closed']       ?? (s.closedComplaints ?? 0);
     return [
-      { label:'New',           count:n,  pct:(n/total)*100,  color:'#7c3aed', statusId:1 },
-      { label:'In Progress',   count:ip, pct:(ip/total)*100, color:'#f59e0b', statusId:3 },
-      { label:'Work Completed',count:wc, pct:(wc/total)*100, color:'#10b981', statusId:5 },
-      { label:'Closed',        count:cl, pct:(cl/total)*100, color:'#6b7280', statusId:7 },
+      { label:'New',           count:n,  pct:(n/total)*100,  color:'#7c3aed', statusId: this.sid('new') },
+      { label:'In Progress',   count:ip, pct:(ip/total)*100, color:'#f59e0b', statusId: this.sid('inprogress') },
+      { label:'Work Completed',count:wc, pct:(wc/total)*100, color:'#10b981', statusId: this.sid('workcompleted') },
+      { label:'Closed',        count:cl, pct:(cl/total)*100, color:'#6b7280', statusId: this.sid('closed') },
       { label:'SLA Breach',    count:s.slaBreached, pct:(s.slaBreached/total)*100, color:'#ef4444' },
     ];
   });
@@ -189,7 +206,7 @@ private _scrollTileTop(): void {
   loadData(): void {
     this.realCounts.set({});
     this.loadSpareSummary();
-    this.loadRealCounts();
+    this.loadStatusesThenCounts();
     this.loading.set(true);
     this.dashboardData.set(null);
     this.api.getStats().subscribe({
@@ -199,14 +216,34 @@ private _scrollTileTop(): void {
     this.loadChartData();
   }
 
+  /** The status ids of this tenant first, then one count per status tile. */
+  private loadStatusesThenCounts(): void {
+    this.api.getComplaintStatuses()
+      .pipe(takeUntilDestroyed(this._destroyRef))
+      .subscribe({
+        next: statuses => {
+          const ids: Record<string, number> = {};
+          for (const [key, names] of Object.entries(ComplaintDashboardComponent.TILE_STATUS_NAMES)) {
+            const id = statusIdByName(statuses ?? [], ...names);
+            if (id !== undefined) ids[key] = id;
+          }
+          this.statusIds.set(ids);
+          this.loadRealCounts();
+        },
+        error: () => { this.statusIds.set({}); this.loadRealCounts(); },
+      });
+  }
+
   loadRealCounts(): void {
+    const ids = this.statusIds();
+    const statusKeys = Object.keys(ComplaintDashboardComponent.TILE_STATUS_NAMES);
+
+    // a status the tenant does not have is not queried: its tile shows 0
     const queries: { key: string; filter: ComplaintFilter }[] = [
-      { key: 'total',         filter: { pageNumber: 1, pageSize: 1 } },
-      { key: 'new',           filter: { pageNumber: 1, pageSize: 1, statusId: 1 } },
-      { key: 'inprogress',    filter: { pageNumber: 1, pageSize: 1, statusId: 3 } },
-      { key: 'workcompleted', filter: { pageNumber: 1, pageSize: 1, statusId: 5 } },
-      { key: 'closed',        filter: { pageNumber: 1, pageSize: 1, statusId: 7 } },
-      { key: 'hold',          filter: { pageNumber: 1, pageSize: 1, statusId: 9 } },
+      { key: 'total', filter: { pageNumber: 1, pageSize: 1 } },
+      ...statusKeys
+        .filter(key => ids[key] !== undefined)
+        .map(key => ({ key, filter: { pageNumber: 1, pageSize: 1, statusId: ids[key] } })),
     ];
 
     forkJoin(queries.map(q => this.api.getComplaints(q.filter)))
@@ -214,6 +251,7 @@ private _scrollTileTop(): void {
       .subscribe({
         next: results => {
           const counts: Record<string, number> = {};
+          statusKeys.forEach(key => counts[key] = 0);
           queries.forEach((q, i) => {
             const r = results[i];
             const fromItem = r.items?.[0]?.totalCount;

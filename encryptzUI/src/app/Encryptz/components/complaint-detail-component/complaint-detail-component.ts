@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { ApiService } from '../../Services/API/api-service';
-import { Complaint, COMPLAINT_STATUSES } from '../../Models/ApiModels';
+import { Complaint, ComplaintStatus } from '../../Models/ApiModels';
 
 
 @Component({
@@ -18,11 +18,18 @@ export class ComplaintDetailComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   complaint = signal<Complaint | null>(null);
-  statuses = COMPLAINT_STATUSES;
-  newStatusId = 1;
+  statuses = signal<ComplaintStatus[]>([]);
+  newStatusId = 0;
   remarks = '';
 
   ngOnInit() {
+    this.api.getComplaintStatuses().subscribe({
+      next: list => {
+        this.statuses.set(list ?? []);
+        if (!this.newStatusId && list?.length) this.newStatusId = list[0].statusId;
+      },
+      error: () => this.statuses.set([]),
+    });
     const id = +this.route.snapshot.params['id'];
     this.api.getComplaint(id).subscribe((r) => {
       if (r.data) this.complaint.set(r.data);

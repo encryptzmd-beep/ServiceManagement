@@ -36,7 +36,7 @@
     <div class="filter-bar">
       <select [(ngModel)]="filter.statusId" (change)="filter.pageNumber=1; load()" class="fx-filter-select">
         <option [ngValue]="undefined">All Statuses</option>
-        @for (s of statuses; track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+        @for (s of statuses(); track s.statusId) { <option [ngValue]="s.statusId">{{ s.statusName }}</option> }
       </select>
       <select [(ngModel)]="filter.priority" (change)="filter.pageNumber=1; load()" class="fx-filter-select">
         <option value="">All Priorities</option>

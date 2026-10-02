@@ -127,9 +127,31 @@ namespace EncryptzBL.Infrastructure.Complients.Modules
             return dt.ToList<ComplaintDto>().FirstOrDefault();
         }
 
+        // 🔥 STATUS LOOKUP
+        public async Task<List<ComplaintStatusDto>> GetStatuses()
+        {
+            var dt = await GetDataTableByQueryAsync(
+                "SELECT StatusId, StatusName, StatusColor, ISNULL(SortOrder, 0) AS SortOrder FROM dbo.ComplaintStatuses ORDER BY SortOrder, StatusId");
+            return dt.ToList<ComplaintStatusDto>();
+        }
+
+        public async Task<ApiResponse> UpdateStatusByName(int id, int userId, string statusName, string? remarks)
+        {
+            var status = (await GetStatuses())
+                .FirstOrDefault(s => string.Equals(s.StatusName, statusName, StringComparison.OrdinalIgnoreCase));
+            if (status == null)
+                return new ApiResponse(false, $"Status '{statusName}' is not configured");
+
+            return await UpdateStatus(id, userId, new ComplaintUpdateStatusDto { StatusId = status.StatusId, Remarks = remarks });
+        }
+
         // 🔥 UPDATE STATUS
         public async Task<ApiResponse> UpdateStatus(int id, int userId, ComplaintUpdateStatusDto dto)
         {
+            // an id that is not a status of this database would only fail on the foreign key
+            if (!(await GetStatuses()).Any(s => s.StatusId == dto.StatusId))
+                return new ApiResponse(false, "Unknown complaint status");
+
             var parameters = new[]
             {
                 SqlParameterHelper.Input("@ComplaintId", id),
@@ -138,11 +160,17 @@ namespace EncryptzBL.Infrastructure.Complients.Modules
                 SqlParameterHelper.Input("@Remarks", dto.Remarks)
             };
 
-            var rows = await ExecuteAsync("sp_Complaint_UpdateStatus", parameters);
+            // The proc runs with NOCOUNT ON, so "rows affected" is always -1 and a status
+            // change that worked was reported as failed. Existence is checked instead.
+            var found = await GetDataTableByQueryAsync(
+                "SELECT TOP 1 1 AS Found FROM dbo.Complaints WHERE ComplaintId = @ComplaintId",
+                new[] { SqlParameterHelper.Input("@ComplaintId", id) });
+            if (found.Rows.Count == 0)
+                return new ApiResponse(false, "Complaint not found");
 
-            return rows > 0
-                ? new ApiResponse(true, "Status updated")
-                : new ApiResponse(false, "Complaint not found or update failed");
+            await ExecuteAsync("sp_Complaint_UpdateStatus", parameters);
+
+            return new ApiResponse(true, "Status updated");
         }
 
         // 🔥 CONFIRM CLOSURE

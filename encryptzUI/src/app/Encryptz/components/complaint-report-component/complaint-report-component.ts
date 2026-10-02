@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../Services/API/api-service';
 import {
-  COMPLAINT_STATUSES,
+  ComplaintStatus,
   ComplaintFilter,
   ComplaintListItem,
   PRIORITIES,
@@ -19,7 +19,15 @@ import {
 })
 export class ComplaintReportComponent {
   private api = inject(ApiService);
-  statuses = COMPLAINT_STATUSES;
+  /** Status filter options: the statuses of this tenant database. */
+  statuses = signal<ComplaintStatus[]>([]);
+
+  constructor() {
+    this.api.getComplaintStatuses().subscribe({
+      next: list => this.statuses.set(list ?? []),
+      error: () => this.statuses.set([]),
+    });
+  }
   priorities = PRIORITIES;
   filter: ComplaintFilter = { pageNumber: 1, pageSize: 100 };
   data = signal<ComplaintListItem[]>([]);

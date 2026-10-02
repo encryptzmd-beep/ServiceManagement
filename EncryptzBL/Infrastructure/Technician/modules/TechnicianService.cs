@@ -185,6 +185,13 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
 
             return ApiResponse<int>.Ok(id, message);
         }
+        /// <summary>
+        /// Optional text left empty is stored as NULL. An empty string is "not null" for the
+        /// complaint's comment list, which then showed an entry without any text.
+        /// </summary>
+        private static object Blank(string? value)
+            => string.IsNullOrWhiteSpace(value) ? DBNull.Value : value.Trim();
+
         public async Task<ApiResponse<int>> AssignTechnician(AssignTechnicianDto dto, int userId)
         {
             var p = new[] {
@@ -193,7 +200,7 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
         SqlParameterHelper.Input("@AssignmentRole", dto.AssignmentRole),
         SqlParameterHelper.Input("@AssignedBy", userId),
         SqlParameterHelper.Input("@Priority", dto.Priority ?? (object)DBNull.Value),
-        SqlParameterHelper.Input("@Notes", dto.Notes ?? (object)DBNull.Value),
+        SqlParameterHelper.Input("@Notes", Blank(dto.Notes)),
         SqlParameterHelper.Input("@ScheduledDate", dto.ScheduledDate ?? (object)DBNull.Value),
         SqlParameterHelper.Input("@StartTime", dto.StartTime ?? (object)DBNull.Value),
         SqlParameterHelper.Input("@EndTime", dto.EndTime ?? (object)DBNull.Value),
@@ -322,10 +329,10 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
         SqlParameterHelper.Input("@AssignmentId",      dto.AssignmentId),
         SqlParameterHelper.Input("@Status",            dto.Status),
         SqlParameterHelper.Input("@UpdatedBy",         userId),
-        SqlParameterHelper.Input("@Remarks",           (object?)dto.Remarks ?? DBNull.Value),
-        SqlParameterHelper.Input("@WorkDone",          (object?)dto.WorkDone ?? DBNull.Value),
-        SqlParameterHelper.Input("@PartsUsed",         (object?)dto.PartsUsed ?? DBNull.Value),
-        SqlParameterHelper.Input("@CustomerFeedback",  (object?)dto.CustomerFeedback ?? DBNull.Value)
+        SqlParameterHelper.Input("@Remarks",           Blank(dto.Remarks)),
+        SqlParameterHelper.Input("@WorkDone",          Blank(dto.WorkDone)),
+        SqlParameterHelper.Input("@PartsUsed",         Blank(dto.PartsUsed)),
+        SqlParameterHelper.Input("@CustomerFeedback",  Blank(dto.CustomerFeedback))
     };
 
             var dt = await GetDataTableAsync("sp_Assignment_UpdateStatus", p);

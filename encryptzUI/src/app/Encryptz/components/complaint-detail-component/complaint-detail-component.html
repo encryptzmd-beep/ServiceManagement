@@ -30,7 +30,7 @@
       <h3>Update Status</h3>
       <div class="update-form">
         <select [(ngModel)]="newStatusId" class="sel">
-          @for (s of statuses; track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+          @for (s of statuses(); track s.statusId) { <option [ngValue]="s.statusId">{{ s.statusName }}</option> }
         </select>
         <textarea [(ngModel)]="remarks" placeholder="Add remarks..." class="textarea" rows="3"></textarea>
         <button (click)="updateStatus(c.complaintId)" class="btn-primary">Update</button>
