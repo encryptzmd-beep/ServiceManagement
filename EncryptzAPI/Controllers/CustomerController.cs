@@ -179,7 +179,6 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetComplaintCategories()
             => Ok(await _svc.GetComplaintCategories());
 
-
         [HttpPost("complaints")]
         public async Task<IActionResult> CreateComplaint([FromBody] ComplaintCreateDto dto)
             => Ok(await _svc.CreateComplaint(GetUserId(), dto));

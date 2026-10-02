@@ -404,21 +404,9 @@ UNIQUE NONCLUSTERED
 GO
 INSERT INTO [dbo].[ComplaintCategories] ([CategoryName], [SortOrder], [IsActive])
 VALUES
-    (N'Treadmill', 1, 1),
-    (N'Elliptical', 2, 1),
-    (N'Exercise Bike', 3, 1),
-    (N'Rowing Machine', 4, 1),
-    (N'Weight Bench', 5, 1),
-    (N'Dumbbells', 6, 1),
-    (N'Barbell', 7, 1),
-    (N'Pull Up Bar', 8, 1),
-    (N'Cable Machine', 9, 1),
-    (N'Leg Press', 10, 1),
-    (N'Smith Machine', 11, 1),
-    (N'Cross Trainer', 12, 1),
-    (N'Yoga Mat', 13, 1),
-    (N'Kettlebell', 14, 1),
-    (N'Other Gym Equipment', 15, 1)
+    (N'Split AC', 1, 1),
+    (N'Window AC', 2, 1),
+    (N'Cassette AC', 3, 1)
 GO
 /****** Object:  Table [dbo].[ComplaintTimeline]    Script Date: 29-09-2026 20:26:58 ******/
 SET ANSI_NULLS ON

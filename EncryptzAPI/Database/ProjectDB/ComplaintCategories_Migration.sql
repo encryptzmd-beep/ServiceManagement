@@ -17,24 +17,17 @@ BEGIN
 END;
 GO
 
+UPDATE [dbo].[ComplaintCategories]
+SET [IsActive] = 0
+WHERE [CategoryName] NOT IN (N'Split AC', N'Window AC', N'Cassette AC');
+GO
+
 INSERT INTO [dbo].[ComplaintCategories] ([CategoryName], [SortOrder], [IsActive])
 SELECT seed.[CategoryName], seed.[SortOrder], 1
 FROM (VALUES
-    (N'Treadmill', 1),
-    (N'Elliptical', 2),
-    (N'Exercise Bike', 3),
-    (N'Rowing Machine', 4),
-    (N'Weight Bench', 5),
-    (N'Dumbbells', 6),
-    (N'Barbell', 7),
-    (N'Pull Up Bar', 8),
-    (N'Cable Machine', 9),
-    (N'Leg Press', 10),
-    (N'Smith Machine', 11),
-    (N'Cross Trainer', 12),
-    (N'Yoga Mat', 13),
-    (N'Kettlebell', 14),
-    (N'Other Gym Equipment', 15)
+    (N'Split AC', 1),
+    (N'Window AC', 2),
+    (N'Cassette AC', 3)
 ) AS seed([CategoryName], [SortOrder])
 WHERE NOT EXISTS (
     SELECT 1
