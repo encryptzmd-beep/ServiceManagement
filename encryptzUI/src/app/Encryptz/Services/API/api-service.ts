@@ -1081,6 +1081,63 @@ getHoldList(): Observable<any> {
   return this.http.get(`${this.api}/Complaints/hold-list`);
 }
 
+// ============================================================
+// SALES: Sales Order (bill) -> Despatch -> Installation -> Warranty
+// ============================================================
+searchSalesCustomers(search?: string, top = 50): Observable<M.ApiResponse<M.SalesCustomer[]>> {
+  return this.get<M.ApiResponse<M.SalesCustomer[]>>('Sales/customers', { search, top });
+}
+
+saveSalesCustomer(dto: M.SalesCustomerSave): Observable<M.ApiResponse<M.SalesCustomerSaveResult>> {
+  return this.post<M.ApiResponse<M.SalesCustomerSaveResult>>('Sales/customers', dto);
+}
+
+getNextSalesOrderNumber(): Observable<M.ApiResponse<string>> {
+  return this.get<M.ApiResponse<string>>('Sales/orders/next-number');
+}
+
+getSalesOrders(filter: M.SalesOrderFilter): Observable<M.PagedResult<M.SalesOrderListItem>> {
+  return this.get<M.PagedResult<M.SalesOrderListItem>>('Sales/orders', filter);
+}
+
+getSalesOrder(id: number): Observable<M.ApiResponse<M.SalesOrderDetail>> {
+  return this.get<M.ApiResponse<M.SalesOrderDetail>>(`Sales/orders/${id}`);
+}
+
+saveSalesOrder(dto: M.SalesOrderSave): Observable<M.ApiResponse<M.SalesOrderSaveResult>> {
+  return this.post<M.ApiResponse<M.SalesOrderSaveResult>>('Sales/orders', dto);
+}
+
+cancelSalesOrder(id: number): Observable<M.ApiResponse> {
+  return this.post<M.ApiResponse>(`Sales/orders/${id}/cancel`, {});
+}
+
+getDespatches(filter: M.DespatchFilter): Observable<M.PagedResult<M.DespatchListItem>> {
+  return this.get<M.PagedResult<M.DespatchListItem>>('Sales/despatches', filter);
+}
+
+getDespatch(id: number): Observable<M.ApiResponse<M.DespatchDetail>> {
+  return this.get<M.ApiResponse<M.DespatchDetail>>(`Sales/despatches/${id}`);
+}
+
+createDespatch(dto: M.DespatchCreate): Observable<M.ApiResponse<M.DespatchCreateResult>> {
+  return this.post<M.ApiResponse<M.DespatchCreateResult>>('Sales/despatches', dto);
+}
+
+warrantyLookup(filter: M.WarrantyLookupFilter): Observable<M.PagedResult<M.WarrantyLookupItem>> {
+  return this.get<M.PagedResult<M.WarrantyLookupItem>>('Sales/warranty', filter);
+}
+
+/** Settings of the Sales + Print groups (bill defaults, invoice print header/footer) as key -> value. */
+getSalesSettings(): Observable<M.ApiResponse<Record<string, string>>> {
+  return this.get<M.ApiResponse<Record<string, string>>>('Sales/settings');
+}
+
+/** Product master rows for the bill lines (same endpoint as the Products screen). */
+getProductMasterList(searchTerm?: string, pageSize = 200): Observable<M.ApiResponse<M.ProductMasterDTO[]>> {
+  return this.get<M.ApiResponse<M.ProductMasterDTO[]>>('ProductMaster/list', { searchTerm, page: 1, pageSize });
+}
+
 }
 
 

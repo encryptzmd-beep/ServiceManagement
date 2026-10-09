@@ -319,6 +319,14 @@ namespace EncryptzBL.DTO_s
         public DateTime CreatedAt { get; set; }
         public string? AssignedTechnicians { get; set; }
         public string? TechnicianName { get; set; }
+        /// <summary>Installation / Repair / ... ("Installation" for complaints created by a despatch).</summary>
+        public string? NatureOfJob { get; set; }
+        /// <summary>The job is covered by warranty (installation complaints are).</summary>
+        public bool IsWarranty { get; set; }
+        /// <summary>Warranty end of the product the complaint is about (dbo.Products).</summary>
+        public DateTime? WarrantyExpiryDate { get; set; }
+        /// <summary>"In Warranty" / "Expired" / "No Warranty"; null when no product is linked.</summary>
+        public string? WarrantyStatus { get; set; }
         public int TotalCount { get; set; }
     }
 
@@ -466,6 +474,11 @@ namespace EncryptzBL.DTO_s
         public string? LocationAddress { get; set; }
         public string? CustomerPhone { get; set; }
         public string ProductName { get; set; } = string.Empty;
+        public string? SerialNumber { get; set; }
+        public DateTime? WarrantyExpiryDate { get; set; }
+        /// <summary>"In Warranty" / "Expired" / "No Warranty"; null when no product is linked.</summary>
+        public string? WarrantyStatus { get; set; }
+        public bool IsWarranty { get; set; }
         public string AssignmentRole { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public DateTime AssignedAt { get; set; }
@@ -1494,6 +1507,10 @@ namespace EncryptzBL.DTO_s
         public string ProductName { get; set; }
         public string SerialNumber { get; set; }
         public string Brand { get; set; }
+        public string? NatureOfJob { get; set; }
+        public bool IsWarranty { get; set; }
+        public DateTime? WarrantyExpiryDate { get; set; }
+        public string? WarrantyStatus { get; set; }
         public string TechnicianName { get; set; }
         public string TechnicianPhone { get; set; }
         public string AssignmentRole { get; set; }
@@ -1528,6 +1545,10 @@ namespace EncryptzBL.DTO_s
         public string ProductName { get; set; }
         public string SerialNumber { get; set; }
         public string Brand { get; set; }
+        public string? NatureOfJob { get; set; }
+        public bool IsWarranty { get; set; }
+        public DateTime? WarrantyExpiryDate { get; set; }
+        public string? WarrantyStatus { get; set; }
         public string CustomerName { get; set; }
         public string MobileNumber { get; set; }
         public string City { get; set; }

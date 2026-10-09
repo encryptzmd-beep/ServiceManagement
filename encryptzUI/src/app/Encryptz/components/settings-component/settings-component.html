@@ -13,7 +13,7 @@
 
   <!-- Group Tabs -->
   <div class="group-tabs" *ngIf="!loading()">
-    <button *ngFor="let g of groups()" [class.active]="activeGroup === g" (click)="activeGroup = g">
+    <button *ngFor="let g of groups()" [class.active]="activeGroup() === g" (click)="activeGroup.set(g)">
       {{ g }}
     </button>
   </div>
@@ -27,7 +27,7 @@
         <span class="setting-key">{{ s.settingKey }}</span>
       </div>
       <div class="setting-control">
-        <ng-container [ngSwitch]="s.dataType">
+        <ng-container [ngSwitch]="controlType(s)">
           <label *ngSwitchCase="'bool'" class="toggle">
             <input
               type="checkbox"
@@ -53,6 +53,38 @@
             [disabled]="!s.isEditable"
             class="fi"
           />
+          <select
+            *ngSwitchCase="'select'"
+            [(ngModel)]="s.settingValue"
+            (ngModelChange)="markChanged(s)"
+            [disabled]="!s.isEditable"
+            class="fi sel">
+            <option *ngFor="let o of optionsOf(s)" [value]="o">{{ o | titlecase }}</option>
+          </select>
+          <div *ngSwitchCase="'image'" class="img-setting">
+            <div class="img-preview" *ngIf="s.settingValue; else noImage">
+              <img [src]="s.settingValue" alt="Image" />
+            </div>
+            <ng-template #noImage><div class="img-empty">No image</div></ng-template>
+            <div class="img-actions">
+              <label class="btn-mini">
+                <span class="material-icons">upload</span> {{ s.settingValue ? 'Replace' : 'Upload image' }}
+                <input type="file" accept="image/png,image/jpeg,image/webp" hidden (change)="onImagePicked(s, $event)" [disabled]="!s.isEditable" />
+              </label>
+              <button type="button" class="btn-mini danger" *ngIf="s.settingValue" (click)="clearImage(s)" [disabled]="!s.isEditable">
+                <span class="material-icons">delete</span> Remove
+              </button>
+            </div>
+            <small class="img-hint">PNG / JPG / WEBP · scaled to max 1600px wide · best as a wide banner</small>
+          </div>
+          <textarea
+            *ngSwitchCase="'textarea'"
+            rows="3"
+            [(ngModel)]="s.settingValue"
+            (ngModelChange)="markChanged(s)"
+            [disabled]="!s.isEditable"
+            class="fi ta"
+          ></textarea>
           <input
             *ngSwitchDefault
             type="text"
@@ -64,12 +96,12 @@
         </ng-container>
       </div>
     </div>
-    <div class="empty" *ngIf="filteredSettings().length === 0 && activeGroup !== 'Payments' && settings().length > 0">
+    <div class="empty" *ngIf="filteredSettings().length === 0 && activeGroup() !== 'Payments' && settings().length > 0">
       <p>No settings in this group</p>
     </div>
 
     <!-- Payments Tab -->
-    <div class="payments-tab" *ngIf="activeGroup === 'Payments'">
+    <div class="payments-tab" *ngIf="activeGroup() === 'Payments'">
       <div class="setting-item">
         <div class="setting-info">
           <h3>Default Service Charge (₹)</h3>

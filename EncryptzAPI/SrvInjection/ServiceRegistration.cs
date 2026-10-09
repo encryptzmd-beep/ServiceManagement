@@ -18,6 +18,7 @@ using EncryptzBL.Infrastructure.User.Modules;
 using EncryptzBL.Infrastructure.WarrantyReturn.Modules;
 using EncryptzBL.Infrastructure.RepairPart.Modules;
 using EncryptzBL.Infrastructure.Payments.Modules;
+using EncryptzBL.Infrastructure.Sales.Modules;
 
 namespace EncryptzAPI.SrvInjection
 {
@@ -54,6 +55,7 @@ namespace EncryptzAPI.SrvInjection
             services.AddScoped<IRepairPartService, RepairPartService>();
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IPaymentService, PaymentService>();
+            services.AddScoped<ISalesService, SalesService>();                      // sales order -> despatch -> warranty
 
             return services;
         }

@@ -5242,3 +5242,12 @@
 .cmp-field-error { display: block; margin-top: 4px; font-size: 0.78rem; color: #dc2626; }
 .loc-device-current { margin: 0 0 8px; font-size: 0.8rem; color: #666; }
 .loc-retry-msg { margin: 10px 0 0; font-size: 0.82rem; color: #c62828; }
+
+/* warranty of the product of the job (list card + detail) */
+.warranty-chip {
+  display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 600; white-space: nowrap; background: #f1f5f9; color: #64748b; margin-left: 4px;
+  .material-icons { font-size: 12px; }
+  &.ok { background: #edf7ee; color: #2d7a38; }
+  &.expired { background: #f9e8e8; color: #D42B2B; }
+}

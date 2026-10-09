@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../Auth/auth-service';
+import { DialogService } from '../../Services/dialog-service';
 
 // ============================================
 // INTERFACES / DTOs
@@ -93,6 +94,7 @@ export interface CompanyInfoDto {
   styleUrl: './auth-management-component.scss',
 })
 export class AuthManagementComponent {
+  private dialog = inject(DialogService);
   svc = inject(AuthService);
   private fb = inject(FormBuilder);
 
@@ -533,7 +535,7 @@ onSearchUser() {
           this.closeInviteModal();
           this.loadPendingInvitations();
           this.loadCompanyUsers();
-          alert('Invitation sent successfully!');
+          this.dialog.alert('Invitation sent successfully!');
          } else {
         this.showToast(res?.message || 'Failed to send invitation', 'error');
       }
@@ -714,25 +716,25 @@ cancelInvitation(invitationId: number) {
 
   requestToJoinCompany(companyId: number) {
     if (!companyId || companyId === 0) {
-      alert('Please select a company');
+      this.dialog.alert('Please select a company');
       return;
     }
 
     this.svc.createJoinRequest(companyId, this.requestedRole, this.requestRemarks).subscribe({
       next: (res: any) => {
         if (res && res.success) {
-          alert('Join request sent successfully!');
+          this.dialog.alert('Join request sent successfully!');
           this.showRequestsModal.set(false);
           this.loadAvailableCompanies();
           this.requestedRole = 'Technician';
           this.requestRemarks = '';
           this.selectedCompanyId.set(0);
         } else {
-          alert(res?.message || 'Failed to send request');
+          this.dialog.alert(res?.message || 'Failed to send request');
         }
       },
       error: (err) => {
-        alert(err.error?.message || 'Failed to send join request');
+        this.dialog.alert(err.error?.message || 'Failed to send join request');
       }
     });
   }
@@ -766,13 +768,13 @@ cancelInvitation(invitationId: number) {
       next: (res: any) => {
         if (res && res.success) {
           this.loadPendingJoinRequests();
-          alert('Request rejected');
+          this.dialog.alert('Request rejected');
         } else {
-          alert(res?.message || 'Failed to reject request');
+          this.dialog.alert(res?.message || 'Failed to reject request');
         }
       },
       error: (err) => {
-        alert(err.error?.message || 'Failed to reject request');
+        this.dialog.alert(err.error?.message || 'Failed to reject request');
       }
     });
   }

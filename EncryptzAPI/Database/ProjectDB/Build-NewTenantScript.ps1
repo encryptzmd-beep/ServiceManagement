@@ -9,6 +9,7 @@
       - 06_Customer_Portal.sql         customer portal
       - 07_Locations_Admin.sql         locations administration
       - 08_Backoffice_Technician_Fixes.sql   status sync, spare approvals, conflicts, reports
+      - 09_Sales_Order_Despatch.sql    sales order -> despatch -> installation complaint, warranty
 
     Re-run after changing any of them:
         powershell -ExecutionPolicy Bypass -File .\Build-NewTenantScript.ps1
@@ -305,6 +306,8 @@ $parts = @(
     (Read-Script (Join-Path $here '07_Locations_Admin.sql'))
     (Section '8. BACK-OFFICE / TECHNICIAN FIXES  (08_Backoffice_Technician_Fixes.sql)')
     (Read-Script (Join-Path $here '08_Backoffice_Technician_Fixes.sql'))
+    (Section '9. SALES ORDER / DESPATCH / WARRANTY  (09_Sales_Order_Despatch.sql)')
+    (Read-Script (Join-Path $here '09_Sales_Order_Despatch.sql'))
     $footer
 )
 

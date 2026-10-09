@@ -331,6 +331,12 @@
  @if (getNatureOfJob(wo)) {
  <span class="nature-job-chip">{{ getNatureOfJob(wo) }}</span>
  }
+ @if (getWarrantyStatus(wo); as ws) {
+ <span class="warranty-chip" [class.ok]="ws === 'In Warranty'" [class.expired]="ws === 'Expired'"
+ [title]="$any(wo).warrantyExpiryDate ? 'Warranty till ' + ($any(wo).warrantyExpiryDate | date:'dd MMM yyyy') : ''">
+ <span class="material-icons">{{ ws === 'In Warranty' ? 'verified_user' : 'gpp_bad' }}</span>{{ ws }}
+ </span>
+ }
  </span>
  </div>
  </div>
@@ -610,6 +616,22 @@
  <div>
  <span class="dmi-label">Serial No</span>
  <span class="dmi-val">{{ detailData()?.serialNumber }}</span>
+ </div>
+ </div>
+ }
+ @if (getWarrantyStatus(detailData()); as ws) {
+ <div class="dm-info-item">
+ <span class="material-icons">verified_user</span>
+ <div>
+ <span class="dmi-label">Warranty</span>
+ <span class="dmi-val">
+ <span class="warranty-chip" [class.ok]="ws === 'In Warranty'" [class.expired]="ws === 'Expired'">
+ <span class="material-icons">{{ ws === 'In Warranty' ? 'verified_user' : 'gpp_bad' }}</span>{{ ws }}
+ </span>
+ </span>
+ @if ($any(detailData())?.warrantyExpiryDate) {
+ <span class="dmi-subval">{{ ws === 'Expired' ? 'Expired on' : 'Valid till' }} {{ $any(detailData())?.warrantyExpiryDate | date:'dd MMM yyyy' }}</span>
+ }
  </div>
  </div>
  }

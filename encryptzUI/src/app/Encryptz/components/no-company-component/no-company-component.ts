@@ -3,6 +3,7 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../Auth/auth-service';
+import { DialogService } from '../../Services/dialog-service';
 
 @Component({
   selector: 'app-no-company-component',
@@ -11,6 +12,7 @@ import { AuthService } from '../../Auth/auth-service';
   styleUrl: './no-company-component.scss',
 })
 export class NoCompanyComponent implements OnInit {
+  private dialog = inject(DialogService);
   private auth = inject(AuthService);
   private router = inject(Router);
 
@@ -78,19 +80,19 @@ export class NoCompanyComponent implements OnInit {
   }
 
   // Cancel user's own join request
-  cancelRequest(requestId: number) {
-    if (confirm('Are you sure you want to cancel this join request?')) {
+  async cancelRequest(requestId: number) {
+    if ((await this.dialog.confirm('Are you sure you want to cancel this join request?'))) {
       this.auth.cancelJoinRequest(requestId).subscribe({
         next: (res) => {
           if (res.success) {
-            alert('Join request cancelled successfully');
+            this.dialog.alert('Join request cancelled successfully');
             this.loadPendingRequests();
           } else {
-            alert(res.message || 'Failed to cancel request');
+            this.dialog.alert(res.message || 'Failed to cancel request');
           }
         },
         error: (err) => {
-          alert(err.error?.message || 'Failed to cancel request');
+          this.dialog.alert(err.error?.message || 'Failed to cancel request');
         }
       });
     }
@@ -121,18 +123,18 @@ export class NoCompanyComponent implements OnInit {
     this.auth.acceptInvitation(token, projectId).subscribe({
       next: (res) => {
         if (res.success) {
-          alert('Invitation accepted! You can now select your company.');
+          this.dialog.alert('Invitation accepted! You can now select your company.');
           // refresh the company list first: the one from login does not have the new company
           this.auth.getUserCompanies().subscribe({
             next: () => this.router.navigate(['/select-company']),
             error: () => this.router.navigate(['/select-company'])
           });
         } else {
-          alert(res.message || 'Failed to accept invitation');
+          this.dialog.alert(res.message || 'Failed to accept invitation');
         }
       },
       error: (err) => {
-        alert('Error accepting invitation');
+        this.dialog.alert('Error accepting invitation');
       }
     });
   }
@@ -166,19 +168,19 @@ export class NoCompanyComponent implements OnInit {
     const text = encodeURIComponent(this.getShareMessage());
     window.location.href = `sms:?body=${text}`;
   }
-  rejectInvitation(invitationId: number) {
-    if (confirm('Are you sure you want to reject this invitation?')) {
+  async rejectInvitation(invitationId: number) {
+    if ((await this.dialog.confirm('Are you sure you want to reject this invitation?'))) {
       this.auth.rejectInvitation(invitationId).subscribe({
         next: (res) => {
           if (res.success) {
-            alert('Invitation rejected successfully');
+            this.dialog.alert('Invitation rejected successfully');
             this.checkInvitations(); // Refresh the list
           } else {
-            alert(res.message || 'Failed to reject invitation');
+            this.dialog.alert(res.message || 'Failed to reject invitation');
           }
         },
         error: (err) => {
-          alert(err.error?.message || 'Failed to reject invitation');
+          this.dialog.alert(err.error?.message || 'Failed to reject invitation');
         }
       });
     }
@@ -186,9 +188,9 @@ export class NoCompanyComponent implements OnInit {
   copyToClipboard() {
     const message = this.getShareMessage();
     navigator.clipboard.writeText(message).then(() => {
-      alert('Request message copied to clipboard!');
+      this.dialog.alert('Request message copied to clipboard!');
     }).catch(() => {
-      alert('Failed to copy');
+      this.dialog.alert('Failed to copy');
     });
   }
 

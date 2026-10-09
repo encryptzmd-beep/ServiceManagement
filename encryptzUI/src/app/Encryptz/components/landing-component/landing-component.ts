@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, inject } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { DialogService } from '../../Services/dialog-service';
 
 @Component({
   selector: 'app-landing-component',
@@ -10,6 +11,7 @@ import { RouterModule } from '@angular/router';
   styleUrl: './landing-component.scss',
 })
 export class LandingComponent {
+  private dialog = inject(DialogService);
   isScrolled = false;
   mobileMenuOpen = false;
   contactLoading = false;
@@ -37,7 +39,7 @@ export class LandingComponent {
     this.contactLoading = true;
     setTimeout(() => {
       this.contactLoading = false;
-      alert('Thank you! We will contact you shortly.');
+      this.dialog.alert('Thank you! We will contact you shortly.');
       this.contactName = this.contactEmail = this.contactPhone = this.contactCompany = this.contactMessage = '';
     }, 1000);
   }

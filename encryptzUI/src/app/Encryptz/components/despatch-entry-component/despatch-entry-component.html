@@ -1,0 +1,304 @@
+<div class="dsp-page">
+
+  <!-- ── header ─────────────────────────────────────────────── -->
+  <div class="dsp-header">
+    <div>
+      <div class="dsp-title">{{ mode() === 'create' ? 'Despatch Bill' : 'Despatch Details' }}</div>
+      <div class="dsp-sub">
+        @if (mode() === 'create') {
+          Enter the serial number of each unit. On despatch the units join the customer's installed base, the warranty starts, and a New Installation job is sent to the dashboard for technician assignment.
+        } @else {
+          Units despatched, their warranty, and the installation job raised for the technician.
+        }
+      </div>
+    </div>
+    <div class="dsp-header-actions">
+      <button type="button" class="btn-outline" (click)="openBill()">
+        <span class="material-icons">receipt_long</span> Open Bill
+      </button>
+      <button type="button" class="btn-outline" (click)="back()">← Back to Despatch</button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="dsp-loading"><div class="spinner"></div><span>Loading…</span></div>
+  } @else if (error() && !order() && !detail()) {
+    <div class="note error"><span class="material-icons">error_outline</span>{{ error() }}</div>
+  }
+
+  <!-- ═══════════════════════════ CREATE ═══════════════════════════ -->
+  @if (mode() === 'create' && order(); as d) {
+
+    <div class="top-grid">
+      <section class="card">
+        <div class="card-head">Bill</div>
+        <div class="card-body kv">
+          <div><span>Bill No</span><strong class="mono">{{ d.order.orderNo }}</strong></div>
+          <div><span>Bill Date</span><strong>{{ d.order.orderDate | date:'dd MMM yyyy' }}</strong></div>
+          <div><span>Payment</span><strong>{{ d.order.paymentMode || '—' }}</strong></div>
+          <div><span>Grand Total</span><strong>₹{{ d.order.grandTotal | number:'1.2-2' }}</strong></div>
+          <div><span>Status</span><strong>{{ d.order.status }}</strong></div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-head">Customer</div>
+        <div class="card-body kv">
+          <div><span>Name</span><strong>{{ d.order.customerName }}</strong></div>
+          <div><span>Mobile</span><strong>{{ d.order.customerMobile || '—' }}</strong></div>
+          <div><span>GSTIN</span><strong>{{ d.order.gstin || '—' }}</strong></div>
+          <div class="full"><span>Billing Address</span><strong>{{ [d.order.billingAddress, d.order.city, d.order.state, d.order.pinCode].join(', ') || '—' }}</strong></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="card">
+      <div class="card-head">Despatch Details</div>
+      <div class="card-body grid-4">
+        <div class="field">
+          <label>Despatch Date <span class="req">*</span></label>
+          <input type="date" [(ngModel)]="despatchDate" (ngModelChange)="onDateChange()" />
+          <small class="hint">Warranty of every unit starts on this date</small>
+        </div>
+        <div class="field">
+          <label>Contact Person</label>
+          <input type="text" [(ngModel)]="contactPerson" />
+        </div>
+        <div class="field">
+          <label>Contact Number</label>
+          <input type="tel" [(ngModel)]="contactNumber" />
+        </div>
+        <div class="field">
+          <label>Transporter</label>
+          <input type="text" [(ngModel)]="transporterName" placeholder="Own vehicle / courier" />
+        </div>
+        <div class="field span-2">
+          <label>Delivery Address</label>
+          <textarea rows="2" [(ngModel)]="deliveryAddress"></textarea>
+        </div>
+        <div class="field">
+          <label>Vehicle No</label>
+          <input type="text" [(ngModel)]="vehicleNo" placeholder="KL-07-AB-1234" />
+        </div>
+        <div class="field">
+          <label>Driver</label>
+          <input type="text" [(ngModel)]="driverName" />
+        </div>
+        <div class="field">
+          <label>Tracking / LR No</label>
+          <input type="text" [(ngModel)]="trackingNo" />
+        </div>
+        <div class="field span-3">
+          <label>Remarks</label>
+          <input type="text" [(ngModel)]="remarks" placeholder="Optional" />
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <span>Units &amp; Serial Numbers <span class="count">{{ unitCount() }}</span></span>
+        <span class="card-head-hint">
+          @if (missingSerials() > 0) { {{ missingSerials() }} unit(s) without a serial number (one is generated from the bill number) }
+          @else { All units have a serial number }
+        </span>
+      </div>
+      <div class="card-body no-pad">
+        <div class="table-scroll">
+          <table class="units">
+            <thead>
+              <tr>
+                <th style="width:48px">#</th>
+                <th>Product</th>
+                <th style="width:260px">Serial Number</th>
+                <th style="width:110px">Warranty</th>
+                <th style="width:160px">Warranty till</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (u of units(); track $index; let i = $index) {
+                <tr>
+                  <td class="muted">{{ i + 1 }}</td>
+                  <td>
+                    <div class="cell-2"><strong>{{ u.productName }}</strong>
+                      <small>{{ [u.brand, u.model].join(' ') }} · unit {{ u.unitNo }}</small>
+                    </div>
+                  </td>
+                  <td>
+                    <input type="text" [(ngModel)]="u.serialNumber" (ngModelChange)="touchUnits()" placeholder="Scan / type serial number"
+                           [class.dup]="duplicateSerial() && u.serialNumber.trim().toUpperCase() === duplicateSerial()" />
+                  </td>
+                  <td>{{ u.warrantyMonths }} months</td>
+                  <td>
+                    @if (warrantyEndDates()[i]; as end) {
+                      <span class="warranty-till">{{ end | date:'dd MMM yyyy' }}</span>
+                    } @else { <span class="muted">—</span> }
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="5" class="empty">The bill has no product lines.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <div class="bottom-grid">
+      <section class="card">
+        <div class="card-head">Installation Job</div>
+        <div class="card-body">
+          <label class="check big">
+            <input type="checkbox" [(ngModel)]="createInstallationComplaint" />
+            <span>
+              <strong>Create a “New Installation” complaint on the dashboard</strong>
+              <small>It appears with the other complaints so the admin can assign a technician. The job is marked as under warranty.</small>
+            </span>
+          </label>
+          <div class="grid-2" style="margin-top:14px" [class.disabled]="!createInstallationComplaint">
+            <div class="field">
+              <label>Priority</label>
+              <select [(ngModel)]="priority" [disabled]="!createInstallationComplaint">
+                @for (p of priorities; track p) { <option [value]="p">{{ p }}</option> }
+              </select>
+            </div>
+            <div class="field">
+              <label>Preferred installation date</label>
+              <input type="date" [(ngModel)]="preferredDate" [disabled]="!createInstallationComplaint" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">Confirm</div>
+        <div class="card-body">
+          <ul class="checklist">
+            <li><span class="material-icons">inventory_2</span>{{ unitCount() }} unit(s) added to the customer's products</li>
+            <li><span class="material-icons">verified_user</span>Warranty starts {{ despatchDate ? (despatchDate | date:'dd MMM yyyy') : '—' }}</li>
+            <li><span class="material-icons">{{ createInstallationComplaint ? 'engineering' : 'block' }}</span>{{ createInstallationComplaint ? 'Installation job sent to the dashboard' : 'No installation job' }}</li>
+            <li><span class="material-icons">lock</span>The bill becomes read-only</li>
+          </ul>
+          @if (error()) { <div class="note error"><span class="material-icons">error_outline</span>{{ error() }}</div> }
+          <button type="button" class="btn-primary wide" [disabled]="saving() || d.order.status !== 'Billed' || !units().length" (click)="submit()">
+            <span class="material-icons">local_shipping</span>{{ saving() ? 'Despatching…' : 'Despatch & Create Installation Job' }}
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- ═══════════════════════════ VIEW ═══════════════════════════ -->
+  @if (mode() === 'view' && detail(); as v) {
+
+    <div class="top-grid three">
+      <section class="card">
+        <div class="card-head">Despatch</div>
+        <div class="card-body kv">
+          <div><span>Despatch No</span><strong class="mono">{{ v.despatch.despatchNo }}</strong></div>
+          <div><span>Date</span><strong>{{ v.despatch.despatchDate | date:'dd MMM yyyy' }}</strong></div>
+          <div><span>Bill</span><strong class="mono">{{ v.despatch.orderNo }}</strong></div>
+          <div><span>Bill Value</span><strong>₹{{ v.despatch.grandTotal | number:'1.2-2' }}</strong></div>
+          <div><span>Transporter</span><strong>{{ v.despatch.transporterName || '—' }}</strong></div>
+          <div><span>Vehicle / Driver</span><strong>{{ [v.despatch.vehicleNo, v.despatch.driverName].join(' · ') || '—' }}</strong></div>
+          <div><span>Tracking</span><strong>{{ v.despatch.trackingNo || '—' }}</strong></div>
+          @if (v.despatch.remarks) { <div class="full"><span>Remarks</span><strong>{{ v.despatch.remarks }}</strong></div> }
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">Customer &amp; Delivery</div>
+        <div class="card-body kv">
+          <div><span>Customer</span><strong>{{ v.despatch.customerName }}</strong></div>
+          <div><span>Mobile</span><strong>{{ v.despatch.customerMobile || '—' }}</strong></div>
+          <div><span>Contact</span><strong>{{ [v.despatch.contactPerson, v.despatch.contactNumber].join(' · ') || '—' }}</strong></div>
+          <div class="full"><span>Delivery Address</span><strong>{{ v.despatch.deliveryAddress || '—' }}</strong></div>
+        </div>
+      </section>
+
+      <section class="card install">
+        <div class="card-head">Installation Job</div>
+        <div class="card-body">
+          @if (v.despatch.installationComplaintId) {
+            <div class="install-no">
+              <span class="mono big">{{ v.despatch.installationComplaintNo }}</span>
+              <span class="status-badge" [style.background]="(v.despatch.installationStatusColor || '#64748b') + '20'" [style.color]="v.despatch.installationStatusColor || '#64748b'">{{ v.despatch.installationStatus }}</span>
+            </div>
+            <div class="tech" [class.unassigned]="!v.despatch.assignedTechnicians">
+              <span class="material-icons">{{ v.despatch.assignedTechnicians ? 'engineering' : 'person_off' }}</span>
+              {{ v.despatch.assignedTechnicians || 'No technician assigned yet — assign it from the dashboard' }}
+            </div>
+            <div class="install-actions">
+              <button type="button" class="btn-primary sm" (click)="openComplaint()"><span class="material-icons">open_in_new</span> View Complaint</button>
+              <button type="button" class="btn-outline sm" (click)="goDashboard()"><span class="material-icons">dashboard</span> Dashboard</button>
+            </div>
+          } @else {
+            <div class="muted">No installation complaint was created for this despatch.</div>
+          }
+        </div>
+      </section>
+    </div>
+
+    <section class="card">
+      <div class="card-head">
+        <span>Units &amp; Warranty <span class="count">{{ v.units.length }}</span></span>
+        <span class="card-head-hint">Each unit is a product of the customer; complaints registered against it show its warranty status</span>
+      </div>
+      <div class="card-body no-pad">
+        <div class="table-scroll">
+          <table class="units">
+            <thead>
+              <tr>
+                <th style="width:48px">#</th>
+                <th>Product</th>
+                <th>Serial Number</th>
+                <th>Warranty</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (u of v.units; track u.despatchItemId; let i = $index) {
+                <tr>
+                  <td class="muted">{{ i + 1 }}</td>
+                  <td><div class="cell-2"><strong>{{ u.productName }}</strong><small>{{ [u.brand, u.model, u.category].join(' · ') }}</small></div></td>
+                  <td class="mono">{{ u.serialNumber }}</td>
+                  <td>{{ u.warrantyMonths }} months</td>
+                  <td>{{ u.warrantyStartDate | date:'dd MMM yyyy' }}</td>
+                  <td>{{ u.warrantyEndDate | date:'dd MMM yyyy' }}</td>
+                  <td>
+                    <div class="cell-2">
+                      <span class="warranty-chip" [class.ok]="u.warrantyStatus === 'In Warranty'" [class.expired]="u.warrantyStatus === 'Expired'">
+                        <span class="material-icons">{{ u.warrantyStatus === 'In Warranty' ? 'verified_user' : 'gpp_bad' }}</span>{{ u.warrantyStatus }}
+                      </span>
+                      @if (u.warrantyDaysLeft !== null && u.warrantyDaysLeft !== undefined) {
+                        <small>{{ u.warrantyDaysLeft >= 0 ? u.warrantyDaysLeft + ' days left' : (-u.warrantyDaysLeft) + ' days ago' }}</small>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="7" class="empty">No units.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  }
+</div>
+
+@if (showComplaint() && detail()?.despatch?.installationComplaintId) {
+  <app-complaint-detail-popup
+    [complaintId]="detail()!.despatch.installationComplaintId!"
+    [viewOnly]="true"
+    (closed)="closeComplaint()"
+    (refreshed)="refreshDespatch()">
+  </app-complaint-detail-popup>
+}
+
+@if (toast(); as t) {
+  <div class="toast" [class.success]="t.type === 'success'" [class.error]="t.type === 'error'">
+    <span class="material-icons">{{ t.type === 'success' ? 'check_circle' : 'error' }}</span>{{ t.text }}
+  </div>
+}

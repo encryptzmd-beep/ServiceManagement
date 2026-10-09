@@ -54,6 +54,17 @@
             <span class="meta-item">
               <span class="material-icons">qr_code</span> {{ c.serialNumber }}
             </span>
+            @if ($any(c).natureOfJob) {
+            <span class="meta-item"><span class="job-chip">{{ $any(c).natureOfJob }}</span></span>
+            }
+            @if ($any(c).warrantyStatus) {
+            <span class="meta-item" [title]="$any(c).warrantyExpiryDate ? 'Warranty till ' + ($any(c).warrantyExpiryDate | date:'dd MMM yyyy') : ''">
+              <span class="warranty-chip" [class.ok]="$any(c).warrantyStatus === 'In Warranty'" [class.expired]="$any(c).warrantyStatus === 'Expired'">
+                <span class="material-icons">{{ $any(c).warrantyStatus === 'In Warranty' ? 'verified_user' : 'gpp_bad' }}</span>
+                {{ $any(c).warrantyStatus }}@if ($any(c).warrantyExpiryDate) { · till {{ $any(c).warrantyExpiryDate | date:'dd MMM yyyy' }} }
+              </span>
+            </span>
+            }
             <span class="meta-item">
               <span class="material-icons">calendar_today</span> {{ c.createdAt | date:'dd MMM yyyy' }}
             </span>

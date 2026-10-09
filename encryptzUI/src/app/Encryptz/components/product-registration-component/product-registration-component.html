@@ -163,13 +163,13 @@
             <span class="material-icons">delete</span>
           </button>
         </div> -->
-        <!-- @if (product.warrantyExpiryDate) {
+        @if (product.warrantyExpiryDate) {
         <span class="warranty-badge" [class.active]="isWarrantyActive(product.warrantyExpiryDate)"
           [class.expired]="!isWarrantyActive(product.warrantyExpiryDate)">
           <span class="material-icons">{{ isWarrantyActive(product.warrantyExpiryDate) ? 'verified_user' : 'gpp_bad' }}</span>
           {{ isWarrantyActive(product.warrantyExpiryDate) ? 'Under Warranty' : 'Expired' }}
         </span>
-        } -->
+        }
       </div>
       <div class="product-details">
         <div class="detail-item">
@@ -184,13 +184,13 @@
           <span class="detail-label">Purchase Date</span>
           <span class="detail-value">{{ product.purchaseDate ? (product.purchaseDate | date:'dd MMM yyyy') : 'Not set' }}</span>
         </div>
-        <!-- <div class="detail-item">
+        <div class="detail-item">
           <span class="detail-label">Warranty Until</span>
           <span class="detail-value" [class.text-green]="isWarrantyActive(product.warrantyExpiryDate || '')"
             [class.text-red]="product.warrantyExpiryDate && !isWarrantyActive(product.warrantyExpiryDate)">
             {{ product.warrantyExpiryDate ? (product.warrantyExpiryDate | date:'dd MMM yyyy') : 'Not set' }}
           </span>
-        </div> -->
+        </div>
       </div>
       @if (product.images?.length) {
       <div class="images-section">

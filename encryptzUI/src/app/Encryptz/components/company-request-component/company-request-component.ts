@@ -4,6 +4,7 @@ import { AuthService } from '../../Auth/auth-service';
 import { CompanyInfoDto } from '../../Models/ApiModels';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DialogService } from '../../Services/dialog-service';
 
 @Component({
   selector: 'app-company-request-component',
@@ -12,6 +13,7 @@ import { FormsModule } from '@angular/forms';
   styleUrl: './company-request-component.scss',
 })
 export class CompanyRequestComponent {
+  private dialog = inject(DialogService);
    private auth = inject(AuthService);
   private router = inject(Router);
 
@@ -54,18 +56,18 @@ export class CompanyRequestComponent {
       next: (res) => {
         this.submitting.set(false);
         if (res.success) {
-          alert('Request sent successfully!');
+          this.dialog.alert('Request sent successfully!');
           this.showModal.set(false);
           this.loadCompanies();
           this.requestedRole.set('Technician');
           this.remarks.set('');
         } else {
-          alert(res.message);
+          this.dialog.alert(res.message);
         }
       },
       error: () => {
         this.submitting.set(false);
-        alert('Failed to send request');
+        this.dialog.alert('Failed to send request');
       }
     });
   }

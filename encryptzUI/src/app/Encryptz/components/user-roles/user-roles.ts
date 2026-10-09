@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../Auth/auth-service';
+import { DialogService } from '../../Services/dialog-service';
 export interface UserDto {
   userId: number;
   fullName: string;
@@ -83,6 +84,7 @@ export interface CompanyInfoDto {
   styleUrl: './user-roles.scss',
 })
 export class UserRoles {
+  private dialog = inject(DialogService);
    svc = inject(AuthService);
   private fb = inject(FormBuilder);
 
@@ -466,7 +468,7 @@ onSearchUser() {
   lookupUserByEmail() {
     const email = this.lookupUserEmail;
     if (!email || !this.isValidEmail(email)) {
-      alert('Please enter a valid email address');
+      this.dialog.alert('Please enter a valid email address');
       return;
     }
 
@@ -509,7 +511,7 @@ onSearchUser() {
     const role = this.inviteRole;
 
     if (!email || !role) {
-      alert('Please select a user and role');
+      this.dialog.alert('Please select a user and role');
       return;
     }
 
@@ -519,13 +521,13 @@ onSearchUser() {
           this.closeInviteModal();
           this.loadPendingInvitations();
           this.loadCompanyUsers();
-          alert('Invitation sent successfully!');
+          this.dialog.alert('Invitation sent successfully!');
         } else {
-          alert(res?.message || 'Failed to send invitation');
+          this.dialog.alert(res?.message || 'Failed to send invitation');
         }
       },
       error: (err) => {
-        alert(err.error?.message || 'Failed to send invitation');
+        this.dialog.alert(err.error?.message || 'Failed to send invitation');
       }
     });
   }
@@ -589,44 +591,44 @@ onSearchUser() {
           this.showRoleModal.set(false);
           this.loadCompanyUsers();
         } else {
-          alert(res?.message || 'Failed to update role');
+          this.dialog.alert(res?.message || 'Failed to update role');
           this.loadCompanyUsers(); // revert on failure
         }
       },
       error: (err) => {
-        alert(err.error?.message || 'Failed to update role');
+        this.dialog.alert(err.error?.message || 'Failed to update role');
         this.loadCompanyUsers(); // revert on failure
       }
     });
 }
 
-  removeUser(userId: number) {
-    if (confirm('Are you sure you want to remove this user from the company?')) {
+  async removeUser(userId: number) {
+    if ((await this.dialog.confirm('Are you sure you want to remove this user from the company?'))) {
       this.svc.removeUserFromCompany(userId).subscribe({
         next: (res: any) => {
           if (res && res.success) {
             this.loadCompanyUsers();
-            alert('User removed successfully');
+            this.dialog.alert('User removed successfully');
           } else {
-            alert(res?.message || 'Failed to remove user');
+            this.dialog.alert(res?.message || 'Failed to remove user');
           }
         },
         error: (err) => {
-          alert(err.error?.message || 'Failed to remove user');
+          this.dialog.alert(err.error?.message || 'Failed to remove user');
         }
       });
     }
   }
 
-  cancelInvitation(invitationId: number) {
-    if (confirm('Cancel this invitation?')) {
+  async cancelInvitation(invitationId: number) {
+    if ((await this.dialog.confirm('Cancel this invitation?'))) {
       this.svc.cancelInvitation(invitationId).subscribe({
         next: () => {
           this.loadPendingInvitations();
-          alert('Invitation cancelled');
+          this.dialog.alert('Invitation cancelled');
         },
         error: (err) => {
-          alert(err.error?.message || 'Failed to cancel invitation');
+          this.dialog.alert(err.error?.message || 'Failed to cancel invitation');
         }
       });
     }
@@ -667,50 +669,50 @@ onSearchUser() {
       },
       error: (err) => {
         console.error('Error loading companies:', err);
-        alert('Failed to load companies');
+        this.dialog.alert('Failed to load companies');
       }
     });
   }
 
   requestToJoinCompany(companyId: number) {
     if (!companyId || companyId === 0) {
-      alert('Please select a company');
+      this.dialog.alert('Please select a company');
       return;
     }
 
     this.svc.createJoinRequest(companyId, this.requestedRole, this.requestRemarks).subscribe({
       next: (res: any) => {
         if (res && res.success) {
-          alert('Join request sent successfully!');
+          this.dialog.alert('Join request sent successfully!');
           this.showRequestsModal.set(false);
           this.loadAvailableCompanies();
           this.requestedRole = 'Technician';
           this.requestRemarks = '';
           this.selectedCompanyId.set(0);
         } else {
-          alert(res?.message || 'Failed to send request');
+          this.dialog.alert(res?.message || 'Failed to send request');
         }
       },
       error: (err) => {
-        alert(err.error?.message || 'Failed to send join request');
+        this.dialog.alert(err.error?.message || 'Failed to send join request');
       }
     });
   }
 
-  approveRequest(requestId: number) {
-    if (confirm('Approve this join request?')) {
+  async approveRequest(requestId: number) {
+    if ((await this.dialog.confirm('Approve this join request?'))) {
       this.svc.approveJoinRequest(requestId).subscribe({
         next: (res: any) => {
           if (res && res.success) {
             this.loadPendingJoinRequests();
             this.loadCompanyUsers();
-            alert('Request approved! User added to company.');
+            this.dialog.alert('Request approved! User added to company.');
           } else {
-            alert(res?.message || 'Failed to approve request');
+            this.dialog.alert(res?.message || 'Failed to approve request');
           }
         },
         error: (err) => {
-          alert(err.error?.message || 'Failed to approve request');
+          this.dialog.alert(err.error?.message || 'Failed to approve request');
         }
       });
     }
@@ -722,13 +724,13 @@ onSearchUser() {
       next: (res: any) => {
         if (res && res.success) {
           this.loadPendingJoinRequests();
-          alert('Request rejected');
+          this.dialog.alert('Request rejected');
         } else {
-          alert(res?.message || 'Failed to reject request');
+          this.dialog.alert(res?.message || 'Failed to reject request');
         }
       },
       error: (err) => {
-        alert(err.error?.message || 'Failed to reject request');
+        this.dialog.alert(err.error?.message || 'Failed to reject request');
       }
     });
   }

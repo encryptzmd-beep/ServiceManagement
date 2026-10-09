@@ -3,6 +3,7 @@ import { ApiService } from '../../Services/API/api-service';
 import { Technician, TechnicianFilter, TechnicianListItem } from '../../Models/ApiModels';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DialogService } from '../../Services/dialog-service';
 
 @Component({
   selector: 'app-technician-list-component',
@@ -11,6 +12,7 @@ import { FormsModule } from '@angular/forms';
   styleUrl: './technician-list-component.scss',
 })
 export class TechnicianListComponent {
+  private dialog = inject(DialogService);
    technicians = signal<TechnicianListItem[]>([]);
   selectedTech = signal<TechnicianListItem | null>(null);
   loading = signal(true);
@@ -68,8 +70,8 @@ editTech(tech: TechnicianListItem) {
   this.showEditModal = true;
 }
 
-  deleteTech(tech: TechnicianListItem) {
-    if (confirm(`Deactivate ${tech.fullName}?`)) {
+  async deleteTech(tech: TechnicianListItem) {
+    if ((await this.dialog.confirm(`Deactivate ${tech.fullName}?`))) {
       this.techService.deleteTechnicianFilter(tech.profileId).subscribe({ next: () => this.loadData() });
     }
   }
@@ -80,12 +82,12 @@ editTech(tech: TechnicianListItem) {
     } else {
       // Technicians are login users in the main DB, so the email is mandatory
       if (!this.formData.email?.trim()) {
-        alert('Email is required: the technician signs in with it');
+        this.dialog.alert('Email is required: the technician signs in with it');
         return;
       }
       this.techService.createTechnician(this.formData).subscribe({
         next: () => { this.closeModals(); this.loadData(); },
-        error: (err) => alert(err?.error?.message || 'Could not create technician')
+        error: (err) => this.dialog.alert(err?.error?.message || 'Could not create technician')
       });
     }
   }

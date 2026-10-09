@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../Services/API/api-service';
 import { LeafletLoaderService } from '../../Services/leaflet-loader-service';
+import { DialogService } from '../../Services/dialog-service';
 
 declare var L: any;
 
@@ -991,6 +992,7 @@ declare var L: any;
   `]
 })
 export class PublicQuickComplaintComponent implements OnInit, AfterViewInit {
+  private dialog = inject(DialogService);
   /** Complaint categories of the tenant (configured per project, not hardcoded). */
   categories = signal<string[]>([]);
 
@@ -1165,10 +1167,10 @@ export class PublicQuickComplaintComponent implements OnInit, AfterViewInit {
       this.ngZone.run(() => {
         this.isSearching.set(false);
         if (data?.length > 0) this.searchResults.set(data);
-        else alert('No locations found. Try a different search term.');
+        else this.dialog.alert('No locations found. Try a different search term.');
       });
     } catch {
-      this.ngZone.run(() => { this.isSearching.set(false); alert('Search failed. Please try again.'); });
+      this.ngZone.run(() => { this.isSearching.set(false); this.dialog.alert('Search failed. Please try again.'); });
     }
   }
 
@@ -1198,7 +1200,7 @@ export class PublicQuickComplaintComponent implements OnInit, AfterViewInit {
   }
 
   getCurrentLocation(): void {
-    if (!navigator.geolocation) { alert('Geolocation not supported'); return; }
+    if (!navigator.geolocation) { this.dialog.alert('Geolocation not supported'); return; }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
@@ -1215,7 +1217,7 @@ export class PublicQuickComplaintComponent implements OnInit, AfterViewInit {
       (err) => {
         let msg = 'Unable to get location. ';
         if (err.code === err.PERMISSION_DENIED) msg += 'Please allow location access.';
-        alert(msg);
+        this.dialog.alert(msg);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -1290,7 +1292,7 @@ export class PublicQuickComplaintComponent implements OnInit, AfterViewInit {
 
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl);
-      this.ngZone.run(() => { this.uploadProgress.set(0); alert('Failed to read image. Try another photo.'); });
+      this.ngZone.run(() => { this.uploadProgress.set(0); this.dialog.alert('Failed to read image. Try another photo.'); });
     };
     img.src = objectUrl;
   }
@@ -1344,13 +1346,13 @@ export class PublicQuickComplaintComponent implements OnInit, AfterViewInit {
           setTimeout(() => this.showSuccess.set(false), 5000);
           this.resetComplaintOnly();
         } else {
-          alert(res.message || 'Failed to submit complaint.');
+          this.dialog.alert(res.message || 'Failed to submit complaint.');
         }
       },
       error: (err) => {
         this.isSubmitting.set(false);
         this.loadingStatus.set('');
-        alert('Failed to submit. Please check your connection and try again.');
+        this.dialog.alert('Failed to submit. Please check your connection and try again.');
       }
     });
   }

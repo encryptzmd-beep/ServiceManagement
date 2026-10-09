@@ -5,8 +5,8 @@ export const environment = {
   // apiUrl: 'https://serviceapp.encryptz.in/api'
    //  apiUrl:'https://app.encryptz.in'
     //apiUrl:'http://192.168.1.39:5092'
-    ///apiUrl:'http://localhost:5092',
-  apiUrl:'https://erp.encryptz.in',
+    apiUrl:'http://localhost:5092',
+  //apiUrl:'https://erp.encryptz.in',
 
   // Customer portal: the project (MainDB Projects.ProjectKey) whose database customers
   // register / log in to. A link with ?project=KEY overrides it for that browser.

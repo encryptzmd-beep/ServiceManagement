@@ -171,7 +171,7 @@
       <table class="data-table tile-table">
         <thead>
           <tr>
-            <th>Complaint #</th><th>Subject</th><th>Customer</th><th>Product</th>
+            <th>Complaint #</th><th>Subject</th><th>Customer</th><th>Product</th><th>Job / Warranty</th>
             <th>Priority</th><th>Status</th><th>SLA</th><th>Technician</th><th>Created</th><th>Actions</th>
           </tr>
         </thead>
@@ -182,6 +182,24 @@
             <td>{{ c.subject }}</td>
             <td>{{ c.customerName }}</td>
             <td>{{ $any(c).productName || '—' }}</td>
+            <td>
+              <div class="job-warranty">
+                @if ($any(c).natureOfJob) {
+                  <span class="job-chip" [class.install]="$any(c).natureOfJob === 'Installation'">{{ $any(c).natureOfJob }}</span>
+                }
+                @if ($any(c).warrantyStatus) {
+                  <span class="warranty-chip"
+                    [class.ok]="$any(c).warrantyStatus === 'In Warranty'"
+                    [class.expired]="$any(c).warrantyStatus === 'Expired'"
+                    [title]="$any(c).warrantyExpiryDate ? 'Warranty till ' + ($any(c).warrantyExpiryDate | date:'dd MMM yyyy') : ''">
+                    <span class="material-icons">{{ $any(c).warrantyStatus === 'In Warranty' ? 'verified_user' : 'gpp_bad' }}</span>
+                    {{ $any(c).warrantyStatus }}
+                  </span>
+                } @else if (!$any(c).natureOfJob) {
+                  <span class="jw-muted">—</span>
+                }
+              </div>
+            </td>
             <td><span class="priority-badge" [attr.data-priority]="$any(c).priority">{{ $any(c).priority }}</span></td>
             <td>
               <span class="status-badge"
@@ -217,7 +235,7 @@
           </tr>
           } @empty {
           <tr>
-            <td colspan="10" class="tc-empty-cell">
+            <td colspan="11" class="tc-empty-cell">
               <span class="material-icons">inbox</span><p>No complaints found</p>
             </td>
           </tr>

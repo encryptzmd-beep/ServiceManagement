@@ -20,6 +20,7 @@ import { AuthService } from '../../Auth/auth-service';
 import { LeafletLoaderService } from '../../Services/leaflet-loader-service';
 import { statusIdByName } from '../../Models/ApiModels';
 import { environment } from '../../../../environments/environment.development';
+import { DialogService } from '../../Services/dialog-service';
 
 declare var L: any;
 
@@ -31,6 +32,7 @@ declare var L: any;
   styleUrls: ['./complaint-detail-popup-component.scss']
 })
 export class ComplaintDetailPopupComponent implements OnInit, AfterViewChecked, OnDestroy {
+  private dialog = inject(DialogService);
   @Input() complaintId!: number;
 
   @Output() closed             = new EventEmitter<void>();
@@ -650,8 +652,8 @@ nextImage()   { if (this.imagePage()   < this.imageTotalPages())   this.imagePag
     });
   }
 
-  markComplaintResolved() {
-    if (!confirm('Mark this complaint as completed/resolved?')) return;
+  async markComplaintResolved() {
+    if (!(await this.dialog.confirm('Mark this complaint as completed/resolved?'))) return;
     this.saving.set(true);
     // the id of "WorkCompleted" is looked up: it used to be sent as 5, which is another
     // status ("Assigned") in this tenant's database
@@ -754,9 +756,9 @@ nextImage()   { if (this.imagePage()   < this.imageTotalPages())   this.imagePag
       error: () => { this.savingSpare.set(false); this.showMessage('Error updating spare', 'error'); }
     });
   }
-  deleteSpare(requestId: number) {
+  async deleteSpare(requestId: number) {
       if (this.viewOnly) return;
-    if (!confirm('Delete this spare part request?')) return;
+    if (!(await this.dialog.confirm('Delete this spare part request?'))) return;
     this.savingSpare.set(true);
     this.api.deleteSparePartRequest(requestId).subscribe({
       next: (r: any) => {

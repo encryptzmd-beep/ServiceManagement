@@ -1,0 +1,525 @@
+<div class="so-page">
+
+  <!-- ── header ─────────────────────────────────────────────── -->
+  <div class="so-header">
+    <div>
+      <div class="so-title">Sales Order</div>
+      <div class="so-sub">Create and manage customer sales invoices</div>
+    </div>
+    <div class="so-header-actions">
+      @if (!isNew()) {
+        <span class="so-status" [attr.data-status]="status()">{{ status() }}</span>
+        <button type="button" class="btn-outline" (click)="print()" title="Print invoice">
+          <span class="material-icons">print</span> Print Invoice
+        </button>
+      }
+      <button type="button" class="btn-outline" (click)="back()">← Back to Sales Orders</button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="so-loading"><div class="spinner"></div><span>Loading bill…</span></div>
+  } @else {
+
+  @if (!isEditable()) {
+    <div class="so-note info">
+      <span class="material-icons">lock</span>
+      This bill is <strong>{{ status() }}</strong> and cannot be changed.
+      @if (status() === 'Despatched') { The warranty of each unit starts on the despatch date. }
+    </div>
+  }
+
+  <!-- ── invoice details ───────────────────────────────────── -->
+  <section class="card">
+    <div class="card-head">Invoice Details</div>
+    <div class="card-body grid-4">
+      <div class="field">
+        <label>Invoice No.</label>
+        <input type="text" [value]="orderNo() || 'Generated on save'" readonly class="ro" />
+      </div>
+      <div class="field">
+        <label>Invoice Date</label>
+        <input type="date" [(ngModel)]="orderDate" [disabled]="!isEditable()" />
+      </div>
+      <div class="field">
+        <label>Payment Mode</label>
+        <select [(ngModel)]="paymentMode" [disabled]="!isEditable()">
+          @for (m of paymentModes; track m) { <option [value]="m">{{ m }}</option> }
+        </select>
+      </div>
+      <div class="field">
+        <label>Reference / PO No.</label>
+        <input type="text" [(ngModel)]="referenceNo" placeholder="Optional" [disabled]="!isEditable()" />
+      </div>
+    </div>
+  </section>
+
+  <!-- ── customer details ──────────────────────────────────── -->
+  <section class="card">
+    <div class="card-head">
+      <span>Customer Details</span>
+      <span class="card-head-hint">A new customer is added to the customer master and can be used for complaints and the customer portal.</span>
+    </div>
+    <div class="card-body">
+      <div class="grid-4">
+        <div class="field span-2">
+          <label>Customer <span class="req">*</span></label>
+          @if (customer(); as c) {
+            <div class="customer-pill">
+              <span class="material-icons">person</span>
+              <div class="customer-pill-text">
+                <strong>{{ c.customerName }}</strong>
+                <small>{{ c.mobileNumber }}@if (c.city) { · {{ c.city }} }@if (c.totalProducts) { · {{ c.totalProducts }} product(s) }</small>
+                @if (hasLocation(c)) {
+                  <small class="geo">
+                    <span class="material-icons">location_on</span>
+                    Mapped location: {{ c.latitude | number:'1.5-5' }}, {{ c.longitude | number:'1.5-5' }}
+                    @if (c.landmark) { · {{ c.landmark }} }
+                    <a [href]="mapsUrl(c)" target="_blank" rel="noopener">Open in Maps</a>
+                  </small>
+                } @else if (c.landmark) {
+                  <small class="geo"><span class="material-icons">place</span>Landmark: {{ c.landmark }}</small>
+                }
+              </div>
+              <button type="button" class="pill-btn" title="Edit customer master" (click)="openEditCustomer()">
+                <span class="material-icons">edit</span>
+              </button>
+              @if (isEditable()) {
+                <button type="button" class="pill-btn danger" title="Change customer" (click)="clearCustomer()">
+                  <span class="material-icons">close</span>
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="customer-search">
+              <input type="text"
+                     [ngModel]="customerSearch"
+                     (ngModelChange)="onCustomerSearch($event)"
+                     (focus)="openCustomerDropdown()"
+                     (blur)="closeCustomerDropdownLater()"
+                     placeholder="Search customer by name, mobile, e-mail or city…"
+                     autocomplete="off" />
+              <button type="button" class="btn-new-customer" (mousedown)="$event.preventDefault()" (click)="openNewCustomer()">
+                <span class="material-icons">person_add</span> New Customer
+              </button>
+
+              @if (customerDropdownOpen()) {
+                <div class="customer-dropdown">
+                  @if (searchingCustomers()) {
+                    <div class="dd-row muted">Searching…</div>
+                  } @else if (!customerResults().length) {
+                    <div class="dd-row muted">
+                      No customer found.
+                      <a (mousedown)="$event.preventDefault()" (click)="openNewCustomer()">Create “{{ customerSearch || 'new customer' }}”</a>
+                    </div>
+                  } @else {
+                    @for (c of customerResults(); track c.customerId) {
+                      <div class="dd-row" (mousedown)="$event.preventDefault()" (click)="selectCustomer(c)">
+                        <div class="dd-name">{{ c.customerName }}</div>
+                        <div class="dd-meta">{{ c.mobileNumber }}@if (c.city) { · {{ c.city }} }@if (c.gstin) { · {{ c.gstin }} }</div>
+                      </div>
+                    }
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+        <div class="field">
+          <label>Phone</label>
+          <input type="tel" [(ngModel)]="contactNumber" placeholder="+91 98765 43210" [disabled]="!isEditable()" />
+        </div>
+        <div class="field">
+          <label>GSTIN</label>
+          <input type="text" [(ngModel)]="gstin" placeholder="GSTIN / UIN" maxlength="20" style="text-transform:uppercase" [disabled]="!isEditable()" />
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:14px">
+        <label>Address</label>
+        <textarea rows="2" [(ngModel)]="billingAddress" placeholder="Customer billing address" [disabled]="!isEditable()"></textarea>
+      </div>
+
+      <div class="grid-4" style="margin-top:14px">
+        <div class="field">
+          <label>City</label>
+          <input type="text" [(ngModel)]="city" placeholder="City" [disabled]="!isEditable()" />
+        </div>
+        <div class="field">
+          <label>State</label>
+          <select [(ngModel)]="state" [disabled]="!isEditable()">
+            <option value="">Select state</option>
+            @for (s of states; track s) { <option [value]="s">{{ s }}</option> }
+          </select>
+        </div>
+        <div class="field">
+          <label>PIN Code</label>
+          <input type="text" [(ngModel)]="pinCode" placeholder="682001" maxlength="10" [disabled]="!isEditable()" />
+        </div>
+        <div class="field check-field">
+          <label>&nbsp;</label>
+          <label class="check">
+            <input type="checkbox" [(ngModel)]="isInterState" (ngModelChange)="touch()" [disabled]="!isEditable()" />
+            Inter-state supply (IGST)
+          </label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── product details ───────────────────────────────────── -->
+  <section class="card">
+    <div class="card-head">
+      <span>Product Details</span>
+      @if (isEditable()) {
+        <button type="button" class="btn-primary sm" (click)="addLine()">+ Add Product</button>
+      }
+    </div>
+    <div class="card-body no-pad">
+      <div class="table-scroll">
+        <table class="lines">
+          <thead>
+            <tr>
+              <th style="min-width:260px">Product / Service</th>
+              <th style="width:110px">HSN/SAC</th>
+              <th style="width:80px">Qty</th>
+              <th style="width:130px">Rate</th>
+              <th style="width:110px">Discount</th>
+              <th style="width:100px">GST %</th>
+              <th style="width:110px">Warranty</th>
+              <th style="width:140px; text-align:right">Amount</th>
+              @if (!isEditable()) { <th style="min-width:180px">Serial / Warranty till</th> }
+              <th style="width:44px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of lines(); track $index; let i = $index) {
+              <tr>
+                <td>
+                  @if (isEditable()) {
+                    <select [ngModel]="l.productMasterId" (ngModelChange)="onProductChange(l, $event)">
+                      <option [ngValue]="null">Select product</option>
+                      @for (p of products(); track p.productMasterId) {
+                        <option [ngValue]="p.productMasterId">{{ productLabel(p) }}</option>
+                      }
+                    </select>
+                    @if (l.productMasterId === null && l.productName) {
+                      <small class="muted">{{ l.productName }}</small>
+                    }
+                  } @else {
+                    <div class="ro-cell"><strong>{{ l.productName }}</strong>
+                      @if (l.model || l.brand) { <small class="muted">{{ [l.brand, l.model].join(' ') }}</small> }
+                    </div>
+                  }
+                </td>
+                <td><input type="text" [(ngModel)]="l.hsnSac" placeholder="8415" [disabled]="!isEditable()" /></td>
+                <td><input type="number" min="1" step="1" [(ngModel)]="l.qty" (ngModelChange)="touch()" [disabled]="!isEditable()" /></td>
+                <td><input type="number" min="0" step="0.01" [(ngModel)]="l.rate" (ngModelChange)="touch()" [disabled]="!isEditable()" /></td>
+                <td><input type="number" min="0" step="0.01" [(ngModel)]="l.discountAmount" (ngModelChange)="touch()" [disabled]="!isEditable()" /></td>
+                <td>
+                  <select [(ngModel)]="l.gstPercent" (ngModelChange)="touch()" [disabled]="!isEditable()">
+                    @for (g of gstRates; track g) { <option [ngValue]="g">{{ g }}</option> }
+                  </select>
+                </td>
+                <td>
+                  <div class="warranty-in">
+                    <input type="number" min="0" step="1" [(ngModel)]="l.warrantyMonths" (ngModelChange)="touch()" [disabled]="!isEditable()" />
+                    <span>mo</span>
+                  </div>
+                </td>
+                <td class="amount">₹{{ lineTotal(l) | number:'1.2-2' }}</td>
+                @if (!isEditable()) {
+                  <td>
+                    @if (l.serialNumbers) {
+                      <div class="ro-cell"><span class="mono">{{ l.serialNumbers }}</span>
+                        @if (l.warrantyEndDate) { <small class="warranty-till">Warranty till {{ l.warrantyEndDate | date:'dd MMM yyyy' }}</small> }
+                      </div>
+                    } @else { <span class="muted">—</span> }
+                  </td>
+                }
+                <td>
+                  @if (isEditable()) {
+                    <button type="button" class="line-remove" title="Remove line" (click)="removeLine(i)">×</button>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="10" class="empty">No products added. Click “+ Add Product”.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── notes + summary ───────────────────────────────────── -->
+  <div class="bottom-grid">
+    <section class="card">
+      <div class="card-head">Notes</div>
+      <div class="card-body">
+        <textarea rows="3" [(ngModel)]="notes" placeholder="Enter any notes or terms and conditions…" [disabled]="!isEditable()"></textarea>
+
+        @if (detail()?.despatches?.length) {
+          <div class="despatch-box">
+            <div class="despatch-box-title"><span class="material-icons">local_shipping</span> Despatch &amp; Installation</div>
+            @for (d of detail()!.despatches; track d.despatchId) {
+              <div class="despatch-row">
+                <div>
+                  <strong>{{ d.despatchNo }}</strong> · {{ d.despatchDate | date:'dd MMM yyyy' }}
+                  @if (d.transporterName) { · {{ d.transporterName }} }
+                  @if (d.vehicleNo) { · {{ d.vehicleNo }} }
+                </div>
+                <div class="despatch-meta">
+                  @if (d.installationComplaintNo) {
+                    Installation complaint <span class="mono">{{ d.installationComplaintNo }}</span>
+                    <span class="status-badge" [style.background]="(d.installationStatusColor || '#64748b') + '20'" [style.color]="d.installationStatusColor || '#64748b'">{{ d.installationStatus }}</span>
+                    @if (d.assignedTechnicians) { · Technician: {{ d.assignedTechnicians }} } @else { · <em>not assigned yet</em> }
+                  } @else { No installation complaint was created. }
+                </div>
+                <button type="button" class="btn-link" (click)="viewDespatch(d.despatchId)">View despatch &amp; warranty →</button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="card summary">
+      <div class="card-head">Invoice Summary</div>
+      <div class="card-body">
+        <div class="sum-row"><span>Subtotal</span><strong>₹{{ subTotal() | number:'1.2-2' }}</strong></div>
+        <div class="sum-row"><span>Discount</span><strong>₹{{ discountTotal() | number:'1.2-2' }}</strong></div>
+        @if (isInterState) {
+          <div class="sum-row tax"><span>IGST</span><strong>₹{{ igst() | number:'1.2-2' }}</strong></div>
+        } @else {
+          <div class="sum-row tax"><span>CGST</span><strong>₹{{ cgst() | number:'1.2-2' }}</strong></div>
+          <div class="sum-row tax"><span>SGST</span><strong>₹{{ sgst() | number:'1.2-2' }}</strong></div>
+        }
+        <div class="sum-row grand"><span>Grand Total</span><strong>₹{{ grandTotal() | number:'1.2-2' }}</strong></div>
+
+        @if (error()) { <div class="so-note error"><span class="material-icons">error_outline</span>{{ error() }}</div> }
+
+        <div class="summary-actions">
+          @if (isEditable()) {
+            <button type="button" class="btn-outline" [disabled]="saving()" (click)="save(false)">
+              {{ isNew() ? 'Save Bill' : 'Update Bill' }}
+            </button>
+            <button type="button" class="btn-primary" [disabled]="saving()" (click)="save(true)">
+              <span class="material-icons">local_shipping</span>
+              {{ saving() ? 'Saving…' : 'Save & Despatch' }}
+            </button>
+          } @else if (detail()?.despatches?.length) {
+            <button type="button" class="btn-primary" (click)="viewDespatch(detail()!.despatches[0].despatchId)">
+              <span class="material-icons">verified_user</span> Despatch &amp; Warranty
+            </button>
+          }
+        </div>
+      </div>
+    </section>
+  </div>
+
+  }
+
+  <!-- ── invoice print (only visible when printing) ─────────── -->
+  @if (!isNew()) {
+    <div class="invoice-print">
+      @if (headerMode() === 'text') {
+        <div class="inv-custom-header">
+          @for (l of printLines('Print.HeaderText'); track $index) { <div>{{ l }}</div> }
+        </div>
+      } @else if (headerMode() === 'image') {
+        <div class="inv-custom-header image"><img [src]="ps('Print.HeaderImage')" alt="Header" /></div>
+      }
+
+      <div class="inv-top">
+        <div class="inv-company">
+          <div class="inv-company-name">{{ printCompanyName() || 'Tax Invoice' }}</div>
+          @for (l of printLines('Print.CompanyAddress'); track $index) { <div class="inv-company-line">{{ l }}</div> }
+          @if (ps('Print.CompanyPhone')) { <div class="inv-company-line">{{ ps('Print.CompanyPhone') }}</div> }
+          @if (ps('Print.CompanyGSTIN')) { <div class="inv-company-line"><strong>GSTIN:</strong> {{ ps('Print.CompanyGSTIN') }}</div> }
+        </div>
+        <div class="inv-meta">
+          <div class="inv-title">TAX INVOICE</div>
+          <table>
+            <tr><td>Invoice No</td><td><strong>{{ orderNo() }}</strong></td></tr>
+            <tr><td>Invoice Date</td><td>{{ orderDate | date:'dd MMM yyyy' }}</td></tr>
+            <tr><td>Payment Mode</td><td>{{ paymentMode || '—' }}</td></tr>
+            @if (referenceNo) { <tr><td>Reference / PO</td><td>{{ referenceNo }}</td></tr> }
+            <tr><td>Status</td><td>{{ status() }}</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="inv-parties">
+        <div class="inv-box">
+          <div class="inv-box-title">Bill To</div>
+          <div class="inv-box-name">{{ customer()?.customerName }}</div>
+          @if (billingAddress) { <div>{{ billingAddress }}</div> }
+          <div>{{ [city, state, pinCode].join(' ') }}</div>
+          @if (contactNumber) { <div>Phone: {{ contactNumber }}</div> }
+          @if (gstin) { <div><strong>GSTIN:</strong> {{ gstin }}</div> }
+        </div>
+        <div class="inv-box">
+          <div class="inv-box-title">Supply</div>
+          <div>{{ isInterState ? 'Inter-state supply (IGST)' : 'Intra-state supply (CGST + SGST)' }}</div>
+          <div>Place of supply: {{ state || '—' }}</div>
+          @if (detail()?.despatches?.length) {
+            <div>Despatch: {{ detail()!.despatches[0].despatchNo }} · {{ detail()!.despatches[0].despatchDate | date:'dd MMM yyyy' }}</div>
+          }
+        </div>
+      </div>
+
+      <table class="inv-items">
+        <thead>
+          <tr>
+            <th>#</th><th>Product / Service</th><th>HSN/SAC</th><th class="r">Qty</th><th class="r">Rate</th>
+            <th class="r">Discount</th><th class="r">Taxable</th><th class="r">GST %</th><th class="r">GST Amt</th><th class="r">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (l of lines(); track $index; let i = $index) {
+            <tr>
+              <td>{{ i + 1 }}</td>
+              <td>
+                <div class="inv-item-name">{{ l.productName }}</div>
+                @if (l.brand || l.model) { <div class="inv-item-sub">{{ [l.brand, l.model].join(' ') }}</div> }
+                @if (l.serialNumbers) { <div class="inv-item-sub">SN: {{ l.serialNumbers }}</div> }
+                <div class="inv-item-sub">Warranty: {{ l.warrantyMonths }} months@if (l.warrantyEndDate) { (till {{ l.warrantyEndDate | date:'dd MMM yyyy' }}) }</div>
+              </td>
+              <td>{{ l.hsnSac || '—' }}</td>
+              <td class="r">{{ l.qty }}</td>
+              <td class="r">{{ l.rate | number:'1.2-2' }}</td>
+              <td class="r">{{ l.discountAmount | number:'1.2-2' }}</td>
+              <td class="r">{{ lineTaxable(l) | number:'1.2-2' }}</td>
+              <td class="r">{{ l.gstPercent }}%</td>
+              <td class="r">{{ lineGst(l) | number:'1.2-2' }}</td>
+              <td class="r">{{ lineTotal(l) | number:'1.2-2' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <div class="inv-bottom">
+        <div class="inv-words">
+          <div class="inv-box-title">Amount in words</div>
+          <div>{{ amountInWords(grandTotal()) }}</div>
+          @if (notes) {
+            <div class="inv-box-title" style="margin-top:10px">Notes</div>
+            <div class="inv-notes">{{ notes }}</div>
+          }
+        </div>
+        <table class="inv-totals">
+          <tr><td>Subtotal</td><td class="r">₹{{ subTotal() | number:'1.2-2' }}</td></tr>
+          <tr><td>Discount</td><td class="r">₹{{ discountTotal() | number:'1.2-2' }}</td></tr>
+          <tr><td>Taxable Value</td><td class="r">₹{{ taxableTotal() | number:'1.2-2' }}</td></tr>
+          @if (isInterState) {
+            <tr><td>IGST</td><td class="r">₹{{ igst() | number:'1.2-2' }}</td></tr>
+          } @else {
+            <tr><td>CGST</td><td class="r">₹{{ cgst() | number:'1.2-2' }}</td></tr>
+            <tr><td>SGST</td><td class="r">₹{{ sgst() | number:'1.2-2' }}</td></tr>
+          }
+          <tr class="grand"><td>Grand Total</td><td class="r">₹{{ grandTotal() | number:'1.2-2' }}</td></tr>
+        </table>
+      </div>
+
+      <div class="inv-sign">
+        <div>Printed on {{ printedAt | date:'dd MMM yyyy, hh:mm a' }}</div>
+        <div class="inv-sign-box">For {{ printCompanyName() || 'the company' }}<br /><br /><br />Authorised Signatory</div>
+      </div>
+
+      @if (footerMode() === 'text') {
+        <div class="inv-custom-footer">
+          @for (l of printLines('Print.FooterText'); track $index) { <div>{{ l }}</div> }
+        </div>
+      } @else if (footerMode() === 'image') {
+        <div class="inv-custom-footer image"><img [src]="ps('Print.FooterImage')" alt="Footer" /></div>
+      }
+    </div>
+  }
+</div>
+
+<!-- ── new / edit customer (customer master) ───────────────── -->
+@if (customerPanelOpen()) {
+  <div class="modal-overlay" (click)="closeCustomerPanel()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">{{ customerPanelMode() === 'new' ? 'New Customer' : 'Edit Customer' }}</div>
+          <div class="modal-sub">Saved to the customer master (used by complaints, despatch and the customer portal)</div>
+        </div>
+        <button type="button" class="modal-close" (click)="closeCustomerPanel()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="grid-2">
+          <div class="field">
+            <label>Customer Name <span class="req">*</span></label>
+            <input type="text" [(ngModel)]="customerForm.customerName" placeholder="Full name / company" />
+          </div>
+          <div class="field">
+            <label>Mobile Number <span class="req">*</span></label>
+            <input type="tel" [(ngModel)]="customerForm.mobileNumber" placeholder="10-digit mobile" />
+          </div>
+          <div class="field">
+            <label>E-mail</label>
+            <input type="email" [(ngModel)]="customerForm.email" placeholder="name@example.com" />
+          </div>
+          <div class="field">
+            <label>Alternate Phone</label>
+            <input type="tel" [(ngModel)]="customerForm.alternatePhone" />
+          </div>
+          <div class="field span-2">
+            <label>Address</label>
+            <textarea rows="2" [(ngModel)]="customerForm.address" placeholder="House / street / area"></textarea>
+          </div>
+          <div class="field">
+            <label>City</label>
+            <input type="text" [(ngModel)]="customerForm.city" />
+          </div>
+          <div class="field">
+            <label>State</label>
+            <select [(ngModel)]="customerForm.state">
+              <option value="">Select state</option>
+              @for (s of states; track s) { <option [value]="s">{{ s }}</option> }
+            </select>
+          </div>
+          <div class="field">
+            <label>PIN Code</label>
+            <input type="text" [(ngModel)]="customerForm.pinCode" maxlength="10" />
+          </div>
+          <div class="field">
+            <label>Landmark</label>
+            <input type="text" [(ngModel)]="customerForm.landmark" placeholder="Near…" />
+          </div>
+          @if (customerPanelMode() === 'edit' && customer() && hasLocation(customer()!)) {
+            <div class="field span-2 geo-field">
+              <label>Mapped Location</label>
+              <div class="geo-box">
+                <span class="material-icons">location_on</span>
+                <span>{{ customer()!.latitude | number:'1.5-5' }}, {{ customer()!.longitude | number:'1.5-5' }}</span>
+                <a [href]="mapsUrl(customer()!)" target="_blank" rel="noopener">Open in Maps</a>
+                <small>Set from the complaint / customer portal; it is kept as it is.</small>
+              </div>
+            </div>
+          }
+          <div class="field span-2">
+            <label>GSTIN</label>
+            <input type="text" [(ngModel)]="customerForm.gstin" maxlength="20" placeholder="15-character GSTIN (optional)" style="text-transform:uppercase" />
+          </div>
+        </div>
+        @if (customerFormError()) { <div class="so-note error"><span class="material-icons">error_outline</span>{{ customerFormError() }}</div> }
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn-outline" (click)="closeCustomerPanel()">Cancel</button>
+        <button type="button" class="btn-primary" [disabled]="savingCustomer()" (click)="saveCustomer()">
+          {{ savingCustomer() ? 'Saving…' : (customerPanelMode() === 'new' ? 'Create Customer' : 'Save Changes') }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (toast(); as t) {
+  <div class="toast" [class.success]="t.type === 'success'" [class.error]="t.type === 'error'">
+    <span class="material-icons">{{ t.type === 'success' ? 'check_circle' : 'error' }}</span>{{ t.text }}
+  </div>
+}

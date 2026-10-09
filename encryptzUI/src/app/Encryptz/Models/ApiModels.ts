@@ -204,7 +204,15 @@ export interface ComplaintListItem {
   createdAt: string;
   totalCount: number;
   AssignedTechnicians: string;
-  technicianName :string
+  technicianName :string;
+  /** "Installation" for complaints created by a despatch */
+  natureOfJob?: string | null;
+  /** the job is covered by warranty */
+  isWarranty?: boolean;
+  /** warranty end of the product the complaint is about */
+  warrantyExpiryDate?: string | null;
+  /** "In Warranty" / "Expired" / "No Warranty"; null when no product is linked */
+  warrantyStatus?: string | null;
 }
 
 export interface ComplaintCreate {
@@ -360,6 +368,11 @@ export interface WorkOrder {
   locationAddress?: string | null;
   customerPhone: string | null;
   productName: string;
+  serialNumber?: string | null;
+  warrantyExpiryDate?: string | null;
+  /** "In Warranty" / "Expired" / "No Warranty"; null when no product is linked */
+  warrantyStatus?: string | null;
+  isWarranty?: boolean;
   assignmentRole: string;
   status: string;
   assignedAt: string;
@@ -1077,6 +1090,10 @@ export interface CustomerComplaintList {
   productName: string;
   serialNumber: string;
   brand?: string;
+  natureOfJob?: string | null;
+  isWarranty?: boolean;
+  warrantyExpiryDate?: string | null;
+  warrantyStatus?: string | null;
   technicianName?: string;
   technicianPhone?: string;
   assignmentRole?: string;
@@ -1098,6 +1115,10 @@ export interface ComplaintDetail {
   productName: string;
   serialNumber: string;
   brand?: string;
+  natureOfJob?: string | null;
+  isWarranty?: boolean;
+  warrantyExpiryDate?: string | null;
+  warrantyStatus?: string | null;
   customerName: string;
   mobileNumber: string;
   city?: string;
@@ -1486,3 +1507,6 @@ export interface AddCommentResponse {
   message: string;
   commentId?: number;
 }
+
+// Sales Order -> Despatch -> Installation -> Warranty
+export * from './SalesModels';

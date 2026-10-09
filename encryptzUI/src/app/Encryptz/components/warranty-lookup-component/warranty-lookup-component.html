@@ -1,0 +1,145 @@
+<div class="fx-page">
+
+  <div class="fx-page-header">
+    <div>
+      <div class="fx-page-title">Warranty Lookup</div>
+      <div class="fx-page-sub">Is a product still under warranty? Search by serial number, customer, mobile, bill or despatch number · warranty starts on the despatch date</div>
+    </div>
+  </div>
+
+  <div class="fx-stats-row">
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">In Warranty</div>
+      <div class="fx-stat-val is-active">{{ inWarranty() }}</div>
+      <div class="fx-stat-pill pill-green">This page</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Expiring in 30 days</div>
+      <div class="fx-stat-val is-pending">{{ expiringSoon() }}</div>
+      <div class="fx-stat-pill pill-amber">This page</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Expired</div>
+      <div class="fx-stat-val is-inactive">{{ expired() }}</div>
+      <div class="fx-stat-pill pill-red">This page</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">With open complaints</div>
+      <div class="fx-stat-val is-navy">{{ withOpenComplaints() }}</div>
+      <div class="fx-stat-pill pill-navy">This page</div>
+    </div>
+  </div>
+
+  <div class="fx-table-wrap">
+    <div class="fx-table-toolbar">
+      <div class="fx-toolbar-left">
+        <span class="fx-table-title">Installed Base</span>
+        <span class="fx-table-count">{{ rangeFrom() }}–{{ rangeTo() }} of {{ totalCount() }} unit(s)</span>
+      </div>
+      <div class="fx-toolbar-right">
+        <div class="fx-search-box" style="width:320px">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="#8a9ab0" stroke-width="1.5"/><path d="M11 11l3 3" stroke="#8a9ab0" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input type="text" class="fx-search-input" placeholder="Serial no, product, customer, mobile, bill no…" [(ngModel)]="search" (keyup.enter)="doSearch()" />
+        </div>
+        <select class="fx-filter-select" [(ngModel)]="scope" (change)="doSearch()">
+          <option value="all">All</option>
+          <option value="active">In warranty</option>
+          <option value="expired">Expired / no warranty</option>
+        </select>
+        <button class="fx-btn-navy" style="padding:8px 14px" (click)="doSearch()">Search</button>
+        <button class="fx-page-btn" style="padding:0 12px" (click)="reset()">Reset</button>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table class="fx-table">
+        <thead>
+          <tr>
+            <th>Serial No</th>
+            <th>Product</th>
+            <th>Customer</th>
+            <th>Bill / Despatch</th>
+            <th>Warranty Period</th>
+            <th>Status</th>
+            <th>Complaints</th>
+            <th>Last Complaint</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            <tr><td colspan="9" class="fx-empty-row">Searching…</td></tr>
+          } @else {
+            @for (i of items(); track i.productId) {
+              <tr>
+                <td class="mono">{{ i.serialNumber }}</td>
+                <td><div class="cell-2"><strong>{{ i.productName }}</strong><small>{{ [i.brand, i.model, i.category].join(' · ') }}</small></div></td>
+                <td><div class="cell-2"><strong>{{ i.customerName }}</strong><small>{{ i.customerMobile }}@if (i.city) { · {{ i.city }} }</small></div></td>
+                <td>
+                  @if (i.orderNo || i.despatchNo) {
+                    <div class="cell-2">
+                      <span class="mono">{{ i.orderNo }}</span>
+                      <small>{{ i.despatchNo }}@if (i.despatchDate) { · {{ i.despatchDate | date:'dd MMM yyyy' }} }</small>
+                    </div>
+                  } @else { <span class="muted">Registered directly</span> }
+                </td>
+                <td>
+                  <div class="cell-2">
+                    <span>{{ (i.warrantyStartDate || i.purchaseDate) | date:'dd MMM yyyy' }} → {{ i.warrantyExpiryDate ? (i.warrantyExpiryDate | date:'dd MMM yyyy') : '—' }}</span>
+                    @if (i.warrantyMonths) { <small>{{ i.warrantyMonths }} months</small> }
+                  </div>
+                </td>
+                <td>
+                  <div class="cell-2">
+                    <span class="warranty-chip" [class.ok]="i.warrantyStatus === 'In Warranty'" [class.expired]="i.warrantyStatus === 'Expired'">
+                      <span class="material-icons">{{ i.warrantyStatus === 'In Warranty' ? 'verified_user' : 'gpp_bad' }}</span>{{ i.warrantyStatus }}
+                    </span>
+                    @if (daysLabel(i)) { <small [class.soon]="i.warrantyStatus === 'In Warranty' && (i.warrantyDaysLeft ?? 999) <= 30">{{ daysLabel(i) }}</small> }
+                  </div>
+                </td>
+                <td>
+                  <div class="cell-2">
+                    <span>{{ i.totalComplaints }} total</span>
+                    @if (i.openComplaints > 0) { <small class="open">{{ i.openComplaints }} open</small> }
+                  </div>
+                </td>
+                <td>
+                  @if (i.lastComplaintNo) {
+                    <div class="cell-2"><span class="mono">{{ i.lastComplaintNo }}</span><small>{{ i.lastComplaintType ? i.lastComplaintType + ' · ' : '' }}{{ i.lastComplaintStatus }} · {{ i.lastComplaintAt | date:'dd MMM yyyy' }}</small></div>
+                  } @else { <span class="muted">—</span> }
+                </td>
+                <td>
+                  <div class="actions">
+                    @if (i.salesOrderId) { <button class="fx-action-btn" title="Open bill" (click)="openBill(i)"><span class="material-icons">receipt_long</span></button> }
+                    @if (i.despatchId) { <button class="fx-action-btn" title="Open despatch" (click)="openDespatch(i)"><span class="material-icons">local_shipping</span></button> }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="9" class="fx-empty-row">{{ searched() ? 'No product matches the search.' : 'Search for a serial number, customer or bill.' }}</td></tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="fx-pagination">
+      <div class="fx-pagination-info">
+        Showing {{ rangeFrom() }}–{{ rangeTo() }} of {{ totalCount() }} &nbsp;·&nbsp; Page {{ pageNumber }} of {{ totalPages() }}
+        &nbsp;·&nbsp;
+        <select class="page-size" [(ngModel)]="pageSize" (change)="changePageSize()" title="Rows per page">
+          @for (s of pageSizes; track s) { <option [ngValue]="s">{{ s }} / page</option> }
+        </select>
+      </div>
+      <div class="fx-pagination-actions">
+        <button class="fx-page-btn" (click)="goPage(1)" [disabled]="pageNumber <= 1" title="First">«</button>
+        <button class="fx-page-btn" (click)="prevPage()" [disabled]="pageNumber <= 1">‹ Prev</button>
+        @for (n of pageWindow(); track n) {
+          <button class="fx-page-btn" [class.is-active]="n === pageNumber" (click)="goPage(n)">{{ n }}</button>
+        }
+        <button class="fx-page-btn" (click)="nextPage()" [disabled]="pageNumber >= totalPages()">Next ›</button>
+        <button class="fx-page-btn" (click)="goPage(totalPages())" [disabled]="pageNumber >= totalPages()" title="Last">»</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,145 @@
+<div class="fx-page">
+
+  <div class="fx-page-header">
+    <div>
+      <div class="fx-page-title">Sales Orders</div>
+      <div class="fx-page-sub">Bills raised against customers · saved bills go on to Despatch, which creates the installation job and starts the warranty</div>
+    </div>
+    <button class="fx-btn-new" (click)="newOrder()">
+      <span class="material-icons" style="font-size:18px">add</span> New Sales Order
+    </button>
+  </div>
+
+  <div class="fx-stats-row">
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Total Bills</div>
+      <div class="fx-stat-val">{{ totalCount() }}</div>
+      <div class="fx-stat-pill pill-navy">All records</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Pending Despatch</div>
+      <div class="fx-stat-val is-pending">{{ billedCount() }}</div>
+      <div class="fx-stat-pill pill-amber">This page · Billed</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Despatched</div>
+      <div class="fx-stat-val is-active">{{ despatchedCount() }}</div>
+      <div class="fx-stat-pill pill-green">This page · Installation raised</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Bill Value</div>
+      <div class="fx-stat-val is-navy">₹{{ pageTotal() | number:'1.0-0' }}</div>
+      <div class="fx-stat-pill pill-navy">This page · excl. cancelled</div>
+    </div>
+  </div>
+
+  <div class="fx-table-wrap">
+    <div class="fx-table-toolbar">
+      <div class="fx-toolbar-left">
+        <span class="fx-table-title">All Sales Orders</span>
+        <span class="fx-table-count">{{ orders().length }} shown · {{ totalCount() }} total</span>
+      </div>
+      <div class="fx-toolbar-right">
+        <div class="fx-search-box">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="#8a9ab0" stroke-width="1.5"/><path d="M11 11l3 3" stroke="#8a9ab0" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input type="text" class="fx-search-input" placeholder="Bill no, customer, mobile, product…"
+                 [(ngModel)]="filter.searchTerm" (keyup.enter)="search()" />
+        </div>
+        <select class="fx-filter-select" [(ngModel)]="filter.status" (change)="search()">
+          <option value="">All Statuses</option>
+          @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
+        </select>
+        <input type="date" class="fx-filter-select" [(ngModel)]="filter.fromDate" (change)="search()" title="From date" />
+        <input type="date" class="fx-filter-select" [(ngModel)]="filter.toDate" (change)="search()" title="To date" />
+        <button class="fx-btn-navy" style="padding:8px 14px" (click)="search()">Apply</button>
+        <button class="fx-page-btn" style="padding:0 12px" (click)="resetFilters()">Reset</button>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table class="fx-table">
+        <thead>
+          <tr>
+            <th>Bill No</th>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Items</th>
+            <th style="text-align:right">Grand Total</th>
+            <th>Payment</th>
+            <th>Status</th>
+            <th>Despatch</th>
+            <th>Installation</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            <tr><td colspan="10" class="fx-empty-row">Loading…</td></tr>
+          } @else {
+            @for (o of orders(); track o.salesOrderId) {
+              <tr class="row-click" (click)="open(o)">
+                <td class="mono">{{ o.orderNo }}</td>
+                <td class="nowrap">{{ o.orderDate | date:'dd MMM yyyy' }}</td>
+                <td>
+                  <div class="cell-2"><strong>{{ o.customerName }}</strong><small>{{ o.customerMobile }}@if (o.city) { · {{ o.city }} }</small></div>
+                </td>
+                <td class="nowrap">{{ o.lineCount }} line(s) · {{ o.totalQty || 0 }} unit(s)</td>
+                <td class="amount">₹{{ o.grandTotal | number:'1.2-2' }}</td>
+                <td>{{ o.paymentMode || '—' }}</td>
+                <td>
+                  <span class="fx-badge"
+                        [class.is-pending]="o.status === 'Billed'"
+                        [class.is-active]="o.status === 'Despatched'"
+                        [class.is-inactive]="o.status === 'Cancelled'">
+                    <span class="fx-dot"></span>{{ o.status }}
+                  </span>
+                </td>
+                <td>
+                  @if (o.despatchNo) {
+                    <div class="cell-2"><span class="mono">{{ o.despatchNo }}</span><small>{{ o.despatchDate | date:'dd MMM yyyy' }}</small></div>
+                  } @else { <span class="muted">—</span> }
+                </td>
+                <td>
+                  @if (o.installationComplaintNo) {
+                    <div class="cell-2"><span class="mono">{{ o.installationComplaintNo }}</span><small>{{ o.installationStatus }}</small></div>
+                  } @else { <span class="muted">—</span> }
+                </td>
+                <td (click)="$event.stopPropagation()">
+                  <div class="actions">
+                    <button class="fx-action-btn" title="Open bill" (click)="open(o)"><span class="material-icons">visibility</span></button>
+                    @if (o.status === 'Billed') {
+                      <button class="fx-btn-navy btn-xs" title="Despatch this bill" (click)="despatch(o)">
+                        <span class="material-icons" style="font-size:15px">local_shipping</span> Despatch
+                      </button>
+                      <button class="fx-action-btn is-danger" title="Cancel bill" (click)="cancel(o, $event)"><span class="material-icons">block</span></button>
+                    } @else if (o.despatchId) {
+                      <button class="fx-action-btn" title="Despatch & warranty" (click)="viewDespatch(o)"><span class="material-icons">verified_user</span></button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="10" class="fx-empty-row">No sales orders yet. Click “New Sales Order” to raise the first bill.</td></tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages() > 1) {
+      <div class="fx-pagination">
+        <div class="fx-pagination-info">Page {{ filter.pageNumber }} of {{ totalPages() }} &nbsp;·&nbsp; {{ totalCount() }} records</div>
+        <div class="fx-pagination-actions">
+          <button class="fx-page-btn" (click)="prevPage()" [disabled]="filter.pageNumber <= 1">‹ Prev</button>
+          <button class="fx-page-btn" (click)="nextPage()" [disabled]="filter.pageNumber >= totalPages()">Next ›</button>
+        </div>
+      </div>
+    }
+  </div>
+</div>
+
+@if (toast(); as t) {
+  <div class="toast" [class.success]="t.type === 'success'" [class.error]="t.type === 'error'">
+    <span class="material-icons">{{ t.type === 'success' ? 'check_circle' : 'error' }}</span>{{ t.text }}
+  </div>
+}

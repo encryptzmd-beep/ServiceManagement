@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../Services/API/api-service';
+import { DialogService } from '../../Services/dialog-service';
 
 @Component({
   selector: 'app-payment-settings',
@@ -11,6 +12,7 @@ import { ApiService } from '../../Services/API/api-service';
   styleUrls: ['./payment-settings-component.scss']
 })
 export class PaymentSettingsComponent implements OnInit {
+  private dialog = inject(DialogService);
   private api = inject(ApiService);
 
   loading        = signal(true);
@@ -104,8 +106,8 @@ export class PaymentSettingsComponent implements OnInit {
     });
   }
 
-  deleteUpi(id: number) {
-    if (!confirm('Delete this UPI configuration?')) return;
+  async deleteUpi(id: number) {
+    if (!(await this.dialog.confirm('Delete this UPI configuration?'))) return;
     this.api.deleteUPIConfiguration(id).subscribe({
       next: () => { this.toast('UPI deleted'); this.loadAll(); },
       error: () => this.toast('Error deleting UPI', true)

@@ -4,9 +4,9 @@ import { ApiService } from "../app/Encryptz/Services/API/api-service";
 export const environment = {
   production: false,
 //apiUrl: 'https://serviceapp.encryptz.in/api'
-   apiUrl:'https://erp.encryptz.in',
+ //  apiUrl:'https://erp.encryptz.in',
   // apiUrl:'http://192.168.1.39:5092'
-  //apiUrl:'http://localhost:5092',
+  apiUrl:'http://localhost:5092',
 
   // Customer portal: the project (MainDB Projects.ProjectKey) whose database customers
   // register / log in to. A link with ?project=KEY overrides it for that browser.

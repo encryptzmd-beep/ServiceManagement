@@ -1,0 +1,199 @@
+<div class="fx-page">
+
+  <div class="fx-page-header">
+    <div>
+      <div class="fx-page-title">Despatch</div>
+      <div class="fx-page-sub">Despatch billed products to the customer · each unit gets its serial number, warranty starts, and a New Installation job goes to the dashboard</div>
+    </div>
+  </div>
+
+  <div class="fx-stats-row">
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Pending Despatch</div>
+      <div class="fx-stat-val is-pending">{{ pendingTotal() }}</div>
+      <div class="fx-stat-pill pill-amber">Billed, not yet despatched</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Despatched</div>
+      <div class="fx-stat-val is-navy">{{ totalCount() }}</div>
+      <div class="fx-stat-pill pill-navy">All records</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">In Warranty</div>
+      <div class="fx-stat-val is-active">{{ inWarranty() }}</div>
+      <div class="fx-stat-pill pill-green">This page</div>
+    </div>
+    <div class="fx-stat-card">
+      <div class="fx-stat-label">Installation Unassigned</div>
+      <div class="fx-stat-val" [class.is-inactive]="unassigned() > 0">{{ unassigned() }}</div>
+      <div class="fx-stat-pill" [class.pill-red]="unassigned() > 0" [class.pill-green]="unassigned() === 0">This page · assign on the dashboard</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab" [class.active]="tab() === 'pending'" (click)="setTab('pending')">
+      <span class="material-icons">pending_actions</span> Pending Despatch <span class="tab-count">{{ pendingTotal() }}</span>
+    </button>
+    <button class="tab" [class.active]="tab() === 'despatched'" (click)="setTab('despatched')">
+      <span class="material-icons">local_shipping</span> Despatched <span class="tab-count">{{ totalCount() }}</span>
+    </button>
+  </div>
+
+  <!-- ── pending bills ─────────────────────────────────────── -->
+  @if (tab() === 'pending') {
+    <div class="fx-table-wrap">
+      <div class="fx-table-toolbar">
+        <div class="fx-toolbar-left">
+          <span class="fx-table-title">Bills waiting for despatch</span>
+          <span class="fx-table-count">{{ pending().length }} shown · {{ pendingTotal() }} total</span>
+        </div>
+        <div class="fx-toolbar-right">
+          <div class="fx-search-box">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="#8a9ab0" stroke-width="1.5"/><path d="M11 11l3 3" stroke="#8a9ab0" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <input type="text" class="fx-search-input" placeholder="Bill no, customer, mobile…" [(ngModel)]="pendingSearch" (keyup.enter)="searchPending()" />
+          </div>
+          <button class="fx-btn-navy" style="padding:8px 14px" (click)="searchPending()">Search</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="fx-table">
+          <thead>
+            <tr><th>Bill No</th><th>Bill Date</th><th>Customer</th><th>Items</th><th style="text-align:right">Grand Total</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            @for (o of pending(); track o.salesOrderId) {
+              <tr>
+                <td class="mono">{{ o.orderNo }}</td>
+                <td class="nowrap">{{ o.orderDate | date:'dd MMM yyyy' }}</td>
+                <td><div class="cell-2"><strong>{{ o.customerName }}</strong><small>{{ o.customerMobile }}@if (o.city) { · {{ o.city }} }</small></div></td>
+                <td class="nowrap">{{ o.lineCount }} line(s) · {{ o.totalQty || 0 }} unit(s)</td>
+                <td class="amount">₹{{ o.grandTotal | number:'1.2-2' }}</td>
+                <td>
+                  <div class="actions">
+                    <button class="fx-action-btn" title="Open bill" (click)="openBill(o.salesOrderId)"><span class="material-icons">receipt_long</span></button>
+                    <button class="fx-btn-navy btn-xs" (click)="despatch(o)"><span class="material-icons" style="font-size:15px">local_shipping</span> Despatch</button>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="6" class="fx-empty-row">No bills are waiting for despatch.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="fx-pagination">
+        <div class="fx-pagination-info">
+          Page {{ pendingPage }} of {{ pendingPages() }} &nbsp;·&nbsp; {{ pendingTotal() }} records &nbsp;·&nbsp;
+          <select class="page-size" [(ngModel)]="pendingPageSize" (change)="searchPending()" title="Rows per page">
+            @for (s of pageSizes; track s) { <option [ngValue]="s">{{ s }} / page</option> }
+          </select>
+        </div>
+        <div class="fx-pagination-actions">
+          <button class="fx-page-btn" (click)="goPending(1)" [disabled]="pendingPage <= 1" title="First">«</button>
+          <button class="fx-page-btn" (click)="prevPending()" [disabled]="pendingPage <= 1">‹ Prev</button>
+          @for (n of pageWindow(pendingPage, pendingPages()); track n) {
+            <button class="fx-page-btn" [class.is-active]="n === pendingPage" (click)="goPending(n)">{{ n }}</button>
+          }
+          <button class="fx-page-btn" (click)="nextPending()" [disabled]="pendingPage >= pendingPages()">Next ›</button>
+          <button class="fx-page-btn" (click)="goPending(pendingPages())" [disabled]="pendingPage >= pendingPages()" title="Last">»</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── despatched ────────────────────────────────────────── -->
+  @if (tab() === 'despatched') {
+    <div class="fx-table-wrap">
+      <div class="fx-table-toolbar">
+        <div class="fx-toolbar-left">
+          <span class="fx-table-title">Despatched</span>
+          <span class="fx-table-count">{{ despatches().length }} shown · {{ totalCount() }} total</span>
+        </div>
+        <div class="fx-toolbar-right">
+          <div class="fx-search-box">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="#8a9ab0" stroke-width="1.5"/><path d="M11 11l3 3" stroke="#8a9ab0" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <input type="text" class="fx-search-input" placeholder="Despatch no, bill, customer, serial, complaint…" [(ngModel)]="filter.searchTerm" (keyup.enter)="search()" />
+          </div>
+          <input type="date" class="fx-filter-select" [(ngModel)]="filter.fromDate" (change)="search()" title="From date" />
+          <input type="date" class="fx-filter-select" [(ngModel)]="filter.toDate" (change)="search()" title="To date" />
+          <button class="fx-btn-navy" style="padding:8px 14px" (click)="search()">Apply</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="fx-table">
+          <thead>
+            <tr>
+              <th>Despatch No</th><th>Date</th><th>Bill</th><th>Customer</th><th>Units</th><th>Transport</th>
+              <th>Warranty</th><th>Installation</th><th>Technician</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (loading()) {
+              <tr><td colspan="10" class="fx-empty-row">Loading…</td></tr>
+            } @else {
+              @for (d of despatches(); track d.despatchId) {
+                <tr class="row-click" (click)="view(d)">
+                  <td class="mono">{{ d.despatchNo }}</td>
+                  <td class="nowrap">{{ d.despatchDate | date:'dd MMM yyyy' }}</td>
+                  <td><div class="cell-2"><span class="mono">{{ d.orderNo }}</span><small>₹{{ d.grandTotal | number:'1.2-2' }}</small></div></td>
+                  <td><div class="cell-2"><strong>{{ d.customerName }}</strong><small>{{ d.customerMobile }}@if (d.city) { · {{ d.city }} }</small></div></td>
+                  <td>{{ d.unitCount }}</td>
+                  <td>
+                    @if (d.transporterName || d.vehicleNo) {
+                      <div class="cell-2"><span>{{ d.transporterName || '—' }}</span><small>{{ d.vehicleNo }}@if (d.trackingNo) { · {{ d.trackingNo }} }</small></div>
+                    } @else { <span class="muted">—</span> }
+                  </td>
+                  <td>
+                    <div class="cell-2">
+                      <span class="warranty-chip" [class.ok]="d.warrantyStatus === 'In Warranty'" [class.expired]="d.warrantyStatus === 'Expired'">
+                        <span class="material-icons">{{ d.warrantyStatus === 'In Warranty' ? 'verified_user' : 'gpp_bad' }}</span>{{ d.warrantyStatus }}
+                      </span>
+                      <small>till {{ d.warrantyEndDate | date:'dd MMM yyyy' }}</small>
+                    </div>
+                  </td>
+                  <td>
+                    @if (d.installationComplaintNo) {
+                      <div class="cell-2">
+                        <span class="mono">{{ d.installationComplaintNo }}</span>
+                        <span class="status-badge" [style.background]="(d.installationStatusColor || '#64748b') + '20'" [style.color]="d.installationStatusColor || '#64748b'">{{ d.installationStatus }}</span>
+                      </div>
+                    } @else { <span class="muted">—</span> }
+                  </td>
+                  <td>
+                    @if (d.installationComplaintId) {
+                      <span class="tech" [class.unassigned]="!d.assignedTechnicians">
+                        <span class="material-icons">{{ d.assignedTechnicians ? 'engineering' : 'person_off' }}</span>{{ d.assignedTechnicians || 'Unassigned' }}
+                      </span>
+                    } @else { <span class="muted">—</span> }
+                  </td>
+                  <td (click)="$event.stopPropagation()">
+                    <button class="fx-action-btn" title="Despatch & warranty details" (click)="view(d)"><span class="material-icons">visibility</span></button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="10" class="fx-empty-row">Nothing despatched yet.</td></tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="fx-pagination">
+        <div class="fx-pagination-info">
+          Page {{ filter.pageNumber }} of {{ totalPages() }} &nbsp;·&nbsp; {{ totalCount() }} records &nbsp;·&nbsp;
+          <select class="page-size" [(ngModel)]="filter.pageSize" (change)="search()" title="Rows per page">
+            @for (s of pageSizes; track s) { <option [ngValue]="s">{{ s }} / page</option> }
+          </select>
+        </div>
+        <div class="fx-pagination-actions">
+          <button class="fx-page-btn" (click)="goPage(1)" [disabled]="filter.pageNumber <= 1" title="First">«</button>
+          <button class="fx-page-btn" (click)="prevPage()" [disabled]="filter.pageNumber <= 1">‹ Prev</button>
+          @for (n of pageWindow(filter.pageNumber, totalPages()); track n) {
+            <button class="fx-page-btn" [class.is-active]="n === filter.pageNumber" (click)="goPage(n)">{{ n }}</button>
+          }
+          <button class="fx-page-btn" (click)="nextPage()" [disabled]="filter.pageNumber >= totalPages()">Next ›</button>
+          <button class="fx-page-btn" (click)="goPage(totalPages())" [disabled]="filter.pageNumber >= totalPages()" title="Last">»</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

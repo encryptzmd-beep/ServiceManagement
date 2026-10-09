@@ -15,7 +15,8 @@ export class SettingsComponent {
   loading = signal(true);
   saveSuccess = signal(false);
   saveError = signal('');
-  activeGroup = 'SLA';
+  /** the open tab (a signal, so the filtered list below follows it) */
+  activeGroup = signal('SLA');
   changedIds = new Set<number>();
   
   // Payment specific state
@@ -33,7 +34,7 @@ export class SettingsComponent {
   private static readonly UPI_ID = /^[a-zA-Z0-9][a-zA-Z0-9._-]{1,255}@[a-zA-Z][a-zA-Z0-9]{1,63}$/;
 
   groups = computed(() => [...new Set(this.settings().map(s => s.settingGroup)), 'Payments']);
-  filteredSettings = computed(() => this.settings().filter(s => s.settingGroup === this.activeGroup));
+  filteredSettings = computed(() => this.settings().filter(s => s.settingGroup === this.activeGroup()));
 
   constructor(private svc: ApiService) {}
   ngOnInit() { 
@@ -44,7 +45,7 @@ export class SettingsComponent {
   loadData() {
     this.loading.set(true);
     this.svc.getAll().subscribe({
-      next: d => { this.settings.set(d); if(d.length) this.activeGroup=d[0].settingGroup; this.loading.set(false); },
+      next: d => { this.settings.set(d); if (d.length && !d.some(s => s.settingGroup === this.activeGroup())) this.activeGroup.set(d[0].settingGroup); this.loading.set(false); },
       error: () => { this.settings.set([]); this.loading.set(false); }
     });
   }
@@ -58,7 +59,7 @@ export class SettingsComponent {
   }
 
   saveAll() {
-    if (this.activeGroup === 'Payments') {
+    if (this.activeGroup() === 'Payments') {
       const charge = Number(this.defaultServiceCharge());
       if (!Number.isFinite(charge) || charge < 0) {
         this.showError('Default service charge must be zero or more');
@@ -160,7 +161,58 @@ export class SettingsComponent {
     });
   }
 
-  formatKey(key: string): string { return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); }
+  /** "Print.CompanyAddress" -> "Company Address", "COMPLAINT_AUTO_ASSIGN" -> "Complaint Auto Assign" */
+  formatKey(key: string): string {
+    const name = key.includes('.') ? key.slice(key.indexOf('.') + 1) : key;
+    if (name === name.toUpperCase()) return name.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+    return name.replace(/_/g, ' ').replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  /** the control for a row: 'bool' | 'int' | 'time' | 'textarea' | 'image' | 'select' ("select:a,b,c") | 'string' */
+  controlType(s: SystemSetting): string {
+    const t = (s.dataType || '').toLowerCase();
+    return t.startsWith('select') ? 'select' : t;
+  }
+
+  /** options of a "select:a,b,c" setting */
+  optionsOf(s: SystemSetting): string[] {
+    const t = s.dataType || '';
+    const i = t.indexOf(':');
+    return i < 0 ? [] : t.slice(i + 1).split(',').map(o => o.trim()).filter(Boolean);
+  }
+
+  // --- image settings (print header / footer): stored as a data URL in SettingValue ---
+  onImagePicked(s: SystemSetting, event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { this.showError('Only PNG, JPG or WEBP images can be used'); return; }
+    if (file.size > 5 * 1024 * 1024) { this.showError('The image must be smaller than 5 MB'); return; }
+
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const maxW = 1600;
+      const scale = img.width > maxW ? maxW / img.width : 1;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { this.showError('Could not read the image'); return; }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      // PNG keeps transparency (logos); photos go to JPEG to stay small
+      const dataUrl = file.type === 'image/png' ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.88);
+      if (dataUrl.length > 1.5 * 1024 * 1024) { this.showError('The image is still too large after scaling. Use a smaller or simpler image.'); return; }
+      s.settingValue = dataUrl;
+      this.markChanged(s);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); this.showError('Could not read the image'); };
+    img.src = url;
+  }
+
+  clearImage(s: SystemSetting) { s.settingValue = ''; this.markChanged(s); }
 
   private showSuccess() { this.saveError.set(''); this.saveSuccess.set(true); setTimeout(() => this.saveSuccess.set(false), 3000); }
   private showError(message: string) { this.saveSuccess.set(false); this.saveError.set(message); setTimeout(() => this.saveError.set(''), 5000); }

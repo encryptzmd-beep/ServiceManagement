@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../Services/API/api-service';
 import { SlaData } from '../../Models/ApiModels';
+import { DialogService } from '../../Services/dialog-service';
 
 @Component({
   selector: 'app-sla-report-component',
@@ -11,6 +12,7 @@ import { SlaData } from '../../Models/ApiModels';
   styleUrl: './sla-report-component.scss',
 })
 export class SlaReportComponent  implements OnInit{
+  private dialog = inject(DialogService);
   ngOnInit(): void {
     this.loadReport()
   }
@@ -39,7 +41,7 @@ export class SlaReportComponent  implements OnInit{
   // Returns: List<SlaData> or ApiResponse wrapping it
 loadReport(): void {
   if (!this.fromDate || !this.toDate) {
-    alert('Please select both From Date and To Date');
+    this.dialog.alert('Please select both From Date and To Date');
     return;
   }
 

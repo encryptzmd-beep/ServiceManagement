@@ -6,6 +6,7 @@ import { ApiService } from '../../Services/API/api-service';
 import { ComplaintCreate, PRIORITIES, Product } from '../../Models/ApiModels';
 import { QuickComplaintRegistrationComponent } from "../quick-complaint-registration-component/quick-complaint-registration-component";
 import { LeafletLoaderService } from '../../Services/leaflet-loader-service';
+import { DialogService } from '../../Services/dialog-service';
 
 declare var L: any;
 
@@ -17,6 +18,7 @@ declare var L: any;
   styleUrls: ['./complaint-registration-component.scss'],
 })
 export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
+  private dialog = inject(DialogService);
   @ViewChild('mapContainer') mapContainer!: ElementRef;
   @ViewChild('locationSearchInput') locationSearchInput!: ElementRef;
 
@@ -282,7 +284,7 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
 
   getCurrentLocation(): void {
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
+      this.dialog.alert('Geolocation is not supported by your browser');
       return;
     }
 
@@ -330,7 +332,7 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
               errorMessage += 'Location request timed out.';
               break;
           }
-          alert(errorMessage);
+          this.dialog.alert(errorMessage);
         },
         {
           enableHighAccuracy: true,
@@ -385,7 +387,7 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
       ComplaintRegistrationComponent.IMAGE_TYPES.includes(f.type) &&
       f.size <= ComplaintRegistrationComponent.MAX_IMAGE_BYTES);
     if (ok.length < files.length) {
-      alert('Only JPG, PNG or WEBP images up to 10MB can be attached.');
+      this.dialog.alert('Only JPG, PNG or WEBP images up to 10MB can be attached.');
     }
     return ok;
   }
@@ -396,7 +398,7 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
       const newFiles = this.acceptedImages(Array.from(input.files));
       // Limit to 5 files
       if (this.files.length + newFiles.length > 5) {
-        alert('Maximum 5 images allowed');
+        this.dialog.alert('Maximum 5 images allowed');
         return;
       }
       this.files = [...this.files, ...newFiles];
@@ -423,7 +425,7 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
     if (event.dataTransfer?.files) {
       const newFiles = this.acceptedImages(Array.from(event.dataTransfer.files));
       if (this.files.length + newFiles.length > 5) {
-        alert('Maximum 5 images allowed');
+        this.dialog.alert('Maximum 5 images allowed');
         return;
       }
       this.files = [...this.files, ...newFiles];
@@ -451,7 +453,7 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
 
     const currentStatus = this.fileUploadStatus()[fileIndex];
     if ((currentStatus.retries || 0) >= this.MAX_RETRIES) {
-      alert(`Maximum retry attempts (${this.MAX_RETRIES}) reached for this file`);
+      this.dialog.alert(`Maximum retry attempts (${this.MAX_RETRIES}) reached for this file`);
       return;
     }
 

@@ -780,3 +780,9 @@ input[type="checkbox"]:checked+.sched-sw { background:#6366f1; &::after{left:19p
   &:disabled { opacity: .55; cursor: not-allowed; }
 }
 .sp-reject-reason { color: #b91c1c; }
+
+/* job type (Installation) + warranty of the product the complaint is about */
+.job-warranty { display:flex; flex-direction:column; gap:4px; align-items:flex-start; }
+.job-chip { padding:2px 8px; border-radius:20px; font-size:10.5px; font-weight:600; white-space:nowrap; background:#f1f5f9; color:#475569; &.install{background:#e8eef5;color:#1B4A7A;} }
+.warranty-chip { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:20px; font-size:10.5px; font-weight:600; white-space:nowrap; background:#f1f5f9; color:#64748b; .material-icons{font-size:13px;} &.ok{background:#edf7ee;color:#2d7a38;} &.expired{background:#f9e8e8;color:#D42B2B;} }
+.jw-muted { color:#94a3b8; }

@@ -14,6 +14,19 @@
       <div class="detail-row"><span class="lbl">Customer</span><span>{{ c.customerName }}</span></div>
       <div class="detail-row"><span class="lbl">Product</span><span>{{ c.productName }} ({{ c.serialNumber }})</span>
       </div>
+      @if ($any(c).natureOfJob) {
+      <div class="detail-row"><span class="lbl">Job</span><span>{{ $any(c).natureOfJob }}</span></div>
+      }
+      @if ($any(c).warrantyStatus) {
+      <div class="detail-row"><span class="lbl">Warranty</span>
+        <span>
+          <span class="warranty-chip" [class.ok]="$any(c).warrantyStatus === 'In Warranty'" [class.expired]="$any(c).warrantyStatus === 'Expired'">
+            <span class="material-icons">{{ $any(c).warrantyStatus === 'In Warranty' ? 'verified_user' : 'gpp_bad' }}</span>{{ $any(c).warrantyStatus }}
+          </span>
+          @if ($any(c).warrantyExpiryDate) { &nbsp;{{ $any(c).warrantyStatus === 'Expired' ? 'expired on' : 'till' }} {{ $any(c).warrantyExpiryDate | date:'dd MMM yyyy' }} }
+        </span>
+      </div>
+      }
       <div class="detail-row"><span class="lbl">Priority</span><span class="priority" [attr.data-p]="c.priority">{{
           c.priority }}</span></div>
       <div class="detail-row"><span class="lbl">SLA Deadline</span>

@@ -1,0 +1,18 @@
+.table-scroll { overflow-x: auto; }
+.row-click { cursor: pointer; }
+.mono { font-family: 'Courier New', monospace; font-weight: 600; color: #1B4A7A; font-size: 12px; white-space: nowrap; }
+.nowrap { white-space: nowrap; }
+.amount { text-align: right; font-weight: 600; white-space: nowrap; }
+.muted { color: #94a3b8; }
+.cell-2 { display: flex; flex-direction: column; gap: 2px; small { font-size: 11.5px; color: #8a9ab0; } }
+.actions { display: flex; align-items: center; gap: 6px; }
+.btn-xs { padding: 5px 10px !important; font-size: 12px !important; border-radius: 7px !important; }
+
+.toast {
+  position: fixed; right: 20px; bottom: 20px; z-index: 1100; display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; border-radius: 10px; font-size: 13.5px; font-weight: 500; color: #fff; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2);
+  animation: slideIn 0.2s ease;
+  .material-icons { font-size: 20px; }
+  &.success { background: #16a34a; }
+  &.error { background: #D42B2B; }
+}

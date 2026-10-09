@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../Services/API/api-service';
 import { LeafletLoaderService } from '../../Services/leaflet-loader-service';
+import { DialogService } from '../../Services/dialog-service';
 
 declare var L: any;
 
@@ -900,6 +901,7 @@ declare var L: any;
   `]
 })
 export class QuickComplaintRegistrationComponent implements AfterViewInit, OnInit {
+  private dialog = inject(DialogService);
   @ViewChild('miniMap') miniMapContainer!: ElementRef;
   @Output() complaintSubmitted = new EventEmitter<any>();
 
@@ -1028,13 +1030,13 @@ export class QuickComplaintRegistrationComponent implements AfterViewInit, OnIni
         if (data?.length > 0) {
           this.searchResults.set(data);
         } else {
-          alert('No locations found. Try a different search term.');
+          this.dialog.alert('No locations found. Try a different search term.');
         }
       });
     } catch {
       this.ngZone.run(() => {
         this.isSearching.set(false);
-        alert('Search failed. Please try again.');
+        this.dialog.alert('Search failed. Please try again.');
       });
     }
   }
@@ -1069,7 +1071,7 @@ export class QuickComplaintRegistrationComponent implements AfterViewInit, OnIni
 
   getCurrentLocation(): void {
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
+      this.dialog.alert('Geolocation is not supported by your browser');
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -1090,7 +1092,7 @@ export class QuickComplaintRegistrationComponent implements AfterViewInit, OnIni
         if (err.code === err.PERMISSION_DENIED)    msg += 'Please allow location access.';
         else if (err.code === err.POSITION_UNAVAILABLE) msg += 'Location unavailable.';
         else if (err.code === err.TIMEOUT)         msg += 'Request timed out.';
-        alert(msg);
+        this.dialog.alert(msg);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -1198,7 +1200,7 @@ export class QuickComplaintRegistrationComponent implements AfterViewInit, OnIni
       URL.revokeObjectURL(objectUrl);
       this.ngZone.run(() => {
         this.uploadProgress.set(0);
-        alert('Failed to read the image. Please try another photo.');
+        this.dialog.alert('Failed to read the image. Please try another photo.');
       });
     };
 
@@ -1251,14 +1253,14 @@ export class QuickComplaintRegistrationComponent implements AfterViewInit, OnIni
           this.complaintSubmitted.emit(res);
           setTimeout(() => this.closeModal(), 2000);
         } else {
-          alert(res.message || 'Failed to submit complaint');
+          this.dialog.alert(res.message || 'Failed to submit complaint');
         }
       },
       error: (err) => {
         this.isSubmitting.set(false);
         this.loadingStatus.set('');
         console.error('Submission error:', err);
-        alert('Failed to submit. Please check your network and try again.');
+        this.dialog.alert('Failed to submit. Please check your network and try again.');
       }
     });
   }

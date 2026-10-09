@@ -9,6 +9,7 @@ import { WorkOrder } from '../../Models/ApiModels';
 import { AuthService } from '../../Auth/auth-service';
 import { GpsTracking } from '../../Services/gps-tracking';
 import { GeocodeService } from '../../Services/API/geocode-service';
+import { DialogService } from '../../Services/dialog-service';
 type SpareCartItem = {
   part?: any;                 // for master item
   isCustom: boolean;          // flag
@@ -27,6 +28,7 @@ type SpareCartItem = {
   styleUrls: ['./work-orders-component.scss'],
 })
 export class WorkOrdersComponent implements OnInit, OnDestroy {
+  private dialog = inject(DialogService);
   private api         = inject(ApiService);
   private auth        = inject(AuthService);
   private router      = inject(Router);
@@ -996,8 +998,8 @@ private showCheckInMsg(m: string, err: boolean): void {
     } as any)[u?.toLowerCase()] || 'u-normal';
   }
 
-  markSpareAsUsed(requestId: number): void {
-    if (!confirm('Are you sure you want to mark this part as used?')) return;
+  async markSpareAsUsed(requestId: number): Promise<void> {
+    if (!(await this.dialog.confirm('Are you sure you want to mark this part as used?'))) return;
     this.api.updateSpareStatus(requestId, 'Used').subscribe({
       next: (res) => {
         if (res.success) {
@@ -1011,8 +1013,8 @@ private showCheckInMsg(m: string, err: boolean): void {
     });
   }
 
-  markRepairDelivered(repairRequestId: number): void {
-    if (!confirm('Confirm that this part has been delivered back to site?')) return;
+  async markRepairDelivered(repairRequestId: number): Promise<void> {
+    if (!(await this.dialog.confirm('Confirm that this part has been delivered back to site?'))) return;
     this.api.updateRepairStatus(repairRequestId, 'Delivered').subscribe({
       next: (res) => {
         if (res.success) {
@@ -1026,8 +1028,8 @@ private showCheckInMsg(m: string, err: boolean): void {
     });
   }
 
-  markRepairResolved(repairRequestId: number): void {
-    if (!confirm('Mark this repair as fully resolved?')) return;
+  async markRepairResolved(repairRequestId: number): Promise<void> {
+    if (!(await this.dialog.confirm('Mark this repair as fully resolved?'))) return;
     this.api.updateRepairStatus(repairRequestId, 'Resolved').subscribe({
       next: (res) => {
         if (res.success) {
@@ -1454,6 +1456,18 @@ getRepairImages(tag: string): { file: File; preview: string; tag: string }[] {
 getNatureOfJob(source: any): string {
   const value = source?.natureOfJob ?? source?.NatureOfJob ?? '';
   return typeof value === 'string' ? value.trim() : String(value || '').trim();
+}
+
+/** "In Warranty" / "Expired" / "No Warranty" of the product of the job ('' when no product is linked). */
+getWarrantyStatus(source: any): string {
+  const given = source?.warrantyStatus ?? source?.WarrantyStatus;
+  if (given) return String(given);
+  const raw = source?.warrantyExpiryDate ?? source?.WarrantyExpiryDate;
+  if (!raw) return source?.productName || source?.serialNumber ? '' : '';
+  const end = new Date(raw);
+  if (isNaN(end.getTime())) return '';
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return end >= today ? 'In Warranty' : 'Expired';
 }
 
 hasDetailLocation(): boolean {

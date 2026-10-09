@@ -90,6 +90,7 @@
             <th>Subject</th>
             <th>Customer</th>
             <th>Product</th>
+            <th>Job / Warranty</th>
             <th>Priority</th>
             <th>Status</th>
             <th>SLA</th>
@@ -104,6 +105,24 @@
               <td>{{ c.subject }}</td>
               <td>{{ c.customerName }}</td>
               <td>{{ c.productName }}</td>
+              <td>
+                <div class="job-warranty">
+                  @if (c.natureOfJob) {
+                    <span class="job-chip" [class.install]="c.natureOfJob === 'Installation'">{{ c.natureOfJob }}</span>
+                  }
+                  @if (c.warrantyStatus) {
+                    <span class="warranty-chip"
+                      [class.ok]="c.warrantyStatus === 'In Warranty'"
+                      [class.expired]="c.warrantyStatus === 'Expired'"
+                      [title]="c.warrantyExpiryDate ? 'Warranty till ' + (c.warrantyExpiryDate | date:'dd MMM yyyy') : ''">
+                      <span class="material-icons">{{ c.warrantyStatus === 'In Warranty' ? 'verified_user' : 'gpp_bad' }}</span>
+                      {{ c.warrantyStatus }}
+                    </span>
+                  } @else if (!c.natureOfJob) {
+                    <span class="muted">—</span>
+                  }
+                </div>
+              </td>
               <td><span class="priority-badge" [attr.data-priority]="c.priority">{{ c.priority }}</span></td>
               <td><span class="status-badge" [style.background]="c.statusColor + '20'" [style.color]="c.statusColor">{{ c.statusName }}</span></td>
               <td>
@@ -122,7 +141,7 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="9" class="fx-empty-row">No complaints found</td>
+              <td colspan="10" class="fx-empty-row">No complaints found</td>
             </tr>
           }
         </tbody>

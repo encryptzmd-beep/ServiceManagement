@@ -345,6 +345,58 @@ export const routes: Routes = [
   canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'Manager'])],
   data: { title: 'Payments Report', icon: 'account_balance_wallet', menu: 'admin' }
 },
+
+// 9. Sales: Sales Order (bill) -> Despatch -> Installation complaint -> Warranty
+//    (sidebar entries: MainDB/12_Sales_Menus.sql)
+{
+  path: 'sales/orders',
+  loadComponent: () => import('./Encryptz/components/sales-order-list-component/sales-order-list-component')
+    .then(m => m.SalesOrderListComponent),
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
+  data: { title: 'Sales Orders', icon: 'receipt_long', menu: 'sales' }
+},
+{
+  path: 'sales/orders/new',
+  loadComponent: () => import('./Encryptz/components/sales-order-entry-component/sales-order-entry-component')
+    .then(m => m.SalesOrderEntryComponent),
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
+  data: { title: 'Sales Order', icon: 'receipt_long', menu: 'sales' }
+},
+{
+  path: 'sales/orders/:id',
+  loadComponent: () => import('./Encryptz/components/sales-order-entry-component/sales-order-entry-component')
+    .then(m => m.SalesOrderEntryComponent),
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
+  data: { title: 'Sales Order', icon: 'receipt_long', menu: 'sales' }
+},
+{
+  path: 'sales/despatch',
+  loadComponent: () => import('./Encryptz/components/despatch-list-component/despatch-list-component')
+    .then(m => m.DespatchListComponent),
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
+  data: { title: 'Despatch', icon: 'local_shipping', menu: 'sales' }
+},
+{
+  path: 'sales/despatch/view/:id',
+  loadComponent: () => import('./Encryptz/components/despatch-entry-component/despatch-entry-component')
+    .then(m => m.DespatchEntryComponent),
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
+  data: { title: 'Despatch Details', icon: 'local_shipping', menu: 'sales', mode: 'view' }
+},
+{
+  path: 'sales/despatch/:orderId',
+  loadComponent: () => import('./Encryptz/components/despatch-entry-component/despatch-entry-component')
+    .then(m => m.DespatchEntryComponent),
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
+  data: { title: 'Despatch Bill', icon: 'local_shipping', menu: 'sales', mode: 'create' }
+},
+{
+  path: 'sales/warranty',
+  loadComponent: () => import('./Encryptz/components/warranty-lookup-component/warranty-lookup-component')
+    .then(m => m.WarrantyLookupComponent),
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager', 'Technician'])],
+  data: { title: 'Warranty Lookup', icon: 'verified_user', menu: 'sales' }
+},
 // {
 //   path: 'settings/payments',
 //   loadComponent: () =>
