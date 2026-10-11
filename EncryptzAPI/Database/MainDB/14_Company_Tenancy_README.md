@@ -16,6 +16,7 @@ The scripts, in the order they are used:
 - `16_Company_Tenancy_Precheck.sql` - read-only report. Run it days before the release, before script 14.
 - `13_Company_Tenancy_Schema.sql` - adds columns and tables. Safe ahead of the release.
 - `14_Company_Tenancy_Cutover.sql` - the cut-over, run during the release.
+- `19_Module_Management.sql` - run after script 14: the procedures behind the Modules switch and module access in Platform Admin; also makes switching the Service module off safe. Run it again every time script 14 is run again.
 - `15_Company_Tenancy_Rollback.sql` - the undo: restores the project tables and project access.
 - `18_Company_Tenancy_Rollback_Connections_Once.sql` - run right after script 15: copies connection changes made since the cut-over back to the project tables, once per cut-over.
 - `17_Company_Tenancy_Rollback_Connections.sql` - superseded by script 18. Do not run it.
@@ -31,8 +32,8 @@ The scripts, in the order they are used:
 
 ## Never edit these scripts
 
-The six files are frozen. If something needs correcting, add a NEW numbered
-file. The next free number in this folder is 19. A later script must not
+The seven files (13 to 19) are frozen. If something needs correcting, add a NEW numbered
+file. The next free number in this folder is 20. A later script must not
 re-create `dbo.sp_Tenant_GetConnection` or `dbo.sp_Project_GetConnection`:
 script 14 and script 15 set these dates and script 18 reads them. Every SQL change must be a file
 in the repository.
@@ -99,10 +100,16 @@ in the repository.
      database, provision status and the number of users who can open the Service
      module. Administrators are counted. Check it: each company with a database
      should be `Ready`.
-4. Deploy the new API. The new UI can be deployed with this release or later,
+4. In the main database run `19_Module_Management.sql`. It adds four procedures
+   and re-creates `dbo.sp_Company_GetUsersForSync`. It changes no table and no
+   data, and nothing in any tenant database. It is safe to run again. Run it
+   after script 14 and before the API is started. **Every time script 14 is run
+   again, run script 19 again afterwards.** Script 14 re-creates one procedure
+   in its earlier form.
+5. Deploy the new API. The new UI can be deployed with this release or later,
    but it works only with the new API (it needs `auth/modules`). Never serve
    the new UI against the previous API.
-5. Start the API.
+6. Start the API.
 
 ## Rehearsal on copies
 
@@ -149,6 +156,14 @@ Task 13, steps 2 to 7. Besides what the plan lists, try these cases:
    and list that row. (Without a new cut-over, script 18 stops earlier with
    "already copied" and this check is never reached.)
 
+After script 19 has been run on the copy, also try module management:
+
+- Switch the Service module off for the test company: its members see the card
+  disabled with "Not subscribed", and no user or technician in the tenant copy
+  changed (compare `SELECT COUNT(*) FROM dbo.Users WHERE IsActive = 1` in the
+  tenant copy before and after, also after saving a user in Access Management).
+- Switch it on again: the same members can enter.
+
 Then try the new UI against the new API on the copies:
 
 6. The company list is shown also when the user has only one company.
@@ -188,6 +203,8 @@ The detailed lists are in
 - Add a user.
 - Add a technician.
 - In Platform Admin switch a member's access off and on again.
+- In Platform Admin, open Modules for a company: the Service module is on. (Do
+  not switch it off on the live system as a test.)
 - With the new UI the Service module card is disabled and shows "Ask your
   administrator". With the previous UI the member sees the company but no
   project to choose.
@@ -212,6 +229,8 @@ The detailed lists are in
 5. Deploy the previous API TOGETHER WITH the previous UI, then start it. The
    new UI works only with the new API, so never leave the new UI in place.
    Keep the previous UI build at hand for this.
+
+Script 19 needs no undo. Its procedures are used only by the new API.
 
 What the rollback (script 15) does:
 
@@ -291,13 +310,15 @@ Still NOT restored:
 
 ## Things to know
 
-- Do not switch a company's Service module off by SQL
-  (`CompanyModules.IsEnabled = 0`) in production. Then no user can open the
-  Service module of that company (`dbo.fn_ModuleUsers` returns nobody), and the
-  next user synchronisation sends an empty user list to the company's database.
-  The full synchronisation deactivates every user and technician there that is
-  not in the list, so it would deactivate all of them. (This will be fixed in a later
-  release.)
+- Switch modules in Platform Admin (Companies, Modules). With script 19 in
+  place, switching the Service module off for a company stops its people from
+  entering and changes nothing in its database; switching it on again restores
+  who could open it. People who are already working in the module keep working
+  until their login expires (the check is made when a module is opened).
+  Without script 19 the earlier danger applies: do not switch a module off
+  before script 19 has been run.
+- Every time script 14 is run again, run script 19 again afterwards. Script 14
+  re-creates one procedure in its earlier form.
 - The API caches each company's connection without an expiry. A connection or
   an active flag changed directly in SQL needs an API restart before it takes
   effect. Changes made through Platform Admin do not: they drop the cached entry.
