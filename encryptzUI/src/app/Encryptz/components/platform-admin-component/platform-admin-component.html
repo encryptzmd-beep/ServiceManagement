@@ -144,7 +144,7 @@
       <table class="fx-table">
         <thead>
           <tr>
-            <th>Module</th><th>Key</th><th>Company</th>
+            <th>Name</th><th>Key</th><th>Company</th>
             @if (isPlatformAdmin()) { <th>Server</th><th>Database</th> }
             <th class="fx-num">Users</th><th>Status</th><th></th>
           </tr>
@@ -196,7 +196,7 @@
               <option [ngValue]="p.projectId">{{ p.companyName }}</option>
             }
           </select>
-          @if (tab() === 'access') {
+          @if (tab() === 'access' && accessModules().length) {
             <select class="fx-filter-select pa-module-picker" [ngModel]="accessModuleKey()" (ngModelChange)="onAccessModulePicked($event)">
               @for (m of accessModules(); track m.moduleKey) {
                 <option [ngValue]="m.moduleKey">{{ m.moduleName }}</option>
@@ -233,6 +233,8 @@
             }
           </tbody>
         </table>
+      } @else if (!accessModuleKey() && !loading()) {
+        <div class="pa-hint">This company has no modules switched on.</div>
       } @else {
         <table class="fx-table">
           <thead>
@@ -247,7 +249,7 @@
                 <td><span class="fx-badge">{{ a.roleInCompany }}</span></td>
                 <td>
                   <label class="pa-switch">
-                    <input type="checkbox" [checked]="a.hasAccess" (change)="toggleAccess(a, $event)" [disabled]="accessBusy().has(a.userId)" />
+                    <input type="checkbox" [checked]="a.hasAccess" (change)="toggleAccess(a, $event)" [disabled]="accessBusy().has(accessBusyKey(selectedProjectId(), accessModuleKey(), a.userId))" />
                     <span>{{ a.hasAccess ? 'Allowed' : 'No access' }}</span>
                   </label>
                 </td>

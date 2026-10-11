@@ -164,6 +164,8 @@ describe('PlatformAdminComponent modules', () => {
     fixture.detectChanges();
 
     expect(boxesOf(fixture)[1].checked).toBe(true);
+    expect(calls).toContainEqual(['setCompanyModule', 2, 'SALES', true]);
+    expect(fixture.componentInstance.companyModules()[1].isEnabled).toBe(true);
   });
 
   it('ignores the late list of a dialog that was closed', () => {
@@ -283,15 +285,27 @@ describe('PlatformAdminComponent module access', () => {
   });
 
   it('reloads the list when another module is picked', () => {
+    const salesList = { success: true, message: '', data: [member(9, 'Sales S', 'Technician', true)] };
+    const baseStub = api.getModuleAccess;
+    api.getModuleAccess = (companyId: number, key: string) =>
+      key === 'SALES' ? (calls.push(['getModuleAccess', companyId, key]), of(salesList)) : baseStub(companyId, key);
     const fixture = create();
     fixture.componentInstance.onAccessModulePicked('SALES');
+    fixture.detectChanges();
+
     expect(calls).toContainEqual(['getModuleAccess', 2, 'SALES']);
+    expect(fixture.componentInstance.access().map(a => a.userId)).toEqual([9]);
+    expect(fixture.nativeElement.textContent).toContain('Sales S');
+    expect(fixture.nativeElement.textContent).not.toContain('Tech T');
   });
 
   it('gives a member access to the picked module', () => {
     const fixture = create();
+    expect(fixture.componentInstance.usersWithAccess()).toBe(1);
     fixture.componentInstance.toggleAccess(member(8, 'Tech T', 'Technician', false) as any);
     fixture.detectChanges();
+
+    expect(fixture.componentInstance.usersWithAccess()).toBe(2);
 
     expect(calls).toContainEqual(['setModuleAccess', 2, 'SERVICE', 8, true]);
     expect(fixture.componentInstance.access().find(a => a.userId === 8)?.hasAccess).toBe(true);
@@ -345,5 +359,97 @@ describe('PlatformAdminComponent module access', () => {
     fixture.componentInstance.toggleAccess(tech);
 
     expect(calls.filter(c => c[0] === 'setModuleAccess').length).toBe(1);
+
+    late.next({ success: true, message: 'Access granted', data: true });
+    late.complete();
+    fixture.componentInstance.toggleAccess(tech);
+
+    expect(calls.filter(c => c[0] === 'setModuleAccess').length).toBe(2);
+  });
+
+  const switchBoxes = (fixture: any) => fixture.nativeElement.querySelectorAll('.pa-switch input[type=checkbox]') as NodeListOf<HTMLInputElement>;
+
+  it('asks nothing and says so when the company has no module switched on', () => {
+    api.getCompanyModules = (companyId: number) => { calls.push(['getCompanyModules', companyId]); return of({ success: true, message: '', data: [offModule] }); };
+    const fixture = create();
+    fixture.detectChanges();
+
+    expect(calls.some(c => c[0] === 'getModuleAccess')).toBe(false);
+    expect(fixture.componentInstance.accessModuleKey()).toBe('');
+    expect(fixture.componentInstance.loading()).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('This company has no modules switched on.');
+    expect(fixture.nativeElement.querySelector('.pa-module-picker')).toBeNull();
+    expect(fixture.nativeElement.querySelector('table')).toBeNull();
+
+    fixture.componentInstance.onAccessModulePicked('SALES');
+    fixture.componentInstance.toggleAccess(member(8, 'Tech T', 'Technician', false) as any);
+    expect(calls.some(c => c[0] === 'getModuleAccess' || c[0] === 'setModuleAccess')).toBe(false);
+  });
+
+  it('shows the server message and asks for no access list when the modules cannot be listed', () => {
+    api.getCompanyModules = (companyId: number) => { calls.push(['getCompanyModules', companyId]); return of({ success: false, message: 'Modules are unavailable', data: null }); };
+    const fixture = create();
+    fixture.detectChanges();
+
+    expect(calls.some(c => c[0] === 'getModuleAccess')).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('Modules are unavailable');
+  });
+
+  it('puts the checkbox back and says so when changing access fails', () => {
+    api.setModuleAccess = () => throwError(() => ({ status: 500, error: {} }));
+    const fixture = create();
+
+    const box = switchBoxes(fixture)[1];
+    expect(box.checked).toBe(false);
+    box.click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Could not change access');
+    expect(switchBoxes(fixture)[1].checked).toBe(false);
+  });
+
+  describe('with two companies', () => {
+    const project3 = { ...project, projectId: 3, companyId: 3, companyName: 'Other Co' };
+    const setup = (modulesOf3: any) => {
+      api.getProjects = () => of({ success: true, message: '', data: [project, project3] });
+      api.getCompanyModules = (companyId: number) => {
+        calls.push(['getCompanyModules', companyId]);
+        return companyId === 3 ? modulesOf3 : of({ success: true, message: '', data: [serviceModule, salesModule, offModule] });
+      };
+      return create();
+    };
+
+    it('keeps the picked module when the other company has it too', () => {
+      const fixture = setup(of({ success: true, message: '', data: [serviceModule, salesModule] }));
+      fixture.componentInstance.onAccessModulePicked('SALES');
+
+      fixture.componentInstance.onProjectPicked(3);
+
+      expect(fixture.componentInstance.accessModuleKey()).toBe('SALES');
+      expect(calls).toContainEqual(['getModuleAccess', 3, 'SALES']);
+    });
+
+    it('falls back to the first module when the other company lacks the picked one', () => {
+      const hr = { ...offModule, isEnabled: true };
+      const fixture = setup(of({ success: true, message: '', data: [hr, serviceModule] }));
+      fixture.componentInstance.onAccessModulePicked('SALES');
+
+      fixture.componentInstance.onProjectPicked(3);
+
+      expect(fixture.componentInstance.accessModuleKey()).toBe('HR');
+      expect(calls).toContainEqual(['getModuleAccess', 3, 'HR']);
+      expect(calls).not.toContainEqual(['getModuleAccess', 3, 'SALES']);
+    });
+
+    it('shows no module of the previous company while the next company loads', () => {
+      const fixture = setup(new Subject<any>());
+
+      fixture.componentInstance.onProjectPicked(3);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.accessModules()).toEqual([]);
+      expect(fixture.nativeElement.querySelectorAll('.pa-module-picker option').length).toBe(0);
+      expect(calls.filter(c => c[0] === 'getModuleAccess' && c[1] === 3).length).toBe(0);
+    });
   });
 });

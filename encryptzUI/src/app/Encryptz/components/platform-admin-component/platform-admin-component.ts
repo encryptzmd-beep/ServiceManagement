@@ -57,11 +57,11 @@ export class PlatformAdminComponent implements OnInit {
   /** Module the Module Access tab works on, and the modules the picked company has. */
   accessModuleKey = signal<string>('SERVICE');
   accessModules = signal<CompanyModule[]>([]);
-  /** User ids with an access change in flight. */
-  accessBusy = signal<ReadonlySet<number>>(new Set());
-  /** The running load of the access tab; dropped when another load starts or the tab is left. */
-  private accessSub = new Subscription();
-  private accessPending = false;
+  /** Access changes in flight, keyed by company, module and user. */
+  accessBusy = signal<ReadonlySet<string>>(new Set());
+  /** The running load of the Branches or Module Access tab; dropped when another load starts or the tab changes. */
+  private tabSub = new Subscription();
+  private tabPending = false;
 
   /** Project the Locations / Access tabs work on. */
   selectedProjectId = signal<number | null>(null);
@@ -159,7 +159,7 @@ export class PlatformAdminComponent implements OnInit {
     this.companies.set([]); this.projects.set([]); this.locations.set([]);
     this.access.set([]); this.menus.set([]);
     this.accessModules.set([]);
-    this.resetAccessLoad();
+    this.resetTabLoad();
     this.otpSent.set(false);
     this.otpMessage.set('');
     this.otpError.set(reason);
@@ -181,7 +181,7 @@ export class PlatformAdminComponent implements OnInit {
   setTab(tab: Tab): void {
     this.tab.set(tab);
 
-    if (tab !== 'access') this.resetAccessLoad();
+    this.resetTabLoad();
 
     if (tab === 'menus' && !this.menus().length) this.loadMenus();
 
@@ -235,61 +235,72 @@ export class PlatformAdminComponent implements OnInit {
     const projectId = this.selectedProjectId();
     if (!projectId) return;
 
+    this.resetTabLoad();
     this.loading.set(true);
+    this.tabPending = true;
 
     if (this.tab() === 'locations') {
       this.locations.set([]);
-      this.api.getLocations(projectId).subscribe({
+      this.tabSub.add(this.api.getLocations(projectId).subscribe({
         next: res => {
+          this.tabPending = false;
           this.loading.set(false);
           if (res.success) this.locations.set(res.data ?? []);
           else this.notify(res.message, false);
         },
-        error: err => this.fail(err, 'Could not load the branches'),
-      });
+        error: err => { this.tabPending = false; this.fail(err, 'Could not load the branches'); },
+      }));
     } else {
       // the picker holds a company id: a "project" is the company's database
       this.access.set([]);
-      this.resetAccessLoad();
-      this.loading.set(true);
-      this.accessPending = true;
-      this.accessSub.add(this.api.getCompanyModules(projectId).subscribe({
+      this.accessModules.set([]);
+      this.tabSub.add(this.api.getCompanyModules(projectId).subscribe({
         next: res => {
           const enabled = (res.success ? res.data ?? [] : []).filter(m => m.isEnabled);
           this.accessModules.set(enabled);
+          if (!enabled.length) {
+            // nothing to ask the server about
+            this.accessModuleKey.set('');
+            this.access.set([]);
+            this.tabPending = false;
+            this.loading.set(false);
+            if (!res.success) this.notify(res.message, false);
+            return;
+          }
           // keep the picked module while the company has it, else fall back to the first
           if (!enabled.some(m => m.moduleKey === this.accessModuleKey()))
-            this.accessModuleKey.set(enabled[0]?.moduleKey ?? 'SERVICE');
+            this.accessModuleKey.set(enabled[0].moduleKey);
           this.loadModuleAccess(projectId);
         },
-        error: err => { this.accessPending = false; this.fail(err, 'Could not load the modules'); },
+        error: err => { this.tabPending = false; this.fail(err, 'Could not load the modules'); },
       }));
     }
   }
 
-  /** Drop the running load of the access tab so a late answer cannot land in a newer list. */
-  private resetAccessLoad(): void {
-    this.accessSub.unsubscribe();
-    this.accessSub = new Subscription();
-    if (this.accessPending) { this.accessPending = false; this.loading.set(false); }
+  /** Drop the running load of the Branches / Module Access tab so a late answer cannot land in a newer list. */
+  private resetTabLoad(): void {
+    this.tabSub.unsubscribe();
+    this.tabSub = new Subscription();
+    if (this.tabPending) { this.tabPending = false; this.loading.set(false); }
   }
 
   private loadModuleAccess(companyId: number): void {
-    this.resetAccessLoad();
+    this.resetTabLoad();
     this.loading.set(true);
-    this.accessPending = true;
-    this.accessSub.add(this.api.getModuleAccess(companyId, this.accessModuleKey()).subscribe({
+    this.tabPending = true;
+    this.tabSub.add(this.api.getModuleAccess(companyId, this.accessModuleKey()).subscribe({
       next: res => {
-        this.accessPending = false;
+        this.tabPending = false;
         this.loading.set(false);
         if (res.success) this.access.set(res.data ?? []);
         else this.notify(res.message, false);
       },
-      error: err => { this.accessPending = false; this.fail(err, 'Could not load module access'); },
+      error: err => { this.tabPending = false; this.fail(err, 'Could not load module access'); },
     }));
   }
 
   onAccessModulePicked(moduleKey: string): void {
+    if (!this.accessModuleKey()) return;
     this.accessModuleKey.set(moduleKey);
     const companyId = this.selectedProjectId();
     if (companyId) { this.access.set([]); this.loadModuleAccess(companyId); }
@@ -522,14 +533,15 @@ export class PlatformAdminComponent implements OnInit {
 
   toggleAccess(user: ProjectAccess, event?: Event): void {
     const companyId = this.selectedProjectId();
-    if (!companyId) { this.redraw(event, user.hasAccess); return; }
-    if (this.accessBusy().has(user.userId)) { this.redraw(event, user.hasAccess); return; }
+    const moduleKey = this.accessModuleKey();
+    if (!companyId || !moduleKey) { this.redraw(event, user.hasAccess); return; }
+    const busyKey = this.accessBusyKey(companyId, moduleKey, user.userId);
+    if (this.accessBusy().has(busyKey)) { this.redraw(event, user.hasAccess); return; }
 
     const grant = !user.hasAccess;
-    const moduleKey = this.accessModuleKey();
-    this.accessBusy.update(s => new Set(s).add(user.userId));
+    this.accessBusy.update(s => new Set(s).add(busyKey));
     this.api.setModuleAccess(companyId, moduleKey, user.userId, grant).pipe(
-      finalize(() => this.accessBusy.update(s => { const n = new Set(s); n.delete(user.userId); return n; })),
+      finalize(() => this.accessBusy.update(s => { const n = new Set(s); n.delete(busyKey); return n; })),
     ).subscribe({
       next: res => {
         this.notify(res.message, res.success);
@@ -542,8 +554,17 @@ export class PlatformAdminComponent implements OnInit {
           this.redraw(event, user.hasAccess);
         }
       },
-      error: err => { this.redraw(event, user.hasAccess); this.fail(err, 'Could not change access'); },
+      error: err => {
+        this.redraw(event, user.hasAccess);
+        if (this.isLocked(err)) return;
+        this.notify(this.message(err, 'Could not change access'), false);
+      },
     });
+  }
+
+  /** Key of one member's access change in flight. */
+  accessBusyKey(companyId: number | null, moduleKey: string, userId: number): string {
+    return `${companyId}|${moduleKey}|${userId}`;
   }
 
   // ── menus ─────────────────────────────────────────────────────────────────
