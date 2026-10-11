@@ -163,7 +163,7 @@
         }
 
         <!-- STEP 1: COMPANY -->
-        @if (!loading() && stage() === 'company' && companies().length === 0) {
+        @if (!loading() && !error() && stage() === 'company' && companies().length === 0) {
           <div class="empty-state">
             <span class="material-icons">business_off</span>
             <p>No companies found.</p>
@@ -241,7 +241,14 @@
             <div class="empty-state">
               <span class="material-icons">location_off</span>
               <p>No branch assigned.</p>
-              <p class="small">Ask your administrator to give you a branch.</p>
+              @if (canAdminister()) {
+                <p class="small">Add a branch in Administration.</p>
+                <button class="link-back" (click)="openAdministration()">
+                  <span class="material-icons">admin_panel_settings</span> Administration
+                </button>
+              } @else {
+                <p class="small">Ask your administrator to give you a branch.</p>
+              }
             </div>
           } @else {
             <div class="company-list">

@@ -193,4 +193,50 @@ describe('AuthService scope', () => {
     auth.clearSelectedCompany();
     expect(auth.scopeState()).toEqual({ loggedIn: true, companyId: null, moduleKey: null, locationId: null });
   });
+
+  it('is logged in with its companies after a reload on the company list', () => {
+    const companies = [{ companyId: 2, companyName: 'X', companyCode: 'C002', roleInCompany: 'Admin', isLinked: false }];
+    localStorage.setItem('temp_login', JSON.stringify({ token: 'login-token', userId: 5, fullName: 'A', role: 'Admin', menus: [{ menuPath: '/x' }], companies }));
+
+    const auth = create();
+
+    expect(auth.isLoggedIn()).toBe(true);
+    expect(auth.userId()).toBe(5);
+    expect(auth.companies()).toEqual(companies);
+    expect(auth.menus()).toEqual([]);
+    expect(auth.currentUser()?.menus).toEqual([]);
+  });
+
+  describe('changes made in another tab', () => {
+    const fire = (init: StorageEventInit) => window.dispatchEvent(new StorageEvent('storage', init));
+    const watch = () => {
+      const auth = create();
+      const spy = vi.spyOn(auth as any, 'reloadPage').mockImplementation(() => {});
+      return spy;
+    };
+
+    it('reloads when the branch changed', () => {
+      const spy = watch();
+      fire({ key: 'selected_location_id', oldValue: '1', newValue: '2' });
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('reloads when the storage was cleared', () => {
+      const spy = watch();
+      fire({ key: null });
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores an unrelated key', () => {
+      const spy = watch();
+      fire({ key: 'something_else', oldValue: '1', newValue: '2' });
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('ignores a write that did not change the value', () => {
+      const spy = watch();
+      fire({ key: 'encryptz_token', oldValue: 'a', newValue: 'a' });
+      expect(spy).not.toHaveBeenCalled();
+    });
+  });
 });

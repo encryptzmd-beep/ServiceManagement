@@ -44,6 +44,8 @@ describe('CompanySelectorComponent', () => {
       currentUser: () => ({ userId: 5, fullName: 'A', role: 'Admin', isPlatformAdmin: false }),
       companies: () => [{ companyId: 2, companyName: 'Hamster A/C', companyCode: 'C002', roleInCompany: 'Admin', isLinked: false, provisionStatus: 'Ready' }],
       selectedModuleKey: () => null,
+      scopeState: () => ({ loggedIn: true, companyId: 2, moduleKey: null, locationId: null }),
+      getUserCompanies: () => of([]),
       selectCompany: () => of({ success: true, message: '', data: { role: 'Admin' } }),
       getModules: () => of({ success: true, message: '', data: modules }),
       getBranches: () => of({ success: true, message: '', data: [branch(1, 'Main'), branch(2, 'North')] }),
@@ -206,5 +208,64 @@ describe('CompanySelectorComponent', () => {
     expect(fixture.nativeElement.querySelector('.loading-state')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Invalid location for this company');
     expect(navigated.length).toBe(0);
+  });
+
+  const company = { companyId: 2, companyName: 'Hamster A/C', companyCode: 'C002', roleInCompany: 'Admin', isLinked: false, provisionStatus: 'Ready' };
+
+  it('asks the API for the companies when nothing is kept in the browser', () => {
+    let calls = 0;
+    auth.companies = () => [];
+    auth.getUserCompanies = () => { calls++; return of([company]); };
+    const fixture = create('company');
+    fixture.detectChanges();
+    expect(calls).toBe(1);
+    expect(fixture.nativeElement.querySelectorAll('.company-item').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('.error-msg')).toBeNull();
+  });
+
+  it('shows the empty state and no error when the API returns no companies', () => {
+    auth.companies = () => [];
+    auth.getUserCompanies = () => of([]);
+    const fixture = create('company');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.empty-state')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.error-msg')).toBeNull();
+  });
+
+  it('shows the error and no empty state when the companies cannot be loaded', () => {
+    auth.companies = () => [];
+    auth.getUserCompanies = () => throwError(() => new Error('boom'));
+    const fixture = create('company');
+    fixture.detectChanges();
+    const error = fixture.nativeElement.querySelector('.error-msg');
+    expect(error.textContent).toContain('Could not load your companies. Please try again.');
+    expect(error.textContent).not.toContain('boom');
+    expect(fixture.nativeElement.querySelector('.empty-state')).toBeNull();
+  });
+
+  for (const stage of ['module', 'branch']) {
+    it('sends a visitor without a company from the ' + stage + ' step to the company list', () => {
+      auth.scopeState = () => ({ loggedIn: true, companyId: null, moduleKey: null, locationId: null });
+      create(stage, 'SERVICE');
+      expect(navigated).toEqual([[['/select-company'], { replaceUrl: true }]]);
+    });
+  }
+
+  it('offers Administration on the branch step to an administrator with no branch', () => {
+    auth.getBranches = () => of({ success: true, message: '', data: [] });
+    const fixture = create('branch', 'SERVICE');
+    expect(fixture.nativeElement.textContent).toContain('Add a branch in Administration.');
+    const btn = Array.from(fixture.nativeElement.querySelectorAll('button')).find((b: any) => b.textContent.includes('Administration')) as HTMLElement;
+    btn.click();
+    expect(navigated).toEqual([[['/settings/platform']]]);
+  });
+
+  it('tells a technician with no branch to ask the administrator', () => {
+    auth.userRole = () => 'Technician';
+    auth.currentUser = () => ({ userId: 5, fullName: 'A', role: 'Technician', isPlatformAdmin: false });
+    auth.getBranches = () => of({ success: true, message: '', data: [] });
+    const fixture = create('branch', 'SERVICE');
+    expect(fixture.nativeElement.textContent).toContain('Ask your administrator to give you a branch.');
+    expect(fixture.nativeElement.textContent).not.toContain('Administration');
   });
 });

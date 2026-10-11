@@ -49,6 +49,11 @@ export class CompanySelectorComponent {
     const stage = this.route.snapshot.data['stage'] as Stage | undefined;
     this.stage.set(stage ?? 'company');
 
+    if ((this.stage() === 'module' || this.stage() === 'branch') && !this.auth.scopeState().companyId) {
+      this.router.navigate(['/select-company'], { replaceUrl: true });
+      return;
+    }
+
     if (this.stage() === 'module') {
       this.loadModules();
     } else if (this.stage() === 'branch') {
@@ -84,17 +89,29 @@ export class CompanySelectorComponent {
       return;
     }
 
-    const temp = localStorage.getItem('temp_login');
+    let tempList: Company[] = [];
+    try {
+      const temp = localStorage.getItem('temp_login');
+      if (temp) tempList = JSON.parse(temp).companies || [];
+    } catch { tempList = []; }
 
-    if (temp) {
-      const data = JSON.parse(temp);
-      this.companies.set(data.companies || []);
+    if (tempList.length > 0) {
+      this.companies.set(tempList);
       this.loading.set(false);
       return;
     }
 
-    this.loading.set(false);
-    this.error.set('No companies found. Please login again.');
+    // after a reload inside the application nothing is kept: ask the API
+    this.auth.getUserCompanies().subscribe({
+      next: (list) => {
+        this.companies.set(list);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.error.set('Could not load your companies. Please try again.');
+      }
+    });
   }
 
   selectCompany(company: Company) {

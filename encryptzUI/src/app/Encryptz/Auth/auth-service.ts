@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { DestroyRef, Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, map, tap, timeout } from 'rxjs';
@@ -110,6 +110,20 @@ export class AuthService {
   constructor(private http: HttpClient, private router: Router) {
     this.migrateStorageKeys();
     this.loadFromStorage();
+
+    // another tab changed the session this tab is really using (the token is shared): reload to show it
+    const onStorage = (event: StorageEvent) => {
+      const watched = ['encryptz_token', 'selected_company_id', 'selected_module_key', 'selected_location_id'];
+      if (event.key === null || (watched.includes(event.key) && event.oldValue !== event.newValue)) {
+        this.reloadPage();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    inject(DestroyRef).onDestroy(() => window.removeEventListener('storage', onStorage));
+  }
+
+  protected reloadPage(): void {
+    window.location.reload();
   }
 
   /**
@@ -425,6 +439,8 @@ private loadFromStorage(): void {
     try {
       const temp = JSON.parse(tempLogin);
       this._companies.set(temp.companies || []);
+      // a reload on the company list: keep the user logged in (as setTempSession does)
+      if (!storedUser) this._currentUser.set({ ...temp, menus: [] });
     } catch {}
   }
 
