@@ -109,6 +109,10 @@ namespace EncryptzBL.Infrastructure.User.Modules
             if (!actor.IsPlatformAdmin)
                 return ApiResponse<int>.Fail("Only a platform administrator can create or change projects");
 
+            var refusal = ProjectRefusal(req.ProjectId, req.CompanyId, await GetCompanyKey(req.CompanyId), req.ProjectKey);
+            if (refusal != null)
+                return ApiResponse<int>.Fail(refusal);
+
             var passwordEnc = string.IsNullOrEmpty(req.DbPassword)
                 ? (object)DBNull.Value
                 : _protector.Protect(req.DbPassword);
@@ -389,13 +393,50 @@ namespace EncryptzBL.Infrastructure.User.Modules
         /// <summary>Drops the cached routing entry of the company's tenant key.</summary>
         private async Task EvictCompanyKey(int companyId)
         {
+            // the save is already committed: a failed re-read must not turn it into an error
+            try
+            {
+                var key = await GetCompanyKey(companyId);
+                if (!string.IsNullOrEmpty(key))
+                    _connectionResolver.Evict(key);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Could not evict the routing cache for company {CompanyId}; restart the API if its connection was changed", companyId);
+            }
+        }
+
+        /// <summary>The tenant key of the company's database, or null when it has none.</summary>
+        private async Task<string?> GetCompanyKey(int companyId)
+        {
             var saved = await GetDataTableAsync("sp_Platform_GetProject", new[]
             {
                 SqlParameterHelper.Input("@ProjectId", companyId)
             });
             var key = saved != null && saved.Rows.Count > 0 ? saved.Rows[0]["ProjectKey"]?.ToString() : null;
-            if (!string.IsNullOrEmpty(key))
-                _connectionResolver.Evict(key);
+            return string.IsNullOrWhiteSpace(key) ? null : key;
+        }
+
+        /// <summary>
+        /// Why a save must be refused before it reaches the procedure, or null. In platform
+        /// administration a "project" is the company's database and its id is the CompanyId;
+        /// the deployed UI sends ProjectId = 0 for "new project", which the procedure would
+        /// treat as an edit of the existing connection.
+        /// </summary>
+        public static string? ProjectRefusal(int requestedProjectId, int companyId, string? existingKey, string? requestedKey)
+        {
+            if (requestedProjectId != 0 && requestedProjectId != companyId)
+                return "Database not found for this company";
+
+            var hasDatabase = !string.IsNullOrWhiteSpace(existingKey);
+            if (requestedProjectId == 0 && hasDatabase)
+                return "This company already has a database. Edit it instead";
+
+            if (hasDatabase && !string.IsNullOrWhiteSpace(requestedKey)
+                && !string.Equals(requestedKey.Trim(), existingKey!.Trim(), StringComparison.OrdinalIgnoreCase))
+                return "The key of a company cannot be changed";
+
+            return null;
         }
 
         private async Task<ExplicitDbHelper> OpenProjectDb(string projectKey)
