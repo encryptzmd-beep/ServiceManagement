@@ -142,7 +142,7 @@ The exact steps are in the plan file
 `docs/superpowers/plans/2026-10-11-company-routing-and-modules-backend.md`,
 Task 13, steps 2 to 7. Besides what the plan lists, try these cases:
 
-1. "+ New Project" in Platform Admin on a company that already has a database.
+1. "+ New Project" (now "+ Attach Database") in Platform Admin on a company that already has a database.
    It must be refused with "This company already has a database. Edit it instead".
 2. A deactivated company with a user who is logged in to it. The user must be
    able to leave that company (company list, select company), and business
@@ -214,10 +214,18 @@ The detailed lists are in
 
 ## Undo
 
-1. Stop the API.
-2. Back up the main database.
-3. In the main database run `15_Company_Tenancy_Rollback.sql`.
-4. In the main database run `18_Company_Tenancy_Rollback_Connections_Once.sql`.
+1. Switch the Service module ON again (Platform Admin, Companies, Modules) for every
+   company where it is off. This query lists them (read-only):
+   ```sql
+   SELECT c.CompanyId, c.CompanyName FROM dbo.CompanyModules cm INNER JOIN dbo.Modules m ON m.ModuleId = cm.ModuleId INNER JOIN dbo.Companies c ON c.CompanyId = cm.CompanyId WHERE m.ModuleKey = 'SERVICE' AND cm.IsEnabled = 0;
+   ```
+   Script 15 carries access back from who can open the Service module now. For a
+   company whose module is off that is nobody, so every member of that company,
+   administrators included, would lose access under the previous API.
+2. Stop the API.
+3. Back up the main database.
+4. In the main database run `15_Company_Tenancy_Rollback.sql`.
+5. In the main database run `18_Company_Tenancy_Rollback_Connections_Once.sql`.
    Run it in the same sitting, right after script 15 printed
    `Project tables restored.` and before the previous API is started.
    Run script 18 only if the previous API has NOT been started since script 15
@@ -226,7 +234,7 @@ The detailed lists are in
    script 18 is run anyway: when a connection was saved since the rollback, it
    stops and lists those rows. When none was saved, it copies; that is
    still correct, because no connection was saved under the previous API.
-5. Deploy the previous API TOGETHER WITH the previous UI, then start it. The
+6. Deploy the previous API TOGETHER WITH the previous UI, then start it. The
    new UI works only with the new API, so never leave the new UI in place.
    Keep the previous UI build at hand for this.
 
@@ -314,12 +322,24 @@ Still NOT restored:
   place, switching the Service module off for a company stops its people from
   entering and changes nothing in its database; switching it on again restores
   who could open it. Members added while the module was off must be given
-  access in Platform Admin (Module Access). People who are already working in
+  access in Platform Admin (Module Access) after it is switched on again. People who are already working in
   the module keep working until their login expires (the check is made when a
   module is opened). User and technician changes made while the module is off
   reach the company's database only after it is switched on again.
   Without script 19 the earlier danger applies: do not switch a module off
-  before script 19 has been run.
+  before script 19 has been run (and run script 19 again after script 14). The
+  API also refuses to send an empty user list, so script 19 is the first
+  safeguard and the API check the second.
+- Before an Undo, switch the Service module on again for every company where it
+  is off (first step of "Undo"), or script 15 removes access from that company's
+  members.
+- If the new API runs before script 19, the Modules dialog and the Module Access
+  tab fail ("Could not load the modules"). Nothing else is affected. Run script 19;
+  no restart is needed.
+- A full synchronisation with no users to mirror is skipped by the API, so the
+  last Service user of a company stays active in the company's database until a
+  later synchronisation has at least one user (login is still decided by the main
+  database).
 - Every time script 14 is run again, run script 19 again afterwards. Script 14
   re-creates one procedure in its earlier form.
 - The API caches each company's connection without an expiry. A connection or
@@ -339,10 +359,10 @@ Still NOT restored:
 ## What changed for administrators
 
 - A company's database is attached on the company. The "Projects & Databases"
-  tab now shows one entry per company.
-- "+ New Project" on a company that already has a database is refused, and the
+  tab (now "Company Databases") shows one entry per company.
+- "+ New Project" (now "+ Attach Database") on a company that already has a database is refused, and the
   key of a company cannot be changed: edit the existing entry instead.
-- "Project access" is access to the Service module. Company administrators
+- "Project access" (now "Module Access") is access to the Service module. Company administrators
   (Admin, CompanyAdmin) always have it.
 - Deactivating a member removes their module access. Reactivating does not give
   it back: an administrator grants it again.

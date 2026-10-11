@@ -42,5 +42,11 @@ namespace EncryptzBL.Common.Tenant
 
         public static bool CanManageAccess(PlatformActor actor, int companyId)
             => companyId > 0 && actor.CanManageCompany(companyId);
+
+        /// <summary>True when the company has the module and it is switched on.</summary>
+        public static bool HasModule(IEnumerable<CompanyModuleDto>? modules, string moduleKey)
+            => modules != null
+               && modules.Any(m => m.IsEnabled
+                                   && string.Equals(m.ModuleKey, moduleKey, StringComparison.OrdinalIgnoreCase));
     }
 }

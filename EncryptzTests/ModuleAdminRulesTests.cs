@@ -74,6 +74,17 @@ namespace EncryptzTests
             Assert.False(ModuleAdminRules.CanManageAccess(Member(7), 7));
         }
 
+        private static CompanyModuleDto Mod(string key, bool on) => new() { ModuleKey = key, IsEnabled = on };
+
+        [Fact]
+        public void A_module_is_had_only_when_it_is_listed_and_switched_on()
+        {
+            Assert.True(ModuleAdminRules.HasModule(new[] { Mod("SERVICE", true) }, "SERVICE"));
+            Assert.False(ModuleAdminRules.HasModule(new[] { Mod("SERVICE", false) }, "SERVICE"));
+            Assert.False(ModuleAdminRules.HasModule(new[] { Mod("SALES", true) }, "SERVICE"));
+            Assert.False(ModuleAdminRules.HasModule(new List<CompanyModuleDto>(), "SERVICE"));
+        }
+
         [Theory]
         [InlineData(0)]
         [InlineData(-1)]

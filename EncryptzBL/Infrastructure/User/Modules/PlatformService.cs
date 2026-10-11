@@ -342,6 +342,17 @@ namespace EncryptzBL.Infrastructure.User.Modules
         // MODULES OF A COMPANY + WHO MAY OPEN THEM
         // ============================================
 
+        private const string CompanyLacksModule = "The company does not have this module";
+
+        private async Task<bool> CompanyHasModuleAsync(int companyId, string moduleKey)
+        {
+            var modules = await GetListAsync<CompanyModuleDto>("sp_Platform_GetCompanyModules", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId)
+            });
+            return ModuleAdminRules.HasModule(modules, moduleKey);
+        }
+
         public async Task<ApiResponse<List<CompanyModuleDto>>> GetCompanyModules(int companyId, PlatformActor actor)
         {
             if (!ModuleAdminRules.CanViewModules(actor, companyId))
@@ -375,6 +386,10 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
             var result = ToFlag(dt);
 
+            if (result.Success)
+                _logger.LogInformation("Module {ModuleKey} switched {State} for company {CompanyId} by user {UserId}",
+                    moduleKey, req!.IsEnabled ? "on" : "off", companyId, actor.UserId);
+
             // Service module switched ON: the company's users must be in its database again.
             // Switched OFF: nothing is synchronised (the procedure behind the sync
             // returns no company), so nobody in the tenant database changes.
@@ -394,6 +409,9 @@ namespace EncryptzBL.Infrastructure.User.Modules
             if (key == null)
                 return ApiResponse<List<ProjectAccessDto>>.Fail("Module not found");
 
+            if (!await CompanyHasModuleAsync(companyId, key))
+                return ApiResponse<List<ProjectAccessDto>>.Fail(CompanyLacksModule);
+
             var list = await GetListAsync<ProjectAccessDto>("sp_Platform_GetModuleAccess", new[]
             {
                 SqlParameterHelper.Input("@CompanyId", companyId),
@@ -411,6 +429,9 @@ namespace EncryptzBL.Infrastructure.User.Modules
             var key = ModuleAdminRules.NormalizeKey(moduleKey);
             if (key == null || req == null || req.UserId <= 0)
                 return ApiResponse<bool>.Fail("Module or user not found");
+
+            if (!await CompanyHasModuleAsync(companyId, key))
+                return ApiResponse<bool>.Fail(CompanyLacksModule);
 
             var dt = await GetDataTableAsync("sp_Platform_SetModuleAccess", new[]
             {

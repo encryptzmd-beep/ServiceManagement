@@ -38,7 +38,7 @@ namespace EncryptzBL.Common.Tenant
                 return new List<TenantUserMap>();
             }
 
-            var dt =await (await OpenAsync(tenantKey)).ExecuteDataTableAsync("sp_Tenant_SyncUsers", new[]
+            var dt = await (await OpenAsync(tenantKey)).ExecuteDataTableAsync("sp_Tenant_SyncUsers", new[]
             {
                 SqlParameterHelper.Input("@CompanyId", companyId),
                 SqlParameterHelper.Input("@ProjectId", scopeId),

@@ -110,6 +110,11 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
             {
                 await _userSync.SyncCompanyUsersAsync(CompanyId, LocationId);
             }
+            catch (CompanyDatabaseNotReadyException ex)
+            {
+                _logger.LogWarning(ex, "Technician sync skipped for company {CompanyId}: database not ready", CompanyId);
+                return ApiResponse<int>.Fail("The Service module is switched off for this company, or its database is not ready. The technician will be added when it is available again.");
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Technician sync failed for company {CompanyId}", CompanyId);

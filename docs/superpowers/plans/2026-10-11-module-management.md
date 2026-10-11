@@ -1493,7 +1493,7 @@ With the API and the UI running against the copies:
 
 - [ ] **Step 3: Script order**
 
-On the main-database copy run script 14 again, then log in and save a user while the Service module is switched off for the test company: note that tenant users ARE deactivated (the earlier procedure is back). Restore the tenant copy, run script 19 again, repeat: nobody is deactivated. This confirms the release-notes rule "run script 19 again after script 14".
+On the main-database copy run script 14 again, then log in and save a user while the Service module is switched off for the test company: nobody is deactivated: the API log shows the warning "User sync skipped for company {CompanyId}: no users to mirror" (from TenantUserSyncService) because the earlier procedure returns no users. Restore the tenant copy, run script 19 again, repeat: nobody is deactivated and the company is not synchronised at all (no warning). This confirms both safeguards and the release-notes rule "run script 19 again after script 14".
 
 - [ ] **Step 4: Record the result**
 
