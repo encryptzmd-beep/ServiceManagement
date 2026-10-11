@@ -78,5 +78,48 @@ namespace EncryptzBL.Common.Provisioning
                 .Where(name => name.Length > 0)
                 .ToList();
         }
+
+        private static readonly Regex Blanks = new(@"\s+", RegexOptions.CultureInvariant);
+        private static readonly Regex BlanksAroundBrackets = new(@"\s*([(),])\s*", RegexOptions.CultureInvariant);
+        private static readonly Regex AfterBracket = new(@"\)(?=[^)\s])", RegexOptions.CultureInvariant);
+
+        /// <summary>
+        /// The columns of the first CREATE TABLE #TenantSettings in the text, one entry per
+        /// column: "NAME TYPE NULL" or "NAME TYPE(LENGTH) NOT NULL", in upper case, comments
+        /// and extra blanks removed. For the test that holds <see cref="CreateSettingsTableSql"/>
+        /// against the real script, so a changed type or length is noticed.
+        /// </summary>
+        internal static IReadOnlyList<string> SettingsColumnDefinitions(string text)
+        {
+            var match = SettingsTable.Match(LineComment.Replace((text ?? "").Replace("\r\n", "\n").Replace('\r', '\n'), ""));
+            if (!match.Success)
+                throw new InvalidOperationException("No CREATE TABLE #TenantSettings (...); in the text.");
+
+            var columns = new List<string>();
+            var depth = 0;
+            var current = new System.Text.StringBuilder();
+
+            // a comma inside brackets belongs to a type, e.g. DECIMAL(10, 2)
+            foreach (var ch in match.Groups["columns"].Value)
+            {
+                if (ch == '(') depth++;
+                else if (ch == ')') depth--;
+
+                if (ch == ',' && depth == 0)
+                {
+                    columns.Add(current.ToString());
+                    current.Clear();
+                }
+                else
+                    current.Append(ch);
+            }
+            columns.Add(current.ToString());
+
+            return columns
+                .Select(column => BlanksAroundBrackets.Replace(Blanks.Replace(column, " ").Trim(), "$1"))
+                .Select(column => AfterBracket.Replace(column, ") ").ToUpperInvariant())
+                .Where(column => column.Length > 0)
+                .ToList();
+        }
     }
 }

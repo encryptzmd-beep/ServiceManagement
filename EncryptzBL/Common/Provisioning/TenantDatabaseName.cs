@@ -9,7 +9,7 @@ namespace EncryptzBL.Common.Provisioning
     public static class TenantDatabaseName
     {
         private const string Prefix = "EncryptzTenant_";
-        private static readonly Regex Generated = new(@"^EncryptzTenant_[0-9]{6,10}$", RegexOptions.CultureInvariant);
+        private static readonly Regex Generated = new(@"^EncryptzTenant_[0-9]{6,10}\z", RegexOptions.CultureInvariant);
 
         public static string For(int companyId)
         {
@@ -25,7 +25,9 @@ namespace EncryptzBL.Common.Provisioning
             if (string.IsNullOrEmpty(name) || !Generated.IsMatch(name))
                 return false;
 
-            return long.TryParse(name.AsSpan(Prefix.Length), out var id) && id > 0 && id <= int.MaxValue
+            return long.TryParse(name.AsSpan(Prefix.Length), System.Globalization.NumberStyles.None,
+                       System.Globalization.CultureInfo.InvariantCulture, out var id)
+                   && id > 0 && id <= int.MaxValue
                    && For((int)id) == name;
         }
     }

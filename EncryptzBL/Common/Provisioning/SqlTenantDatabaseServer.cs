@@ -7,6 +7,8 @@ namespace EncryptzBL.Common.Provisioning
     /// Creates, builds and (for a failed attempt) drops a company database on the
     /// server of the job. The only text ever concatenated into SQL here is a database
     /// name that <see cref="TenantDatabaseName.IsGenerated"/> accepts.
+    /// An error that leaves this class carries its text only, without the connection
+    /// string and without the password.
     /// </summary>
     public sealed class SqlTenantDatabaseServer : ITenantDatabaseServer
     {
@@ -35,23 +37,40 @@ namespace EncryptzBL.Common.Provisioning
 
         public async Task<bool> DatabaseExistsAsync(ProvisionJob job, string databaseName, CancellationToken ct)
         {
-            await using var conn = new SqlConnection(Master(job));
-            await conn.OpenAsync(ct);
+            var connectionString = Master(job);
+            try
+            {
+                await using var conn = new SqlConnection(connectionString);
+                await conn.OpenAsync(ct);
 
-            await using var cmd = new SqlCommand("SELECT DB_ID(@Name);", conn);
-            cmd.Parameters.AddWithValue("@Name", databaseName);
+                await using var cmd = new SqlCommand("SELECT DB_ID(@Name);", conn);
+                cmd.Parameters.AddWithValue("@Name", databaseName);
 
-            var id = await cmd.ExecuteScalarAsync(ct);
-            return id != null && id != DBNull.Value;
+                var id = await cmd.ExecuteScalarAsync(ct);
+                return id != null && id != DBNull.Value;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                throw Safe(ex, connectionString, job);
+            }
         }
 
         public async Task CreateDatabaseAsync(ProvisionJob job, string databaseName, CancellationToken ct)
         {
-            await using var conn = new SqlConnection(Master(job));
-            await conn.OpenAsync(ct);
+            var sql = CreateDatabaseSql(databaseName);
+            var connectionString = Master(job);
+            try
+            {
+                await using var conn = new SqlConnection(connectionString);
+                await conn.OpenAsync(ct);
 
-            await using var cmd = new SqlCommand(CreateDatabaseSql(databaseName), conn) { CommandTimeout = 120 };
-            await cmd.ExecuteNonQueryAsync(ct);
+                await using var cmd = new SqlCommand(sql, conn) { CommandTimeout = 120 };
+                await cmd.ExecuteNonQueryAsync(ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                throw Safe(ex, connectionString, job);
+            }
         }
 
         public async Task BuildTenantAsync(ProvisionJob job, string databaseName, CancellationToken ct)
@@ -60,45 +79,53 @@ namespace EncryptzBL.Common.Provisioning
 
             // One connection for everything: #TenantSettings lives in the session.
             // Not pooled, so nothing keeps the database open if it has to be dropped.
-            await using var conn = new SqlConnection(Tenant(job, Checked(databaseName)));
-            await conn.OpenAsync(ct);
-
-            // A parameterised command runs inside sp_executesql, where a temporary table
-            // would vanish at once: create it with a plain command, fill it with parameters.
-            await using (var create = new SqlCommand(TenantScript.CreateSettingsTableSql, conn))
-                await create.ExecuteNonQueryAsync(ct);
-
-            await using (var insert = new SqlCommand(TenantScript.InsertSettingsSql, conn))
+            var connectionString = Tenant(job, Checked(databaseName));
+            try
             {
-                insert.Parameters.AddWithValue("@CompanyId", job.CompanyId);
-                insert.Parameters.AddWithValue("@ProjectId", job.TenantScopeId);
-                insert.Parameters.Add("@LocationName", System.Data.SqlDbType.NVarChar, 200).Value = job.FirstBranchName;
-                insert.Parameters.Add("@LocationCode", System.Data.SqlDbType.NVarChar, 50).Value = DBNull.Value;
-                insert.Parameters.Add("@LocationCity", System.Data.SqlDbType.NVarChar, 100).Value = DBNull.Value;
-                insert.Parameters.Add("@CopyLookupsFrom", System.Data.SqlDbType.NVarChar, 128).Value =
-                    string.IsNullOrWhiteSpace(job.LookupSourceDb) ? DBNull.Value : job.LookupSourceDb.Trim();
-                await insert.ExecuteNonQueryAsync(ct);
-            }
+                await using var conn = new SqlConnection(connectionString);
+                await conn.OpenAsync(ct);
 
-            var number = 0;
-            foreach (var batch in script.Batches)
+                // A parameterised command runs inside sp_executesql, where a temporary table
+                // would vanish at once: create it with a plain command, fill it with parameters.
+                await using (var create = new SqlCommand(TenantScript.CreateSettingsTableSql, conn))
+                    await create.ExecuteNonQueryAsync(ct);
+
+                await using (var insert = new SqlCommand(TenantScript.InsertSettingsSql, conn))
+                {
+                    insert.Parameters.AddWithValue("@CompanyId", job.CompanyId);
+                    insert.Parameters.AddWithValue("@ProjectId", job.TenantScopeId);
+                    insert.Parameters.Add("@LocationName", System.Data.SqlDbType.NVarChar, 200).Value = job.FirstBranchName;
+                    insert.Parameters.Add("@LocationCode", System.Data.SqlDbType.NVarChar, 50).Value = DBNull.Value;
+                    insert.Parameters.Add("@LocationCity", System.Data.SqlDbType.NVarChar, 100).Value = DBNull.Value;
+                    insert.Parameters.Add("@CopyLookupsFrom", System.Data.SqlDbType.NVarChar, 128).Value =
+                        string.IsNullOrWhiteSpace(job.LookupSourceDb) ? DBNull.Value : job.LookupSourceDb.Trim();
+                    await insert.ExecuteNonQueryAsync(ct);
+                }
+
+                var number = 0;
+                foreach (var batch in script.Batches)
+                {
+                    number++;
+                    ct.ThrowIfCancellationRequested();
+
+                    try
+                    {
+                        await using var cmd = new SqlCommand(batch, conn) { CommandTimeout = BatchTimeoutSeconds };
+                        await cmd.ExecuteNonQueryAsync(ct);
+                    }
+                    catch (SqlException ex)
+                    {
+                        // the script's own safety checks raise an error and switch NOEXEC on: stop at once
+                        throw new InvalidOperationException($"Tenant script batch {number} of {script.Batches.Count} failed: {ex.Message}");
+                    }
+                }
+
+                await VerifyAsync(conn, ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                number++;
-                ct.ThrowIfCancellationRequested();
-
-                try
-                {
-                    await using var cmd = new SqlCommand(batch, conn) { CommandTimeout = BatchTimeoutSeconds };
-                    await cmd.ExecuteNonQueryAsync(ct);
-                }
-                catch (SqlException ex)
-                {
-                    // the script's own safety checks raise an error and switch NOEXEC on: stop at once
-                    throw new InvalidOperationException($"Tenant script batch {number} of {script.Batches.Count} failed: {ex.Message}", ex);
-                }
+                throw Safe(ex, connectionString, job);
             }
-
-            await VerifyAsync(conn, ct);
         }
 
         /// <summary>The same readiness test "Test connection" uses, plus the first branch.</summary>
@@ -129,21 +156,61 @@ namespace EncryptzBL.Common.Provisioning
 
         public async Task DropDatabaseAsync(ProvisionJob job, string databaseName)
         {
-            await using var conn = new SqlConnection(Master(job));
-            await conn.OpenAsync();
+            var sql = DropDatabaseSql(databaseName);
+            var connectionString = Master(job);
+            try
+            {
+                await using var conn = new SqlConnection(connectionString);
+                await conn.OpenAsync();
 
-            await using var cmd = new SqlCommand(DropDatabaseSql(databaseName), conn) { CommandTimeout = 120 };
-            await cmd.ExecuteNonQueryAsync();
+                await using var cmd = new SqlCommand(sql, conn) { CommandTimeout = 120 };
+                await cmd.ExecuteNonQueryAsync();
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                throw Safe(ex, connectionString, job);
+            }
         }
 
-        private static string Master(ProvisionJob job)
-            => new SqlConnectionStringBuilder(
-                   TenantConnectionString.Build(job.ServerName, "master", job.AdminUser, job.AdminPassword, job.ExtraOptions))
-               { Pooling = false, ConnectTimeout = 15 }.ConnectionString;
+        /// <summary>Not pooled: no idle connection keeps a database open when it has to be dropped.</summary>
+        internal static string Master(ProvisionJob job) => ConnectionString(job, "master");
 
-        private static string Tenant(ProvisionJob job, string databaseName)
-            => new SqlConnectionStringBuilder(
-                   TenantConnectionString.Build(job.ServerName, databaseName, job.AdminUser, job.AdminPassword, job.ExtraOptions))
-               { Pooling = false, ConnectTimeout = 15 }.ConnectionString;
+        /// <summary>Not pooled, for the same reason.</summary>
+        internal static string Tenant(ProvisionJob job, string databaseName) => ConnectionString(job, databaseName);
+
+        private static string ConnectionString(ProvisionJob job, string databaseName)
+        {
+            try
+            {
+                // set after the typed options are read: they cannot switch pooling on
+                return new SqlConnectionStringBuilder(
+                           TenantConnectionString.Build(job.ServerName, databaseName, job.AdminUser, job.AdminPassword, job.ExtraOptions))
+                       { Pooling = false, ConnectTimeout = 15 }.ConnectionString;
+            }
+            catch (Exception)
+            {
+                // the text of this error can quote parts of the connection string: never pass it on
+                throw new InvalidOperationException("The connection settings of the database server are not valid.");
+            }
+        }
+
+        /// <summary>
+        /// What leaves this class as an error: the text only, with the connection string and
+        /// the password taken out, and without the original exception (its details can carry both).
+        /// </summary>
+        private static InvalidOperationException Safe(Exception ex, string connectionString, ProvisionJob job)
+            => new(WithoutSecrets(ex.Message, connectionString, job));
+
+        internal static string WithoutSecrets(string? message, string connectionString, ProvisionJob job)
+        {
+            var text = message ?? "";
+
+            if (!string.IsNullOrEmpty(connectionString))
+                text = text.Replace(connectionString, "***", StringComparison.OrdinalIgnoreCase);
+            if (!string.IsNullOrEmpty(job.AdminPassword))
+                text = text.Replace(job.AdminPassword, "***", StringComparison.OrdinalIgnoreCase);
+
+            return text;
+        }
     }
 }

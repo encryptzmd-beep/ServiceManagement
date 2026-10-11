@@ -15,7 +15,7 @@ namespace EncryptzBL.Common.Provisioning
         /// </summary>
         public const string TenantLookupSourceDb = "TenantLookupSourceDb";
 
-        private static readonly Regex DatabaseName = new(@"^[A-Za-z0-9_]{1,128}$", RegexOptions.CultureInvariant);
+        private static readonly Regex DatabaseName = new(@"^[A-Za-z0-9_]{1,128}\z", RegexOptions.CultureInvariant);
         private static readonly string[] SystemDatabases = { "master", "model", "msdb", "tempdb" };
 
         /// <summary>The value to store, or the reason it is refused.</summary>

@@ -13,9 +13,10 @@ namespace EncryptzBL.Common.Provisioning
             _protector = protector;
         }
 
-        public async Task<ProvisionJob?> GetJobAsync(int companyId)
+        public async Task<ProvisionJob?> BeginAsync(int companyId)
         {
-            var dt = await GetDataTableAsync("sp_Provision_GetJob", new[]
+            // sp_Provision_Begin claims the job in one UPDATE: no row = nothing to do
+            var dt = await GetDataTableAsync("sp_Provision_Begin", new[]
             {
                 SqlParameterHelper.Input("@CompanyId", companyId)
             });
@@ -24,6 +25,9 @@ namespace EncryptzBL.Common.Provisioning
                 return null;
 
             var row = dt.Rows[0];
+            if (row["ProvisionAttempt"] is not Guid attempt || attempt == Guid.Empty)
+                return null;
+
             var encrypted = row["AdminPasswordEnc"]?.ToString() ?? "";
 
             string password;
@@ -33,36 +37,52 @@ namespace EncryptzBL.Common.Provisioning
             return new ProvisionJob
             {
                 CompanyId = Convert.ToInt32(row["CompanyId"]),
+                Attempt = attempt,
                 TenantScopeId = Convert.ToInt32(row["TenantScopeId"]),
                 FirstBranchName = row["FirstBranchName"]?.ToString() ?? "",
-                Status = row["ProvisionStatus"]?.ToString() ?? "",
                 ServerName = row["ServerName"]?.ToString() ?? "",
                 AdminUser = row["AdminUser"]?.ToString() ?? "",
-                AdminPassword = password,
+                AdminPassword = password ?? "",
                 ExtraOptions = row["ExtraOptions"]?.ToString() ?? "",
                 LookupSourceDb = row["LookupSourceDb"]?.ToString() ?? ""
             };
         }
 
-        public async Task<bool> CompleteAsync(int companyId, string databaseName)
+        public async Task<bool> CompleteAsync(ProvisionJob job, string databaseName)
         {
+            // the server name and login this run used: the procedure refuses when the
+            // server row was edited meanwhile
             var dt = await GetDataTableAsync("sp_Provision_Complete", new[]
             {
-                SqlParameterHelper.Input("@CompanyId", companyId),
-                SqlParameterHelper.Input("@DatabaseName", databaseName)
+                SqlParameterHelper.Input("@CompanyId", job.CompanyId),
+                SqlParameterHelper.Input("@Attempt", job.Attempt),
+                SqlParameterHelper.Input("@DatabaseName", databaseName),
+                SqlParameterHelper.Input("@ServerName", job.ServerName),
+                SqlParameterHelper.Input("@AdminUser", job.AdminUser)
             });
 
             return dt != null && dt.Rows.Count > 0 && Convert.ToInt32(dt.Rows[0]["Success"]) == 1;
         }
 
-        public async Task FailAsync(int companyId, string error)
+        public async Task FailAsync(ProvisionJob job, string error)
         {
             // no result set: the non-query method
             await ExecuteAsync("sp_Provision_Fail", new[]
             {
-                SqlParameterHelper.Input("@CompanyId", companyId),
+                SqlParameterHelper.Input("@CompanyId", job.CompanyId),
+                SqlParameterHelper.Input("@Attempt", job.Attempt),
                 SqlParameterHelper.Input("@Error", error ?? "")
             });
+        }
+
+        public async Task<string> GetStatusAsync(int companyId)
+        {
+            var dt = await GetDataTableAsync("sp_Provision_GetStatus", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId)
+            });
+
+            return dt != null && dt.Rows.Count > 0 ? dt.Rows[0]["ProvisionStatus"]?.ToString() ?? "" : "";
         }
 
         public async Task<int> FailStuckAsync(int olderThanMinutes)
@@ -73,6 +93,18 @@ namespace EncryptzBL.Common.Provisioning
             });
 
             return dt != null && dt.Rows.Count > 0 ? Convert.ToInt32(dt.Rows[0]["Failed"]) : 0;
+        }
+
+        public async Task<IReadOnlyList<int>> GetQueuedAsync()
+        {
+            var dt = await GetDataTableAsync("sp_Provision_GetQueued");
+
+            var ids = new List<int>();
+            if (dt != null)
+                foreach (DataRow row in dt.Rows)
+                    ids.Add(Convert.ToInt32(row["CompanyId"]));
+
+            return ids;
         }
     }
 }

@@ -105,6 +105,44 @@ VALUES (0, 0, N'Head Office', N'HO', NULL, N'FelixServiceDB');";
         }
 
         [Fact]
+        public void The_table_the_API_creates_matches_the_real_script_column_by_column()
+        {
+            // name, type (with its length) and nullability of every column, in order
+            var real = TenantScript.SettingsColumnDefinitions(File.ReadAllText(RepositoryScriptPath()));
+            var supplied = TenantScript.SettingsColumnDefinitions(TenantScript.CreateSettingsTableSql);
+
+            Assert.Equal(6, real.Count);
+            Assert.Equal(real, supplied);
+        }
+
+        [Fact]
+        public void Column_definitions_are_read_without_comments_and_extra_blanks()
+        {
+            var columns = TenantScript.SettingsColumnDefinitions(Settings);
+
+            Assert.Equal(new[]
+            {
+                "COMPANYID INT NOT NULL", "PROJECTID INT NOT NULL", "LOCATIONNAME NVARCHAR(200) NOT NULL",
+                "LOCATIONCODE NVARCHAR(50) NULL", "LOCATIONCITY NVARCHAR(100) NULL", "COPYLOOKUPSFROM SYSNAME NULL"
+            }, columns);
+        }
+
+        [Theory]
+        [InlineData("LocationName    NVARCHAR(200) NOT NULL", "LocationName    NVARCHAR(100) NOT NULL")]
+        [InlineData("LocationName    NVARCHAR(200) NOT NULL", "LocationName    NVARCHAR ( 200 ) NULL")]
+        [InlineData("LocationCode    NVARCHAR(50)  NULL", "LocationCode    VARCHAR(50)  NULL")]
+        [InlineData("CopyLookupsFrom SYSNAME       NULL", "CopyLookupsFrom SYSNAME       NOT NULL")]
+        public void A_changed_type_length_or_nullability_shows_in_the_column_definitions(string find, string replace)
+        {
+            var changed = Settings.Replace(find, replace);
+            Assert.NotEqual(Settings, changed);
+
+            Assert.NotEqual(
+                TenantScript.SettingsColumnDefinitions(TenantScript.CreateSettingsTableSql),
+                TenantScript.SettingsColumnDefinitions(changed));
+        }
+
+        [Fact]
         public void The_script_is_shipped_next_to_the_API()
         {
             var csproj = File.ReadAllText(Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(RepositoryScriptPath())!)!)!, "EncryptzAPI.csproj"));

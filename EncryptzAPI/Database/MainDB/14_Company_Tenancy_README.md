@@ -105,12 +105,21 @@ in the repository.
    and re-creates `dbo.sp_Company_GetUsersForSync`. It changes no table and no
    data, and nothing in any tenant database. It is safe to run again. Run it
    after script 14 and before the API is started. **Every time script 14 is run
-   again, run scripts 19 and 20 again afterwards.** Script 14 re-creates one procedure
-   in its earlier form.
-5. Deploy the new API. The new UI can be deployed with this release or later,
+   again, run scripts 19 and 20 again afterwards.** Script 14 re-creates three
+   procedures in their earlier form (`sp_Company_GetUsersForSync`,
+   `sp_User_GetCompanies`, `sp_Platform_GetCompanies`); scripts 19 and 20 restore
+   them.
+5. In the main database run `20_Company_Provisioning.sql`. It adds two tables,
+   six columns on `dbo.Companies` and the procedures for creating a company, and
+   re-creates `dbo.sp_User_GetCompanies` and `dbo.sp_Platform_GetCompanies` with
+   extra columns. It changes no existing row and nothing in any tenant database.
+   It is safe to run again. Run it after script 19 and before the API is
+   deployed. It refuses to run while `dbo.Projects` exists (before script 14, or
+   after a rollback). See `20_Company_Provisioning_README.md`.
+6. Deploy the new API. The new UI can be deployed with this release or later,
    but it works only with the new API (it needs `auth/modules`). Never serve
    the new UI against the previous API.
-6. Start the API.
+7. Start the API.
 
 ## Rehearsal on copies
 
@@ -240,6 +249,7 @@ The detailed lists are in
    Keep the previous UI build at hand for this.
 
 Script 19 needs no undo. Its procedures are used only by the new API.
+Script 20 needs no undo either (see `20_Company_Provisioning_README.md`).
 
 What the rollback (script 15) does:
 
@@ -312,8 +322,9 @@ then set to not routable (`ProvisionStatus` `None`).
 
 Still NOT restored:
 
-- The new columns and tables from script 13 stay in place. The previous API
-  ignores them.
+- The new columns and tables from script 13 stay in place, and so do those of
+  script 20 (`dbo.DbServers`, `dbo.PlatformSettings` and its six columns on
+  `dbo.Companies`). The previous API ignores them.
 - A company created after the cut-over has no project row and is not visible to
   the previous API.
 
@@ -342,7 +353,8 @@ Still NOT restored:
   later synchronisation has at least one user (login is still decided by the main
   database).
 - Every time script 14 is run again, run scripts 19 and 20 again afterwards. Script 14
-  re-creates one procedure in its earlier form.
+  re-creates three procedures in their earlier form (`sp_Company_GetUsersForSync`,
+  `sp_User_GetCompanies`, `sp_Platform_GetCompanies`); scripts 19 and 20 restore them.
 - The API caches each company's connection without an expiry. A connection or
   an active flag changed directly in SQL needs an API restart before it takes
   effect. Changes made through Platform Admin do not: they drop the cached entry.

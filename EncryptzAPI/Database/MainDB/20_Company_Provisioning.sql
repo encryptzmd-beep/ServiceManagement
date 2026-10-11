@@ -4,13 +4,17 @@
    Run AFTER 14_Company_Tenancy_Cutover.sql and 19_Module_Management.sql, with
    the new API. Run it AGAIN every time script 14 is run again: script 14
    re-creates dbo.sp_User_GetCompanies and dbo.sp_Platform_GetCompanies in their
-   earlier form.
+   earlier form. It refuses to run while dbo.Projects exists (before script 14,
+   or after a rollback with script 15).
 
    ADDS (nothing is removed, no existing row is changed):
      dbo.DbServers            SQL servers on which the API creates company databases
      dbo.PlatformSettings     MaxCompaniesPerUser (1), TenantLookupSourceDb ('')
      dbo.Companies            DbServerId, ProvisionError, ProvisionStartedAt,
-                              CreatedBy, FirstBranchName
+                              CreatedBy, FirstBranchName,
+                              ProvisionAttempt (NULL = queued, nobody is building;
+                              a value = the attempt that is building, or was the
+                              last to build)
      procedures               sp_Company_Create, sp_Company_GetCreationState,
                               sp_Provision_*, sp_Platform_*DbServer*, sp_Platform_*Setting*
    RE-CREATES with extra columns at the end:
@@ -47,6 +51,16 @@ IF OBJECT_ID('dbo.Companies') IS NOT NULL
         OR OBJECT_ID('dbo.UserModuleAccess') IS NULL)
 BEGIN
     RAISERROR('Run 13_Company_Tenancy_Schema.sql and 14_Company_Tenancy_Cutover.sql first.', 16, 1);
+    SET NOEXEC ON;
+END
+ELSE IF OBJECT_ID('dbo.Companies') IS NOT NULL
+   AND (   OBJECT_ID('dbo.Projects') IS NOT NULL
+        OR OBJECT_ID('dbo.sp_Tenant_GetConnection') IS NULL
+        OR OBJECT_ID('dbo.fn_ModuleUsers') IS NULL)
+BEGIN
+    /* the project tables are in use: the API that runs then does not know these objects,
+       and sp_User_GetCompanies / sp_Platform_GetCompanies must stay as that API expects them */
+    RAISERROR('Run 13_Company_Tenancy_Schema.sql and 14_Company_Tenancy_Cutover.sql first (this script must not run while dbo.Projects exists: before the cut-over or after a rollback).', 16, 1);
     SET NOEXEC ON;
 END
 GO
@@ -105,6 +119,8 @@ IF COL_LENGTH('dbo.Companies', 'CreatedBy') IS NULL
     ALTER TABLE dbo.Companies ADD CreatedBy INT NULL;
 IF COL_LENGTH('dbo.Companies', 'FirstBranchName') IS NULL
     ALTER TABLE dbo.Companies ADD FirstBranchName NVARCHAR(200) NULL;
+IF COL_LENGTH('dbo.Companies', 'ProvisionAttempt') IS NULL
+    ALTER TABLE dbo.Companies ADD ProvisionAttempt UNIQUEIDENTIFIER NULL;  -- NULL = queued; a value = the attempt that is (or was last) building
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Companies_CreatedBy' AND object_id = OBJECT_ID('dbo.Companies'))
@@ -115,8 +131,17 @@ GO
    4. Creating a company
    ----------------------------------------------------------------------------- */
 
-/* How many companies the user has created, the limit and whether a server is
-   there. Companies whose database failed do not count. */
+/* In this script a company "waiting for its first database" (PENDING) is always:
+       DbServerId IS NOT NULL
+       AND NULLIF(LTRIM(RTRIM(ISNULL(DatabaseName, ''))), '') IS NULL
+   It was created here and never got a database. A company whose database was
+   attached by hand has a database name (and no DbServerId) and is never pending,
+   whatever its status. */
+
+/* How many companies the user has created, the limit, whether a server is there
+   and whether an earlier company of the user is waiting for a retry.
+   A company whose set-up failed does not count, unless it has a database (one
+   attached by hand and switched off). */
 CREATE OR ALTER PROCEDURE dbo.sp_Company_GetCreationState
     @UserId INT
 AS
@@ -125,17 +150,29 @@ BEGIN
 
     SELECT
         (SELECT COUNT(*) FROM dbo.Companies c
-         WHERE c.CreatedBy = @UserId AND c.ProvisionStatus <> 'Failed')                            AS Created,
+         WHERE c.CreatedBy = @UserId
+           AND (c.ProvisionStatus <> 'Failed'
+                OR NULLIF(LTRIM(RTRIM(ISNULL(c.DatabaseName, ''))), '') IS NOT NULL))               AS Created,
         ISNULL((SELECT TRY_CAST(s.SettingValue AS INT) FROM dbo.PlatformSettings s
                 WHERE s.SettingKey = 'MaxCompaniesPerUser'), 1)                                     AS Limit,
         CAST(CASE WHEN EXISTS (SELECT 1 FROM dbo.DbServers WHERE IsDefault = 1 AND IsActive = 1)
-                  THEN 1 ELSE 0 END AS BIT)                                                         AS ServerAvailable;
+                  THEN 1 ELSE 0 END AS BIT)                                                         AS ServerAvailable,
+        CAST(CASE WHEN EXISTS (SELECT 1 FROM dbo.Companies c
+                               WHERE c.CreatedBy = @UserId AND c.IsActive = 1
+                                 AND c.ProvisionStatus = 'Failed'
+                                 AND c.DbServerId IS NOT NULL
+                                 AND NULLIF(LTRIM(RTRIM(ISNULL(c.DatabaseName, ''))), '') IS NULL)
+                  THEN 1 ELSE 0 END AS BIT)                                                         AS PendingRetry;
 END
 GO
 
 /* The company, its creator as Admin and the Service module, in one transaction.
-   The database is created afterwards by the API (status Provisioning).
-   Two requests of the same user wait for each other, so the limit holds. */
+   The database is created afterwards by the API (status Provisioning, no
+   ProvisionAttempt yet: the job is queued).
+   Two requests of the same user wait for each other, so the limit holds. A user
+   whose earlier company is waiting for a retry cannot create another one: failed
+   companies do not count, so they could otherwise be used to pass the limit.
+   ErrorNumber / ErrorDetail are for the API's log only, never for the caller. */
 CREATE OR ALTER PROCEDURE dbo.sp_Company_Create
     @CompanyName     NVARCHAR(200),
     @CompanyCode     NVARCHAR(50),
@@ -156,7 +193,9 @@ BEGIN
 
     IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE UserId = @CreatedBy AND IsActive = 1)
     BEGIN
-        SELECT CAST(0 AS INT) AS Success, 'User not found' AS Message, CAST(0 AS INT) AS CompanyId; RETURN;
+        SELECT CAST(0 AS INT) AS Success, 'User not found' AS Message, CAST(0 AS INT) AS CompanyId,
+               CAST(0 AS INT) AS ErrorNumber, CAST('' AS NVARCHAR(4000)) AS ErrorDetail;
+        RETURN;
     END
 
     BEGIN TRY
@@ -167,7 +206,8 @@ BEGIN
         IF @LockResult < 0
         BEGIN
             ROLLBACK TRANSACTION;
-            SELECT CAST(0 AS INT) AS Success, 'The company could not be created. Please try again.' AS Message, CAST(0 AS INT) AS CompanyId;
+            SELECT CAST(0 AS INT) AS Success, 'The company could not be created. Please try again.' AS Message, CAST(0 AS INT) AS CompanyId,
+                   CAST(0 AS INT) AS ErrorNumber, CAST('' AS NVARCHAR(4000)) AS ErrorDetail;
             RETURN;
         END
 
@@ -176,20 +216,31 @@ BEGIN
 
         SET @Limit = ISNULL((SELECT TRY_CAST(SettingValue AS INT) FROM dbo.PlatformSettings
                              WHERE SettingKey = 'MaxCompaniesPerUser'), 1);
+        /* same count as sp_Company_GetCreationState */
         SET @Created = (SELECT COUNT(*) FROM dbo.Companies
-                        WHERE CreatedBy = @CreatedBy AND ProvisionStatus <> 'Failed');
+                        WHERE CreatedBy = @CreatedBy
+                          AND (ProvisionStatus <> 'Failed'
+                               OR NULLIF(LTRIM(RTRIM(ISNULL(DatabaseName, ''))), '') IS NOT NULL));
 
         IF @ServerId IS NULL OR @ModuleId IS NULL OR (ISNULL(@IsPlatformAdmin, 0) = 0 AND @Limit <= 0)
             SET @Message = 'Company creation is not available right now';
         ELSE IF ISNULL(@IsPlatformAdmin, 0) = 0 AND @Created >= @Limit
             SET @Message = 'You have reached the number of companies you can create';
+        ELSE IF ISNULL(@IsPlatformAdmin, 0) = 0
+                AND EXISTS (SELECT 1 FROM dbo.Companies
+                            WHERE CreatedBy = @CreatedBy AND IsActive = 1
+                              AND ProvisionStatus = 'Failed'
+                              AND DbServerId IS NOT NULL
+                              AND NULLIF(LTRIM(RTRIM(ISNULL(DatabaseName, ''))), '') IS NULL)
+            SET @Message = 'Your earlier company is waiting for a retry';
         ELSE IF EXISTS (SELECT 1 FROM dbo.Companies WHERE CompanyCode = @CompanyCode)
             SET @Message = 'This company code is already in use';
 
         IF @Message IS NOT NULL
         BEGIN
             ROLLBACK TRANSACTION;
-            SELECT CAST(0 AS INT) AS Success, @Message AS Message, CAST(0 AS INT) AS CompanyId;
+            SELECT CAST(0 AS INT) AS Success, @Message AS Message, CAST(0 AS INT) AS CompanyId,
+                   CAST(0 AS INT) AS ErrorNumber, CAST('' AS NVARCHAR(4000)) AS ErrorDetail;
             RETURN;
         END
 
@@ -219,16 +270,24 @@ BEGIN
 
         COMMIT TRANSACTION;
 
-        SELECT CAST(1 AS INT) AS Success, 'Company created. Its database is being set up.' AS Message, @CompanyId AS CompanyId;
+        SELECT CAST(1 AS INT) AS Success, 'Company created. Its database is being set up.' AS Message, @CompanyId AS CompanyId,
+               CAST(0 AS INT) AS ErrorNumber, CAST('' AS NVARCHAR(4000)) AS ErrorDetail;
     END TRY
     BEGIN CATCH
+        /* read first: a ROLLBACK does not clear them, but nothing may come in between */
+        DECLARE @ErrorNumber INT = ERROR_NUMBER(), @ErrorDetail NVARCHAR(4000) = ERROR_MESSAGE();
+
         IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
 
-        /* 2627 / 2601: the code was taken by another request in the same moment */
+        /* 2627 / 2601 on the company code: it was taken by another request in the same
+           moment. Any other unique key (the tenant key, a membership) is not the user's
+           doing and gets the general message. */
         SELECT CAST(0 AS INT) AS Success,
-               CASE WHEN ERROR_NUMBER() IN (2627, 2601) THEN 'This company code is already in use'
+               CASE WHEN @ErrorNumber IN (2627, 2601) AND @ErrorDetail LIKE '%UQ_Companies_Code%'
+                    THEN 'This company code is already in use'
                     ELSE 'The company could not be created. Please try again.' END AS Message,
-               CAST(0 AS INT) AS CompanyId;
+               CAST(0 AS INT) AS CompanyId,
+               ISNULL(@ErrorNumber, 0) AS ErrorNumber, ISNULL(@ErrorDetail, '') AS ErrorDetail;
     END CATCH
 END
 GO
@@ -237,17 +296,37 @@ GO
    5. The provisioning job (called by the API's background worker)
    ----------------------------------------------------------------------------- */
 
-/* What the worker needs to build the database of a company. */
-CREATE OR ALTER PROCEDURE dbo.sp_Provision_GetJob
+/* A job is QUEUED while the company is Provisioning and ProvisionAttempt is
+   NULL. sp_Provision_Begin claims it: it writes a new ProvisionAttempt and starts
+   the clock (ProvisionStartedAt). Completing and failing name that attempt, so a
+   late answer of an earlier attempt changes nothing. */
+
+/* API-internal (background worker) only: claims the job and returns the encrypted server password. Never expose through an endpoint. */
+CREATE OR ALTER PROCEDURE dbo.sp_Provision_Begin
     @CompanyId INT
 AS
 BEGIN
     SET NOCOUNT ON;
 
+    DECLARE @Attempt UNIQUEIDENTIFIER = NEWID(), @Claimed BIT = 0;
+
+    /* The single UPDATE is the claim: of two runs for one company only one gets a
+       row. Only a company that is waiting for its first database (see section 4). */
+    UPDATE dbo.Companies
+    SET ProvisionAttempt = @Attempt, ProvisionStartedAt = GETDATE()
+    WHERE CompanyId = @CompanyId
+      AND ProvisionStatus = 'Provisioning'
+      AND ProvisionAttempt IS NULL
+      AND DbServerId IS NOT NULL
+      AND NULLIF(LTRIM(RTRIM(ISNULL(DatabaseName, ''))), '') IS NULL;
+
+    IF @@ROWCOUNT = 1 SET @Claimed = 1;
+
+    /* one row when claimed, no row otherwise (same columns) */
     SELECT
         c.CompanyId, c.TenantScopeId,
         ISNULL(NULLIF(LTRIM(RTRIM(c.FirstBranchName)), ''), 'Head Office') AS FirstBranchName,
-        c.ProvisionStatus,
+        c.ProvisionAttempt,
         ISNULL(s.ServerName, '')       AS ServerName,
         ISNULL(s.AdminUser, '')        AS AdminUser,
         ISNULL(s.AdminPasswordEnc, '') AS AdminPasswordEnc,
@@ -256,16 +335,25 @@ BEGIN
                 WHERE p.SettingKey = 'TenantLookupSourceDb'), '') AS LookupSourceDb
     FROM dbo.Companies c
     LEFT JOIN dbo.DbServers s ON s.DbServerId = c.DbServerId AND s.IsActive = 1
-    WHERE c.CompanyId = @CompanyId;
+    WHERE @Claimed = 1
+      AND c.CompanyId = @CompanyId
+      AND c.ProvisionAttempt = @Attempt;
 END
 GO
 
 /* The database is built: the company gets its connection (taken from its
-   server row) and becomes Ready. Only a company that is still Provisioning:
-   a job that was given up (marked Failed) must not become Ready later. */
+   server row) and becomes Ready. Only for the attempt that owns the job, and
+   only while the company is still Provisioning and still without a database:
+   a job that was given up, retried or overtaken (a database attached by hand)
+   must not become Ready through an old attempt. @ServerName / @AdminUser are
+   what the attempt connected with: if the server row was edited meanwhile, the
+   database was built somewhere else than the row now says, and nothing is saved. */
 CREATE OR ALTER PROCEDURE dbo.sp_Provision_Complete
     @CompanyId    INT,
-    @DatabaseName NVARCHAR(200)
+    @Attempt      UNIQUEIDENTIFIER,
+    @DatabaseName NVARCHAR(200),
+    @ServerName   NVARCHAR(200),
+    @AdminUser    NVARCHAR(100)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -281,15 +369,23 @@ BEGIN
     FROM dbo.Companies c
     INNER JOIN dbo.DbServers s ON s.DbServerId = c.DbServerId
     WHERE c.CompanyId = @CompanyId
-      AND c.ProvisionStatus = 'Provisioning';
+      AND c.ProvisionStatus = 'Provisioning'
+      AND c.ProvisionAttempt = @Attempt
+      AND c.DbServerId IS NOT NULL
+      AND NULLIF(LTRIM(RTRIM(ISNULL(c.DatabaseName, ''))), '') IS NULL
+      AND NULLIF(LTRIM(RTRIM(ISNULL(@DatabaseName, ''))), '') IS NOT NULL
+      AND s.ServerName = @ServerName
+      AND s.AdminUser  = @AdminUser;
 
     SELECT CAST(CASE WHEN @@ROWCOUNT = 1 THEN 1 ELSE 0 END AS INT) AS Success,
            ISNULL((SELECT TenantKey FROM dbo.Companies WHERE CompanyId = @CompanyId), '') AS TenantKey;
 END
 GO
 
+/* Only the attempt that owns the job can fail it. */
 CREATE OR ALTER PROCEDURE dbo.sp_Provision_Fail
     @CompanyId INT,
+    @Attempt   UNIQUEIDENTIFIER,
     @Error     NVARCHAR(2000)
 AS
 BEGIN
@@ -299,12 +395,46 @@ BEGIN
     SET ProvisionStatus = 'Failed',
         ProvisionError  = LEFT(ISNULL(@Error, ''), 2000)
     WHERE CompanyId = @CompanyId
-      AND ProvisionStatus = 'Provisioning';
+      AND ProvisionStatus = 'Provisioning'
+      AND ProvisionAttempt = @Attempt;
 END
 GO
 
-/* Try again: only a Failed company, by its creator or a platform administrator.
-   The single UPDATE is the gate, so two retries cannot both start a job. */
+/* For the worker, when the answer of sp_Provision_Complete was lost. No row when
+   the company does not exist. */
+CREATE OR ALTER PROCEDURE dbo.sp_Provision_GetStatus
+    @CompanyId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT ProvisionStatus, ProvisionAttempt
+    FROM dbo.Companies
+    WHERE CompanyId = @CompanyId;
+END
+GO
+
+/* Jobs nobody has claimed, oldest first: after a restart the API has forgotten
+   the ones it held in memory and picks them up from here. */
+CREATE OR ALTER PROCEDURE dbo.sp_Provision_GetQueued
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT CompanyId
+    FROM dbo.Companies
+    WHERE ProvisionStatus = 'Provisioning'
+      AND ProvisionAttempt IS NULL
+    ORDER BY ProvisionStartedAt, CompanyId;
+END
+GO
+
+/* Try again: only a Failed company that never got a database (see section 4),
+   by a platform administrator, or by its creator while still an active member.
+   A company whose database was attached by hand and then switched off is Failed
+   too, but it HAS a database: it is never rebuilt here.
+   The single UPDATE is the gate, so two retries cannot both start a job. It
+   queues the job again (ProvisionAttempt NULL) on the current default server. */
 CREATE OR ALTER PROCEDURE dbo.sp_Provision_Retry
     @CompanyId       INT,
     @UserId          INT,
@@ -315,9 +445,12 @@ BEGIN
 
     DECLARE @ServerId INT = (SELECT DbServerId FROM dbo.DbServers WHERE IsDefault = 1 AND IsActive = 1);
 
-    IF NOT EXISTS (SELECT 1 FROM dbo.Companies
-                   WHERE CompanyId = @CompanyId AND IsActive = 1
-                     AND (ISNULL(@IsPlatformAdmin, 0) = 1 OR CreatedBy = @UserId))
+    IF NOT EXISTS (SELECT 1 FROM dbo.Companies c
+                   WHERE c.CompanyId = @CompanyId AND c.IsActive = 1
+                     AND (   ISNULL(@IsPlatformAdmin, 0) = 1
+                          OR (    c.CreatedBy = @UserId
+                              AND EXISTS (SELECT 1 FROM dbo.CompanyUsers cu
+                                          WHERE cu.CompanyId = c.CompanyId AND cu.UserId = @UserId AND cu.IsActive = 1))))
     BEGIN
         SELECT CAST(0 AS INT) AS Success, 'Company not found' AS Message; RETURN;
     END
@@ -328,9 +461,15 @@ BEGIN
     END
 
     UPDATE dbo.Companies
-    SET ProvisionStatus = 'Provisioning', ProvisionStartedAt = GETDATE(), DbServerId = @ServerId
+    SET ProvisionStatus    = 'Provisioning',
+        ProvisionStartedAt = GETDATE(),
+        ProvisionAttempt   = NULL,
+        ProvisionError     = NULL,
+        DbServerId         = @ServerId
     WHERE CompanyId = @CompanyId
-      AND ProvisionStatus = 'Failed';
+      AND ProvisionStatus = 'Failed'
+      AND DbServerId IS NOT NULL
+      AND NULLIF(LTRIM(RTRIM(ISNULL(DatabaseName, ''))), '') IS NULL;
 
     IF @@ROWCOUNT = 1
         SELECT CAST(1 AS INT) AS Success, 'The database is being set up.' AS Message;
@@ -339,19 +478,32 @@ BEGIN
 END
 GO
 
-/* Jobs that were interrupted (API restart, crash): give them up so the user
-   can retry. */
+/* Gives up jobs that will not finish, so they can be retried:
+     - a CLAIMED job (ProvisionAttempt set) whose attempt started more than
+       @OlderThanMinutes ago: the run was interrupted (API restart, crash) or hangs.
+       The clock starts when the job is claimed, not when the company was created,
+       so a job that waited in the queue is not given up while it is being built;
+     - a QUEUED job (ProvisionAttempt NULL) that nobody claimed for 8 times as long
+       (2 hours with the default).
+   ProvisionAttempt is left as it is: an attempt that is still running finds the
+   company no longer Provisioning, cannot complete, and removes its own database. */
 CREATE OR ALTER PROCEDURE dbo.sp_Provision_FailStuck
     @OlderThanMinutes INT = 15
 AS
 BEGIN
     SET NOCOUNT ON;
 
+    DECLARE @Minutes INT = ABS(ISNULL(@OlderThanMinutes, 15));
+    IF @Minutes > 100000 SET @Minutes = 100000;   -- keeps 8 times the value inside DATEADD's range
+
     UPDATE dbo.Companies
     SET ProvisionStatus = 'Failed',
         ProvisionError  = 'The set-up did not finish (interrupted or timed out).'
     WHERE ProvisionStatus = 'Provisioning'
-      AND ISNULL(ProvisionStartedAt, '19000101') < DATEADD(MINUTE, -ABS(ISNULL(@OlderThanMinutes, 15)), GETDATE());
+      AND (   (ProvisionAttempt IS NOT NULL
+               AND ISNULL(ProvisionStartedAt, '19000101') < DATEADD(MINUTE, -@Minutes, GETDATE()))
+           OR (ProvisionAttempt IS NULL
+               AND ISNULL(ProvisionStartedAt, '19000101') < DATEADD(MINUTE, -8 * @Minutes, GETDATE())));
 
     SELECT @@ROWCOUNT AS Failed;
 END
@@ -424,32 +576,40 @@ BEGIN
         SELECT CAST(0 AS INT) AS Success, 'Server not found' AS Message, CAST(0 AS INT) AS DbServerId; RETURN;
     END
 
-    BEGIN TRANSACTION;
+    BEGIN TRY
+        BEGIN TRANSACTION;
 
-    IF @IsDefault = 1
-        UPDATE dbo.DbServers WITH (UPDLOCK, HOLDLOCK) SET IsDefault = 0
-        WHERE IsDefault = 1 AND DbServerId <> ISNULL(@DbServerId, 0);
+        IF @IsDefault = 1
+            UPDATE dbo.DbServers WITH (UPDLOCK, HOLDLOCK) SET IsDefault = 0
+            WHERE IsDefault = 1 AND DbServerId <> ISNULL(@DbServerId, 0);
 
-    IF ISNULL(@DbServerId, 0) = 0
-    BEGIN
-        INSERT INTO dbo.DbServers (ServerName, AdminUser, AdminPasswordEnc, ExtraOptions, IsDefault, IsActive)
-        VALUES (@ServerName, @AdminUser, @AdminPasswordEnc, NULLIF(LTRIM(RTRIM(@ExtraOptions)), ''), @IsDefault, @IsActive);
+        IF ISNULL(@DbServerId, 0) = 0
+        BEGIN
+            INSERT INTO dbo.DbServers (ServerName, AdminUser, AdminPasswordEnc, ExtraOptions, IsDefault, IsActive)
+            VALUES (@ServerName, @AdminUser, @AdminPasswordEnc, NULLIF(LTRIM(RTRIM(@ExtraOptions)), ''), @IsDefault, @IsActive);
 
-        SET @DbServerId = SCOPE_IDENTITY();
-    END
-    ELSE
-        UPDATE dbo.DbServers
-        SET ServerName       = @ServerName,
-            AdminUser        = @AdminUser,
-            AdminPasswordEnc = CASE WHEN ISNULL(@AdminPasswordEnc, '') = '' THEN AdminPasswordEnc ELSE @AdminPasswordEnc END,
-            ExtraOptions     = NULLIF(LTRIM(RTRIM(@ExtraOptions)), ''),
-            IsDefault        = @IsDefault,
-            IsActive         = @IsActive
-        WHERE DbServerId = @DbServerId;
+            SET @DbServerId = SCOPE_IDENTITY();
+        END
+        ELSE
+            UPDATE dbo.DbServers
+            SET ServerName       = @ServerName,
+                AdminUser        = @AdminUser,
+                AdminPasswordEnc = CASE WHEN ISNULL(@AdminPasswordEnc, '') = '' THEN AdminPasswordEnc ELSE @AdminPasswordEnc END,
+                ExtraOptions     = NULLIF(LTRIM(RTRIM(@ExtraOptions)), ''),
+                IsDefault        = @IsDefault,
+                IsActive         = @IsActive
+            WHERE DbServerId = @DbServerId;
 
-    COMMIT TRANSACTION;
+        COMMIT TRANSACTION;
 
-    SELECT CAST(1 AS INT) AS Success, 'Server saved' AS Message, @DbServerId AS DbServerId;
+        SELECT CAST(1 AS INT) AS Success, 'Server saved' AS Message, @DbServerId AS DbServerId;
+    END TRY
+    BEGIN CATCH
+        /* e.g. two administrators making two servers the default in the same moment */
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+
+        SELECT CAST(0 AS INT) AS Success, 'The server could not be saved. Please try again.' AS Message, CAST(0 AS INT) AS DbServerId;
+    END CATCH
 END
 GO
 

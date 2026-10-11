@@ -1,14 +1,17 @@
 namespace EncryptzBL.Common.Provisioning
 {
-    /// <summary>Everything the worker needs to build one company's database.</summary>
+    /// <summary>
+    /// Everything the worker needs to build one company's database. A job only
+    /// exists once it is claimed: whoever holds one is the only run for that company.
+    /// </summary>
     public sealed class ProvisionJob
     {
         public int CompanyId { get; init; }
+        /// <summary>Identity of this claim (Companies.ProvisionAttempt). A later attempt has another one.</summary>
+        public Guid Attempt { get; init; }
         /// <summary>Value the tenant database stores in its ProjectId columns (1 for a new company).</summary>
         public int TenantScopeId { get; init; }
         public string FirstBranchName { get; init; } = "";
-        /// <summary>Companies.ProvisionStatus when the job was read.</summary>
-        public string Status { get; init; } = "";
         public string ServerName { get; init; } = "";
         public string AdminUser { get; init; } = "";
         /// <summary>Decrypted. Never log it, never store it.</summary>
@@ -22,22 +25,33 @@ namespace EncryptzBL.Common.Provisioning
     {
         Ready,
         Failed,
-        /// <summary>The company is not waiting for a database (unknown, or not Provisioning).</summary>
+        /// <summary>There was no job to claim (unknown company, not Provisioning, or another run has it).</summary>
         Skipped
     }
 
     /// <summary>The main-database side of a provisioning job.</summary>
     public interface IProvisionStore
     {
-        Task<ProvisionJob?> GetJobAsync(int companyId);
+        /// <summary>Claims the company's job. Null when there is nothing to do: unknown company, not Provisioning, or another run already has it.</summary>
+        Task<ProvisionJob?> BeginAsync(int companyId);
 
-        /// <summary>Marks the company Ready. False when it is no longer Provisioning (the job was given up).</summary>
-        Task<bool> CompleteAsync(int companyId, string databaseName);
+        /// <summary>Marks the company Ready. False when this attempt no longer owns the job.</summary>
+        Task<bool> CompleteAsync(ProvisionJob job, string databaseName);
 
-        Task FailAsync(int companyId, string error);
+        /// <summary>Marks the company Failed, when this attempt still owns the job.</summary>
+        Task FailAsync(ProvisionJob job, string error);
 
-        /// <summary>Gives up jobs that have been Provisioning for longer than the given time. Returns how many.</summary>
+        /// <summary>Companies.ProvisionStatus now ("" when the company does not exist).</summary>
+        Task<string> GetStatusAsync(int companyId);
+
+        /// <summary>
+        /// Gives up claimed jobs that have been running for longer than the given time, and
+        /// queued jobs nobody picked up for eight times as long. Returns how many.
+        /// </summary>
         Task<int> FailStuckAsync(int olderThanMinutes);
+
+        /// <summary>Jobs that are queued in the database but in nobody's memory (after a restart).</summary>
+        Task<IReadOnlyList<int>> GetQueuedAsync();
     }
 
     /// <summary>The SQL server a company database is created on.</summary>

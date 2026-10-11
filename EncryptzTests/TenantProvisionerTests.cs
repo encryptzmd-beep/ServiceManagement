@@ -1,4 +1,5 @@
 using EncryptzBL.Common.Provisioning;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -6,27 +7,51 @@ namespace EncryptzTests
 {
     public class TenantProvisionerTests
     {
+        private static readonly Guid Attempt = Guid.Parse("11111111-2222-3333-4444-555555555555");
+
         private sealed class FakeStore : IProvisionStore
         {
             public ProvisionJob? Job = new()
             {
-                CompanyId = 7, TenantScopeId = 1, FirstBranchName = "Head Office", Status = "Provisioning",
+                CompanyId = 7, Attempt = TenantProvisionerTests.Attempt, TenantScopeId = 1, FirstBranchName = "Head Office",
                 ServerName = "srv", AdminUser = "creator", AdminPassword = "secret-pw", ExtraOptions = "", LookupSourceDb = ""
             };
             public bool CompleteAnswer = true;
-            public Exception? CompleteThrows;
+            public Exception? BeginThrows, CompleteThrows, StatusThrows, FailThrows;
+            public string Status = "Provisioning";
             public readonly List<string> Calls = new();
+            public readonly List<Guid> Attempts = new();
             public string? Error;
 
-            public Task<ProvisionJob?> GetJobAsync(int companyId) { Calls.Add("get"); return Task.FromResult(Job); }
-            public Task<bool> CompleteAsync(int companyId, string databaseName)
+            public Task<ProvisionJob?> BeginAsync(int companyId)
+            {
+                Calls.Add("begin");
+                if (BeginThrows != null) throw BeginThrows;
+                return Task.FromResult(Job);
+            }
+            public Task<bool> CompleteAsync(ProvisionJob job, string databaseName)
             {
                 Calls.Add("complete:" + databaseName);
+                Attempts.Add(job.Attempt);
                 if (CompleteThrows != null) throw CompleteThrows;
                 return Task.FromResult(CompleteAnswer);
             }
-            public Task FailAsync(int companyId, string error) { Calls.Add("fail"); Error = error; return Task.CompletedTask; }
+            public Task FailAsync(ProvisionJob job, string error)
+            {
+                Calls.Add("fail");
+                Attempts.Add(job.Attempt);
+                Error = error;
+                if (FailThrows != null) throw FailThrows;
+                return Task.CompletedTask;
+            }
+            public Task<string> GetStatusAsync(int companyId)
+            {
+                Calls.Add("status");
+                if (StatusThrows != null) throw StatusThrows;
+                return Task.FromResult(Status);
+            }
             public Task<int> FailStuckAsync(int olderThanMinutes) => Task.FromResult(0);
+            public Task<IReadOnlyList<int>> GetQueuedAsync() => Task.FromResult<IReadOnlyList<int>>(Array.Empty<int>());
         }
 
         private sealed class FakeServer : ITenantDatabaseServer
@@ -62,6 +87,21 @@ namespace EncryptzTests
             }
         }
 
+        /// <summary>Keeps what was logged: the text and whether an exception object was handed over.</summary>
+        private sealed class ListLogger : ILogger<TenantProvisioner>
+        {
+            public readonly List<string> Lines = new();
+            public readonly List<Exception> Exceptions = new();
+
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+            public bool IsEnabled(LogLevel logLevel) => true;
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            {
+                Lines.Add(formatter(state, exception));
+                if (exception != null) Exceptions.Add(exception);
+            }
+        }
+
         private const string Db = "EncryptzTenant_000007";
 
         private static (TenantProvisioner Provisioner, FakeStore Store, FakeServer Server) Make()
@@ -80,32 +120,54 @@ namespace EncryptzTests
 
             Assert.Equal(ProvisionOutcome.Ready, outcome);
             Assert.Equal(new[] { "exists:" + Db, "create:" + Db, "build:" + Db }, server.Calls);
-            Assert.Equal(new[] { "get", "complete:" + Db }, store.Calls);
+            Assert.Equal(new[] { "begin", "complete:" + Db }, store.Calls);
         }
 
-        [Theory]
-        [InlineData("Ready")]
-        [InlineData("Failed")]
-        [InlineData("None")]
-        [InlineData("")]
-        public async Task A_company_that_is_not_being_set_up_is_left_alone(string status)
-        {
-            var (provisioner, store, server) = Make();
-            store.Job = new ProvisionJob { CompanyId = 7, Status = status, ServerName = "srv", AdminUser = "u", AdminPassword = "p" };
-
-            Assert.Equal(ProvisionOutcome.Skipped, await provisioner.RunAsync(7, CancellationToken.None));
-            Assert.Empty(server.Calls);
-            Assert.Equal(new[] { "get" }, store.Calls);
-        }
-
+        // A company that is unknown, not Provisioning (Ready, Failed, None) or already
+        // claimed by another run: the store gives no job in all of these cases.
         [Fact]
-        public async Task An_unknown_company_is_left_alone()
+        public async Task A_company_without_a_job_is_left_alone()
         {
             var (provisioner, store, server) = Make();
             store.Job = null;
 
             Assert.Equal(ProvisionOutcome.Skipped, await provisioner.RunAsync(7, CancellationToken.None));
             Assert.Empty(server.Calls);
+            Assert.Equal(new[] { "begin" }, store.Calls);
+        }
+
+        [Fact]
+        public async Task When_another_run_already_has_the_job_nothing_is_touched_and_nothing_is_recorded()
+        {
+            var (provisioner, store, server) = Make();
+            store.Job = null;   // sp_Provision_Begin claimed nothing: ProvisionAttempt was already set
+
+            Assert.Equal(ProvisionOutcome.Skipped, await provisioner.RunAsync(7, CancellationToken.None));
+            Assert.Empty(server.Calls);
+            Assert.DoesNotContain("fail", store.Calls);
+            Assert.DoesNotContain("status", store.Calls);
+        }
+
+        [Fact]
+        public async Task A_job_for_another_company_is_refused_and_nothing_is_touched()
+        {
+            var (provisioner, store, server) = Make();
+            store.Job = new ProvisionJob { CompanyId = 8, Attempt = Attempt, TenantScopeId = 1, ServerName = "srv", AdminUser = "u", AdminPassword = "p" };
+
+            Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
+            Assert.Empty(server.Calls);
+            Assert.Equal(new[] { "begin" }, store.Calls);
+        }
+
+        [Fact]
+        public async Task When_the_job_cannot_be_claimed_nothing_is_touched()
+        {
+            var (provisioner, store, server) = Make();
+            store.BeginThrows = new InvalidOperationException("main database unreachable");
+
+            Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
+            Assert.Empty(server.Calls);
+            Assert.Equal(new[] { "begin" }, store.Calls);
         }
 
         [Theory]
@@ -115,7 +177,7 @@ namespace EncryptzTests
         public async Task Without_a_usable_server_the_set_up_fails_and_nothing_is_touched(string serverName, string user, string password)
         {
             var (provisioner, store, server) = Make();
-            store.Job = new ProvisionJob { CompanyId = 7, TenantScopeId = 1, Status = "Provisioning", ServerName = serverName, AdminUser = user, AdminPassword = password };
+            store.Job = new ProvisionJob { CompanyId = 7, Attempt = Attempt, TenantScopeId = 1, ServerName = serverName, AdminUser = user, AdminPassword = password };
 
             Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
             Assert.Empty(server.Calls);
@@ -131,6 +193,20 @@ namespace EncryptzTests
             Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
             Assert.Equal(new[] { "exists:" + Db }, server.Calls);
             Assert.Contains("already exists", store.Error);
+            Assert.Contains("was not touched", store.Error);
+            Assert.DoesNotContain("may have been created", store.Error);
+        }
+
+        [Fact]
+        public async Task When_the_existence_check_fails_nothing_is_created_and_nothing_is_dropped()
+        {
+            var (provisioner, store, server) = Make();
+            server.ExistsThrows = new InvalidOperationException("Login failed for user 'creator'");
+
+            Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
+            Assert.Equal(new[] { "exists:" + Db }, server.Calls);
+            Assert.Contains("Login failed", store.Error);
+            Assert.DoesNotContain("may have been created", store.Error);
         }
 
         [Fact]
@@ -141,7 +217,34 @@ namespace EncryptzTests
 
             Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
             Assert.DoesNotContain(server.Calls, c => c.StartsWith("drop"));
+            Assert.DoesNotContain(server.Calls, c => c.StartsWith("build"));
             Assert.Contains("permission denied", store.Error);
+            Assert.EndsWith(" The database " + Db + " may have been created; check the server before retrying.", store.Error);
+        }
+
+        [Fact]
+        public async Task When_creating_is_cancelled_nothing_is_dropped_and_the_error_says_the_database_may_exist()
+        {
+            var (provisioner, store, server) = Make();
+            server.CreateThrows = new OperationCanceledException();
+
+            Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
+            Assert.DoesNotContain(server.Calls, c => c.StartsWith("drop"));
+            Assert.Contains("The set-up was cancelled or timed out.", store.Error);
+            Assert.Contains("may have been created", store.Error);
+            Assert.Contains(Db, store.Error);
+        }
+
+        [Fact]
+        public async Task The_note_that_the_database_may_have_been_created_survives_truncation()
+        {
+            var (provisioner, store, server) = Make();
+            server.CreateThrows = new InvalidOperationException(new string('x', 5000));
+
+            await provisioner.RunAsync(7, CancellationToken.None);
+
+            Assert.True(store.Error!.Length <= 2000);
+            Assert.EndsWith(" The database " + Db + " may have been created; check the server before retrying.", store.Error);
         }
 
         [Fact]
@@ -166,7 +269,7 @@ namespace EncryptzTests
             // the existence check and the create do not observe the token in the fake; the build does
             Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, cts.Token));
             Assert.Contains("drop:" + Db, server.Calls);
-            Assert.Contains("timed out", store.Error);
+            Assert.Equal("The set-up was cancelled or timed out.", store.Error);
         }
 
         [Fact]
@@ -177,17 +280,58 @@ namespace EncryptzTests
 
             Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
             Assert.Contains("drop:" + Db, server.Calls);
+            Assert.Equal("The set-up was given up before it finished.", store.Error);
+            Assert.DoesNotContain("status", store.Calls);
         }
 
+        // -- CompleteAsync throws: nobody knows whether the main database committed --
+
         [Fact]
-        public async Task When_marking_ready_fails_the_database_is_dropped()
+        public async Task When_marking_ready_throws_but_the_company_is_ready_the_database_is_kept()
+        {
+            var (provisioner, store, server) = Make();
+            store.CompleteThrows = new InvalidOperationException("connection lost after the commit");
+            store.Status = "Ready";
+
+            Assert.Equal(ProvisionOutcome.Ready, await provisioner.RunAsync(7, CancellationToken.None));
+            Assert.DoesNotContain(server.Calls, c => c.StartsWith("drop"));
+            Assert.DoesNotContain("fail", store.Calls);
+            Assert.Equal(new[] { "begin", "complete:" + Db, "status" }, store.Calls);
+        }
+
+        [Theory]
+        [InlineData("Provisioning")]
+        [InlineData("Failed")]
+        [InlineData("None")]
+        [InlineData("")]
+        public async Task When_marking_ready_throws_and_the_company_is_not_ready_the_database_is_dropped(string status)
         {
             var (provisioner, store, server) = Make();
             store.CompleteThrows = new InvalidOperationException("main database unreachable");
+            store.Status = status;
 
             Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
             Assert.Contains("drop:" + Db, server.Calls);
             Assert.Contains("fail", store.Calls);
+            Assert.Contains("main database unreachable", store.Error);
+        }
+
+        [Fact]
+        public async Task When_marking_ready_throws_and_the_status_cannot_be_read_the_database_is_kept_for_a_person_to_decide()
+        {
+            var store = new FakeStore
+            {
+                CompleteThrows = new InvalidOperationException("main database unreachable"),
+                StatusThrows = new InvalidOperationException("main database unreachable")
+            };
+            var server = new FakeServer();
+            var logger = new ListLogger();
+            var provisioner = new TenantProvisioner(store, server, logger);
+
+            Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
+            Assert.DoesNotContain(server.Calls, c => c.StartsWith("drop"));
+            Assert.DoesNotContain("fail", store.Calls);
+            Assert.Contains(logger.Lines, line => line.Contains("7") && line.Contains(Db));
         }
 
         [Fact]
@@ -216,25 +360,84 @@ namespace EncryptzTests
         }
 
         [Fact]
+        public async Task The_note_about_a_database_left_on_the_server_survives_truncation()
+        {
+            var (provisioner, store, server) = Make();
+            server.BuildThrows = new InvalidOperationException(new string('x', 5000));
+            server.DropThrows = new InvalidOperationException("cannot drop");
+
+            await provisioner.RunAsync(7, CancellationToken.None);
+
+            Assert.True(store.Error!.Length <= 2000);
+            Assert.Contains("left on the server", store.Error);
+            Assert.Contains(Db, store.Error);
+            Assert.EndsWith("remove it before retrying.", store.Error);
+        }
+
+        [Fact]
+        public async Task Completing_and_failing_carry_the_attempt_that_was_claimed()
+        {
+            var (provisioner, store, server) = Make();
+            await provisioner.RunAsync(7, CancellationToken.None);
+            Assert.Equal(new[] { Attempt }, store.Attempts);
+
+            (provisioner, store, server) = Make();
+            server.BuildThrows = new InvalidOperationException("script error");
+            await provisioner.RunAsync(7, CancellationToken.None);
+            Assert.Equal(new[] { Attempt }, store.Attempts);
+
+            (provisioner, store, server) = Make();
+            store.CompleteAnswer = false;
+            await provisioner.RunAsync(7, CancellationToken.None);
+            Assert.Equal(new[] { Attempt, Attempt }, store.Attempts);   // complete, then fail
+        }
+
+        [Fact]
         public async Task A_failure_while_recording_the_failure_does_not_escape()
         {
-            var store = new ThrowingFailStore();
-            var server = new FakeServer { BuildThrows = new InvalidOperationException("script error") };
-            var provisioner = new TenantProvisioner(store, server, NullLogger<TenantProvisioner>.Instance);
+            var (provisioner, store, server) = Make();
+            server.BuildThrows = new InvalidOperationException("script error");
+            store.FailThrows = new InvalidOperationException("main database unreachable");
 
             Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
             Assert.Contains("drop:" + Db, server.Calls);
         }
 
-        private sealed class ThrowingFailStore : IProvisionStore
+        [Fact]
+        public async Task The_log_gets_the_scrubbed_reason_and_the_error_type_never_the_exception_or_the_password()
         {
-            public Task<ProvisionJob?> GetJobAsync(int companyId) => Task.FromResult<ProvisionJob?>(new ProvisionJob
+            var store = new FakeStore
             {
-                CompanyId = 7, TenantScopeId = 1, Status = "Provisioning", ServerName = "srv", AdminUser = "u", AdminPassword = "p"
-            });
-            public Task<bool> CompleteAsync(int companyId, string databaseName) => Task.FromResult(true);
-            public Task FailAsync(int companyId, string error) => throw new InvalidOperationException("main database unreachable");
-            public Task<int> FailStuckAsync(int olderThanMinutes) => Task.FromResult(0);
+                BeginThrows = null,
+                FailThrows = new InvalidOperationException("fail: Password=secret-pw")
+            };
+            var server = new FakeServer
+            {
+                BuildThrows = new InvalidOperationException("Login failed; Password=secret-pw"),
+                DropThrows = new TimeoutException("drop: Password=secret-pw")
+            };
+            var logger = new ListLogger();
+
+            await new TenantProvisioner(store, server, logger).RunAsync(7, CancellationToken.None);
+
+            Assert.Empty(logger.Exceptions);
+            Assert.NotEmpty(logger.Lines);
+            Assert.DoesNotContain(logger.Lines, line => line.Contains("secret-pw"));
+            Assert.Contains(logger.Lines, line => line.Contains("Login failed") && line.Contains("InvalidOperationException"));
+            Assert.Contains(logger.Lines, line => line.Contains("TimeoutException"));
+        }
+
+        [Fact]
+        public async Task A_failure_to_claim_is_logged_without_the_exception()
+        {
+            var store = new FakeStore { BeginThrows = new InvalidOperationException("Server=x;Password=main-db-pw") };
+            var logger = new ListLogger();
+
+            await new TenantProvisioner(store, new FakeServer(), logger).RunAsync(7, CancellationToken.None);
+
+            Assert.Empty(logger.Exceptions);
+            Assert.DoesNotContain(logger.Lines, line => line.Contains("main-db-pw"));
+            Assert.Contains(logger.Lines, line => line.Contains("InvalidOperationException"));
         }
     }
 }
