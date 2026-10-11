@@ -29,7 +29,10 @@ The scripts, in the order they are used:
 ## Never edit these scripts
 
 The six files are frozen. If something needs correcting, add a NEW numbered
-file. The next free number in this folder is 19. Every SQL change must be a file
+file. The next free number in this folder is 19. A later script must not
+re-create `dbo.sp_Tenant_GetConnection` or `dbo.sp_Project_GetConnection`:
+scripts 14, 15 and 18 use their dates to know where a cut-over and a rollback
+happened. Every SQL change must be a file
 in the repository.
 
 ## Before the release (any time, the running API is not affected)
@@ -94,7 +97,7 @@ in the repository.
      database, provision status and the number of users who can open the Service
      module. Administrators are counted. Check it: each company with a database
      should be `Ready`.
-4. Deploy the new API. The UI does not have to change in this release.
+4. Deploy the new API. The new UI can be deployed with this release or later.
 5. Start the API.
 
 ## Rehearsal on copies
@@ -110,7 +113,7 @@ pointed at a tenant-database copy or set to not routable (`ProvisionStatus` not
 
 The exact steps are in the plan file
 `docs/superpowers/plans/2026-10-11-company-routing-and-modules-backend.md`,
-Task 13, steps 2 to 7. Besides what the plan lists, try these three cases:
+Task 13, steps 2 to 7. Besides what the plan lists, try these cases:
 
 1. "+ New Project" in Platform Admin on a company that already has a database.
    It must be refused with "This company already has a database. Edit it instead".
@@ -120,6 +123,10 @@ Task 13, steps 2 to 7. Besides what the plan lists, try these three cases:
 3. Rollback after a connection was edited. Edit a company's connection in
    Platform Admin, run script 15, then script 18. The connection in
    `ProjectConnections` must follow.
+4. Run script 18 a second time. It must stop with "already copied".
+5. Roll back again, then edit a connection in Platform Admin under the previous
+   API without running script 18, and run script 18. It must stop and list that
+   row.
 
 ## Check after the release
 
@@ -131,8 +138,9 @@ Task 13, steps 2 to 7. Besides what the plan lists, try these three cases:
 - Add a user.
 - Add a technician.
 - In Platform Admin switch a member's access off and on again.
-- A member without access to the module sees the Service module card
-  disabled, with the text "Ask your administrator".
+- With the new UI the Service module card is disabled and shows "Ask your
+  administrator". With the previous UI the member sees the company but no
+  project to choose.
 - A user who was logged in before the release can keep working. Their token
   carries the old project key, which is now the company's tenant key, so it
   should still reach the same database. If it does not, they log in again.
@@ -140,11 +148,16 @@ Task 13, steps 2 to 7. Besides what the plan lists, try these three cases:
 ## Undo
 
 1. Stop the API.
-2. In the main database run `15_Company_Tenancy_Rollback.sql`.
-3. In the main database run `18_Company_Tenancy_Rollback_Connections_Once.sql`.
+2. Back up the main database.
+3. In the main database run `15_Company_Tenancy_Rollback.sql`.
+4. In the main database run `18_Company_Tenancy_Rollback_Connections_Once.sql`.
    Run it in the same sitting, right after script 15 printed
    `Project tables restored.` and before the previous API is started.
-4. Deploy the previous API and UI, then start it.
+   If the previous API has been started since script 15 ran, or script 15
+   printed `No project tables were restored in this run: project access was left as it is.`,
+   do NOT run script 18. The project tables are already the live data. Correct
+   connections in Platform Admin.
+5. Deploy the previous API and UI, then start it.
 
 What the rollback (script 15) does:
 
@@ -179,15 +192,26 @@ What script 18 does:
   has a server, database and user. It adds a row when the project has none and
   the company has a password. A connection is active only when the company's
   database is `Ready`.
-- It refuses to run until script 15 has been run ("Run 15 first"). The same
-  refusal appears when scripts 13 and 14 were never run on that database. Then
-  there is nothing to undo.
+- It stops with a message, and changes nothing, in these cases:
+  - "The project tables are not there. Run 15_Company_Tenancy_Rollback.sql
+    first." Run script 15, then script 18.
+  - "Script 14 (the cut-over) was never run on this database: there is nothing
+    to copy back." There is nothing to undo.
+  - "Run 15_Company_Tenancy_Rollback.sql first: the previous procedures are not
+    restored." Script 15 has not finished. Run it first.
+  - "The connections were already copied back for this cut-over on ..." There is
+    nothing more to do.
+  - "N connection row(s) were changed after the rollback. ..." Script 18 lists
+    those rows (never a password). A connection was saved under the previous API
+    since the rollback, so the project tables are the live data. Do not copy.
+    Correct connections in Platform Admin.
 - Script 18 copies once per cut-over. Run again, it stops with a message and
   changes nothing. Once the previous API has been running, the project tables
   are the live data.
 - It records the cut-over in `dbo.TenancyRollbackLog`. It changes nothing in
   any tenant database.
 - It ends with `Connections copied back to the project tables: N updated, M added.`
+  and then `This script will not copy again for this cut-over.`
 
 The reverse case: connection changes made in `ProjectConnections` under the
 previous API after a rollback are copied again by the next cut-over. Script 14
@@ -212,8 +236,9 @@ Still NOT restored:
   and nobody can pick a company. No data is harmed. Stop the API, run script 14,
   start the API.
 - The company list at login is now by membership. A member who was not given
-  the Service module sees the company in the list. In the module list the
-  Service module is shown disabled with the reason.
+  the Service module sees the company in the list. With the new UI the Service
+  module card is disabled and shows "Ask your administrator". With the previous
+  UI the member sees the company but no project to choose.
 - A platform administrator working inside a company that is attached AFTER this
   release may land on another company's tabs in Platform Admin until the UI is
   updated. Pick the company from the filter.

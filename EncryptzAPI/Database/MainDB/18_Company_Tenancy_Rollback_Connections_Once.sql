@@ -25,6 +25,15 @@
    refuses to copy for the same cut-over again. (A cut-over is identified by the
    date script 14 last created dbo.sp_Tenant_GetConnection.)
 
+   IT ALSO REFUSES when any dbo.ProjectConnections row was changed after the
+   rollback (later than the date script 15 created dbo.sp_Project_GetConnection).
+   That means the previous API has saved a connection since the rollback: the
+   project tables are the live data and copying the company values would point a
+   tenant back at an old server, database or password. It lists those rows
+   (never the passwords) and changes nothing. If script 15 printed "No project
+   tables were restored in this run", or the previous API has been started, do
+   not run this script. Correct connections in Platform Admin instead.
+
    It first lists the rows it will change (never the passwords), then changes
    them in ONE transaction. On an error everything is rolled back and the
    message is shown. It changes nothing in any tenant database.
@@ -60,7 +69,7 @@ IF OBJECT_ID('dbo.Companies') IS NOT NULL
    AND (   COL_LENGTH('dbo.Companies', 'TenantKey') IS NULL
         OR OBJECT_ID('dbo.sp_Tenant_GetConnection') IS NULL)
 BEGIN
-    RAISERROR('The cut-over (scripts 13 and 14) was never run on this database: there is nothing to copy back.', 16, 1);
+    RAISERROR('Script 14 (the cut-over) was never run on this database: there is nothing to copy back.', 16, 1);
     SET NOEXEC ON;
 END
 GO
@@ -91,6 +100,39 @@ BEGIN
     SET @DoneText = CONVERT(VARCHAR(30), @Done, 120);
     RAISERROR('The connections were already copied back for this cut-over on %s. Nothing was changed. The project tables are the live data now.', 16, 1, @DoneText);
     SET NOEXEC ON;
+END
+GO
+
+/* Connections changed after the rollback: stop. Script 15 creates
+   dbo.sp_Project_GetConnection again when it restores the project tables (script 14
+   drops it), so its create date is the moment of the rollback. The previous API sets
+   ProjectConnections.UpdatedAt on every save. A newer row means ProjectConnections is
+   the live data and the company rows are stale. The statements that name
+   dbo.ProjectConnections and UpdatedAt are dynamic SQL, see the note below. */
+DECLARE @RolledBackAt DATETIME, @Changed INT = 0;
+
+SELECT @RolledBackAt = o.create_date
+FROM sys.objects o
+WHERE o.object_id = OBJECT_ID('dbo.sp_Project_GetConnection');
+
+IF @RolledBackAt IS NULL
+BEGIN
+    RAISERROR('Run 15_Company_Tenancy_Rollback.sql first: the previous procedures are not restored.', 16, 1);
+    SET NOEXEC ON;
+END
+ELSE
+BEGIN
+    EXEC sp_executesql N'SELECT @n = COUNT(*) FROM dbo.ProjectConnections WHERE UpdatedAt > @since',
+         N'@n INT OUTPUT, @since DATETIME', @n = @Changed OUTPUT, @since = @RolledBackAt;
+
+    IF @Changed > 0
+    BEGIN
+        EXEC sp_executesql N'SELECT ''Connection changed after the rollback'' AS Info, pc.ProjectKey, pc.DatabaseName, pc.IsActive, pc.UpdatedAt
+                             FROM dbo.ProjectConnections pc WHERE pc.UpdatedAt > @since ORDER BY pc.ProjectKey',
+             N'@since DATETIME', @since = @RolledBackAt;
+        RAISERROR('%d connection row(s) were changed after the rollback. The project tables are the live data now: nothing was copied. Correct connections in Platform Admin instead.', 16, 1, @Changed);
+        SET NOEXEC ON;
+    END
 END
 GO
 
