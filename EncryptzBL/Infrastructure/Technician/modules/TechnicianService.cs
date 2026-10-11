@@ -86,11 +86,10 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
             if (string.IsNullOrWhiteSpace(dto.Email))
                 return ApiResponse<int>.Fail("Email is required: the technician signs in with it");
 
-            // 1) The login, company role and project access live in MainDB
+            // 1) The login, company role and Service module access live in MainDB
             var main = await _mainDb.ExecuteDataTableAsync("sp_Company_CreateTechnicianUser", new[]
             {
                 SqlParameterHelper.Input("@CompanyId", CompanyId),
-                SqlParameterHelper.Input("@ProjectId", ProjectId),
                 SqlParameterHelper.Input("@FullName", dto.FullName),
                 SqlParameterHelper.Input("@Email", dto.Email.Trim()),
                 SqlParameterHelper.Input("@MobileNumber", dto.MobileNumber ?? (object)DBNull.Value),
@@ -103,14 +102,14 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
 
             var mainUserId = Convert.ToInt32(main.Rows[0]["UserId"]);
 
-            // 2) Mirror the user into this project's DB (creates the technician rows)
+            // 2) Mirror the user into this company's DB (creates the technician rows)
             try
             {
-                await _userSync.SyncProjectUsersAsync(ProjectId, LocationId);
+                await _userSync.SyncCompanyUsersAsync(CompanyId, LocationId);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return ApiResponse<int>.Fail("Technician user was created, but syncing it to this project failed: " + ex.Message);
+                return ApiResponse<int>.Fail("Technician user was created, but adding it to this company failed. Please try again");
             }
 
             // 3) Fill in the technician profile

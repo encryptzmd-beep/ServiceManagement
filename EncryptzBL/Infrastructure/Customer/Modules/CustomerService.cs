@@ -1,4 +1,5 @@
 using EncryptzBL.Common;
+using EncryptzBL.Common.Tenant;
 using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using Microsoft.Extensions.Configuration;
@@ -342,8 +343,10 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
                     new Claim(ClaimTypes.Email, customer.Email),
                     new Claim(ClaimTypes.Role, "Customer"),
                     new Claim("CustomerId", customer.CustomerId.ToString()),
-                    // Route every later customer request to the project the customer logged in to
-                    new Claim("ProjectKey", ProjectKey),
+                    // Route every later customer request to the company the customer logged in to.
+                    // ProjectKey is the old name of the same value (see TenantClaims).
+                    new Claim(TenantClaims.TenantKey, ProjectKey),
+                    new Claim(TenantClaims.LegacyProjectKey, ProjectKey),
                     new Claim("CompanyId", CompanyId.ToString()),
                     new Claim("ProjectId", ProjectId.ToString()),
                     new Claim("LocationId", LocationId.ToString())

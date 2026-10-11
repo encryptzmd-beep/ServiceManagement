@@ -38,10 +38,13 @@ namespace EncryptzAPI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> GetTenantInfo()
         {
-            var projectKey = Request.Headers[TenantResolutionMiddleware.ProjectKeyHeader].FirstOrDefault() ?? string.Empty;
-            var scope = await _connectionResolver.GetProjectScopeAsync(projectKey);
+            var tenantKey = Request.Headers[TenantResolutionMiddleware.TenantKeyHeader].FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(tenantKey))
+                tenantKey = Request.Headers[TenantResolutionMiddleware.ProjectKeyHeader].FirstOrDefault();
+
+            var scope = await _connectionResolver.GetProjectScopeAsync(tenantKey ?? string.Empty);
             if (scope == null)
-                return BadRequest(ApiResponse<string>.Fail("Unknown project"));
+                return BadRequest(ApiResponse<string>.Fail("Unknown company"));
 
             return Ok(ApiResponse<string>.Ok(scope.CompanyName));
         }
