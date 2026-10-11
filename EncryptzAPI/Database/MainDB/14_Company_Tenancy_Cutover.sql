@@ -131,6 +131,13 @@ BEGIN
       AND c.ProvisionStatus = 'Ready'
       AND NOT EXISTS (SELECT 1 FROM dbo.CompanyModules x WHERE x.CompanyId = c.CompanyId AND x.ModuleId = m.ModuleId);
 
+    /* While the project tables exist they are the authority: grants left over from
+       an earlier cut-over (that was rolled back) are rebuilt, not kept. */
+    DELETE uma
+    FROM dbo.UserModuleAccess uma
+    INNER JOIN dbo.Modules m ON m.ModuleId = uma.ModuleId AND m.ModuleKey = 'SERVICE'
+    WHERE EXISTS (SELECT 1 FROM dbo.Projects p WHERE p.CompanyId = uma.CompanyId AND p.IsActive = 1);
+
     /* 1c. Whoever could enter the company's project can open the Service module */
     INSERT INTO dbo.UserModuleAccess (CompanyId, UserId, ModuleId, GrantedBy, GrantedAt)
     SELECT p.CompanyId, upa.UserId, m.ModuleId, MAX(g.UserId), MIN(upa.GrantedAt)
@@ -874,7 +881,7 @@ BEGIN
 
         /* Only a NEW member gets the modules: an administrator may have taken a
            module away from an existing member on purpose. */
-        IF @NewMember = 1
+        IF @NewMember = 1 AND @IsActive = 1
             EXEC dbo.sp_Company_GrantDefaultModules @CompanyId = @CompanyId, @UserId = @UserId, @GrantedBy = @SavedBy;
     END
 

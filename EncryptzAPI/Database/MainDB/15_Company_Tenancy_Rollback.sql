@@ -4,10 +4,13 @@
    Run with the API STOPPED, then redeploy the previous API and UI.
 
      1. renames Projects_Old, ProjectConnections_Old, UserProjectAccess_Old back
-     2. carries module access back to project access: people whose Service access
-        was removed after the cut-over lose project access, people who got it
-        after the cut-over receive it, and pending invitations created after the
-        cut-over are attached to the company's project
+     2. only when step 1 really restored the tables in THIS run: carries module
+        access back to project access (people whose Service access was removed
+        after the cut-over lose project access, people who got it after the
+        cut-over receive it) and attaches pending invitations created after the
+        cut-over to the company's project. When the tables were already in place,
+        project access is left as it is, so running this script again cannot
+        overwrite access changed under the previous API.
      3. restores the procedures as they were on 2026-10-11
 
    Still true afterwards: the new columns and tables (13_Company_Tenancy_Schema.sql)
@@ -21,6 +24,7 @@ SET NOCOUNT ON;
 SET QUOTED_IDENTIFIER ON;   -- same session options as the other tenancy scripts
 SET ANSI_NULLS ON;
 SET NOEXEC OFF;
+EXEC sys.sp_set_session_context @key = N'TenancyTablesRestored', @value = 0;   -- no stale flag from an earlier run
 GO
 
 IF DB_NAME() IN ('master', 'model', 'msdb', 'tempdb') OR OBJECT_ID('dbo.Companies') IS NULL
@@ -31,7 +35,10 @@ END
 GO
 
 IF OBJECT_ID('dbo.Projects') IS NULL AND OBJECT_ID('dbo.Projects_Old') IS NOT NULL
+BEGIN
     EXEC sp_rename 'dbo.Projects_Old', 'Projects';
+    EXEC sys.sp_set_session_context @key = N'TenancyTablesRestored', @value = 1;
+END
 IF OBJECT_ID('dbo.ProjectConnections') IS NULL AND OBJECT_ID('dbo.ProjectConnections_Old') IS NOT NULL
     EXEC sp_rename 'dbo.ProjectConnections_Old', 'ProjectConnections';
 IF OBJECT_ID('dbo.UserProjectAccess') IS NULL AND OBJECT_ID('dbo.UserProjectAccess_Old') IS NOT NULL
@@ -47,8 +54,13 @@ BEGIN
 END
 GO
 
-/* Bring project access in line with module access as it is now. */
-IF OBJECT_ID('dbo.fn_ModuleUsers') IS NOT NULL AND OBJECT_ID('dbo.UserModuleAccess') IS NOT NULL
+/* Bring project access in line with module access as it is now, but only when this
+   run restored the tables: otherwise project access has been maintained by the
+   previous API since and must not be overwritten. */
+IF ISNULL(CONVERT(INT, SESSION_CONTEXT(N'TenancyTablesRestored')), 0) <> 1
+    PRINT 'The project tables were already in place: project access was left as it is.';
+IF ISNULL(CONVERT(INT, SESSION_CONTEXT(N'TenancyTablesRestored')), 0) = 1
+   AND OBJECT_ID('dbo.fn_ModuleUsers') IS NOT NULL AND OBJECT_ID('dbo.UserModuleAccess') IS NOT NULL
 BEGIN
     DECLARE @CarryError NVARCHAR(2000);
 
@@ -62,6 +74,9 @@ BEGIN
             FROM dbo.UserProjectAccess upa
             INNER JOIN dbo.Projects p ON p.ProjectId = upa.ProjectId AND p.IsActive = 1
             WHERE upa.IsActive = 1
+              AND EXISTS (SELECT 1 FROM dbo.CompanyModules cm
+                          INNER JOIN dbo.Modules m ON m.ModuleId = cm.ModuleId AND m.ModuleKey = ''SERVICE''
+                          WHERE cm.CompanyId = p.CompanyId)   -- no row = never migrated: leave its grants alone
               AND NOT EXISTS (SELECT 1 FROM dbo.fn_ModuleUsers(p.CompanyId, ''SERVICE'') mu WHERE mu.UserId = upa.UserId);
 
             /* has the module now: project access again */
