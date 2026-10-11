@@ -175,7 +175,8 @@
         @if (!loading() && stage() === 'company' && companies().length > 0) {
           <div class="company-list">
             @for (company of companies(); track company.companyId) {
-              <div class="company-item" (click)="selectCompany(company)">
+              <div class="company-item" (click)="selectCompany(company)"
+                   role="button" tabindex="0" (keydown.enter)="selectCompany(company)" (keydown.space)="selectCompany(company); $event.preventDefault()">
                 <div class="company-avatar">
                   <span class="material-icons">apartment</span>
                 </div>
@@ -200,7 +201,9 @@
           <div class="company-list">
             @for (module of modules(); track module.moduleKey) {
               <div class="company-item module-item" [class.disabled]="module.state !== 'Available'"
-                   [attr.aria-disabled]="module.state !== 'Available'" (click)="openModule(module)">
+                   [attr.aria-disabled]="module.state !== 'Available'" (click)="openModule(module)"
+                   role="button" [attr.tabindex]="module.state === 'Available' ? 0 : -1"
+                   (keydown.enter)="openModule(module)" (keydown.space)="openModule(module); $event.preventDefault()">
                 <div class="company-avatar">
                   <span class="material-icons">{{ module.icon || 'apps' }}</span>
                 </div>
@@ -243,7 +246,8 @@
           } @else {
             <div class="company-list">
               @for (branch of branches(); track branch.locationId) {
-                <div class="company-item branch-item" (click)="enterBranch(branch)">
+                <div class="company-item branch-item" (click)="enterBranch(branch)"
+                     role="button" tabindex="0" (keydown.enter)="enterBranch(branch)" (keydown.space)="enterBranch(branch); $event.preventDefault()">
                   <div class="company-avatar">
                     <span class="material-icons">storefront</span>
                   </div>

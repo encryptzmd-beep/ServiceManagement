@@ -572,3 +572,8 @@
   color: #ffd98a;
   border: 1px solid rgba(255, 183, 0, 0.40);
 }
+
+.company-item:focus-visible {
+  outline: 2px solid #ffd98a;
+  outline-offset: 2px;
+}

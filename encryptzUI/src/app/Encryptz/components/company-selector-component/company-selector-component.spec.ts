@@ -104,7 +104,7 @@ describe('CompanySelectorComponent', () => {
     create('branch', 'SERVICE');
 
     expect(scoped).toEqual(['SERVICE', 7, 'Elankulam']);
-    expect(navigated).toEqual([[['/technicians/work-orders']]]);
+    expect(navigated).toEqual([[['/technicians/work-orders'], { replaceUrl: true }]]);
   });
 
   it('explains when no branch is assigned', () => {
@@ -138,6 +138,73 @@ describe('CompanySelectorComponent', () => {
 
   it('goes back to the module step when the branch step has no module', () => {
     create('branch', null);
-    expect(navigated).toEqual([[['/select-module']]]);
+    expect(navigated).toEqual([[['/select-module'], { replaceUrl: true }]]);
+  });
+
+  it('keeps the history entry when the user clicks one of several branches', () => {
+    const fixture = create('branch', 'SERVICE');
+    (fixture.nativeElement.querySelectorAll('.branch-item')[1] as HTMLElement).click();
+    expect(navigated).toEqual([[['/complaints/dashboard']]]);
+  });
+
+  it('opens an available module with the Enter key', () => {
+    const fixture = create('module');
+    const card = fixture.nativeElement.querySelectorAll('.module-item')[0] as HTMLElement;
+    card.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(navigated).toEqual([[['/select-branch'], { queryParams: { module: 'SERVICE' } }]]);
+  });
+
+  it('keeps a disabled module out of the tab order and ignores real clicks on it', () => {
+    const fixture = create('module');
+    const cards = Array.from(fixture.nativeElement.querySelectorAll('.module-item')) as HTMLElement[];
+    expect(cards[1].getAttribute('tabindex')).toBe('-1');
+    expect(cards[1].getAttribute('aria-disabled')).toBe('true');
+    expect(cards[0].getAttribute('tabindex')).toBe('0');
+    cards[1].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(navigated.length).toBe(0);
+    cards[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(navigated.length).toBe(1);
+  });
+
+  for (const role of ['Admin', 'CompanyAdmin']) {
+    it('offers Administration to ' + role, () => {
+      auth.userRole = () => role;
+      auth.currentUser = () => ({ userId: 5, fullName: 'A', role, isPlatformAdmin: false });
+      const fixture = create('module');
+      const btn = Array.from(fixture.nativeElement.querySelectorAll('button')).find((b: any) => b.textContent.includes('Administration')) as HTMLElement;
+      expect(btn).toBeTruthy();
+      btn.click();
+      expect(navigated).toEqual([[['/settings/platform']]]);
+    });
+  }
+
+  it('does not offer Administration to a technician', () => {
+    auth.userRole = () => 'Technician';
+    auth.currentUser = () => ({ userId: 5, fullName: 'A', role: 'Technician', isPlatformAdmin: false });
+    const fixture = create('module');
+    expect(fixture.nativeElement.textContent).not.toContain('Administration');
+  });
+
+  it('shows the state of a company database', () => {
+    const cases: [string, string | null][] = [
+      ['Provisioning', 'Setting up…'], ['Failed', 'Setup failed'], ['None', 'No database yet'], ['Ready', null],
+    ];
+    for (const [status, text] of cases) {
+      auth.companies = () => [{ companyId: 2, companyName: 'X', companyCode: 'C', roleInCompany: 'Admin', isLinked: false, provisionStatus: status }];
+      const fixture = create('company');
+      const badge = fixture.nativeElement.querySelector('.status-badge');
+      if (text === null) expect(badge).toBeNull();
+      else expect(badge.textContent).toContain(text);
+    }
+  });
+
+  it('shows the reason and no spinner when entering the only branch is refused', () => {
+    auth.getBranches = () => of({ success: true, message: '', data: [branch(7, 'Elankulam')] });
+    auth.setScope = () => of({ success: false, message: 'Invalid location for this company', data: null });
+    const fixture = create('branch', 'SERVICE');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.loading-state')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Invalid location for this company');
+    expect(navigated.length).toBe(0);
   });
 });

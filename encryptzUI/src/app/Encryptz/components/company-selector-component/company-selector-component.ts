@@ -54,7 +54,7 @@ export class CompanySelectorComponent {
     } else if (this.stage() === 'branch') {
       this.moduleKey = this.route.snapshot.queryParamMap.get('module') || this.auth.selectedModuleKey() || '';
       if (!this.moduleKey) {
-        this.router.navigate(['/select-module']);
+        this.router.navigate(['/select-module'], { replaceUrl: true });
         return;
       }
       this.loadBranches();
@@ -199,6 +199,8 @@ export class CompanySelectorComponent {
   }
 
   enterBranch(branch: LocationDto): void {
+    // an automatic entry (single branch) must not leave this step in the browser history
+    const extras = this.entering() ? { replaceUrl: true } : undefined;
     this.loading.set(true);
     this.error.set('');
 
@@ -206,7 +208,7 @@ export class CompanySelectorComponent {
       next: (res) => {
         this.loading.set(false);
         if (res.success && res.data) {
-          this.router.navigate([landingRouteForRole(res.data.role)]);
+          this.router.navigate([landingRouteForRole(res.data.role)], extras);
           return;
         }
         // leave the "entering" spinner so the reason and the list are visible
