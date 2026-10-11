@@ -2,6 +2,7 @@ using EncryptzBL.Common;
 using EncryptzBL.Common.Tenant;
 using EncryptzBL.DTO_s;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using System.Data;
 
 namespace EncryptzBL.Infrastructure.User.Modules
@@ -13,17 +14,20 @@ namespace EncryptzBL.Infrastructure.User.Modules
         private readonly IConnectionResolver _connectionResolver;
         private readonly ITenantSecretProtector _protector;
         private readonly ITenantUserSyncService _userSync;
+        private readonly ILogger<PlatformService> _logger;
 
         // Control-plane: companies / projects / connections / menus live in MainDB.
         public PlatformService(
             MainDbHelper db,
             IConnectionResolver connectionResolver,
             ITenantSecretProtector protector,
-            ITenantUserSyncService userSync) : base(db)
+            ITenantUserSyncService userSync,
+            ILogger<PlatformService> logger) : base(db)
         {
             _connectionResolver = connectionResolver;
             _protector = protector;
             _userSync = userSync;
+            _logger = logger;
         }
 
         // ============================================
@@ -123,13 +127,15 @@ namespace EncryptzBL.Infrastructure.User.Modules
             if (result.Success)
             {
                 // routing is cached per key: forget the old target
-                _connectionResolver.Evict(req.ProjectKey?.Trim().ToUpperInvariant() ?? "");
-                var oldKey = dt.Rows[0]["OldProjectKey"]?.ToString();
-                if (!string.IsNullOrEmpty(oldKey))
-                    _connectionResolver.Evict(oldKey);
+                var saved = await GetDataTableAsync("sp_Platform_GetProject", new[]
+                {
+                    SqlParameterHelper.Input("@ProjectId", req.CompanyId)
+                });
+                if (saved != null && saved.Rows.Count > 0)
+                    _connectionResolver.Evict(saved.Rows[0]["ProjectKey"]?.ToString() ?? "");
 
                 if (req.IsActive)
-                    await _userSync.TrySyncProjectUsersAsync(result.Data);
+                    await _userSync.TrySyncCompanyUsersAsync(req.CompanyId);
             }
 
             return result;
@@ -147,11 +153,11 @@ namespace EncryptzBL.Infrastructure.User.Modules
             var password = req.DbPassword;
 
             // editing without retyping the password: test with the stored one
-            if (string.IsNullOrEmpty(password) && req.ProjectId > 0)
+            if (string.IsNullOrEmpty(password) && req.CompanyId > 0)
             {
                 var stored = await GetDataTableByQueryAsync(
-                    "SELECT DbPasswordEnc FROM dbo.ProjectConnections WHERE ProjectId = @ProjectId",
-                    new[] { SqlParameterHelper.Input("@ProjectId", req.ProjectId) });
+                    "SELECT DbPasswordEnc FROM dbo.Companies WHERE CompanyId = @CompanyId",
+                    new[] { SqlParameterHelper.Input("@CompanyId", req.CompanyId) });
 
                 if (stored.Rows.Count > 0)
                 {
@@ -191,23 +197,23 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 result.Connected = true;
                 result.SchemaReady = dt.Rows.Count > 0 && Convert.ToInt32(dt.Rows[0]["SchemaReady"]) == 1;
 
-                if (result.SchemaReady && req.ProjectId > 0)
+                if (result.SchemaReady)
                 {
                     var loc = await projectDb.ExecuteQueryDataTableAsync(
-                        "SELECT COUNT(*) AS N FROM dbo.Locations WHERE ProjectId = @ProjectId AND IsActive = 1",
-                        new[] { SqlParameterHelper.Input("@ProjectId", req.ProjectId) });
+                        "SELECT COUNT(*) AS N FROM dbo.Locations WHERE IsActive = 1");
                     result.LocationCount = Convert.ToInt32(loc.Rows[0]["N"]);
                 }
 
                 result.Message = !result.SchemaReady
-                    ? "Connected, but the project database scripts (Database/ProjectDB) have not been run on this database"
-                    : req.ProjectId > 0 && result.LocationCount == 0
-                        ? "Connected. Add at least one location so users can enter the project"
+                    ? "Connected, but the tenant database scripts (Database/ProjectDB) have not been run on this database"
+                    : result.LocationCount == 0
+                        ? "Connected. Add at least one branch so users can enter the company"
                         : "Connected";
             }
             catch (SqlException ex)
             {
-                result.Message = "Could not connect: " + ex.Message;
+                _logger.LogWarning(ex, "Connection test failed for company {CompanyId}", req.CompanyId);
+                result.Message = "Could not connect. Check the server, database, user and password";
             }
 
             return ApiResponse<ConnectionTestResult>.Ok(result, result.Message);
@@ -229,14 +235,15 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 var dt = await projectDb.ExecuteDataTableAsync("sp_Location_GetAll", new[]
                 {
                     SqlParameterHelper.Input("@CompanyId", project.Value.CompanyId),
-                    SqlParameterHelper.Input("@ProjectId", projectId)
+                    SqlParameterHelper.Input("@ProjectId", project.Value.ScopeId)
                 });
 
                 return ApiResponse<List<PlatformLocationDto>>.Ok(dt.ToList<PlatformLocationDto>());
             }
             catch (Exception ex)
             {
-                return ApiResponse<List<PlatformLocationDto>>.Fail("Could not read the project database: " + ex.Message);
+                _logger.LogError(ex, "Company database access failed for company {CompanyId}", project.Value.CompanyId);
+                return ApiResponse<List<PlatformLocationDto>>.Fail("Could not read the company database");
             }
         }
 
@@ -252,7 +259,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 var dt = await projectDb.ExecuteDataTableAsync("sp_Location_Save", new[]
                 {
                     SqlParameterHelper.Input("@CompanyId", project.Value.CompanyId),
-                    SqlParameterHelper.Input("@ProjectId", projectId),
+                    SqlParameterHelper.Input("@ProjectId", project.Value.ScopeId),
                     SqlParameterHelper.Input("@LocationId", dto.LocationId),
                     SqlParameterHelper.Input("@LocationName", dto.LocationName ?? ""),
                     SqlParameterHelper.Input("@LocationCode", Nullable(dto.LocationCode)),
@@ -271,7 +278,8 @@ namespace EncryptzBL.Infrastructure.User.Modules
             }
             catch (Exception ex)
             {
-                return ApiResponse<int>.Fail("Could not save to the project database: " + ex.Message);
+                _logger.LogError(ex, "Company database access failed for company {CompanyId}", project.Value.CompanyId);
+                return ApiResponse<int>.Fail("Could not save to the company database");
             }
         }
 
@@ -312,8 +320,8 @@ namespace EncryptzBL.Infrastructure.User.Modules
             if (Convert.ToInt32(dt.Rows[0]["Success"]) != 1)
                 return ApiResponse<bool>.Fail(message);
 
-            // the project DB mirrors who may work in it (users, technicians)
-            await _userSync.TrySyncProjectUsersAsync(projectId);
+            // the company DB mirrors who may work in it (users, technicians)
+            await _userSync.TrySyncCompanyUsersAsync(projectId);
 
             return ApiResponse<bool>.Ok(true, message);
         }
@@ -356,8 +364,11 @@ namespace EncryptzBL.Infrastructure.User.Modules
         // HELPERS
         // ============================================
 
-        /// <summary>The project's routing key + company, or null when the caller may not manage it.</summary>
-        private async Task<(string ProjectKey, int CompanyId)?> GetManagedProject(int projectId, PlatformActor actor)
+        /// <summary>
+        /// The company's routing key and tenant scope id, or null when the caller may not
+        /// manage it. "projectId" is the CompanyId: a project is the company's Service database.
+        /// </summary>
+        private async Task<(string ProjectKey, int CompanyId, int ScopeId)?> GetManagedProject(int projectId, PlatformActor actor)
         {
             var dt = await GetDataTableAsync("sp_Platform_GetProject", new[]
             {
@@ -371,7 +382,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             if (!actor.CanManageCompany(companyId))
                 return null;
 
-            return (dt.Rows[0]["ProjectKey"]?.ToString() ?? "", companyId);
+            return (dt.Rows[0]["ProjectKey"]?.ToString() ?? "", companyId, Convert.ToInt32(dt.Rows[0]["TenantScopeId"]));
         }
 
         private async Task<ExplicitDbHelper> OpenProjectDb(string projectKey)
