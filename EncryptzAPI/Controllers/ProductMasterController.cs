@@ -2,12 +2,14 @@
 using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Products.Modules;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace EncryptzAPI.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/[controller]")]
     [AppModule("SERVICE")]
     public class ProductMasterController : ControllerBase

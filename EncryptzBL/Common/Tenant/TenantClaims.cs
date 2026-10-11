@@ -22,9 +22,14 @@ namespace EncryptzBL.Common.Tenant
             return key ?? string.Empty;
         }
 
-        /// <summary>True for a token issued before TenantKey / ModuleKey existed.</summary>
+        /// <summary>
+        /// True for a token issued before TenantKey / ModuleKey existed: it carries a
+        /// non-empty ProjectKey and no TenantKey claim at all. An identity or company
+        /// token (TenantKey present but empty, or no key claims) is not legacy.
+        /// </summary>
         public static bool IsLegacyToken(ClaimsPrincipal user)
-            => user.FindFirst(TenantKey) == null;
+            => user.FindFirst(TenantKey) == null
+               && !string.IsNullOrEmpty(user.FindFirst(LegacyProjectKey)?.Value);
 
         public static string GetModuleKey(ClaimsPrincipal user)
             => user.FindFirst(ModuleKey)?.Value ?? string.Empty;

@@ -1,4 +1,5 @@
 using EncryptzBL.Common.Tenant;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -26,6 +27,9 @@ namespace EncryptzAPI.Middleware
         {
             var required = context.ActionDescriptor.EndpointMetadata.OfType<AppModuleAttribute>().LastOrDefault();
             if (required == null)
+                return;
+
+            if (context.ActionDescriptor.EndpointMetadata.OfType<IAllowAnonymous>().Any())
                 return;
 
             var user = context.HttpContext.User;

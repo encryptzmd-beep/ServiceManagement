@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Security.Claims;
 using EncryptzAPI.Controllers;
 using EncryptzAPI.Middleware;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
@@ -98,6 +99,42 @@ namespace EncryptzTests
                 .ToList();
 
             Assert.Empty(untagged);
+        }
+
+        [Fact]
+        public void A_token_with_neither_key_claim_is_refused_on_a_module_endpoint()
+        {
+            var context = Context(ServiceEndpoint, new Claim(ClaimTypes.Role, "Admin"));
+
+            new ModuleBoundaryFilter().OnAuthorization(context);
+
+            var result = Assert.IsType<ObjectResult>(context.Result);
+            Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
+        }
+
+        [Fact]
+        public void Endpoints_that_allow_anonymous_are_not_checked()
+        {
+            var context = Context(new object[] { new AppModuleAttribute("SERVICE"), new AllowAnonymousAttribute() },
+                new Claim("TenantKey", "K"), new Claim("ModuleKey", ""), new Claim(ClaimTypes.Role, "Admin"));
+
+            new ModuleBoundaryFilter().OnAuthorization(context);
+
+            Assert.Null(context.Result);
+        }
+
+        [Fact]
+        public void Every_module_controller_requires_a_login()
+        {
+            var open = typeof(AuthController).Assembly.GetTypes()
+                .Where(t => typeof(ControllerBase).IsAssignableFrom(t) && !t.IsAbstract)
+                .Where(t => t.GetCustomAttribute<AppModuleAttribute>() != null)
+                .Where(t => t.GetCustomAttribute<AuthorizeAttribute>() == null)
+                .Select(t => t.Name)
+                .OrderBy(n => n)
+                .ToList();
+
+            Assert.Empty(open);
         }
     }
 }

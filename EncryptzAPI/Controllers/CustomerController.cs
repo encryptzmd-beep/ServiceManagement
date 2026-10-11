@@ -42,7 +42,7 @@ namespace EncryptzAPI.Controllers
             if (string.IsNullOrWhiteSpace(tenantKey))
                 tenantKey = Request.Headers[TenantResolutionMiddleware.ProjectKeyHeader].FirstOrDefault();
 
-            var scope = await _connectionResolver.GetProjectScopeAsync(tenantKey ?? string.Empty);
+            var scope = await _connectionResolver.GetProjectScopeAsync(tenantKey?.Trim() ?? string.Empty);
             if (scope == null)
                 return BadRequest(ApiResponse<string>.Fail("Unknown company"));
 

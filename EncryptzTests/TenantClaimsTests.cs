@@ -55,5 +55,23 @@ namespace EncryptzTests
             Assert.Equal("", TenantClaims.GetModuleKey(User()));
             Assert.Equal("SERVICE", TenantClaims.GetModuleKey(User(new Claim("ModuleKey", "SERVICE"))));
         }
+
+        [Fact]
+        public void An_identity_token_without_key_claims_is_not_legacy()
+        {
+            Assert.False(TenantClaims.IsLegacyToken(User(new Claim(ClaimTypes.NameIdentifier, "11"))));
+        }
+
+        [Fact]
+        public void A_company_token_with_an_empty_tenant_key_is_not_legacy()
+        {
+            Assert.False(TenantClaims.IsLegacyToken(User(new Claim("TenantKey", ""), new Claim("ProjectKey", ""))));
+        }
+
+        [Fact]
+        public void An_old_token_with_only_an_empty_project_key_is_not_legacy()
+        {
+            Assert.False(TenantClaims.IsLegacyToken(User(new Claim("ProjectKey", ""))));
+        }
     }
 }
