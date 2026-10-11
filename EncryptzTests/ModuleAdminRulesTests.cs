@@ -27,6 +27,8 @@ namespace EncryptzTests
         [InlineData("SER VICE")]
         [InlineData("SERVICE-1")]
         [InlineData("SERVICÉ")]
+        [InlineData("ſERVICE")]   // long s: upper-cases into S
+        [InlineData("SER\tVICE")]
         public void A_key_with_anything_but_letters_digits_and_underscore_is_refused(string? input)
         {
             Assert.Null(ModuleAdminRules.NormalizeKey(input));
@@ -37,6 +39,13 @@ namespace EncryptzTests
         {
             Assert.Null(ModuleAdminRules.NormalizeKey(new string('A', 51)));
             Assert.Equal(new string('A', 50), ModuleAdminRules.NormalizeKey(new string('A', 50)));
+        }
+
+        [Fact]
+        public void The_length_is_checked_on_the_trimmed_key()
+        {
+            Assert.Equal(new string('A', 50), ModuleAdminRules.NormalizeKey(" " + new string('A', 50) + " "));
+            Assert.Null(ModuleAdminRules.NormalizeKey(" " + new string('A', 51) + " "));
         }
 
         [Fact]

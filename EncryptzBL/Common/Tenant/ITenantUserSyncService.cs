@@ -19,6 +19,7 @@ namespace EncryptzBL.Common.Tenant
         /// <summary>
         /// Pushes the company's Service users (with their company role) into the company
         /// database and returns the MainDB -> tenant id map. Throws when the sync cannot run.
+        /// With no users to mirror nothing is sent (it would deactivate everybody) and the map is empty.
         /// </summary>
         Task<List<TenantUserMap>> SyncCompanyUsersAsync(int companyId, int locationId = 0);
 

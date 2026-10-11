@@ -17,18 +17,20 @@ namespace EncryptzBL.Common.Tenant
             if (string.IsNullOrWhiteSpace(moduleKey))
                 return null;
 
-            var key = moduleKey.Trim().ToUpperInvariant();
+            var key = moduleKey.Trim();
             if (key.Length > MaxKeyLength)
                 return null;
 
+            // checked before upper-casing: some other letters upper-case into A-Z
             foreach (var ch in key)
             {
-                var allowed = (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_';
+                var allowed = (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')
+                              || (ch >= '0' && ch <= '9') || ch == '_';
                 if (!allowed)
                     return null;
             }
 
-            return key;
+            return key.ToUpperInvariant();
         }
 
         /// <summary>Switching a module on or off is a platform (subscription) decision.</summary>

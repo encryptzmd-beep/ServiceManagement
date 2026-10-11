@@ -31,7 +31,14 @@ namespace EncryptzBL.Common.Tenant
         {
             var (tenantKey, scopeId, users) = await LoadAsync(companyId, null);
 
-            var dt = await (await OpenAsync(tenantKey)).ExecuteDataTableAsync("sp_Tenant_SyncUsers", new[]
+            // An empty list would deactivate every user and technician in the company database.
+            if (TenantUserSyncRules.ShouldSkipFullSync(users.Count))
+            {
+                _logger.LogWarning("User sync skipped for company {CompanyId}: no users to mirror", companyId);
+                return new List<TenantUserMap>();
+            }
+
+            var dt =await (await OpenAsync(tenantKey)).ExecuteDataTableAsync("sp_Tenant_SyncUsers", new[]
             {
                 SqlParameterHelper.Input("@CompanyId", companyId),
                 SqlParameterHelper.Input("@ProjectId", scopeId),

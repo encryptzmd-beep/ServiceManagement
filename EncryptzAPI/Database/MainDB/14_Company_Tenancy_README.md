@@ -92,7 +92,7 @@ in the repository.
    - After such an error, fix the cause and run script 14 again. It is safe to
      run again. Once the tables are renamed, a second run prints
      `Project tables are already renamed: data copy skipped, procedures refreshed.`
-     and only refreshes the procedures.
+     and only refreshes the procedures. Then run script 19 again.
    - The script also lists project grants of people who are not members of the
      company. They could not enter before and cannot enter now. They are not
      migrated.
@@ -203,11 +203,11 @@ The detailed lists are in
 - Add a user.
 - Add a technician.
 - In Platform Admin switch a member's access off and on again.
-- In Platform Admin, open Modules for a company: the Service module is on. (Do
-  not switch it off on the live system as a test.)
 - With the new UI the Service module card is disabled and shows "Ask your
   administrator". With the previous UI the member sees the company but no
   project to choose.
+- In Platform Admin, open Modules for a company: the Service module is on. (Do
+  not switch it off on the live system as a test.)
 - A user who was logged in before the release can keep working. Their token
   carries the old project key, which is now the company's tenant key, so it
   should still reach the same database. If it does not, they log in again.
@@ -313,8 +313,11 @@ Still NOT restored:
 - Switch modules in Platform Admin (Companies, Modules). With script 19 in
   place, switching the Service module off for a company stops its people from
   entering and changes nothing in its database; switching it on again restores
-  who could open it. People who are already working in the module keep working
-  until their login expires (the check is made when a module is opened).
+  who could open it. Members added while the module was off must be given
+  access in Platform Admin (Module Access). People who are already working in
+  the module keep working until their login expires (the check is made when a
+  module is opened). User and technician changes made while the module is off
+  reach the company's database only after it is switched on again.
   Without script 19 the earlier danger applies: do not switch a module off
   before script 19 has been run.
 - Every time script 14 is run again, run script 19 again afterwards. Script 14

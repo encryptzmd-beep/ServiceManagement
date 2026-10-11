@@ -375,10 +375,11 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
             var result = ToFlag(dt);
 
-            // Switched ON: the company's users must be in its database again.
+            // Service module switched ON: the company's users must be in its database again.
             // Switched OFF: nothing is synchronised (the procedure behind the sync
             // returns no company), so nobody in the tenant database changes.
-            if (result.Success && req.IsEnabled)
+            // Any other module: the company database mirrors Service users only.
+            if (result.Success && req.IsEnabled && moduleKey == ModuleAccess.ServiceModuleKey)
                 await _userSync.TrySyncCompanyUsersAsync(companyId);
 
             return result;

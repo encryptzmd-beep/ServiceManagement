@@ -12,7 +12,9 @@
      sp_Company_GetUsersForSync      re-created: a company whose Service module is
                                      switched off is NOT synchronised, so switching
                                      the module off never deactivates anybody in
-                                     the company's own database
+                                     the company's own database. Its two result
+                                     sets are read in one transaction, so they
+                                     always describe the same state of the switch
 
    Nothing here changes a table or any data. It changes nothing in any tenant
    database.
@@ -122,6 +124,7 @@ GO
 /* -----------------------------------------------------------------------------
    The company's active members, with whether they may open the module.
    Company administrators always may (no grant row needed).
+   An unknown or inactive module key returns no rows.
    ----------------------------------------------------------------------------- */
 CREATE OR ALTER PROCEDURE dbo.sp_Platform_GetModuleAccess
     @CompanyId INT,
@@ -139,7 +142,7 @@ BEGIN
         ISNULL(gb.FullName, '') AS GrantedByName
     FROM dbo.CompanyUsers cu
     INNER JOIN dbo.Users u   ON u.UserId = cu.UserId AND u.IsActive = 1
-    LEFT  JOIN dbo.Modules m ON m.ModuleKey = @ModuleKey AND m.IsActive = 1
+    INNER JOIN dbo.Modules m ON m.ModuleKey = @ModuleKey AND m.IsActive = 1
     LEFT  JOIN dbo.UserModuleAccess uma
            ON uma.CompanyId = cu.CompanyId AND uma.UserId = cu.UserId AND uma.ModuleId = m.ModuleId
     LEFT  JOIN dbo.Users gb  ON gb.UserId = uma.GrantedBy
@@ -193,12 +196,11 @@ BEGIN
     END
 
     IF @HasAccess = 1
-    BEGIN
-        IF NOT EXISTS (SELECT 1 FROM dbo.UserModuleAccess
-                       WHERE CompanyId = @CompanyId AND UserId = @UserId AND ModuleId = @ModuleId)
-            INSERT INTO dbo.UserModuleAccess (CompanyId, UserId, ModuleId, GrantedBy)
-            VALUES (@CompanyId, @UserId, @ModuleId, @GrantedBy);
-    END
+        -- one statement: the check and the insert cannot be separated by another caller
+        INSERT INTO dbo.UserModuleAccess (CompanyId, UserId, ModuleId, GrantedBy)
+        SELECT @CompanyId, @UserId, @ModuleId, @GrantedBy
+        WHERE NOT EXISTS (SELECT 1 FROM dbo.UserModuleAccess WITH (UPDLOCK, HOLDLOCK)
+                          WHERE CompanyId = @CompanyId AND UserId = @UserId AND ModuleId = @ModuleId);
     ELSE
         DELETE FROM dbo.UserModuleAccess
         WHERE CompanyId = @CompanyId AND UserId = @UserId AND ModuleId = @ModuleId;
@@ -215,6 +217,9 @@ GO
    skips the synchronisation, so nobody in the tenant database is deactivated
    because the module was switched off. (With the module on, the second result
    set is every active user who may open it, as before.)
+   The switch and the users are read in one transaction that holds the
+   company's module rows until both are read, so the two result sets always
+   describe the same state: with the module off both are empty.
    ----------------------------------------------------------------------------- */
 CREATE OR ALTER PROCEDURE dbo.sp_Company_GetUsersForSync
     @CompanyId INT,
@@ -222,25 +227,50 @@ CREATE OR ALTER PROCEDURE dbo.sp_Company_GetUsersForSync
 AS
 BEGIN
     SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @ServiceOn BIT = 0;
+
+    -- sizes as in dbo.Users and dbo.CompanyUsers (01_Schema.sql)
+    DECLARE @Users TABLE
+    (
+        UserId        INT           NOT NULL,
+        FullName      NVARCHAR(200) NULL,
+        Email         NVARCHAR(256) NULL,
+        MobileNumber  NVARCHAR(20)  NULL,
+        RoleInCompany NVARCHAR(100) NULL
+    );
+
+    BEGIN TRANSACTION;
+
+    -- HOLDLOCK: the switch cannot change until the users are read too
+    SELECT @ServiceOn = 1
+    FROM dbo.CompanyModules cm WITH (HOLDLOCK)
+    INNER JOIN dbo.Modules m WITH (HOLDLOCK) ON m.ModuleId = cm.ModuleId
+    WHERE cm.CompanyId = @CompanyId
+      AND cm.IsEnabled = 1
+      AND m.ModuleKey = 'SERVICE'
+      AND m.IsActive = 1;
+
+    IF @ServiceOn = 1
+        INSERT INTO @Users (UserId, FullName, Email, MobileNumber, RoleInCompany)
+        SELECT u.UserId, u.FullName, u.Email, u.MobileNumber, mu.RoleInCompany
+        FROM dbo.fn_ModuleUsers(@CompanyId, 'SERVICE') mu
+        INNER JOIN dbo.Users u ON u.UserId = mu.UserId AND u.IsActive = 1
+        WHERE @UserId IS NULL OR u.UserId = @UserId;
+
+    COMMIT TRANSACTION;
 
     SELECT c.CompanyId, c.TenantKey, c.TenantScopeId
     FROM dbo.Companies c
     WHERE c.CompanyId = @CompanyId
       AND c.IsActive = 1
       AND c.ProvisionStatus = 'Ready'
-      AND EXISTS (SELECT 1
-                  FROM dbo.CompanyModules cm
-                  INNER JOIN dbo.Modules m ON m.ModuleId = cm.ModuleId
-                  WHERE cm.CompanyId = c.CompanyId
-                    AND cm.IsEnabled = 1
-                    AND m.ModuleKey = 'SERVICE'
-                    AND m.IsActive = 1);
+      AND @ServiceOn = 1;
 
-    SELECT u.UserId, u.FullName, u.Email, u.MobileNumber, mu.RoleInCompany
-    FROM dbo.fn_ModuleUsers(@CompanyId, 'SERVICE') mu
-    INNER JOIN dbo.Users u ON u.UserId = mu.UserId AND u.IsActive = 1
-    WHERE @UserId IS NULL OR u.UserId = @UserId
-    ORDER BY u.UserId;
+    SELECT UserId, FullName, Email, MobileNumber, RoleInCompany
+    FROM @Users
+    ORDER BY UserId;
 END
 GO
 
