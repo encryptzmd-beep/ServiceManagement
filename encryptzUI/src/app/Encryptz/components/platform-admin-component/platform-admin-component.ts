@@ -389,11 +389,15 @@ export class PlatformAdminComponent implements OnInit {
 
   /** Reload the open dialog's list (without clearing it) so the member counts are real. */
   private refreshModules(companyId: number): void {
-    this.modulesSub.add(this.api.getCompanyModules(companyId).subscribe({
+    // only the newest reload counts: an older answer must not undo a later switch
+    this.refreshSub?.unsubscribe();
+    this.refreshSub = this.api.getCompanyModules(companyId).subscribe({
       next: res => { if (res.success) this.companyModules.set(res.data ?? []); },
-      error: () => { /* keep the list as it is */ },
-    }));
+      error: err => { this.isLocked(err); /* else keep the list as it is */ },
+    });
+    this.modulesSub.add(this.refreshSub);
   }
+  private refreshSub?: Subscription;
 
   closeModules(): void {
     this.modulesSub.unsubscribe();

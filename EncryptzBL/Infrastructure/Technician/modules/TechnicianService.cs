@@ -113,7 +113,7 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
             catch (CompanyDatabaseNotReadyException ex)
             {
                 _logger.LogWarning(ex, "Technician sync skipped for company {CompanyId}: database not ready", CompanyId);
-                return ApiResponse<int>.Fail("The Service module is switched off for this company, or its database is not ready. The technician will be added when it is available again.");
+                return ApiResponse<int>.Fail("The user was created, but the Service module is switched off for this company or its database is not ready, so the technician profile was not saved. When it is available again, open the technician and complete the details.");
             }
             catch (Exception ex)
             {
