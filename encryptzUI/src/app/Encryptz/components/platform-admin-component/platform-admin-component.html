@@ -41,9 +41,9 @@
       <div class="fx-page-title">Platform Admin</div>
       <div class="fx-page-sub">
         @if (isPlatformAdmin()) {
-          Companies, projects, databases, locations, access and menus of the main database
+          Companies and their modules, databases, branches, module access and menus of the main database
         } @else {
-          Locations and project access of your company
+          Branches and module access of your company
         }
       </div>
     </div>
@@ -58,7 +58,7 @@
       <div class="fx-stat-pill pill-green">{{ activeCompanies() }} active</div>
     </div>
     <div class="fx-stat-card">
-      <div class="fx-stat-label">Projects</div>
+      <div class="fx-stat-label">Databases</div>
       <div class="fx-stat-val">{{ projects().length }}</div>
       <div class="fx-stat-pill pill-green">{{ activeProjects() }} active</div>
     </div>
@@ -67,9 +67,9 @@
   <!-- TABS -->
   <div class="pa-tabs">
     <button [class.active]="tab() === 'companies'" (click)="setTab('companies')">Companies</button>
-    <button [class.active]="tab() === 'projects'" (click)="setTab('projects')">Projects &amp; Databases</button>
-    <button [class.active]="tab() === 'locations'" (click)="setTab('locations')">Locations</button>
-    <button [class.active]="tab() === 'access'" (click)="setTab('access')">Project Access</button>
+    <button [class.active]="tab() === 'projects'" (click)="setTab('projects')">Company Databases</button>
+    <button [class.active]="tab() === 'locations'" (click)="setTab('locations')">Branches</button>
+    <button [class.active]="tab() === 'access'" (click)="setTab('access')">Module Access</button>
     @if (isPlatformAdmin()) {
       <button [class.active]="tab() === 'menus'" (click)="setTab('menus')">Menus</button>
     }
@@ -94,7 +94,7 @@
         <thead>
           <tr>
             <th>Company</th><th>Code</th><th>City</th><th>Phone</th>
-            <th class="fx-num">Projects</th><th class="fx-num">Users</th><th>Status</th><th></th>
+            <th class="fx-num">Databases</th><th class="fx-num">Users</th><th>Status</th><th></th>
           </tr>
         </thead>
         <tbody>
@@ -125,7 +125,7 @@
     <div class="fx-table-wrap">
       <div class="fx-table-toolbar">
         <div class="fx-toolbar-left">
-          <span class="fx-table-title">Projects</span>
+          <span class="fx-table-title">Company databases</span>
           <span class="fx-table-count">{{ projects().length }}</span>
         </div>
         <div class="fx-toolbar-right">
@@ -136,7 +136,7 @@
                 <option [ngValue]="c.companyId">{{ c.companyName }}</option>
               }
             </select>
-            <button class="fx-btn-new" (click)="newProject()" [disabled]="!companies().length">+ New Project</button>
+            <button class="fx-btn-new" (click)="newProject()" [disabled]="!companies().length">+ Attach Database</button>
           }
         </div>
       </div>
@@ -144,7 +144,7 @@
       <table class="fx-table">
         <thead>
           <tr>
-            <th>Project</th><th>Key</th><th>Company</th>
+            <th>Module</th><th>Key</th><th>Company</th>
             @if (isPlatformAdmin()) { <th>Server</th><th>Database</th> }
             <th class="fx-num">Users</th><th>Status</th><th></th>
           </tr>
@@ -171,7 +171,7 @@
               </td>
             </tr>
           } @empty {
-            <tr class="fx-empty-row"><td [attr.colspan]="isPlatformAdmin() ? 8 : 6">No projects yet</td></tr>
+            <tr class="fx-empty-row"><td [attr.colspan]="isPlatformAdmin() ? 8 : 6">No company databases yet</td></tr>
           }
         </tbody>
       </table>
@@ -183,7 +183,7 @@
     <div class="fx-table-wrap">
       <div class="fx-table-toolbar">
         <div class="fx-toolbar-left">
-          <span class="fx-table-title">{{ tab() === 'locations' ? 'Locations' : 'Who can enter the project' }}</span>
+          <span class="fx-table-title">{{ tab() === 'locations' ? 'Branches' : 'Who can open the module' }}</span>
           <span class="fx-table-count">
             @if (tab() === 'locations') { {{ locations().length }} }
             @else { {{ usersWithAccess() }} of {{ access().length }} }
@@ -191,23 +191,30 @@
         </div>
         <div class="fx-toolbar-right">
           <select class="fx-filter-select" [ngModel]="selectedProjectId()" (ngModelChange)="onProjectPicked($event)">
-            <option [ngValue]="null" disabled>Select project</option>
+            <option [ngValue]="null" disabled>Select company</option>
             @for (p of projects(); track p.projectId) {
-              <option [ngValue]="p.projectId">{{ p.companyName }} — {{ p.projectName }}</option>
+              <option [ngValue]="p.projectId">{{ p.companyName }}</option>
             }
           </select>
+          @if (tab() === 'access') {
+            <select class="fx-filter-select pa-module-picker" [ngModel]="accessModuleKey()" (ngModelChange)="onAccessModulePicked($event)">
+              @for (m of accessModules(); track m.moduleKey) {
+                <option [ngValue]="m.moduleKey">{{ m.moduleName }}</option>
+              }
+            </select>
+          }
           @if (tab() === 'locations') {
-            <button class="fx-btn-new" (click)="newLocation()" [disabled]="!selectedProjectId()">+ New Location</button>
+            <button class="fx-btn-new" (click)="newLocation()" [disabled]="!selectedProjectId()">+ New Branch</button>
           }
         </div>
       </div>
 
       @if (!selectedProjectId()) {
-        <div class="pa-hint">Select a project.</div>
+        <div class="pa-hint">Select a company.</div>
       } @else if (tab() === 'locations') {
         <table class="fx-table">
           <thead>
-            <tr><th>Location</th><th>Code</th><th>City</th><th>Address</th><th>Status</th><th></th></tr>
+            <tr><th>Branch</th><th>Code</th><th>City</th><th>Address</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
             @for (l of locations(); track l.locationId) {
@@ -221,7 +228,7 @@
               </tr>
             } @empty {
               <tr class="fx-empty-row">
-                <td colspan="6">{{ loading() ? 'Loading…' : 'No locations yet — users cannot enter the project without one' }}</td>
+                <td colspan="6">{{ loading() ? 'Loading…' : 'No branches yet — users cannot enter the company without one' }}</td>
               </tr>
             }
           </tbody>
@@ -240,7 +247,7 @@
                 <td><span class="fx-badge">{{ a.roleInCompany }}</span></td>
                 <td>
                   <label class="pa-switch">
-                    <input type="checkbox" [checked]="a.hasAccess" (change)="toggleAccess(a)" />
+                    <input type="checkbox" [checked]="a.hasAccess" (change)="toggleAccess(a, $event)" [disabled]="accessBusy().has(a.userId)" />
                     <span>{{ a.hasAccess ? 'Allowed' : 'No access' }}</span>
                   </label>
                 </td>
@@ -366,7 +373,7 @@
           }
         </div>
         @if (!f.companyId) {
-          <div class="form-note">You are added to the new company as Admin so you can set it up. Next: create its project.</div>
+          <div class="form-note">You are added to the new company as Admin so you can set it up. Next: attach its database.</div>
         }
         @if (formError()) { <div class="pa-error">{{ formError() }}</div> }
       </div>
@@ -383,7 +390,7 @@
   <div class="modal-overlay" (click)="closeForms()">
     <div class="modal-content wide" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h2>{{ f.projectId ? 'Edit Project' : 'New Project' }}</h2>
+        <h2>{{ f.projectId ? 'Edit Company Database' : 'Attach Company Database' }}</h2>
         <button class="modal-close" (click)="closeForms()">✕</button>
       </div>
       <div class="modal-body">
@@ -397,11 +404,11 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Project Name *</label>
+            <label>Name *</label>
             <input class="form-input" [(ngModel)]="f.projectName" placeholder="Service Management" />
           </div>
           <div class="form-group">
-            <label>Project Key *</label>
+            <label>Key *</label>
             <input class="form-input" [(ngModel)]="f.projectKey" placeholder="C002-P001" />
           </div>
           <div class="form-group">
@@ -409,7 +416,7 @@
           </div>
         </div>
 
-        <div class="pa-section">Database of this project</div>
+        <div class="pa-section">Database of this company</div>
         <div class="form-grid">
           <div class="form-group">
             <label>Server *</label>
@@ -435,7 +442,7 @@
         </div>
 
         @if (f.projectId && f.projectKey) {
-          <div class="form-note">Changing the key or the database moves where this project's users work. People who are logged in must log in again.</div>
+          <div class="form-note">Changing the key or the database moves where this company's users work. People who are logged in must log in again.</div>
         }
 
         @if (testResult(); as t) {
@@ -461,13 +468,13 @@
   <div class="modal-overlay" (click)="closeForms()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h2>{{ f.locationId ? 'Edit Location' : 'New Location' }} · {{ selectedProject()?.projectName }}</h2>
+        <h2>{{ f.locationId ? 'Edit Branch' : 'New Branch' }} · {{ selectedProject()?.companyName }}</h2>
         <button class="modal-close" (click)="closeForms()">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-grid">
           <div class="form-group">
-            <label>Location Name *</label>
+            <label>Branch Name *</label>
             <input class="form-input" [(ngModel)]="f.locationName" placeholder="Head Office" />
           </div>
           <div class="form-group">

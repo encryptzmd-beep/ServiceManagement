@@ -17,11 +17,11 @@ import {
 type Tab = 'companies' | 'projects' | 'locations' | 'access' | 'menus';
 
 /**
- * Administration of the main database: companies, projects and the database each
- * project is stored in, locations, who may enter a project, and the menu tree.
+ * Administration of the main database: companies and their modules, the database each
+ * company is stored in, branches, who may open a module, and the menu tree.
  *
  * A platform administrator sees every company. A company administrator sees the
- * own company and can manage its locations and project access.
+ * own company and can manage its branches and module access.
  */
 @Component({
   selector: 'app-platform-admin-component',
@@ -53,6 +53,15 @@ export class PlatformAdminComponent implements OnInit {
   switching = signal<ReadonlySet<string>>(new Set());
   /** Requests of the open Modules dialog; dropped when it closes or another opens. */
   private modulesSub = new Subscription();
+
+  /** Module the Module Access tab works on, and the modules the picked company has. */
+  accessModuleKey = signal<string>('SERVICE');
+  accessModules = signal<CompanyModule[]>([]);
+  /** User ids with an access change in flight. */
+  accessBusy = signal<ReadonlySet<number>>(new Set());
+  /** The running load of the access tab; dropped when another load starts or the tab is left. */
+  private accessSub = new Subscription();
+  private accessPending = false;
 
   /** Project the Locations / Access tabs work on. */
   selectedProjectId = signal<number | null>(null);
@@ -149,6 +158,8 @@ export class PlatformAdminComponent implements OnInit {
     this.closeForms();
     this.companies.set([]); this.projects.set([]); this.locations.set([]);
     this.access.set([]); this.menus.set([]);
+    this.accessModules.set([]);
+    this.resetAccessLoad();
     this.otpSent.set(false);
     this.otpMessage.set('');
     this.otpError.set(reason);
@@ -169,6 +180,8 @@ export class PlatformAdminComponent implements OnInit {
 
   setTab(tab: Tab): void {
     this.tab.set(tab);
+
+    if (tab !== 'access') this.resetAccessLoad();
 
     if (tab === 'menus' && !this.menus().length) this.loadMenus();
 
@@ -209,7 +222,7 @@ export class PlatformAdminComponent implements OnInit {
         if (res.success) this.projects.set(res.data ?? []);
         else this.notify(res.message, false);
       },
-      error: err => this.fail(err, 'Could not load projects'),
+      error: err => this.fail(err, 'Could not load the company databases'),
     });
   }
 
@@ -232,19 +245,54 @@ export class PlatformAdminComponent implements OnInit {
           if (res.success) this.locations.set(res.data ?? []);
           else this.notify(res.message, false);
         },
-        error: err => this.fail(err, 'Could not load locations'),
+        error: err => this.fail(err, 'Could not load the branches'),
       });
     } else {
+      // the picker holds a company id: a "project" is the company's database
       this.access.set([]);
-      this.api.getProjectAccess(projectId).subscribe({
+      this.resetAccessLoad();
+      this.loading.set(true);
+      this.accessPending = true;
+      this.accessSub.add(this.api.getCompanyModules(projectId).subscribe({
         next: res => {
-          this.loading.set(false);
-          if (res.success) this.access.set(res.data ?? []);
-          else this.notify(res.message, false);
+          const enabled = (res.success ? res.data ?? [] : []).filter(m => m.isEnabled);
+          this.accessModules.set(enabled);
+          // keep the picked module while the company has it, else fall back to the first
+          if (!enabled.some(m => m.moduleKey === this.accessModuleKey()))
+            this.accessModuleKey.set(enabled[0]?.moduleKey ?? 'SERVICE');
+          this.loadModuleAccess(projectId);
         },
-        error: err => this.fail(err, 'Could not load project access'),
-      });
+        error: err => { this.accessPending = false; this.fail(err, 'Could not load the modules'); },
+      }));
     }
+  }
+
+  /** Drop the running load of the access tab so a late answer cannot land in a newer list. */
+  private resetAccessLoad(): void {
+    this.accessSub.unsubscribe();
+    this.accessSub = new Subscription();
+    if (this.accessPending) { this.accessPending = false; this.loading.set(false); }
+  }
+
+  private loadModuleAccess(companyId: number): void {
+    this.resetAccessLoad();
+    this.loading.set(true);
+    this.accessPending = true;
+    this.accessSub.add(this.api.getModuleAccess(companyId, this.accessModuleKey()).subscribe({
+      next: res => {
+        this.accessPending = false;
+        this.loading.set(false);
+        if (res.success) this.access.set(res.data ?? []);
+        else this.notify(res.message, false);
+      },
+      error: err => { this.accessPending = false; this.fail(err, 'Could not load module access'); },
+    }));
+  }
+
+  onAccessModulePicked(moduleKey: string): void {
+    this.accessModuleKey.set(moduleKey);
+    const companyId = this.selectedProjectId();
+    if (companyId) { this.access.set([]); this.loadModuleAccess(companyId); }
   }
 
   loadMenus(): void {
@@ -394,7 +442,7 @@ export class PlatformAdminComponent implements OnInit {
 
   private projectFormError(form: PlatformProject): string {
     if (!form.companyId) return 'Select the company';
-    if (!form.projectName.trim() || !form.projectKey.trim()) return 'Project name and key are required';
+    if (!form.projectName.trim() || !form.projectKey.trim()) return 'Name and key are required';
     if (!form.serverName.trim() || !form.databaseName.trim() || !form.dbUser.trim())
       return 'Server, database and database user are required';
     if (!form.projectId && !form.dbPassword) return 'Database password is required';
@@ -455,7 +503,7 @@ export class PlatformAdminComponent implements OnInit {
     const form = this.locationForm;
     const projectId = this.selectedProjectId();
     if (!form || !projectId) return;
-    if (!form.locationName.trim()) { this.formError.set('Location name is required'); return; }
+    if (!form.locationName.trim()) { this.formError.set('Branch name is required'); return; }
 
     this.saving.set(true);
     this.api.saveLocation(projectId, form).subscribe({
@@ -470,22 +518,31 @@ export class PlatformAdminComponent implements OnInit {
     });
   }
 
-  // ── project access ────────────────────────────────────────────────────────
+  // ── module access ─────────────────────────────────────────────────────────
 
-  toggleAccess(user: ProjectAccess): void {
-    const projectId = this.selectedProjectId();
-    if (!projectId) return;
+  toggleAccess(user: ProjectAccess, event?: Event): void {
+    const companyId = this.selectedProjectId();
+    if (!companyId) { this.redraw(event, user.hasAccess); return; }
+    if (this.accessBusy().has(user.userId)) { this.redraw(event, user.hasAccess); return; }
 
     const grant = !user.hasAccess;
-    this.api.setProjectAccess(projectId, user.userId, grant).subscribe({
+    const moduleKey = this.accessModuleKey();
+    this.accessBusy.update(s => new Set(s).add(user.userId));
+    this.api.setModuleAccess(companyId, moduleKey, user.userId, grant).pipe(
+      finalize(() => this.accessBusy.update(s => { const n = new Set(s); n.delete(user.userId); return n; })),
+    ).subscribe({
       next: res => {
         this.notify(res.message, res.success);
         if (res.success) {
-          this.access.update(list => list.map(a => a.userId === user.userId ? { ...a, hasAccess: grant } : a));
+          // the list may belong to another company or module by now
+          if (this.selectedProjectId() === companyId && this.accessModuleKey() === moduleKey)
+            this.access.update(list => list.map(a => a.userId === user.userId ? { ...a, hasAccess: grant } : a));
           this.loadProjects();
+        } else {
+          this.redraw(event, user.hasAccess);
         }
       },
-      error: err => this.fail(err, 'Could not change access'),
+      error: err => { this.redraw(event, user.hasAccess); this.fail(err, 'Could not change access'); },
     });
   }
 

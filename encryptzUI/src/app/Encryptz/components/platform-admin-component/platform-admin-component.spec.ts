@@ -226,3 +226,124 @@ describe('PlatformAdminComponent modules', () => {
     expect(fixture.componentInstance.modulesCompany()).toBeNull();
   });
 });
+
+describe('PlatformAdminComponent module access', () => {
+  const project = { projectId: 2, companyId: 2, companyName: 'Hamster A/C', projectName: 'Service Management', projectKey: 'C002-P001', isActive: true, serverName: '', databaseName: '', dbUser: '', extraOptions: '' };
+  const serviceModule = { moduleId: 1, moduleKey: 'SERVICE', moduleName: 'Service Management', description: 'd', icon: 'build', sortOrder: 1, isEnabled: true, userCount: 2 };
+  const salesModule = { moduleId: 2, moduleKey: 'SALES', moduleName: 'Sales', description: 'd', icon: 'sell', sortOrder: 2, isEnabled: true, userCount: 1 };
+  const offModule = { moduleId: 3, moduleKey: 'HR', moduleName: 'HR', description: 'd', icon: 'groups', sortOrder: 3, isEnabled: false, userCount: 0 };
+  const member = (userId: number, name: string, role: string, hasAccess: boolean) =>
+    ({ userId, fullName: name, email: name + '@x.test', mobileNumber: '', roleInCompany: role, hasAccess });
+
+  let api: any;
+  let calls: any[][];
+
+  const create = () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [PlatformAdminComponent],
+      providers: [
+        { provide: PlatformService, useValue: api },
+        { provide: AuthService, useValue: {
+          currentUser: () => ({ userId: 5, fullName: 'A', role: 'Admin', isPlatformAdmin: true }),
+          selectedCompanyId: () => 2,
+        } },
+      ],
+    });
+    const fixture = TestBed.createComponent(PlatformAdminComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.setTab('access');
+    fixture.detectChanges();
+    return fixture;
+  };
+
+  beforeEach(() => {
+    calls = [];
+    api = {
+      isUnlocked: () => of({ success: true, unlocked: true }),
+      getCompanies: () => of({ success: true, message: '', data: [] }),
+      getProjects: () => of({ success: true, message: '', data: [project] }),
+      getCompanyModules: (companyId: number) => { calls.push(['getCompanyModules', companyId]); return of({ success: true, message: '', data: [serviceModule, salesModule, offModule] }); },
+      getModuleAccess: (companyId: number, key: string) => { calls.push(['getModuleAccess', companyId, key]); return of({ success: true, message: '', data: [member(5, 'Admin A', 'Admin', true), member(8, 'Tech T', 'Technician', false)] }); },
+      setModuleAccess: (companyId: number, key: string, userId: number, on: boolean) => { calls.push(['setModuleAccess', companyId, key, userId, on]); return of({ success: true, message: 'Access granted', data: true }); },
+      lock: () => {},
+    };
+  });
+
+  it('loads the access of the Service module of the company being worked in', () => {
+    create();
+    expect(calls).toContainEqual(['getCompanyModules', 2]);
+    expect(calls).toContainEqual(['getModuleAccess', 2, 'SERVICE']);
+  });
+
+  it('offers only the modules the company has', () => {
+    const fixture = create();
+    const options = Array.from(fixture.nativeElement.querySelectorAll('.pa-module-picker option')) as HTMLOptionElement[];
+    expect(options.map(o => o.textContent?.trim())).toEqual(['Service Management', 'Sales']);
+  });
+
+  it('reloads the list when another module is picked', () => {
+    const fixture = create();
+    fixture.componentInstance.onAccessModulePicked('SALES');
+    expect(calls).toContainEqual(['getModuleAccess', 2, 'SALES']);
+  });
+
+  it('gives a member access to the picked module', () => {
+    const fixture = create();
+    fixture.componentInstance.toggleAccess(member(8, 'Tech T', 'Technician', false) as any);
+    fixture.detectChanges();
+
+    expect(calls).toContainEqual(['setModuleAccess', 2, 'SERVICE', 8, true]);
+    expect(fixture.componentInstance.access().find(a => a.userId === 8)?.hasAccess).toBe(true);
+  });
+
+  it('leaves the switch on when removing an administrator is refused', () => {
+    api.setModuleAccess = (companyId: number, key: string, userId: number, on: boolean) => {
+      calls.push(['setModuleAccess', companyId, key, userId, on]);
+      return of({ success: false, message: 'Company administrators always have access. Change the role instead.', data: false });
+    };
+    const fixture = create();
+    fixture.componentInstance.toggleAccess(member(5, 'Admin A', 'Admin', true) as any);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.access().find(a => a.userId === 5)?.hasAccess).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('Company administrators always have access');
+  });
+
+  it('says Branch and Module access, never Project or Location', () => {
+    const fixture = create();
+    const visible = (fixture.nativeElement.textContent as string);
+    expect(visible).toContain('Module Access');
+    expect(visible).toContain('Branches');
+    expect(visible).not.toMatch(/Project/i);
+    expect(visible).not.toMatch(/Location/i);
+  });
+
+  it('ignores the late list of a module that is no longer picked', () => {
+    const late = new Subject<any>();
+    const salesList = { success: true, message: '', data: [member(9, 'Sales S', 'Technician', true)] };
+    api.getModuleAccess = (companyId: number, key: string) => {
+      calls.push(['getModuleAccess', companyId, key]);
+      return key === 'SERVICE' ? late : of(salesList);
+    };
+    const fixture = create();
+
+    fixture.componentInstance.onAccessModulePicked('SALES');
+    late.next({ success: true, message: '', data: [member(5, 'Admin A', 'Admin', true)] });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.access().map(a => a.userId)).toEqual([9]);
+  });
+
+  it('sends no second request for a member while the first one is in flight', () => {
+    const late = new Subject<any>();
+    api.setModuleAccess = (companyId: number, key: string, userId: number, on: boolean) => { calls.push(['setModuleAccess', companyId, key, userId, on]); return late; };
+    const fixture = create();
+    const tech = member(8, 'Tech T', 'Technician', false) as any;
+
+    fixture.componentInstance.toggleAccess(tech);
+    fixture.componentInstance.toggleAccess(tech);
+
+    expect(calls.filter(c => c[0] === 'setModuleAccess').length).toBe(1);
+  });
+});
