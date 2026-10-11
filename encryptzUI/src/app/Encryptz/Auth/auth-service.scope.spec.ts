@@ -124,4 +124,73 @@ describe('AuthService scope', () => {
     expect(localStorage.getItem('selected_location_name')).toBeNull();
     expect(auth.selectedModuleKey()).toBeNull();
   });
+
+  const scopedAnswer = {
+    token: 'scoped', fullName: 'A', role: 'Admin', userId: 5, menus: [],
+    companyId: 2, projectId: 2, projectKey: 'C002-P001', moduleKey: 'SERVICE', locationId: 9,
+  };
+  const startScoped = () => {
+    localStorage.setItem('encryptz_token', 't');
+    localStorage.setItem('encryptz_user', JSON.stringify({ ...scopedAnswer, token: 't' }));
+    localStorage.setItem('selected_company_id', '2');
+    localStorage.setItem('selected_module_key', 'SERVICE');
+    localStorage.setItem('selected_location_id', '9');
+    localStorage.setItem('selected_location_name', 'Elankulam');
+  };
+  const scoped9 = { loggedIn: true, companyId: 2, moduleKey: 'SERVICE', locationId: 9 };
+
+  it('uses the requested branch when the answer carries none', () => {
+    localStorage.setItem('selected_company_id', '2');
+    const auth = create();
+    auth.setScope('SERVICE', 9, 'Elankulam').subscribe();
+    const { moduleKey, ...noModule } = scopedAnswer;
+    http.expectOne(r => r.url.endsWith('/api/auth/set-scope'))
+      .flush({ success: true, message: '', data: { ...noModule, locationId: 0 } });
+    expect(auth.scopeState()).toEqual(scoped9);
+  });
+
+  it('keeps the scope over a reload', () => {
+    localStorage.setItem('selected_company_id', '2');
+    const auth = create();
+    auth.setScope('SERVICE', 9, 'Elankulam').subscribe();
+    http.expectOne(r => r.url.endsWith('/api/auth/set-scope')).flush({ success: true, message: '', data: scopedAnswer });
+
+    TestBed.resetTestingModule();
+    const again = create();
+
+    expect(again.scopeState()).toEqual(scoped9);
+    expect(again.selectedLocationName()).toBe('Elankulam');
+  });
+
+  it('keeps an existing scope when a new one is refused', () => {
+    startScoped();
+    const auth = create();
+    auth.setScope('SERVICE', 12).subscribe();
+    http.expectOne(r => r.url.endsWith('/api/auth/set-scope'))
+      .flush({ success: false, message: 'no', data: null });
+
+    expect(auth.scopeState()).toEqual(scoped9);
+    expect(localStorage.getItem('selected_location_id')).toBe('9');
+    expect(localStorage.getItem('selected_module_key')).toBe('SERVICE');
+  });
+
+  it('keeps an existing scope when the call fails', () => {
+    startScoped();
+    const auth = create();
+    let failed = false;
+    auth.setScope('SERVICE', 12).subscribe({ error: () => failed = true });
+    http.expectOne(r => r.url.endsWith('/api/auth/set-scope'))
+      .flush('x', { status: 500, statusText: 'Server Error' });
+
+    expect(failed).toBe(true);
+    expect(auth.scopeState()).toEqual(scoped9);
+    expect(localStorage.getItem('selected_location_id')).toBe('9');
+  });
+
+  it('forgets company, module and branch when the selected company is cleared', () => {
+    startScoped();
+    const auth = create();
+    auth.clearSelectedCompany();
+    expect(auth.scopeState()).toEqual({ loggedIn: true, companyId: null, moduleKey: null, locationId: null });
+  });
 });

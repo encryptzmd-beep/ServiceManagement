@@ -355,7 +355,7 @@ setScope(moduleKey: string, locationId: number, locationName = ''): Observable<A
         localStorage.setItem('encryptz_menus', JSON.stringify(data.menus || []));
         this._currentUser.set(data);
         this._menus.set(data.menus || []);
-        this.persistScope(data.moduleKey || moduleKey, data.locationId ?? locationId, locationName, data.projectId);
+        this.persistScope(data.moduleKey || moduleKey, data.locationId || locationId, locationName, data.projectId);
       }
     }));
 }
@@ -516,6 +516,7 @@ private setSessionWithCompanies(data: ExtendedLoginResponse): void {
     this._selectedCompanyId.set(null);
     this._selectedCompanyRole.set(null);
     this._companies.set([]);
+    this.clearScope();
   }
 
   // NEW: Helper to check if user has access to current company
