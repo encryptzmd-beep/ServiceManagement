@@ -17,4 +17,9 @@
     <ProjectReference Include="..\EncryptzBL\EncryptzBL.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- run by the API when a company's database is created -->
+    <Content Include="Database\ProjectDB\New_Tenant_Database.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
