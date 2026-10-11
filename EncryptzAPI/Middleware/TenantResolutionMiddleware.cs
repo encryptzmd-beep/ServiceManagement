@@ -4,25 +4,28 @@ using EncryptzBL.Common.Tenant;
 namespace EncryptzAPI.Middleware
 {
     /// <summary>
-    /// Resolves the project DB for the request and populates the request-scoped
+    /// Resolves the company's database for the request and fills the request-scoped
     /// TenantContext.
     ///
-    /// AUTHENTICATED requests: the tenant claims baked into the JWT (ProjectKey,
-    /// CompanyId, ProjectId, LocationId) — staff tokens get them at set-scope,
-    /// customer tokens at customer login. The JWT is signed and the scope is only
-    /// issued after access was verified, so the claims are trusted for routing.
+    /// AUTHENTICATED requests: the routing claims of the signed JWT (TenantKey,
+    /// CompanyId, ProjectId = tenant scope id, LocationId, ModuleKey). Staff tokens get
+    /// them at set-scope, customer tokens at customer login. Tokens issued before the
+    /// company-level routing carry the key as ProjectKey; it is accepted as a fallback.
     ///
-    /// ANONYMOUS requests (public customer-portal endpoints: register, login,
-    /// public complaint): the project is named by the X-Project-Key header. The
-    /// header is ignored for authenticated requests, so a token can never be
-    /// pointed at another project's DB.
+    /// ANONYMOUS requests (public customer-portal endpoints): the company is named by
+    /// the X-Tenant-Key header (X-Project-Key is the old name). The header is ignored
+    /// for authenticated requests, so a token can never be pointed at another database.
     ///
-    /// Endpoints that run before a project is chosen (login, select-company, etc.)
-    /// have neither — TenantContext stays unresolved and any business-data access
-    /// fails fast with a clear message.
+    /// The branch always comes from the token: changing it means calling set-scope,
+    /// which checks the caller's access and issues a new token.
+    ///
+    /// Endpoints that run before a scope is chosen (login, select-company, modules)
+    /// have neither; TenantContext stays unresolved and business data access is refused.
     /// </summary>
     public class TenantResolutionMiddleware
     {
+        public const string TenantKeyHeader = "X-Tenant-Key";
+        /// <summary>Old name of <see cref="TenantKeyHeader"/>, still sent by deployed customer pages.</summary>
         public const string ProjectKeyHeader = "X-Project-Key";
 
         private readonly RequestDelegate _next;
@@ -37,35 +40,34 @@ namespace EncryptzAPI.Middleware
             var user = context.User;
             if (user?.Identity?.IsAuthenticated == true)
             {
-                var projectKey = user.FindFirst("ProjectKey")?.Value;
+                var tenantKey = TenantClaims.GetTenantKey(user);
 
-                if (!string.IsNullOrEmpty(projectKey))
+                if (!string.IsNullOrEmpty(tenantKey))
                 {
-                    tenant.ProjectKey = projectKey;
+                    tenant.ProjectKey = tenantKey;
                     tenant.CompanyId = ParseInt(user.FindFirst("CompanyId")?.Value
                                                 ?? user.FindFirst("ClientId")?.Value);
                     tenant.ProjectId = ParseInt(user.FindFirst("ProjectId")?.Value);
                     tenant.LocationId = ParseInt(user.FindFirst("LocationId")?.Value);
+                    tenant.ModuleKey = TenantClaims.GetModuleKey(user);
 
                     // Identity: the login lives in MainDB; TenantUserId/TechnicianId are the
-                    // caller's ids inside the project DB (resolved by the user sync at set-scope).
-                    // Customer tokens are issued by the project DB itself: their NameIdentifier
+                    // caller's ids inside the tenant DB (resolved by the user sync at set-scope).
+                    // Customer tokens are issued by the tenant DB itself: their NameIdentifier
                     // already is the local user id.
                     var nameId = ParseInt(user.FindFirst(ClaimTypes.NameIdentifier)?.Value);
                     tenant.TenantUserId = user.GetTenantUserId();
                     tenant.MainUserId = user.FindFirst("TenantUserId") != null ? nameId : 0;
                     tenant.TechnicianId = user.GetTechnicianId();
 
-                    // Optional per-request location override header. Narrows scope WITHIN
-                    // the same project DB; rows are still guarded by LocationId in every proc.
-                    ApplyLocationHeader(context, tenant);
-
-                    tenant.ServiceDbConnectionString = await resolver.GetServiceConnectionAsync(projectKey);
+                    tenant.ServiceDbConnectionString = await resolver.GetServiceConnectionAsync(tenantKey);
                 }
             }
             else
             {
-                var headerKey = context.Request.Headers[ProjectKeyHeader].FirstOrDefault();
+                var headerKey = context.Request.Headers[TenantKeyHeader].FirstOrDefault();
+                if (string.IsNullOrWhiteSpace(headerKey))
+                    headerKey = context.Request.Headers[ProjectKeyHeader].FirstOrDefault();
 
                 if (!string.IsNullOrWhiteSpace(headerKey))
                 {
@@ -73,7 +75,7 @@ namespace EncryptzAPI.Middleware
                     if (scope == null)
                     {
                         context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                        await context.Response.WriteAsJsonAsync(new { success = false, message = "Unknown project" });
+                        await context.Response.WriteAsJsonAsync(new { success = false, message = "Unknown company" });
                         return;
                     }
 
@@ -81,20 +83,12 @@ namespace EncryptzAPI.Middleware
                     tenant.CompanyId = scope.CompanyId;
                     tenant.ProjectId = scope.ProjectId;
                     tenant.LocationId = scope.DefaultLocationId;
-                    ApplyLocationHeader(context, tenant);
 
                     tenant.ServiceDbConnectionString = await resolver.GetServiceConnectionAsync(scope.ProjectKey);
                 }
             }
 
             await _next(context);
-        }
-
-        private static void ApplyLocationHeader(HttpContext context, TenantContext tenant)
-        {
-            var headerLocation = context.Request.Headers["X-Location-Id"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(headerLocation) && int.TryParse(headerLocation, out var loc) && loc > 0)
-                tenant.LocationId = loc;
         }
 
         private static int ParseInt(string? value)

@@ -11,11 +11,14 @@ namespace EncryptzBL.Common.Tenant
         /// <summary>Companies.CompanyId of the current company (used to scope/stamp business rows).</summary>
         public int CompanyId { get; set; }
 
-        /// <summary>Projects.ProjectId of the current project.</summary>
+        /// <summary>Companies.TenantScopeId: the value the tenant database stores and filters as ProjectId.</summary>
         public int ProjectId { get; set; }
 
-        /// <summary>Projects.ProjectKey — the routing key that resolves this project's DB.</summary>
+        /// <summary>Companies.TenantKey: the routing key that resolves this company's database.</summary>
         public string? ProjectKey { get; set; }
+
+        /// <summary>Module the token was issued for (empty on tokens issued before modules existed).</summary>
+        public string? ModuleKey { get; set; }
 
         /// <summary>LocationId scoping the current request's rows (locations live in the project DB).</summary>
         public int LocationId { get; set; }
