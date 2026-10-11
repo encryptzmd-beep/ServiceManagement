@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import { CanActivateChildFn, CanActivateFn, Router } from '@angular/router';
 import { AuthService } from './auth-service';
+import { nextScopeStep, routeForStep, ScopeNeed } from './scope-flow';
 
 
 export const authGuard: CanActivateFn = (route, state) => {
@@ -45,4 +46,19 @@ export const dashboardRedirectGuard: CanActivateFn = () => {
     return false;
   }
   return true; // let dashboard load for Admin/ServiceManager
+};
+
+/**
+ * Pages inside the application need a company, a module and a branch; pages marked
+ * `data: { scope: 'company' }` (administration, profile) need only a company.
+ * A session that is not there yet is sent to the step it is missing.
+ */
+export const scopeGuard: CanActivateChildFn = (childRoute) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  const need: ScopeNeed = childRoute.data?.['scope'] === 'company' ? 'company' : 'full';
+  const step = nextScopeStep(auth.scopeState(), need);
+
+  return step === 'ready' ? true : router.createUrlTree([routeForStep(step)]);
 };

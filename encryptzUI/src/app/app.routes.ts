@@ -3,7 +3,7 @@ import { LoginComponent } from './Encryptz/components/login-component/login-comp
 import { RegisterComponent } from './Encryptz/components/register-component/register-component';
 import { Routes } from '@angular/router';
 import { MainLayoutComponent } from './Encryptz/components/main-layout-component/main-layout-component';
-import { authGuard, dashboardRedirectGuard, roleGuard } from './Encryptz/Auth/guard-guard';
+import { authGuard, dashboardRedirectGuard, roleGuard, scopeGuard } from './Encryptz/Auth/guard-guard';
 import { CompanySelectorComponent } from './Encryptz/components/company-selector-component/company-selector-component';
 import { NoCompanyComponent } from './Encryptz/components/no-company-component/no-company-component';
 import { AddUserComponent } from './Encryptz/components/add-user-component/add-user-component';
@@ -29,13 +29,16 @@ export const routes: Routes = [
     path: 'customer',
     children: CUSTOMER_ROUTES
   },
-  { path: 'select-company', component: CompanySelectorComponent, canActivate: [authGuard] },
+  { path: 'select-company', component: CompanySelectorComponent, canActivate: [authGuard], data: { stage: 'company' } },
+  { path: 'select-module', component: CompanySelectorComponent, canActivate: [authGuard], data: { stage: 'module' } },
+  { path: 'select-branch', component: CompanySelectorComponent, canActivate: [authGuard], data: { stage: 'branch' } },
   { path: 'no-company', component: NoCompanyComponent, canActivate: [authGuard] },
   // Protected routes (with layout)
   {
     path: '',
     component: MainLayoutComponent,
     canActivate: [authGuard],
+    canActivateChild: [scopeGuard],
     children: [
       { path: '', redirectTo: 'complaints/dashboard', pathMatch: 'full' },
 
@@ -52,6 +55,7 @@ export const routes: Routes = [
         path: 'admin/add-user',
         component: AddUserComponent,
         canActivate: [roleGuard(['Admin', 'CompanyAdmin'])],
+        data: { scope: 'company' },
       },
 
       // 2.1 Customer Portal
@@ -296,25 +300,27 @@ export const routes: Routes = [
       {
   path: 'settings/access-management',
   loadComponent: () => import('./Encryptz/components/auth-management-component/auth-management-component')
-    .then(m => m.AuthManagementComponent)
+    .then(m => m.AuthManagementComponent),
+  data: { scope: 'company' }
 },
    {
   path: 'profile',
   loadComponent: () => import('./Encryptz/components/my-profile-component/my-profile-component')
     .then(m => m.MyProfileComponent),
-  data: { title: 'My Profile', icon: 'person' }
+  data: { title: 'My Profile', icon: 'person', scope: 'company' }
 },
    {
   path: 'settings/platform',
   loadComponent: () => import('./Encryptz/components/platform-admin-component/platform-admin-component')
     .then(m => m.PlatformAdminComponent),
   canActivate: [roleGuard(['Admin', 'CompanyAdmin'])],
-  data: { title: 'Platform Admin', icon: 'admin_panel_settings', menu: 'settings' }
+  data: { title: 'Platform Admin', icon: 'admin_panel_settings', menu: 'settings', scope: 'company' }
 },
    {
   path: 'settings/roles',
   loadComponent: () => import('./Encryptz/components/user-roles/user-roles')
-    .then(m => m.UserRoles)
+    .then(m => m.UserRoles),
+  data: { scope: 'company' }
 },
   {
   path: 'products',
