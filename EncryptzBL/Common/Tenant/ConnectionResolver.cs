@@ -6,15 +6,17 @@ using Microsoft.Extensions.Configuration;
 namespace EncryptzBL.Common.Tenant
 {
     /// <summary>
-    /// Singleton resolver. Reads the registry from MainDB using its own short-lived
-    /// connection (so it can stay a singleton), decrypts the ServiceDB password, and
-    /// builds + caches a connection string per client key.
+    /// Singleton resolver. Reads a company's registry row from MainDB with its own
+    /// short-lived connection (so it can stay a singleton), decrypts the database
+    /// password, and builds + caches the connection string per tenant key.
     /// </summary>
     public class ConnectionResolver : IConnectionResolver
     {
+        private sealed record TenantEntry(string TenantKey, int CompanyId, string CompanyName, int ScopeId, string ConnectionString);
+
         private readonly string _mainConnectionString;
         private readonly ITenantSecretProtector _protector;
-        private readonly ConcurrentDictionary<string, string> _cache = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, TenantEntry> _cache = new(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<string, ProjectScope> _scopeCache = new(StringComparer.OrdinalIgnoreCase);
 
         public ConnectionResolver(IConfiguration config, ITenantSecretProtector protector)
@@ -27,14 +29,12 @@ namespace EncryptzBL.Common.Tenant
         public async Task<string> GetServiceConnectionAsync(string projectKey)
         {
             if (string.IsNullOrWhiteSpace(projectKey))
-                throw new ArgumentException("Project key is required to resolve a project DB.", nameof(projectKey));
+                throw new ArgumentException("A tenant key is required to resolve a company database.", nameof(projectKey));
 
-            if (_cache.TryGetValue(projectKey, out var cached))
-                return cached;
+            var entry = await GetEntryAsync(projectKey)
+                ?? throw new InvalidOperationException("No active company database is registered for this key.");
 
-            var connStr = await BuildFromRegistryAsync(projectKey);
-            _cache[projectKey] = connStr;
-            return connStr;
+            return entry.ConnectionString;
         }
 
         public async Task<ProjectScope?> GetProjectScopeAsync(string projectKey)
@@ -45,33 +45,21 @@ namespace EncryptzBL.Common.Tenant
             if (_scopeCache.TryGetValue(projectKey, out var cached))
                 return cached;
 
-            var scope = new ProjectScope();
+            var entry = await GetEntryAsync(projectKey);
+            if (entry == null)
+                return null;
 
-            await using (var conn = new SqlConnection(_mainConnectionString))
+            var scope = new ProjectScope
             {
-                await conn.OpenAsync();
+                ProjectKey = entry.TenantKey,
+                CompanyId = entry.CompanyId,
+                CompanyName = entry.CompanyName,
+                ProjectId = entry.ScopeId
+            };
 
-                await using var cmd = new SqlCommand(
-                                        @"SELECT TOP 1 p.ProjectId, p.CompanyId, p.ProjectKey, c.CompanyName
-                      FROM dbo.Projects p
-                      INNER JOIN dbo.ProjectConnections pc ON pc.ProjectId = p.ProjectId AND pc.IsActive = 1
-                      INNER JOIN dbo.Companies c ON c.CompanyId = p.CompanyId AND c.IsActive = 1
-                      WHERE p.ProjectKey = @ProjectKey AND p.IsActive = 1", conn);
-                cmd.Parameters.AddWithValue("@ProjectKey", projectKey);
-
-                await using var reader = await cmd.ExecuteReaderAsync();
-                if (!await reader.ReadAsync())
-                    return null;
-
-                scope.ProjectId = Convert.ToInt32(reader["ProjectId"]);
-                scope.CompanyId = Convert.ToInt32(reader["CompanyId"]);
-                scope.ProjectKey = reader["ProjectKey"]?.ToString() ?? projectKey;
-                scope.CompanyName = reader["CompanyName"]?.ToString() ?? string.Empty;
-            }
-
-            // Locations live in the project's own DB
-            var projectDb = new ExplicitDbHelper(await GetServiceConnectionAsync(scope.ProjectKey));
-            var locations = await projectDb.ExecuteDataTableAsync("sp_Project_GetLocations", new[]
+            // Branches live in the company's own DB
+            var tenantDb = new ExplicitDbHelper(entry.ConnectionString);
+            var locations = await tenantDb.ExecuteDataTableAsync("sp_Project_GetLocations", new[]
             {
                 SqlParameterHelper.Input("@CompanyId", scope.CompanyId),
                 SqlParameterHelper.Input("@ProjectId", scope.ProjectId)
@@ -93,46 +81,48 @@ namespace EncryptzBL.Common.Tenant
             }
         }
 
-        private async Task<string> BuildFromRegistryAsync(string projectKey)
+        private async Task<TenantEntry?> GetEntryAsync(string tenantKey)
+        {
+            if (_cache.TryGetValue(tenantKey, out var cached))
+                return cached;
+
+            var entry = await LoadFromRegistryAsync(tenantKey);
+            if (entry != null)
+                _cache[tenantKey] = entry;
+
+            return entry;
+        }
+
+        private async Task<TenantEntry?> LoadFromRegistryAsync(string tenantKey)
         {
             await using var conn = new SqlConnection(_mainConnectionString);
             await conn.OpenAsync();
 
-            await using var cmd = new SqlCommand("dbo.sp_Project_GetConnection", conn)
+            await using var cmd = new SqlCommand("dbo.sp_Tenant_GetConnection", conn)
             {
                 CommandType = CommandType.StoredProcedure
             };
-            cmd.Parameters.AddWithValue("@ProjectKey", projectKey);
+            cmd.Parameters.AddWithValue("@TenantKey", tenantKey);
 
             await using var reader = await cmd.ExecuteReaderAsync();
             if (!await reader.ReadAsync())
-                throw new InvalidOperationException($"No active project DB registered for project key '{projectKey}'.");
+                return null;
 
-            var server   = reader["ServerName"]?.ToString();
-            var database = reader["DatabaseName"]?.ToString();
-            var user     = reader["DbUser"]?.ToString();
-            var passEnc  = reader["DbPasswordEnc"]?.ToString();
-            var extra    = reader["ExtraOptions"]?.ToString();
+            var password = _protector.Unprotect(reader["DbPasswordEnc"]?.ToString() ?? string.Empty);
 
-            var password = _protector.Unprotect(passEnc ?? string.Empty);
+            var connectionString = TenantConnectionString.Build(
+                reader["ServerName"]?.ToString(),
+                reader["DatabaseName"]?.ToString(),
+                reader["DbUser"]?.ToString(),
+                password,
+                reader["ExtraOptions"]?.ToString());
 
-            var builder = new SqlConnectionStringBuilder
-            {
-                DataSource = server,
-                InitialCatalog = database,
-                UserID = user,
-                Password = password,
-                TrustServerCertificate = true,
-                MultipleActiveResultSets = true
-            };
-
-            var result = builder.ConnectionString;
-
-            // Append any raw extra options that aren't covered above.
-            if (!string.IsNullOrWhiteSpace(extra))
-                result = result.TrimEnd(';') + ";" + extra.Trim();
-
-            return result;
+            return new TenantEntry(
+                reader["TenantKey"]?.ToString() ?? tenantKey,
+                Convert.ToInt32(reader["CompanyId"]),
+                reader["CompanyName"]?.ToString() ?? string.Empty,
+                Convert.ToInt32(reader["TenantScopeId"]),
+                connectionString);
         }
     }
 }
