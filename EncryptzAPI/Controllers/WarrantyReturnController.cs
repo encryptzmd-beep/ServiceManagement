@@ -1,3 +1,4 @@
+using EncryptzAPI.Middleware;
 ﻿using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.WarrantyReturn.Modules;
@@ -11,6 +12,7 @@ namespace EncryptzAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
+    [AppModule("SERVICE")]
     public class WarrantyReturnController : ControllerBase
     {
         private readonly IWarrantyReturnService _service;

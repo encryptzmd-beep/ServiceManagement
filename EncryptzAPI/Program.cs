@@ -21,6 +21,7 @@ builder.Services.AddControllers(options =>
     options.Filters.Add<PagingGuardFilter>();   // page / size validation + max page size on every list endpoint
     options.Filters.Add<CustomerBoundaryFilter>();   // customer tokens only reach customer-portal endpoints
     options.Filters.Add<TenantScopeExceptionFilter>();   // no scope selected -> 403, not 500
+    options.Filters.Add<ModuleBoundaryFilter>();   // a token is issued for one module
 });
 
 // 🔹 Single Service Injection (Your Custom DI)

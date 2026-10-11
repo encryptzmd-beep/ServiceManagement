@@ -1,3 +1,4 @@
+using EncryptzAPI.Middleware;
 ﻿using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
@@ -9,6 +10,7 @@ namespace EncryptzAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [AppModule("SERVICE")]
     public class ProductMasterController : ControllerBase
     {
         private readonly IProductMasterService _productMasterService;

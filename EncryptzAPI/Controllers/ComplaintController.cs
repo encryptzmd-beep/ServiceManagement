@@ -1,3 +1,4 @@
+using EncryptzAPI.Middleware;
 ﻿using EncryptzAPI.Middleware;
 using EncryptzBL.Common;
 using EncryptzBL.DTO_s;
@@ -11,6 +12,7 @@ namespace EncryptzAPI.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
+    [AppModule("SERVICE")]
     public class ComplaintController : ControllerBase
     {
         private readonly IComplaintService _svc;

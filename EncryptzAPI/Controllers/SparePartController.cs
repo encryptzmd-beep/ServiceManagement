@@ -1,3 +1,4 @@
+using EncryptzAPI.Middleware;
 ﻿using EncryptzAPI.Middleware;
 using EncryptzBL.Common;
 using EncryptzBL.DTO_s;
@@ -14,6 +15,7 @@ using System.Security.Claims;
     [Route("api/spare-parts")]
     [ApiController]
     [Authorize]
+    [AppModule("SERVICE")]
     public class SparePartController : ControllerBase
     {
         private readonly ISparePartService _svc;

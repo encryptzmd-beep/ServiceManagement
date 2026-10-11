@@ -13,6 +13,7 @@ namespace EncryptzAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
+    [AppModule("SERVICE")]
     public class PaymentsController : ControllerBase
     {
         private readonly IPaymentService _paymentService;

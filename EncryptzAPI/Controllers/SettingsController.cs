@@ -1,3 +1,4 @@
+using EncryptzAPI.Middleware;
 ﻿using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Settings.Modules;
@@ -11,6 +12,7 @@ namespace EncryptzAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(Roles = "Admin")]
+    [AppModule("SERVICE")]
     public class SettingsController : ControllerBase
     {
         private readonly ISettingsService _service;

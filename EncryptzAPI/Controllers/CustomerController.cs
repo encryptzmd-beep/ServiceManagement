@@ -14,6 +14,7 @@ namespace EncryptzAPI.Controllers
     [Route("api/[controller]")]
     [Authorize]
     [CustomerPortal]
+    [AppModule("SERVICE")]
     public class CustomerController : ControllerBase
     {
         private readonly ICustomerService _svc;

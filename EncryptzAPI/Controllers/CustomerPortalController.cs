@@ -1,3 +1,4 @@
+using EncryptzAPI.Middleware;
 ﻿using EncryptzBL.Common;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.CustomerPortal.Modules;
@@ -11,6 +12,7 @@ namespace EncryptzAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(Roles = "Customer")]
+    [AppModule("SERVICE")]
     public class CustomerPortalController : ControllerBase
     {
         private readonly ICustomerPortalService _service;
