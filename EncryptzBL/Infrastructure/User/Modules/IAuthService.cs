@@ -21,7 +21,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
         Task<ApiResponse<MyProfileDto>> UpdateMyProfile(int userId, int companyId, UpdateMyProfileDto dto);
         Task<ApiResponse<string>> ChangeMyPassword(int userId, ChangeMyPasswordDto dto);
         Task<ApiResponse<List<UserDto>>> GetUsers(int companyId);
-        Task<ApiResponse<object>> SaveUser(SaveUserRequest req, int companyId, int projectId, int savedBy);
+        Task<ApiResponse<object>> SaveUser(SaveUserRequest req, int companyId, int savedBy);
         Task<ApiResponse<List<RoleDto>>> GetRoles();
         Task<ApiResponse<object>> SaveRole(SaveRoleRequest req);
         /// <summary>Deletes a role nobody uses (built-in roles and roles in use are refused).</summary>
@@ -34,11 +34,14 @@ namespace EncryptzBL.Infrastructure.User.Modules
         Task<ApiResponse<List<CompanyResponseDto>>> GetUserCompanies(int userId);
 
         // Multi-project / multi-location scoping (Client -> Projects -> Locations)
+        // Company -> Module -> Branch scoping
+        Task<ApiResponse<List<ModuleDto>>> GetModules(int userId, int companyId);
+        /// <summary>For the deployed UI: the Service module shown as the company's one "project".</summary>
         Task<ApiResponse<List<ProjectDto>>> GetProjects(int userId, int companyId);
-        Task<ApiResponse<List<LocationDto>>> GetLocations(int userId, int projectId);
-        Task<ApiResponse<LoginResponseDto>> SetScope(int userId, int companyId, int projectId, int locationId);
-        Task<ApiResponse<InvitationResponseDto>> InviteUser(int companyId, string email, string roleInCompany, int invitedBy, int projectID, string remarks = null);
-        Task<ApiResponse<SelectCompanyResponseDto>> AcceptInvitation(Guid token, int userId,int projectId);
+        Task<ApiResponse<List<LocationDto>>> GetLocations(int userId, int companyId, string moduleKey);
+        Task<ApiResponse<LoginResponseDto>> SetScope(int userId, int companyId, string moduleKey, int locationId);
+        Task<ApiResponse<InvitationResponseDto>> InviteUser(int companyId, string email, string roleInCompany, int invitedBy, string remarks = null);
+        Task<ApiResponse<SelectCompanyResponseDto>> AcceptInvitation(Guid token, int userId);
         Task<ApiResponse<bool>> RejectInvitation(int invitationId, int userId);
         Task<ApiResponse<List<InvitationResponseDto>>> GetPendingInvitations(string email);
         Task<ApiResponse<CheckUserExistsResponseDto>> CheckUserExists(string email);

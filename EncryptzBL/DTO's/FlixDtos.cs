@@ -1,3 +1,4 @@
+using EncryptzBL.Common.Tenant;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -36,10 +37,13 @@ namespace EncryptzBL.DTO_s
         public string Email { get; set; }
         public List<MenuDto> Menus { get; set; } = new();
 
-        // Multi-tenant scope currently baked into the token (Company -> Project -> Location)
+        // Scope currently baked into the token (Company -> Module -> Branch).
+        // ProjectId / ProjectKey are the tenant scope id and tenant key: the names are
+        // kept for the deployed UI.
         public int CompanyId { get; set; }
         public int ProjectId { get; set; }
-        public string ProjectKey { get; set; } = string.Empty;   // routing key -> project DB
+        public string ProjectKey { get; set; } = string.Empty;
+        public string ModuleKey { get; set; } = string.Empty;
 
         /// <summary>Name of the selected company (MainDB.Companies) shown in the header.</summary>
         public string CompanyName { get; set; } = string.Empty;
@@ -72,10 +76,41 @@ namespace EncryptzBL.DTO_s
         public string? City { get; set; }
     }
 
+    /// <summary>One module of the catalogue as a user sees it inside a company.</summary>
+    public class ModuleDto
+    {
+        public int ModuleId { get; set; }
+        public string ModuleKey { get; set; } = string.Empty;
+        public string ModuleName { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+        public int SortOrder { get; set; }
+        /// <summary>Available | NotSubscribed | NoAccess</summary>
+        public string State { get; set; } = string.Empty;
+
+        public static ModuleDto From(int moduleId, string moduleKey, string moduleName, string description,
+            string icon, int sortOrder, bool companyEnabled, bool userGranted, string? roleInCompany)
+        {
+            return new ModuleDto
+            {
+                ModuleId = moduleId,
+                ModuleKey = moduleKey,
+                ModuleName = moduleName,
+                Description = description,
+                Icon = icon,
+                SortOrder = sortOrder,
+                State = ModuleAccess.Evaluate(companyEnabled, userGranted, roleInCompany).ToString()
+            };
+        }
+    }
+
     public class SetScopeRequestDto
     {
         public int UserId { get; set; }
         public int CompanyId { get; set; }
+        /// <summary>Module to open. Empty = SERVICE (the deployed UI does not send it).</summary>
+        public string ModuleKey { get; set; } = string.Empty;
+        /// <summary>Ignored: projects no longer exist. Still sent by the deployed UI.</summary>
         public int ProjectId { get; set; }
         public int LocationId { get; set; }
     }

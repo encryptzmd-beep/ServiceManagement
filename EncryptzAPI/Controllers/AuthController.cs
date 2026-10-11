@@ -1,3 +1,4 @@
+using EncryptzBL.Common.Tenant;
 using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.User.Modules;
@@ -101,8 +102,7 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SaveUser([FromBody] SaveUserRequest req)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            var projectId = int.Parse(User.FindFirst("ProjectId")?.Value ?? "0");
-            var result = await _authService.SaveUser(req, GetCurrentCompanyId(), projectId, userId);
+            var result = await _authService.SaveUser(req, GetCurrentCompanyId(), userId);
             return Ok(result);
         }
 
@@ -178,8 +178,21 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
-        // ── PROJECT / LOCATION SCOPING (Client -> Projects -> Locations) ──────
+        // ── MODULE / BRANCH SCOPING (Company -> Modules -> Branches) ──────
 
+        [HttpGet("modules")]
+        [Authorize]
+        public async Task<IActionResult> GetModules()
+        {
+            var companyId = GetCurrentCompanyId();
+            if (companyId == 0)
+                return BadRequest(ApiResponse<object>.Fail("No company selected"));
+
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            return Ok(await _authService.GetModules(userId, companyId));
+        }
+
+        /// <summary>For the deployed UI: the Service module as the company's one "project".</summary>
         [HttpGet("projects")]
         [Authorize]
         public async Task<IActionResult> GetProjects([FromQuery] int companyId)
@@ -189,12 +202,20 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// Branches of the selected company. The company comes from the token.
+        /// projectId is ignored (sent by the deployed UI).
+        /// </summary>
         [HttpGet("locations")]
         [Authorize]
-        public async Task<IActionResult> GetLocations([FromQuery] int projectId)
+        public async Task<IActionResult> GetLocations([FromQuery] string? moduleKey = null, [FromQuery] int projectId = 0)
         {
+            var companyId = GetCurrentCompanyId();
+            if (companyId == 0)
+                return BadRequest(ApiResponse<object>.Fail("No company selected"));
+
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            var result = await _authService.GetLocations(userId, projectId);
+            var result = await _authService.GetLocations(userId, companyId, ModuleOrService(moduleKey));
             return Ok(result);
         }
 
@@ -203,7 +224,7 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SetScope([FromBody] SetScopeRequestDto dto)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            var result = await _authService.SetScope(userId, dto.CompanyId, dto.ProjectId, dto.LocationId);
+            var result = await _authService.SetScope(userId, dto.CompanyId, ModuleOrService(dto.ModuleKey), dto.LocationId);
             return Ok(result);
         }
 
@@ -226,7 +247,7 @@ namespace EncryptzAPI.Controllers
             if (companyId == 0)
                 return BadRequest(ApiResponse<object>.Fail("No company selected"));
 
-            var result = await _authService.InviteUser(companyId, dto.Email, dto.RoleInCompany, userId, dto.projectID, dto.Remarks);
+            var result = await _authService.InviteUser(companyId, dto.Email, dto.RoleInCompany, userId, dto.Remarks);
             return Ok(result);
         }
 
@@ -235,7 +256,7 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> AcceptInvitation([FromBody] AcceptInvitationRequestDto dto)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            var result = await _authService.AcceptInvitation(dto.Token, userId, dto.projectId);
+            var result = await _authService.AcceptInvitation(dto.Token, userId);
             return Ok(result);
         }
         // CompanyController.cs - ADD THIS METHOD (based on your existing pattern)
@@ -333,6 +354,9 @@ namespace EncryptzAPI.Controllers
         #endregion
 
         #region Helper
+
+        private static string ModuleOrService(string? moduleKey)
+            => string.IsNullOrWhiteSpace(moduleKey) ? ModuleAccess.ServiceModuleKey : moduleKey.Trim().ToUpperInvariant();
 
         private int GetCurrentCompanyId()
         {
