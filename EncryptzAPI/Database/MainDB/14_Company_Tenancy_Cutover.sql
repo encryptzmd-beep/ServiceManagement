@@ -17,6 +17,8 @@
    Undo: 15_Company_Tenancy_Rollback.sql
    ============================================================================= */
 SET NOCOUNT ON;
+SET QUOTED_IDENTIFIER ON;   -- needed by the filtered index and indexed objects this script touches
+SET ANSI_NULLS ON;
 SET XACT_ABORT ON;
 SET NOEXEC OFF;
 GO
@@ -24,9 +26,20 @@ GO
 IF DB_NAME() IN ('master', 'model', 'msdb', 'tempdb')
    OR OBJECT_ID('dbo.Companies') IS NULL
    OR OBJECT_ID('dbo.Modules') IS NULL
+   OR OBJECT_ID('dbo.CompanyModules') IS NULL
+   OR OBJECT_ID('dbo.UserModuleAccess') IS NULL
    OR COL_LENGTH('dbo.Companies', 'TenantKey') IS NULL
 BEGIN
     RAISERROR('Select the SaaS main database and run 13_Company_Tenancy_Schema.sql first.', 16, 1);
+    SET NOEXEC ON;
+END
+GO
+
+/* a separate batch: dbo.Modules may not exist when the guard above fired */
+IF OBJECT_ID('dbo.Modules') IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM dbo.Modules WHERE ModuleKey = 'SERVICE')
+BEGIN
+    RAISERROR('The SERVICE module is not seeded: run 13_Company_Tenancy_Schema.sql first.', 16, 1);
     SET NOEXEC ON;
 END
 GO
@@ -62,6 +75,23 @@ BEGIN
         RAISERROR('A database is shared by more than one company. Nothing was changed.', 16, 1);
         SET NOEXEC ON;
     END
+
+    IF EXISTS (SELECT 1
+               FROM dbo.ProjectConnections pc
+               INNER JOIN dbo.Projects p ON p.ProjectId = pc.ProjectId AND p.IsActive = 1
+               GROUP BY pc.ProjectId
+               HAVING COUNT(*) > 1)
+    BEGIN
+        SELECT 'Active project with more than one connection row' AS Problem, p.CompanyId, p.ProjectId, p.ProjectKey, pc.ServerName, pc.DatabaseName, pc.IsActive
+        FROM dbo.ProjectConnections pc
+        INNER JOIN dbo.Projects p ON p.ProjectId = pc.ProjectId AND p.IsActive = 1
+        WHERE pc.ProjectId IN (SELECT pc2.ProjectId FROM dbo.ProjectConnections pc2
+                               INNER JOIN dbo.Projects p2 ON p2.ProjectId = pc2.ProjectId AND p2.IsActive = 1
+                               GROUP BY pc2.ProjectId HAVING COUNT(*) > 1);
+
+        RAISERROR('A project has more than one connection row. Nothing was changed.', 16, 1);
+        SET NOEXEC ON;
+    END
 END
 GO
 
@@ -70,6 +100,9 @@ GO
    ----------------------------------------------------------------------------- */
 IF OBJECT_ID('dbo.Projects') IS NOT NULL
 BEGIN
+    DECLARE @CopyError NVARCHAR(2000);
+
+    BEGIN TRY
     BEGIN TRANSACTION;
 
     /* 1a. The company's routing key is its project key, so tokens issued before
@@ -100,15 +133,17 @@ BEGIN
 
     /* 1c. Whoever could enter the company's project can open the Service module */
     INSERT INTO dbo.UserModuleAccess (CompanyId, UserId, ModuleId, GrantedBy, GrantedAt)
-    SELECT DISTINCT p.CompanyId, upa.UserId, m.ModuleId, upa.GrantedBy, upa.GrantedAt
+    SELECT p.CompanyId, upa.UserId, m.ModuleId, MAX(g.UserId), MIN(upa.GrantedAt)
     FROM dbo.UserProjectAccess upa
     INNER JOIN dbo.Projects p      ON p.ProjectId = upa.ProjectId AND p.IsActive = 1
     INNER JOIN dbo.CompanyUsers cu ON cu.CompanyId = p.CompanyId AND cu.UserId = upa.UserId
+    LEFT  JOIN dbo.Users g         ON g.UserId = upa.GrantedBy      -- keeps GrantedBy only when that user still exists
     CROSS JOIN dbo.Modules m
     WHERE m.ModuleKey = 'SERVICE'
       AND upa.IsActive = 1
       AND NOT EXISTS (SELECT 1 FROM dbo.UserModuleAccess x
-                      WHERE x.CompanyId = p.CompanyId AND x.UserId = upa.UserId AND x.ModuleId = m.ModuleId);
+                      WHERE x.CompanyId = p.CompanyId AND x.UserId = upa.UserId AND x.ModuleId = m.ModuleId)
+    GROUP BY p.CompanyId, upa.UserId, m.ModuleId;
 
     COMMIT TRANSACTION;
 
@@ -123,9 +158,65 @@ BEGIN
       AND NOT EXISTS (SELECT 1 FROM dbo.CompanyUsers cu WHERE cu.CompanyId = p.CompanyId AND cu.UserId = upa.UserId);
 
     PRINT 'Connections and access copied to the company level.';
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        SET @CopyError = ERROR_MESSAGE();
+        RAISERROR('The data copy failed and was rolled back. Nothing was renamed. %s', 16, 1, @CopyError);
+        SET NOEXEC ON;
+    END CATCH
 END
 ELSE
     PRINT 'Project tables are already renamed: data copy skipped, procedures refreshed.';
+GO
+
+/* -----------------------------------------------------------------------------
+   1e. Verify the copy before anything is replaced or renamed
+   ----------------------------------------------------------------------------- */
+IF OBJECT_ID('dbo.Projects') IS NOT NULL
+BEGIN
+    IF EXISTS (SELECT 1
+               FROM dbo.Companies c
+               INNER JOIN dbo.Projects p ON p.CompanyId = c.CompanyId AND p.IsActive = 1
+               WHERE ISNULL(c.TenantKey, '') <> ISNULL(p.ProjectKey, '')
+                  OR c.TenantScopeId <> p.ProjectId)
+    BEGIN
+        SELECT 'Company routing key / scope differs from its project' AS Problem,
+               c.CompanyId, c.TenantKey, p.ProjectKey, c.TenantScopeId, p.ProjectId
+        FROM dbo.Companies c
+        INNER JOIN dbo.Projects p ON p.CompanyId = c.CompanyId AND p.IsActive = 1
+        WHERE ISNULL(c.TenantKey, '') <> ISNULL(p.ProjectKey, '')
+           OR c.TenantScopeId <> p.ProjectId;
+
+        RAISERROR('The copied data does not match the project tables. Nothing was renamed.', 16, 1);
+        SET NOEXEC ON;
+    END
+
+    IF EXISTS (SELECT 1
+               FROM dbo.UserProjectAccess upa
+               INNER JOIN dbo.Projects p      ON p.ProjectId = upa.ProjectId AND p.IsActive = 1
+               INNER JOIN dbo.CompanyUsers cu ON cu.CompanyId = p.CompanyId AND cu.UserId = upa.UserId
+               CROSS JOIN dbo.Modules m
+               WHERE m.ModuleKey = 'SERVICE'
+                 AND upa.IsActive = 1
+                 AND NOT EXISTS (SELECT 1 FROM dbo.UserModuleAccess x
+                                 WHERE x.CompanyId = p.CompanyId AND x.UserId = upa.UserId AND x.ModuleId = m.ModuleId))
+    BEGIN
+        SELECT 'Project access without Service module access' AS Problem,
+               p.CompanyId, upa.UserId, p.ProjectId
+        FROM dbo.UserProjectAccess upa
+        INNER JOIN dbo.Projects p      ON p.ProjectId = upa.ProjectId AND p.IsActive = 1
+        INNER JOIN dbo.CompanyUsers cu ON cu.CompanyId = p.CompanyId AND cu.UserId = upa.UserId
+        CROSS JOIN dbo.Modules m
+        WHERE m.ModuleKey = 'SERVICE'
+          AND upa.IsActive = 1
+          AND NOT EXISTS (SELECT 1 FROM dbo.UserModuleAccess x
+                          WHERE x.CompanyId = p.CompanyId AND x.UserId = upa.UserId AND x.ModuleId = m.ModuleId);
+
+        RAISERROR('The copied data does not match the project tables. Nothing was renamed.', 16, 1);
+        SET NOEXEC ON;
+    END
+END
 GO
 
 /* =============================================================================
@@ -694,7 +785,8 @@ END
 GO
 
 /* Saves the login and, when a company is given, the user's role in that company.
-   A member added here gets the company's modules. UserId = 0 in the result means
+   A member added here gets the company's modules; a member saved as inactive loses
+   their module access (reactivating does not restore it). UserId = 0 in the result means
    nothing was saved and Status carries the reason. */
 CREATE OR ALTER PROCEDURE dbo.sp_Mgmt_SaveUser
     @UserId       INT,
@@ -774,6 +866,11 @@ BEGIN
             UPDATE dbo.CompanyUsers
             SET RoleInCompany = @RoleName, IsActive = @IsActive
             WHERE CompanyId = @CompanyId AND UserId = @UserId;
+
+        /* A deactivated member loses module access. Reactivating does not give it
+           back: an administrator grants it again, as it was with project access. */
+        IF @IsActive = 0
+            DELETE FROM dbo.UserModuleAccess WHERE CompanyId = @CompanyId AND UserId = @UserId;
 
         /* Only a NEW member gets the modules: an administrator may have taken a
            module away from an existing member on purpose. */
@@ -937,15 +1034,15 @@ BEGIN
 
     SET @Message = CASE WHEN @HadDatabase = 1 THEN 'Database updated' ELSE 'Database attached' END;
 
+    /* a company with a database has the Service module (idempotent) */
+    INSERT INTO dbo.CompanyModules (CompanyId, ModuleId, IsEnabled)
+    SELECT @CompanyId, m.ModuleId, 1
+    FROM dbo.Modules m
+    WHERE m.ModuleKey = 'SERVICE'
+      AND NOT EXISTS (SELECT 1 FROM dbo.CompanyModules x WHERE x.CompanyId = @CompanyId AND x.ModuleId = m.ModuleId);
+
     IF @HadDatabase = 0
     BEGIN
-        /* a company with a database has the Service module */
-        INSERT INTO dbo.CompanyModules (CompanyId, ModuleId, IsEnabled)
-        SELECT @CompanyId, m.ModuleId, 1
-        FROM dbo.Modules m
-        WHERE m.ModuleKey = 'SERVICE'
-          AND NOT EXISTS (SELECT 1 FROM dbo.CompanyModules x WHERE x.CompanyId = @CompanyId AND x.ModuleId = m.ModuleId);
-
         /* whoever attaches it can enter it */
         IF @SavedBy IS NOT NULL AND EXISTS (SELECT 1 FROM dbo.Users WHERE UserId = @SavedBy)
            AND NOT EXISTS (SELECT 1 FROM dbo.CompanyUsers WHERE CompanyId = @CompanyId AND UserId = @SavedBy)
@@ -1018,6 +1115,11 @@ BEGIN
 
     SELECT @ModuleId = ModuleId FROM dbo.Modules WHERE ModuleKey = 'SERVICE';
 
+    IF @ModuleId IS NULL
+    BEGIN
+        SELECT CAST(0 AS INT) AS Success, 'The Service module is not set up' AS Message; RETURN;
+    END
+
     IF @HasAccess = 1
     BEGIN
         IF NOT EXISTS (SELECT 1 FROM dbo.UserModuleAccess WHERE CompanyId = @ProjectId AND UserId = @UserId AND ModuleId = @ModuleId)
@@ -1038,35 +1140,42 @@ GO
    ============================================================================= */
 IF OBJECT_ID('dbo.Projects') IS NOT NULL
 BEGIN
-    DECLARE @fk SYSNAME, @sql NVARCHAR(400);
+    DECLARE @RenameError NVARCHAR(2000);
 
-    /* UserSessions.SelectedProjectId no longer points anywhere */
-    SELECT @fk = fk.name
-    FROM sys.foreign_keys fk
-    WHERE fk.parent_object_id = OBJECT_ID('dbo.UserSessions')
-      AND fk.referenced_object_id = OBJECT_ID('dbo.Projects');
+    BEGIN TRY
+        BEGIN TRANSACTION;
 
-    IF @fk IS NOT NULL
-    BEGIN
-        SET @sql = N'ALTER TABLE dbo.UserSessions DROP CONSTRAINT ' + QUOTENAME(@fk) + N';';
-        EXEC sp_executesql @sql;
-    END
+        /* UserSessions.SelectedProjectId no longer points anywhere. The foreign key
+           UserSessions -> Projects is left alone: it follows the renamed table, and
+           NULL satisfies it. */
+        UPDATE dbo.UserSessions SET SelectedProjectId = NULL WHERE SelectedProjectId IS NOT NULL;
 
-    UPDATE dbo.UserSessions SET SelectedProjectId = NULL WHERE SelectedProjectId IS NOT NULL;
+        EXEC sp_rename 'dbo.UserProjectAccess',  'UserProjectAccess_Old';
+        EXEC sp_rename 'dbo.ProjectConnections', 'ProjectConnections_Old';
+        EXEC sp_rename 'dbo.Projects',           'Projects_Old';
 
-    EXEC sp_rename 'dbo.UserProjectAccess',  'UserProjectAccess_Old';
-    EXEC sp_rename 'dbo.ProjectConnections', 'ProjectConnections_Old';
-    EXEC sp_rename 'dbo.Projects',           'Projects_Old';
+        COMMIT TRANSACTION;
 
-    PRINT 'Projects, ProjectConnections and UserProjectAccess renamed to *_Old.';
+        PRINT 'Projects, ProjectConnections and UserProjectAccess renamed to *_Old.';
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        SET @RenameError = ERROR_MESSAGE();
+        RAISERROR('Renaming the project tables failed and was rolled back. Run this script again. %s', 16, 1, @RenameError);
+        SET NOEXEC ON;
+    END CATCH
 END
 GO
 
-/* The procedures below read the renamed tables and are no longer called. */
-DROP PROCEDURE IF EXISTS dbo.sp_Project_GetConnection;
-DROP PROCEDURE IF EXISTS dbo.sp_Project_GetUsersForSync;
-DROP PROCEDURE IF EXISTS dbo.sp_User_GetProjects;
-DROP PROCEDURE IF EXISTS dbo.sp_User_ValidateProject;
+/* The procedures below read the renamed tables and are no longer called. They are
+   dropped only once the tables are really renamed. */
+IF OBJECT_ID('dbo.Projects') IS NULL AND OBJECT_ID('dbo.Projects_Old') IS NOT NULL
+BEGIN
+    DROP PROCEDURE IF EXISTS dbo.sp_Project_GetConnection;
+    DROP PROCEDURE IF EXISTS dbo.sp_Project_GetUsersForSync;
+    DROP PROCEDURE IF EXISTS dbo.sp_User_GetProjects;
+    DROP PROCEDURE IF EXISTS dbo.sp_User_ValidateProject;
+END
 GO
 
 SELECT CompanyId, CompanyName, CompanyCode, TenantKey, TenantScopeId, DatabaseName, ProvisionStatus,

@@ -4,19 +4,22 @@
    Run with the API STOPPED, then redeploy the previous API and UI.
 
      1. renames Projects_Old, ProjectConnections_Old, UserProjectAccess_Old back
-     2. restores the procedures as they were on 2026-10-11
+     2. carries module access back to project access: people whose Service access
+        was removed after the cut-over lose project access, people who got it
+        after the cut-over receive it, and pending invitations created after the
+        cut-over are attached to the company's project
+     3. restores the procedures as they were on 2026-10-11
 
-   The new columns and tables (13_Company_Tenancy_Schema.sql) are left in place;
-   the previous API ignores them.
-
-   NOT restored: module access granted or removed AFTER the cut-over is not copied
-   back to UserProjectAccess, and the UserSessions -> Projects foreign key is not
-   recreated.
+   Still true afterwards: the new columns and tables (13_Company_Tenancy_Schema.sql)
+   are left in place (the previous API ignores them). A company created after the
+   cut-over has no project row and is not visible to the previous API.
 
    Select the SaaS main database in SSMS before running. No USE statement on
    purpose.
    ============================================================================= */
 SET NOCOUNT ON;
+SET QUOTED_IDENTIFIER ON;   -- same session options as the other tenancy scripts
+SET ANSI_NULLS ON;
 SET NOEXEC OFF;
 GO
 
@@ -28,20 +31,73 @@ END
 GO
 
 IF OBJECT_ID('dbo.Projects') IS NULL AND OBJECT_ID('dbo.Projects_Old') IS NOT NULL
-BEGIN
-    EXEC sp_rename 'dbo.Projects_Old',           'Projects';
+    EXEC sp_rename 'dbo.Projects_Old', 'Projects';
+IF OBJECT_ID('dbo.ProjectConnections') IS NULL AND OBJECT_ID('dbo.ProjectConnections_Old') IS NOT NULL
     EXEC sp_rename 'dbo.ProjectConnections_Old', 'ProjectConnections';
-    EXEC sp_rename 'dbo.UserProjectAccess_Old',  'UserProjectAccess';
-    PRINT 'Project tables restored.';
-END
+IF OBJECT_ID('dbo.UserProjectAccess') IS NULL AND OBJECT_ID('dbo.UserProjectAccess_Old') IS NOT NULL
+    EXEC sp_rename 'dbo.UserProjectAccess_Old', 'UserProjectAccess';
 GO
 
 IF OBJECT_ID('dbo.Projects') IS NULL
+   OR OBJECT_ID('dbo.ProjectConnections') IS NULL
+   OR OBJECT_ID('dbo.UserProjectAccess') IS NULL
 BEGIN
-    RAISERROR('dbo.Projects does not exist and there is no dbo.Projects_Old to restore.', 16, 1);
+    RAISERROR('dbo.Projects, dbo.ProjectConnections and dbo.UserProjectAccess must all exist (or have a *_Old copy to restore).', 16, 1);
     SET NOEXEC ON;
 END
 GO
+
+/* Bring project access in line with module access as it is now. */
+IF OBJECT_ID('dbo.fn_ModuleUsers') IS NOT NULL AND OBJECT_ID('dbo.UserModuleAccess') IS NOT NULL
+BEGIN
+    DECLARE @CarryError NVARCHAR(2000);
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        /* dynamic SQL: the function may not exist, which must not break compilation */
+        EXEC sp_executesql N'
+            /* removed after the cut-over: no project access */
+            UPDATE upa SET IsActive = 0
+            FROM dbo.UserProjectAccess upa
+            INNER JOIN dbo.Projects p ON p.ProjectId = upa.ProjectId AND p.IsActive = 1
+            WHERE upa.IsActive = 1
+              AND NOT EXISTS (SELECT 1 FROM dbo.fn_ModuleUsers(p.CompanyId, ''SERVICE'') mu WHERE mu.UserId = upa.UserId);
+
+            /* has the module now: project access again */
+            UPDATE upa SET IsActive = 1
+            FROM dbo.UserProjectAccess upa
+            INNER JOIN dbo.Projects p ON p.ProjectId = upa.ProjectId AND p.IsActive = 1
+            WHERE upa.IsActive = 0
+              AND EXISTS (SELECT 1 FROM dbo.fn_ModuleUsers(p.CompanyId, ''SERVICE'') mu WHERE mu.UserId = upa.UserId);
+
+            /* added after the cut-over: a project access row */
+            INSERT INTO dbo.UserProjectAccess (UserId, ProjectId, IsActive, GrantedBy, GrantedAt)
+            SELECT mu.UserId, p.ProjectId, 1, NULL, GETDATE()
+            FROM dbo.Projects p
+            CROSS APPLY dbo.fn_ModuleUsers(p.CompanyId, ''SERVICE'') mu
+            WHERE p.IsActive = 1
+              AND NOT EXISTS (SELECT 1 FROM dbo.UserProjectAccess x WHERE x.UserId = mu.UserId AND x.ProjectId = p.ProjectId);';
+
+        /* invitations created after the cut-over have no project; the old procedures need one */
+        UPDATE i SET i.ProjectId = p.ProjectId
+        FROM dbo.Invitations i
+        INNER JOIN dbo.Projects p ON p.CompanyId = i.CompanyId AND p.IsActive = 1
+        WHERE i.ProjectId IS NULL AND i.Status = 'Pending';
+
+        COMMIT TRANSACTION;
+
+        PRINT 'Module access carried back to project access.';
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        SET @CarryError = ERROR_MESSAGE();
+        RAISERROR('Could not carry module access back to project access. %s', 16, 1, @CarryError);
+        SET NOEXEC ON;
+    END CATCH
+END
+GO
+
 
 /* ===== sp_Company_AcceptInvitation ===== */
 CREATE OR ALTER PROCEDURE dbo.sp_Company_AcceptInvitation

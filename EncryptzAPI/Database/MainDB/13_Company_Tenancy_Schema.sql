@@ -12,6 +12,8 @@
    Next: 14_Company_Tenancy_Cutover.sql (during the release, API stopped).
    ============================================================================= */
 SET NOCOUNT ON;
+SET QUOTED_IDENTIFIER ON;   -- required by the filtered index below (error 1934 otherwise)
+SET ANSI_NULLS ON;
 SET NOEXEC OFF;
 GO
 
