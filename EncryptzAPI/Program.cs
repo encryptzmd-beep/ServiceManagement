@@ -20,6 +20,7 @@ builder.Services.AddControllers(options =>
     options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
     options.Filters.Add<PagingGuardFilter>();   // page / size validation + max page size on every list endpoint
     options.Filters.Add<CustomerBoundaryFilter>();   // customer tokens only reach customer-portal endpoints
+    options.Filters.Add<TenantScopeExceptionFilter>();   // no scope selected -> 403, not 500
 });
 
 // 🔹 Single Service Injection (Your Custom DI)
