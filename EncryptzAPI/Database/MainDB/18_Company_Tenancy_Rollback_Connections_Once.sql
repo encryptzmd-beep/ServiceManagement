@@ -152,6 +152,7 @@ BEGIN
     RAISERROR('%d connection row(s) were changed after the rollback. The project tables are the live data now: nothing was copied. Correct connections in Platform Admin instead.', 16, 1, @Changed);
     SET NOEXEC ON;
 END
+GO
 
 /* The statements that name Projects, ProjectConnections or the columns added by
    script 13 are dynamic SQL on purpose: this batch is compiled even when a guard
