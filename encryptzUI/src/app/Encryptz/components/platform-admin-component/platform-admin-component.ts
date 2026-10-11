@@ -57,6 +57,8 @@ export class PlatformAdminComponent implements OnInit {
   /** Module the Module Access tab works on, and the modules the picked company has. */
   accessModuleKey = signal<string>('SERVICE');
   accessModules = signal<CompanyModule[]>([]);
+  /** The modules of the picked company could not be loaded. */
+  modulesFailed = signal(false);
   /** Access changes in flight, keyed by company, module and user. */
   accessBusy = signal<ReadonlySet<string>>(new Set());
   /** The running load of the Branches or Module Access tab; dropped when another load starts or the tab changes. */
@@ -159,6 +161,7 @@ export class PlatformAdminComponent implements OnInit {
     this.companies.set([]); this.projects.set([]); this.locations.set([]);
     this.access.set([]); this.menus.set([]);
     this.accessModules.set([]);
+    this.modulesFailed.set(false);
     this.resetTabLoad();
     this.otpSent.set(false);
     this.otpMessage.set('');
@@ -254,9 +257,18 @@ export class PlatformAdminComponent implements OnInit {
       // the picker holds a company id: a "project" is the company's database
       this.access.set([]);
       this.accessModules.set([]);
+      this.modulesFailed.set(false);
       this.tabSub.add(this.api.getCompanyModules(projectId).subscribe({
         next: res => {
-          const enabled = (res.success ? res.data ?? [] : []).filter(m => m.isEnabled);
+          if (!res.success) {
+            this.modulesFailed.set(true);
+            this.accessModuleKey.set('');
+            this.tabPending = false;
+            this.loading.set(false);
+            this.notify(res.message, false);
+            return;
+          }
+          const enabled = (res.data ?? []).filter(m => m.isEnabled);
           this.accessModules.set(enabled);
           if (!enabled.length) {
             // nothing to ask the server about
@@ -264,7 +276,6 @@ export class PlatformAdminComponent implements OnInit {
             this.access.set([]);
             this.tabPending = false;
             this.loading.set(false);
-            if (!res.success) this.notify(res.message, false);
             return;
           }
           // keep the picked module while the company has it, else fall back to the first
@@ -272,7 +283,12 @@ export class PlatformAdminComponent implements OnInit {
             this.accessModuleKey.set(enabled[0].moduleKey);
           this.loadModuleAccess(projectId);
         },
-        error: err => { this.tabPending = false; this.fail(err, 'Could not load the modules'); },
+        error: err => {
+          this.tabPending = false;
+          this.modulesFailed.set(true);
+          this.accessModuleKey.set('');
+          this.fail(err, 'Could not load the modules');
+        },
       }));
     }
   }
@@ -371,6 +387,14 @@ export class PlatformAdminComponent implements OnInit {
     }));
   }
 
+  /** Reload the open dialog's list (without clearing it) so the member counts are real. */
+  private refreshModules(companyId: number): void {
+    this.modulesSub.add(this.api.getCompanyModules(companyId).subscribe({
+      next: res => { if (res.success) this.companyModules.set(res.data ?? []); },
+      error: () => { /* keep the list as it is */ },
+    }));
+  }
+
   closeModules(): void {
     this.modulesSub.unsubscribe();
     this.modulesSub = new Subscription();
@@ -409,6 +433,7 @@ export class PlatformAdminComponent implements OnInit {
         this.companyModules.update(list =>
           list.map(m => m.moduleKey === module.moduleKey ? { ...m, isEnabled: switchOn } : m));
         this.notify(res.message, true);
+        this.refreshModules(company.companyId);
       },
       error: err => {
         this.redraw(event, module.isEnabled);

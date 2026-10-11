@@ -233,6 +233,8 @@
             }
           </tbody>
         </table>
+      } @else if (modulesFailed() && !loading()) {
+        <div class="pa-hint">Could not load the modules.</div>
       } @else if (!accessModuleKey() && !loading()) {
         <div class="pa-hint">This company has no modules switched on.</div>
       } @else {

@@ -11,6 +11,7 @@ describe('PlatformAdminComponent modules', () => {
 
   let api: any;
   let calls: any[][];
+  let switched: Record<string, boolean>;
 
   const create = (isPlatformAdmin: boolean) => {
     TestBed.resetTestingModule();
@@ -31,12 +32,16 @@ describe('PlatformAdminComponent modules', () => {
 
   beforeEach(() => {
     calls = [];
+    switched = {};
     api = {
       isUnlocked: () => of({ success: true, unlocked: true }),
       getCompanies: () => of({ success: true, message: '', data: [company] }),
       getProjects: () => of({ success: true, message: '', data: [] }),
-      getCompanyModules: (companyId: number) => { calls.push(['getCompanyModules', companyId]); return of({ success: true, message: '', data: [serviceModule, salesModule] }); },
-      setCompanyModule: (companyId: number, key: string, on: boolean) => { calls.push(['setCompanyModule', companyId, key, on]); return of({ success: true, message: 'Sales switched on', data: true }); },
+      getCompanyModules: (companyId: number) => {
+        calls.push(['getCompanyModules', companyId]);
+        return of({ success: true, message: '', data: [serviceModule, salesModule].map(m => ({ ...m, isEnabled: switched[m.moduleKey] ?? m.isEnabled })) });
+      },
+      setCompanyModule: (companyId: number, key: string, on: boolean) => { calls.push(['setCompanyModule', companyId, key, on]); switched[key] = on; return of({ success: true, message: 'Sales switched on', data: true }); },
       lock: () => {},
     };
   });
@@ -219,6 +224,24 @@ describe('PlatformAdminComponent modules', () => {
     expect(boxesOf(fixture)[1].disabled).toBe(false);
   });
 
+  it('shows the real member count after a module is switched on', () => {
+    let loads = 0;
+    api.getCompanyModules = () => {
+      loads++;
+      const sales = loads === 1 ? salesModule : { ...salesModule, isEnabled: true, userCount: 4 };
+      return of({ success: true, message: '', data: [serviceModule, sales] });
+    };
+    const fixture = create(true);
+    openDialog(fixture);
+    expect(fixture.nativeElement.textContent).not.toContain('On · 4 users');
+
+    boxesOf(fixture)[1].click();
+    fixture.detectChanges();
+
+    expect(loads).toBe(2);
+    expect(fixture.nativeElement.textContent).toContain('On · 4 users');
+  });
+
   it('closes the Modules dialog with the other forms', () => {
     const fixture = create(true);
     openDialog(fixture);
@@ -393,6 +416,49 @@ describe('PlatformAdminComponent module access', () => {
 
     expect(calls.some(c => c[0] === 'getModuleAccess')).toBe(false);
     expect(fixture.nativeElement.textContent).toContain('Modules are unavailable');
+    expect(fixture.componentInstance.accessModuleKey()).toBe('');
+    expect(fixture.nativeElement.textContent).toContain('Could not load the modules.');
+    expect(fixture.nativeElement.textContent).not.toContain('no modules switched on');
+    expect(fixture.nativeElement.textContent).not.toContain('no members yet');
+  });
+
+  it('shows the same hint and asks for no access list when loading the modules fails', () => {
+    api.getCompanyModules = (companyId: number) => { calls.push(['getCompanyModules', companyId]); return throwError(() => ({ status: 500, error: {} })); };
+    const fixture = create();
+    fixture.detectChanges();
+
+    expect(calls.some(c => c[0] === 'getModuleAccess')).toBe(false);
+    expect(fixture.componentInstance.accessModuleKey()).toBe('');
+    expect(fixture.componentInstance.modulesFailed()).toBe(true);
+    expect(fixture.componentInstance.loading()).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('Could not load the modules.');
+    expect(fixture.nativeElement.textContent).not.toContain('no modules switched on');
+    expect(fixture.nativeElement.textContent).not.toContain('no members yet');
+  });
+
+  it('ignores a late branch list after another company was picked', () => {
+    const late = new Subject<any>();
+    const branch = (id: number, name: string) => ({ locationId: id, locationName: name, locationCode: '', address: '', city: '', isActive: true });
+    api.getProjects = () => of({ success: true, message: '', data: [project, { ...project, projectId: 3, companyId: 3, companyName: 'Other Co' }] });
+    api.getLocations = (id: number) => id === 2 ? late : of({ success: true, message: '', data: [branch(30, 'Other branch')] });
+    const fixture = create();
+
+    fixture.componentInstance.setTab('locations');
+    fixture.componentInstance.onProjectPicked(3);
+    late.next({ success: true, message: '', data: [branch(20, 'Old branch')] });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.locations().map(l => l.locationId)).toEqual([30]);
+    expect(fixture.componentInstance.loading()).toBe(false);
+  });
+
+  it('goes back to the code screen when the lock ends during a tab load', () => {
+    api.getCompanyModules = () => throwError(() => ({ status: 403, error: { code: 'PLATFORM_LOCKED' } }));
+    const fixture = create();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.loading()).toBe(false);
+    expect(fixture.componentInstance.unlocked()).toBe(false);
   });
 
   it('puts the checkbox back and says so when changing access fails', () => {
