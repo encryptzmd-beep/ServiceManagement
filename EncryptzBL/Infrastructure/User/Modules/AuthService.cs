@@ -339,7 +339,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             if (Convert.ToInt32(dt.Rows[0]["Success"]) != 1)
                 return ApiResponse<MyProfileDto>.Fail(message);
 
-            // the project DBs show the user by name (technician lists, timelines)
+            // the company DB shows the user by name (technician lists, timelines)
             if (companyId > 0)
                 await _userSync.TrySyncCompanyUsersAsync(companyId);
 
@@ -743,6 +743,10 @@ namespace EncryptzBL.Infrastructure.User.Modules
             var row = dt.Rows[0];
             var role = row["RoleInCompany"]?.ToString() ?? "";
 
+            var tenantKey = row["TenantKey"]?.ToString() ?? "";
+            if (row["ProvisionStatus"]?.ToString() != "Ready" || string.IsNullOrEmpty(tenantKey))
+                return (null, "Your company is still being set up. Please try again shortly");
+
             var state = ModuleAccess.Evaluate(
                 Convert.ToBoolean(row["CompanyEnabled"]), Convert.ToBoolean(row["UserGranted"]), role);
 
@@ -750,10 +754,6 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 return (null, "This module is not part of your company's subscription");
             if (state == ModuleState.NoAccess)
                 return (null, "You don't have access to this module. Ask your administrator");
-
-            var tenantKey = row["TenantKey"]?.ToString() ?? "";
-            if (row["ProvisionStatus"]?.ToString() != "Ready" || string.IsNullOrEmpty(tenantKey))
-                return (null, "Your company is still being set up. Please try again shortly");
 
             return (new ModuleScope(tenantKey, Convert.ToInt32(row["TenantScopeId"]), role,
                 row["ModuleName"]?.ToString() ?? ""), "");
@@ -815,13 +815,22 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 return ApiResponse<List<LocationDto>>.Fail(error);
 
             // Branches live in the company's own DB
-            var tenantDb = new ExplicitDbHelper(await _connectionResolver.GetServiceConnectionAsync(scope.TenantKey));
-
-            var dt = await tenantDb.ExecuteDataTableAsync("sp_Project_GetLocations", new[]
+            DataTable? dt;
+            try
             {
-                SqlParameterHelper.Input("@CompanyId", companyId),
-                SqlParameterHelper.Input("@ProjectId", scope.ScopeId)
-            });
+                var tenantDb = new ExplicitDbHelper(await _connectionResolver.GetServiceConnectionAsync(scope.TenantKey));
+
+                dt = await tenantDb.ExecuteDataTableAsync("sp_Project_GetLocations", new[]
+                {
+                    SqlParameterHelper.Input("@CompanyId", companyId),
+                    SqlParameterHelper.Input("@ProjectId", scope.ScopeId)
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Reading branches failed for company {CompanyId}", companyId);
+                return ApiResponse<List<LocationDto>>.Fail("Your company database is not reachable right now. Please try again shortly");
+            }
 
             if (dt == null || dt.Rows.Count == 0)
                 return ApiResponse<List<LocationDto>>.Ok(new List<LocationDto>(), "No locations found");
@@ -848,14 +857,23 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 return ApiResponse<LoginResponseDto>.Fail(error);
 
             // 2) The branch exists and is active in the COMPANY's OWN DB
-            var tenantDb = new ExplicitDbHelper(await _connectionResolver.GetServiceConnectionAsync(scope.TenantKey));
-
-            var vl = await tenantDb.ExecuteDataTableAsync("sp_Location_Validate", new[]
+            DataTable? vl;
+            try
             {
-                SqlParameterHelper.Input("@CompanyId", companyId),
-                SqlParameterHelper.Input("@ProjectId", scope.ScopeId),
-                SqlParameterHelper.Input("@LocationId", locationId)
-            });
+                var tenantDb = new ExplicitDbHelper(await _connectionResolver.GetServiceConnectionAsync(scope.TenantKey));
+
+                vl = await tenantDb.ExecuteDataTableAsync("sp_Location_Validate", new[]
+                {
+                    SqlParameterHelper.Input("@CompanyId", companyId),
+                    SqlParameterHelper.Input("@ProjectId", scope.ScopeId),
+                    SqlParameterHelper.Input("@LocationId", locationId)
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Validating branch failed for company {CompanyId}", companyId);
+                return ApiResponse<LoginResponseDto>.Fail("Your company database is not reachable right now. Please try again shortly");
+            }
 
             if (vl == null || vl.Rows.Count == 0)
                 return ApiResponse<LoginResponseDto>.Fail("Invalid location for this company");
@@ -934,7 +952,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             return dt != null && dt.Rows.Count > 0 ? dt.Rows[0]["CompanyName"]?.ToString() ?? "" : "";
         }
 
-        public async Task<ApiResponse<InvitationResponseDto>> InviteUser(int companyId, string email, string roleInCompany, int invitedBy, string remarks = null)
+        public async Task<ApiResponse<InvitationResponseDto>> InviteUser(int companyId, string email, string roleInCompany, int invitedBy, string? remarks = null)
         {
             var parameters = new[]
             {

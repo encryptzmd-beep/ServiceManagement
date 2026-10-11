@@ -4,6 +4,13 @@ using Microsoft.Extensions.Logging;
 
 namespace EncryptzBL.Common.Tenant
 {
+    /// <summary>The company has no ready database to sync to (a normal state until one is attached).</summary>
+    public class CompanyDatabaseNotReadyException : InvalidOperationException
+    {
+        public CompanyDatabaseNotReadyException(int companyId)
+            : base($"Company {companyId} has no ready database in MainDB.") { }
+    }
+
     public class TenantUserSyncService : ITenantUserSyncService
     {
         private readonly MainDbHelper _mainDb;
@@ -60,6 +67,10 @@ namespace EncryptzBL.Common.Tenant
             {
                 await SyncCompanyUsersAsync(companyId);
             }
+            catch (CompanyDatabaseNotReadyException)
+            {
+                _logger.LogInformation("No ready database to sync users to for company {CompanyId}", companyId);
+            }
             catch (Exception ex)
             {
                 // The MainDB change is already committed; the mirror catches up on the next set-scope.
@@ -77,7 +88,7 @@ namespace EncryptzBL.Common.Tenant
             });
 
             if (ds == null || ds.Tables.Count < 2 || ds.Tables[0].Rows.Count == 0)
-                throw new InvalidOperationException($"Company {companyId} has no ready database in MainDB.");
+                throw new CompanyDatabaseNotReadyException(companyId);
 
             var company = ds.Tables[0].Rows[0];
 

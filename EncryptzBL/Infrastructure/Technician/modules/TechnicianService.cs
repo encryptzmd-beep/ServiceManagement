@@ -2,6 +2,7 @@ using EncryptzBL.Common;
 using EncryptzBL.Common.Tenant;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Technician.modules;
+using Microsoft.Extensions.Logging;
 using System.Data;
 using static System.Net.WebRequestMethods;
 
@@ -12,13 +13,15 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
         private readonly MainDbHelper _mainDb;
         private readonly ITenantUserSyncService _userSync;
         private readonly TenantContext _tenant;
+        private readonly ILogger<TechnicianService> _logger;
 
         // Technicians are MainDB users (company role "Technician" + project access); the
         // project DB only holds their profile/assignments, linked through Users.MainUserId.
-        public TechnicianService(DbHelper db, MainDbHelper mainDb, ITenantUserSyncService userSync) : base(db)
+        public TechnicianService(DbHelper db, MainDbHelper mainDb, ITenantUserSyncService userSync, ILogger<TechnicianService> logger) : base(db)
         {
             _mainDb = mainDb;
             _userSync = userSync;
+            _logger = logger;
             _tenant = db.Tenant;
         }
 
@@ -107,8 +110,9 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
             {
                 await _userSync.SyncCompanyUsersAsync(CompanyId, LocationId);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Technician sync failed for company {CompanyId}", CompanyId);
                 return ApiResponse<int>.Fail("Technician user was created, but adding it to this company failed. Please try again");
             }
 

@@ -68,7 +68,13 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 SqlParameterHelper.Input("@SavedBy", actor.UserId)
             });
 
-            return ToResult(dt, "CompanyId");
+            var result = ToResult(dt, "CompanyId");
+
+            // activating or deactivating a company changes whether its key may route
+            if (result.Success)
+                await EvictCompanyKey(result.Data > 0 ? result.Data : dto.CompanyId);
+
+            return result;
         }
 
         // ============================================
@@ -127,12 +133,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             if (result.Success)
             {
                 // routing is cached per key: forget the old target
-                var saved = await GetDataTableAsync("sp_Platform_GetProject", new[]
-                {
-                    SqlParameterHelper.Input("@ProjectId", req.CompanyId)
-                });
-                if (saved != null && saved.Rows.Count > 0)
-                    _connectionResolver.Evict(saved.Rows[0]["ProjectKey"]?.ToString() ?? "");
+                await EvictCompanyKey(req.CompanyId);
 
                 if (req.IsActive)
                     await _userSync.TrySyncCompanyUsersAsync(req.CompanyId);
@@ -383,6 +384,18 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 return null;
 
             return (dt.Rows[0]["ProjectKey"]?.ToString() ?? "", companyId, Convert.ToInt32(dt.Rows[0]["TenantScopeId"]));
+        }
+
+        /// <summary>Drops the cached routing entry of the company's tenant key.</summary>
+        private async Task EvictCompanyKey(int companyId)
+        {
+            var saved = await GetDataTableAsync("sp_Platform_GetProject", new[]
+            {
+                SqlParameterHelper.Input("@ProjectId", companyId)
+            });
+            var key = saved != null && saved.Rows.Count > 0 ? saved.Rows[0]["ProjectKey"]?.ToString() : null;
+            if (!string.IsNullOrEmpty(key))
+                _connectionResolver.Evict(key);
         }
 
         private async Task<ExplicitDbHelper> OpenProjectDb(string projectKey)

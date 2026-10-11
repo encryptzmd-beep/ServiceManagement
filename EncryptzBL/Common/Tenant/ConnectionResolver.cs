@@ -68,7 +68,7 @@ namespace EncryptzBL.Common.Tenant
             if (locations.Rows.Count > 0)
                 scope.DefaultLocationId = locations.Rows.Cast<DataRow>().Min(r => Convert.ToInt32(r["LocationId"]));
 
-            _scopeCache[projectKey] = scope;
+            _scopeCache[entry.TenantKey] = scope;
             return scope;
         }
 
@@ -88,7 +88,7 @@ namespace EncryptzBL.Common.Tenant
 
             var entry = await LoadFromRegistryAsync(tenantKey);
             if (entry != null)
-                _cache[tenantKey] = entry;
+                _cache[entry.TenantKey] = entry;
 
             return entry;
         }

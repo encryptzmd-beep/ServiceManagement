@@ -33,14 +33,13 @@ namespace EncryptzBL.Infrastructure.User.Modules
         Task<ApiResponse<LoginResponseDto>> SelectCompany(int userId, int companyId);
         Task<ApiResponse<List<CompanyResponseDto>>> GetUserCompanies(int userId);
 
-        // Multi-project / multi-location scoping (Client -> Projects -> Locations)
         // Company -> Module -> Branch scoping
         Task<ApiResponse<List<ModuleDto>>> GetModules(int userId, int companyId);
         /// <summary>For the deployed UI: the Service module shown as the company's one "project".</summary>
         Task<ApiResponse<List<ProjectDto>>> GetProjects(int userId, int companyId);
         Task<ApiResponse<List<LocationDto>>> GetLocations(int userId, int companyId, string moduleKey);
         Task<ApiResponse<LoginResponseDto>> SetScope(int userId, int companyId, string moduleKey, int locationId);
-        Task<ApiResponse<InvitationResponseDto>> InviteUser(int companyId, string email, string roleInCompany, int invitedBy, string remarks = null);
+        Task<ApiResponse<InvitationResponseDto>> InviteUser(int companyId, string email, string roleInCompany, int invitedBy, string? remarks = null);
         Task<ApiResponse<SelectCompanyResponseDto>> AcceptInvitation(Guid token, int userId);
         Task<ApiResponse<bool>> RejectInvitation(int invitationId, int userId);
         Task<ApiResponse<List<InvitationResponseDto>>> GetPendingInvitations(string email);
