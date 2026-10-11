@@ -46,7 +46,6 @@ namespace EncryptzBL.Infrastructure.User.Modules
         Task<ApiResponse<CheckUserExistsResponseDto>> CheckUserExists(string email);
         Task<ApiResponse<List<CompanyUserResponseDto>>> GetCompanyUsers(int companyId);
         Task<ApiResponse<List<string>>> GetAvailableRoles();
-        Task<ApiResponse<string>> CreateCompany(string companyName, string companyCode, int createdBy, object address = null); // Disabled for now
 
         // Customer Portal Methods
         Task<ApiResponse<List<CustomerTenantProjectDto>>> ResolveCustomerTenant(string companyCode);

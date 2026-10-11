@@ -69,6 +69,24 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0
             });
     });
+
+    // Each permitted call can start a database build: per logged-in user, else per IP.
+    options.AddPolicy(RateLimitPolicies.CompanyCreation, context =>
+    {
+        var user = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var key = !string.IsNullOrEmpty(user)
+            ? "u:" + user
+            : "ip:" + (context.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            key,
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromHours(1),
+                QueueLimit = 0
+            });
+    });
 });
 
 // 🔹 JWT Authentication (Required for [Authorize])

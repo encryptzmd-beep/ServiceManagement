@@ -641,7 +641,8 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 RoleInCompany = r["RoleInCompany"]?.ToString() ?? "",
                 IsLinked = Convert.ToBoolean(r["IsLinked"]),
                 ProvisionStatus = CompanyResponseDto.StatusFrom(
-                    r.Table.Columns.Contains("ProvisionStatus") ? r["ProvisionStatus"] : null)
+                    r.Table.Columns.Contains("ProvisionStatus") ? r["ProvisionStatus"] : null),
+                IsCreator = r.Table.Columns.Contains("IsCreator") && r["IsCreator"] != DBNull.Value && Convert.ToBoolean(r["IsCreator"])
             }).ToList();
 
             return ApiResponse<List<CompanyResponseDto>>.Ok(companies, "Success");
@@ -1139,12 +1140,6 @@ namespace EncryptzBL.Infrastructure.User.Modules
         {
             var roles = new List<string> { "Admin", "Technician", "Storekeeper", "Manager" };
             return await Task.FromResult(ApiResponse<List<string>>.Ok(roles, "Success"));
-        }
-
-        public async Task<ApiResponse<string>> CreateCompany(string companyName, string companyCode, int createdBy, object address = null)
-        {
-            // Company creation is disabled as per requirement
-            return await Task.FromResult(ApiResponse<string>.Fail("Company creation is currently disabled. Please contact support."));
         }
 
         // ============================================

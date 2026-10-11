@@ -9,6 +9,7 @@ using EncryptzBL.Infrastructure.Customer.Modules;
 using EncryptzBL.Infrastructure.CustomerPortal.Modules;
 using EncryptzBL.Infrastructure.Dashboard.Modules;
 using EncryptzBL.Infrastructure.Products.Modules;
+using EncryptzBL.Infrastructure.Provisioning;
 using EncryptzBL.Infrastructure.Report.Modules;
 using EncryptzBL.Infrastructure.Schedule.Modules;
 using EncryptzBL.Infrastructure.Settings.Modules;
@@ -48,6 +49,7 @@ namespace EncryptzAPI.SrvInjection
             services.AddScoped<DbHelper>();                                         // tenant ServiceDB executor (business)
             services.AddScoped<DbTransactionHelper>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<ICompanyProvisioningService, CompanyProvisioningService>();
             services.AddScoped<IPlatformService, PlatformService>();                // MainDB registry administration
             services.AddScoped<IPlatformUnlockService, PlatformUnlockService>();    // e-mailed access code for Platform Admin
             services.AddScoped<IComplaintService, ComplaintService>();

@@ -1651,6 +1651,9 @@ namespace EncryptzBL.DTO_s
             /// <summary>State of the company's database: None | Provisioning | Ready | Failed.</summary>
             public string ProvisionStatus { get; set; } = "None";
 
+            /// <summary>The user created this company and may retry a failed set-up.</summary>
+            public bool IsCreator { get; set; }
+
             public static string StatusFrom(object? value)
             {
                 var text = value == null || value == DBNull.Value ? "" : value.ToString()!.Trim();

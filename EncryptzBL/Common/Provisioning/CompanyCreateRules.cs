@@ -53,6 +53,21 @@ namespace EncryptzBL.Common.Provisioning
             return (new NewCompany(companyName, companyCode, branchName, addressText, cityText, phoneText), null);
         }
 
+        public const string NotAvailableMessage = "Company creation is not available right now";
+        public const string PendingRetryMessage = "Your earlier company is waiting for a retry";
+
+        /// <summary>Why the user cannot create a company now; null when they can.</summary>
+        public static string? CreationBlockedReason(bool serverAvailable, bool pendingRetry, int created, int limit, bool isPlatformAdmin)
+        {
+            if (!serverAvailable)
+                return NotAvailableMessage;
+
+            if (pendingRetry && !isPlatformAdmin)
+                return PendingRetryMessage;
+
+            return LimitMessage(created, limit, isPlatformAdmin);
+        }
+
         /// <summary>Null when the user may create another company.</summary>
         public static string? LimitMessage(int created, int limit, bool isPlatformAdmin)
         {

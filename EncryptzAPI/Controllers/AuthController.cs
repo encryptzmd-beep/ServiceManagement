@@ -1,6 +1,7 @@
 using EncryptzBL.Common.Tenant;
 using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
+using EncryptzBL.Infrastructure.Provisioning;
 using EncryptzBL.Infrastructure.User.Modules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -15,7 +16,12 @@ namespace EncryptzAPI.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
-        public AuthController(IAuthService authService) => _authService = authService;
+        private readonly ICompanyProvisioningService _provisioning;
+        public AuthController(IAuthService authService, ICompanyProvisioningService provisioning)
+        {
+            _authService = authService;
+            _provisioning = provisioning;
+        }
 
         [HttpPost("send-otp")]
         public async Task<IActionResult> SendOtp([FromBody] OtpRequestDto dto)
@@ -312,14 +318,30 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        // Any logged-in user (the identity token is enough): this is how a company comes to exist.
         [HttpPost("create-company")]
         [Authorize]
-        public async Task<IActionResult> CreateCompany([FromBody] CreateCompanyDto dto)
-        {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            var result = await _authService.CreateCompany(dto.CompanyName, dto.CompanyCode, userId);
-            return Ok(result);
-        }
+        [EnableRateLimiting(RateLimitPolicies.CompanyCreation)]
+        public async Task<IActionResult> CreateCompany([FromBody] CreateCompanyRequest req)
+            => Ok(await _provisioning.CreateCompany(req, CurrentUserId(), IsPlatformAdmin()));
+
+        [HttpPost("companies/{companyId}/retry-provision")]
+        [Authorize]
+        [EnableRateLimiting(RateLimitPolicies.CompanyCreation)]
+        public async Task<IActionResult> RetryProvision(int companyId)
+            => Ok(await _provisioning.RetryProvision(companyId, CurrentUserId(), IsPlatformAdmin()));
+
+        [HttpGet("company-creation")]
+        [Authorize]
+        public async Task<IActionResult> GetCompanyCreation()
+            => Ok(await _provisioning.GetCreationState(CurrentUserId(), IsPlatformAdmin()));
+
+        private int CurrentUserId()
+            => int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
+
+        // the same claim PlatformController.Actor() reads
+        private bool IsPlatformAdmin()
+            => User.FindFirst("PlatformAdmin")?.Value == "true";
 
         #endregion
 

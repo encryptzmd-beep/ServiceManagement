@@ -1,5 +1,8 @@
 ﻿using EncryptzBL.DTO_s;
+using EncryptzAPI.Middleware;
+using EncryptzBL.Infrastructure.Provisioning;
 using EncryptzBL.Infrastructure.User.Modules;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -11,7 +14,12 @@ namespace EncryptzAPI.Controllers
     public class CompanyController : ControllerBase
     {
         private readonly IAuthService _authService;
-        public CompanyController(IAuthService authService) => _authService = authService;
+        private readonly ICompanyProvisioningService _provisioning;
+        public CompanyController(IAuthService authService, ICompanyProvisioningService provisioning)
+        {
+            _authService = authService;
+            _provisioning = provisioning;
+        }
 
         // ============================================
         // COMPANY USER MANAGEMENT
@@ -186,10 +194,20 @@ namespace EncryptzAPI.Controllers
         // ============================================
 
         [HttpPost("create")]
+        [Authorize]
+        [EnableRateLimiting(RateLimitPolicies.CompanyCreation)]
         public async Task<IActionResult> CreateCompany([FromBody] CreateCompanyDto dto)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            var result = await _authService.CreateCompany(dto.CompanyName, dto.CompanyCode, userId);
+            var req = new CreateCompanyRequest
+            {
+                CompanyName = dto?.CompanyName,
+                CompanyCode = dto?.CompanyCode,
+                Address = dto?.Address,
+                City = dto?.City,
+                PhoneNumber = dto?.PhoneNumber
+            };
+            var result = await _provisioning.CreateCompany(req, userId, User.FindFirst("PlatformAdmin")?.Value == "true");
             return Ok(result);
         }
         [HttpGet("my-requests")]
