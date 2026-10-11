@@ -84,6 +84,7 @@ export interface LoginResponse {
   projectId?: number;
   projectKey?: string;   // routing key -> project DB
   locationId?: number;
+  moduleKey?: string;    // module the token was issued for (empty until set-scope)
   // Name of the selected company (main database), shown in the header
   companyName?: string;
   // Global role Admin: may manage every company in Platform Admin
@@ -103,6 +104,19 @@ export interface LocationDto {
   locationName: string;
   locationCode?: string;
   city?: string;
+}
+
+/** What a user sees for one module of the catalogue inside a company. */
+export type ModuleState = 'Available' | 'NotSubscribed' | 'NoAccess';
+
+export interface ModuleDto {
+  moduleId: number;
+  moduleKey: string;
+  moduleName: string;
+  description: string;
+  icon: string;
+  sortOrder: number;
+  state: ModuleState;
 }
 
 export interface MenuItem {
