@@ -224,7 +224,12 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SetScope([FromBody] SetScopeRequestDto dto)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            var result = await _authService.SetScope(userId, dto.CompanyId, ModuleOrService(dto.ModuleKey), dto.LocationId);
+            // the company comes from the token, like modules and locations; the body cannot move it
+            var (companyId, error) = ScopeCompany.Resolve(GetCurrentCompanyId(), dto.CompanyId);
+            if (error != null)
+                return Ok(ApiResponse<LoginResponseDto>.Fail(error));
+
+            var result = await _authService.SetScope(userId, companyId, ModuleOrService(dto.ModuleKey), dto.LocationId);
             return Ok(result);
         }
 

@@ -49,13 +49,18 @@ namespace EncryptzTests
 
         [Theory]
         [InlineData(true)]
-        [InlineData(false)]
         public void A_key_that_is_already_set_cannot_be_changed(bool hasDatabase)
         {
-            // the key is in tokens and customer links: it stays, listed or not
-            var projectId = hasDatabase ? 7 : 0;
+            // the key is in tokens and customer links: it stays for a company that has a database
             Assert.Equal("The key of a company cannot be changed",
-                PlatformService.ProjectRefusal(projectId, 7, hasDatabase, "C007-P001", "C007-P002"));
+                PlatformService.ProjectRefusal(7, 7, hasDatabase, "C007-P001", "C007-P002"));
+        }
+
+        [Fact]
+        public void A_company_without_a_listed_database_can_be_attached_with_a_different_suggested_key()
+        {
+            // the administrator cannot see the real key of an unlisted company; the stored procedure keeps it
+            Assert.Null(PlatformService.ProjectRefusal(0, 7, false, "C007-P001", "C007-P002"));
         }
 
         [Fact]

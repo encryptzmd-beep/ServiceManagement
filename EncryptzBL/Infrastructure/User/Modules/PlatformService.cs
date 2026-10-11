@@ -429,6 +429,9 @@ namespace EncryptzBL.Infrastructure.User.Modules
         /// A "project" is the company's database and its id is the company id.
         /// hasDatabase = the company is listed as having a database (sp_Platform_GetProjects);
         /// a migrated company can have a key without one.
+        /// The key of a company that has a database cannot be changed. For a company without a listed
+        /// database the key is not compared: the administrator cannot see the real key and the stored
+        /// procedure keeps the existing one.
         /// </summary>
         public static string? ProjectRefusal(int requestedProjectId, int companyId, bool hasDatabase, string? existingKey, string? requestedKey)
         {
@@ -438,7 +441,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             if (requestedProjectId == 0 && hasDatabase)
                 return "This company already has a database. Edit it instead";
 
-            if (!string.IsNullOrWhiteSpace(existingKey) && !string.IsNullOrWhiteSpace(requestedKey)
+            if (hasDatabase && !string.IsNullOrWhiteSpace(existingKey) && !string.IsNullOrWhiteSpace(requestedKey)
                 && !string.Equals(requestedKey.Trim(), existingKey.Trim(), StringComparison.OrdinalIgnoreCase))
                 return "The key of a company cannot be changed";
 
