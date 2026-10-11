@@ -10,11 +10,12 @@ its `Companies` row. Access to a module replaces access to a project.
 
 The scripts, in the order they are used:
 
-- `13_Company_Tenancy_Schema.sql` - adds columns and tables. Safe ahead of the release.
 - `16_Company_Tenancy_Precheck.sql` - read-only report. Run it days before the release, before script 14.
+- `13_Company_Tenancy_Schema.sql` - adds columns and tables. Safe ahead of the release.
 - `14_Company_Tenancy_Cutover.sql` - the cut-over, run during the release.
 - `15_Company_Tenancy_Rollback.sql` - the undo: restores the project tables and project access.
-- `17_Company_Tenancy_Rollback_Connections.sql` - run right after script 15: copies connection changes made since the cut-over back to the project tables.
+- `18_Company_Tenancy_Rollback_Connections_Once.sql` - run right after script 15: copies connection changes made since the cut-over back to the project tables, once per cut-over.
+- `17_Company_Tenancy_Rollback_Connections.sql` - superseded by script 18. Do not run it.
 
 ## How to run
 
@@ -27,8 +28,8 @@ The scripts, in the order they are used:
 
 ## Never edit these scripts
 
-The five files are frozen. If something needs correcting, add a NEW numbered
-file. The next free number in this folder is 18. Every SQL change must be a file
+The six files are frozen. If something needs correcting, add a NEW numbered
+file. The next free number in this folder is 19. Every SQL change must be a file
 in the repository.
 
 ## Before the release (any time, the running API is not affected)
@@ -57,8 +58,9 @@ in the repository.
    - **5. Objects with `QUOTED_IDENTIFIER` or `ANSI_NULLS` off that mention
      `Companies`.** Zero rows is OK. Script 13 adds a filtered index to
      `dbo.Companies`, and a procedure or view saved with these settings off
-     would fail when it writes to that table. Save such an object again with
-     both settings on before the release.
+     would fail when it writes to that table. Do not change it by hand. Ask for a
+     numbered script that re-creates it with both options on, and run that
+     before script 13.
 3. In the main database run `13_Company_Tenancy_Schema.sql`. It only adds
    columns and tables and seeds the Service module. It is safe to run again.
 
@@ -116,7 +118,7 @@ Task 13, steps 2 to 7. Besides what the plan lists, try these three cases:
    able to leave that company (company list, select company), and business
    calls must be refused.
 3. Rollback after a connection was edited. Edit a company's connection in
-   Platform Admin, run script 15, then script 17. The connection in
+   Platform Admin, run script 15, then script 18. The connection in
    `ProjectConnections` must follow.
 
 ## Check after the release
@@ -129,8 +131,8 @@ Task 13, steps 2 to 7. Besides what the plan lists, try these three cases:
 - Add a user.
 - Add a technician.
 - In Platform Admin switch a member's access off and on again.
-- A member without access to the module is refused with a clear message
-  ("You don't have access to this module. Ask your administrator").
+- A member without access to the module sees the Service module card
+  disabled, with the text "Ask your administrator".
 - A user who was logged in before the release can keep working. Their token
   carries the old project key, which is now the company's tenant key, so it
   should still reach the same database. If it does not, they log in again.
@@ -139,7 +141,9 @@ Task 13, steps 2 to 7. Besides what the plan lists, try these three cases:
 
 1. Stop the API.
 2. In the main database run `15_Company_Tenancy_Rollback.sql`.
-3. In the main database run `17_Company_Tenancy_Rollback_Connections.sql`.
+3. In the main database run `18_Company_Tenancy_Rollback_Connections_Once.sql`.
+   Run it in the same sitting, right after script 15 printed
+   `Project tables restored.` and before the previous API is started.
 4. Deploy the previous API and UI, then start it.
 
 What the rollback (script 15) does:
@@ -162,21 +166,27 @@ What the rollback (script 15) does:
   maintaining it. Running it again is safe.
 - It ends with `Rollback complete. Redeploy the previous API and UI.`
 
-What script 17 does:
+What script 18 does:
 
 - After the cut-over the connection of a company (server, database, user,
-  password, extra options, active and ready state) is stored only on its
+  password, extra options, ready state) is stored only on its
   `Companies` row. Script 15 does not copy changes made there back, so the
   previous API would read stale rows in `ProjectConnections`.
-- Script 17 first lists the rows it will change (company, project key, old and
+- Script 18 first lists the rows it will change (company, project key, old and
   new database name, old and new active flag; never a password). Then, in one
   transaction, it updates the connection row of every active project whose
   company was migrated (the company's `TenantKey` equals the project key) and
   has a server, database and user. It adds a row when the project has none and
-  the company has a password. A connection is active only when the company is
-  `Ready` and active.
-- It refuses to run until script 15 has been run. Running it again is safe: when
-  nothing differs it changes nothing. It changes nothing in any tenant database.
+  the company has a password. A connection is active only when the company's
+  database is `Ready`.
+- It refuses to run until script 15 has been run ("Run 15 first"). The same
+  refusal appears when scripts 13 and 14 were never run on that database. Then
+  there is nothing to undo.
+- Script 18 copies once per cut-over. Run again, it stops with a message and
+  changes nothing. Once the previous API has been running, the project tables
+  are the live data.
+- It records the cut-over in `dbo.TenancyRollbackLog`. It changes nothing in
+  any tenant database.
 - It ends with `Connections copied back to the project tables: N updated, M added.`
 
 The reverse case: connection changes made in `ProjectConnections` under the
@@ -201,8 +211,9 @@ Still NOT restored:
 - If the new API is started before script 14 has run, logged-in users get errors
   and nobody can pick a company. No data is harmed. Stop the API, run script 14,
   start the API.
-- The company list at login is now by membership. A member without access to the
-  Service module sees the company but cannot enter it, and is told why.
+- The company list at login is now by membership. A member who was not given
+  the Service module sees the company in the list. In the module list the
+  Service module is shown disabled with the reason.
 - A platform administrator working inside a company that is attached AFTER this
   release may land on another company's tabs in Platform Admin until the UI is
   updated. Pick the company from the filter.
