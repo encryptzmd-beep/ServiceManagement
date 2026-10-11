@@ -1,5 +1,5 @@
-using EncryptzAPI.Middleware;
-﻿using EncryptzBL.Common;
+﻿using EncryptzAPI.Middleware;
+using EncryptzBL.Common;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.CustomerPortal.Modules;
 using Microsoft.AspNetCore.Authorization;
