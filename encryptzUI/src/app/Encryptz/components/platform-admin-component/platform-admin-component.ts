@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Subscription, finalize } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../Auth/auth-service';
 import {
@@ -48,6 +49,10 @@ export class PlatformAdminComponent implements OnInit {
   /** Company whose Modules dialog is open (null = closed). */
   modulesCompany = signal<PlatformCompany | null>(null);
   companyModules = signal<CompanyModule[]>([]);
+  /** Module keys with a switch request in flight. */
+  switching = signal<ReadonlySet<string>>(new Set());
+  /** Requests of the open Modules dialog; dropped when it closes or another opens. */
+  private modulesSub = new Subscription();
 
   /** Project the Locations / Access tabs work on. */
   selectedProjectId = signal<number | null>(null);
@@ -295,16 +300,22 @@ export class PlatformAdminComponent implements OnInit {
     this.formError.set('');
     this.modulesCompany.set(company);
     this.companyModules.set([]);
-    this.api.getCompanyModules(company.companyId).subscribe({
+    this.switching.set(new Set());
+    this.modulesSub.unsubscribe();
+    this.modulesSub = new Subscription();
+    this.modulesSub.add(this.api.getCompanyModules(company.companyId).subscribe({
       next: res => {
         if (res.success) this.companyModules.set(res.data ?? []);
         else this.formError.set(res.message);
       },
       error: err => { if (this.isLocked(err)) return; this.formError.set(this.message(err, 'Could not load the modules')); },
-    });
+    }));
   }
 
   closeModules(): void {
+    this.modulesSub.unsubscribe();
+    this.modulesSub = new Subscription();
+    this.switching.set(new Set());
     this.modulesCompany.set(null);
     this.companyModules.set([]);
     this.formError.set('');
@@ -315,6 +326,8 @@ export class PlatformAdminComponent implements OnInit {
     const company = this.modulesCompany();
     if (!company || !this.isPlatformAdmin()) { this.redraw(event, module.isEnabled); return; }
 
+    if (this.switching().has(module.moduleKey)) { this.redraw(event, module.isEnabled); return; }
+
     const switchOn = !module.isEnabled;
     if (!switchOn && !window.confirm(
       `Switch ${module.moduleName} off for ${company.companyName}? Its people will not be able to open it until it is switched on again.`)) {
@@ -323,7 +336,11 @@ export class PlatformAdminComponent implements OnInit {
     }
 
     this.formError.set('');
-    this.api.setCompanyModule(company.companyId, module.moduleKey, switchOn).subscribe({
+    const key = module.moduleKey;
+    this.switching.update(s => new Set(s).add(key));
+    this.modulesSub.add(this.api.setCompanyModule(company.companyId, key, switchOn).pipe(
+      finalize(() => this.switching.update(s => { const n = new Set(s); n.delete(key); return n; })),
+    ).subscribe({
       next: res => {
         if (!res.success) {
           this.formError.set(res.message);
@@ -339,7 +356,7 @@ export class PlatformAdminComponent implements OnInit {
         if (this.isLocked(err)) return;
         this.formError.set(this.message(err, 'Could not switch the module'));
       },
-    });
+    }));
   }
 
   /**

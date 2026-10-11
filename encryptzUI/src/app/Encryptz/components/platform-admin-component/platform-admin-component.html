@@ -302,7 +302,7 @@
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>Modules · {{ mc.companyName }}</h2>
-        <button class="modal-close" (click)="closeModules()">✕</button>
+        <button class="modal-close" aria-label="Close" (click)="closeModules()">✕</button>
       </div>
       <div class="modal-body">
         @if (!isPlatformAdmin()) {
@@ -310,7 +310,7 @@
         }
         @for (m of companyModules(); track m.moduleKey) {
           <label class="pa-module-row">
-            <input type="checkbox" [checked]="m.isEnabled" [disabled]="!isPlatformAdmin()" (change)="toggleCompanyModule(m, $event)" />
+            <input type="checkbox" [checked]="m.isEnabled" [disabled]="!isPlatformAdmin() || switching().has(m.moduleKey)" (change)="toggleCompanyModule(m, $event)" />
             <span class="pa-module-text">
               <strong>{{ m.moduleName }}</strong>
               <small>{{ m.description }}</small>

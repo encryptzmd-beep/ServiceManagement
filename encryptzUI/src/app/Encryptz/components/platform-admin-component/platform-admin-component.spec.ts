@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { AuthService } from '../../Auth/auth-service';
 import { PlatformService } from '../../Services/platform-service';
 import { PlatformAdminComponent } from './platform-admin-component';
@@ -126,5 +126,103 @@ describe('PlatformAdminComponent modules', () => {
     expect(confirmSpy).toHaveBeenCalled();
     expect(calls.some(c => c[0] === 'setCompanyModule')).toBe(false);
     confirmSpy.mockRestore();
+  });
+
+  const boxesOf = (fixture: any) => fixture.nativeElement.querySelectorAll('.pa-module-row input[type=checkbox]') as NodeListOf<HTMLInputElement>;
+  const okList = { success: true, message: '', data: [serviceModule, salesModule] };
+
+  it('shows the error and restores the checkbox when switching fails', () => {
+    api.setCompanyModule = () => throwError(() => ({ status: 500, error: {} }));
+    const fixture = create(true);
+    openDialog(fixture);
+
+    boxesOf(fixture)[1].click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Could not switch the module');
+    expect(boxesOf(fixture)[1].checked).toBe(false);
+  });
+
+  it('keeps the Service checkbox checked when the confirm is cancelled', () => {
+    const fixture = create(true);
+    openDialog(fixture);
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    boxesOf(fixture)[0].click();
+    fixture.detectChanges();
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(boxesOf(fixture)[0].checked).toBe(true);
+    confirmSpy.mockRestore();
+  });
+
+  it('leaves the checkbox checked after a successful switch', () => {
+    const fixture = create(true);
+    openDialog(fixture);
+
+    boxesOf(fixture)[1].click();
+    fixture.detectChanges();
+
+    expect(boxesOf(fixture)[1].checked).toBe(true);
+  });
+
+  it('ignores the late list of a dialog that was closed', () => {
+    const late = new Subject<any>();
+    const companyB = { ...company, companyId: 3, companyName: 'B' };
+    const listB = { success: true, message: '', data: [salesModule] };
+    api.getCompanyModules = (id: number) => id === 2 ? late : of(listB);
+    const fixture = create(true);
+
+    fixture.componentInstance.openModules(company);
+    fixture.componentInstance.closeModules();
+    fixture.componentInstance.openModules(companyB);
+    late.next(okList);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.companyModules()).toEqual([salesModule]);
+  });
+
+  it('ignores the late answer of a switch after the dialog was closed', () => {
+    const late = new Subject<any>();
+    api.setCompanyModule = () => late;
+    const fixture = create(true);
+    openDialog(fixture);
+
+    boxesOf(fixture)[1].click();
+    fixture.componentInstance.closeModules();
+    late.next({ success: true, message: 'Sales switched on', data: true });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.toast()).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Sales switched on');
+    expect(fixture.componentInstance.companyModules()).toEqual([]);
+  });
+
+  it('disables the checkbox and sends no second request while a switch is in flight', () => {
+    const late = new Subject<any>();
+    api.setCompanyModule = (companyId: number, key: string, on: boolean) => { calls.push(['setCompanyModule', companyId, key, on]); return late; };
+    const fixture = create(true);
+    openDialog(fixture);
+
+    boxesOf(fixture)[1].click();
+    fixture.detectChanges();
+    expect(boxesOf(fixture)[1].disabled).toBe(true);
+
+    fixture.componentInstance.toggleCompanyModule(salesModule as any);
+    expect(calls.filter(c => c[0] === 'setCompanyModule').length).toBe(1);
+
+    late.next({ success: true, message: 'ok', data: true });
+    late.complete();
+    fixture.detectChanges();
+    expect(boxesOf(fixture)[1].disabled).toBe(false);
+  });
+
+  it('closes the Modules dialog with the other forms', () => {
+    const fixture = create(true);
+    openDialog(fixture);
+
+    fixture.componentInstance.closeForms();
+
+    expect(fixture.componentInstance.modulesCompany()).toBeNull();
   });
 });
