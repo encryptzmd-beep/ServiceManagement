@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../Auth/auth-service';
 import {
+  CompanyModule,
   ConnectionTestResult,
   PlatformCompany,
   PlatformLocation,
@@ -43,6 +44,10 @@ export class PlatformAdminComponent implements OnInit {
   locations = signal<PlatformLocation[]>([]);
   access = signal<ProjectAccess[]>([]);
   menus = signal<PlatformMenu[]>([]);
+
+  /** Company whose Modules dialog is open (null = closed). */
+  modulesCompany = signal<PlatformCompany | null>(null);
+  companyModules = signal<CompanyModule[]>([]);
 
   /** Project the Locations / Access tabs work on. */
   selectedProjectId = signal<number | null>(null);
@@ -284,6 +289,69 @@ export class PlatformAdminComponent implements OnInit {
     });
   }
 
+  // ── modules of a company ──────────────────────────────────────────────────
+
+  openModules(company: PlatformCompany): void {
+    this.formError.set('');
+    this.modulesCompany.set(company);
+    this.companyModules.set([]);
+    this.api.getCompanyModules(company.companyId).subscribe({
+      next: res => {
+        if (res.success) this.companyModules.set(res.data ?? []);
+        else this.formError.set(res.message);
+      },
+      error: err => { if (this.isLocked(err)) return; this.formError.set(this.message(err, 'Could not load the modules')); },
+    });
+  }
+
+  closeModules(): void {
+    this.modulesCompany.set(null);
+    this.companyModules.set([]);
+    this.formError.set('');
+  }
+
+  /** Which modules a company has is a platform decision: others see the list read-only. */
+  toggleCompanyModule(module: CompanyModule, event?: Event): void {
+    const company = this.modulesCompany();
+    if (!company || !this.isPlatformAdmin()) { this.redraw(event, module.isEnabled); return; }
+
+    const switchOn = !module.isEnabled;
+    if (!switchOn && !window.confirm(
+      `Switch ${module.moduleName} off for ${company.companyName}? Its people will not be able to open it until it is switched on again.`)) {
+      this.redraw(event, module.isEnabled);
+      return;
+    }
+
+    this.formError.set('');
+    this.api.setCompanyModule(company.companyId, module.moduleKey, switchOn).subscribe({
+      next: res => {
+        if (!res.success) {
+          this.formError.set(res.message);
+          this.redraw(event, module.isEnabled);
+          return;
+        }
+        this.companyModules.update(list =>
+          list.map(m => m.moduleKey === module.moduleKey ? { ...m, isEnabled: switchOn } : m));
+        this.notify(res.message, true);
+      },
+      error: err => {
+        this.redraw(event, module.isEnabled);
+        if (this.isLocked(err)) return;
+        this.formError.set(this.message(err, 'Could not switch the module'));
+      },
+    });
+  }
+
+  /**
+   * A click toggles the checkbox before we know the outcome. When the state did
+   * not change, the [checked] binding sees the same value and does not touch the
+   * element, so put the box back by hand.
+   */
+  private redraw(event: Event | undefined, checked: boolean): void {
+    const box = event?.target as HTMLInputElement | null | undefined;
+    if (box) box.checked = checked;
+  }
+
   // ── projects + database ───────────────────────────────────────────────────
 
   newProject(): void {
@@ -440,6 +508,7 @@ export class PlatformAdminComponent implements OnInit {
   // ── shared ────────────────────────────────────────────────────────────────
 
   closeForms(): void {
+    this.closeModules();
     this.companyForm = this.projectForm = this.locationForm = this.menuForm = null;
     this.formError.set('');
     this.testResult.set(null);

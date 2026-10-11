@@ -107,7 +107,10 @@
               <td class="fx-num">{{ c.projectCount }}</td>
               <td class="fx-num">{{ c.userCount }}</td>
               <td><span class="pa-status" [class.off]="!c.isActive">{{ c.isActive ? 'Active' : 'Inactive' }}</span></td>
-              <td class="pa-actions"><button class="fx-action-btn" (click)="editCompany(c)">Edit</button></td>
+              <td class="pa-actions">
+                <button class="fx-action-btn" (click)="openModules(c)">Modules</button>
+                <button class="fx-action-btn" (click)="editCompany(c)">Edit</button>
+              </td>
             </tr>
           } @empty {
             <tr class="fx-empty-row"><td colspan="8">{{ loading() ? 'Loading…' : 'No companies yet' }}</td></tr>
@@ -291,6 +294,39 @@
     </div>
   }
 </div>
+}
+
+<!-- ═══════════ MODULES OF A COMPANY ═══════════ -->
+@if (modulesCompany(); as mc) {
+  <div class="modal-overlay" (click)="closeModules()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Modules · {{ mc.companyName }}</h2>
+        <button class="modal-close" (click)="closeModules()">✕</button>
+      </div>
+      <div class="modal-body">
+        @if (!isPlatformAdmin()) {
+          <div class="form-note">Modules are part of the company's subscription. Contact the platform administrator to change them.</div>
+        }
+        @for (m of companyModules(); track m.moduleKey) {
+          <label class="pa-module-row">
+            <input type="checkbox" [checked]="m.isEnabled" [disabled]="!isPlatformAdmin()" (change)="toggleCompanyModule(m, $event)" />
+            <span class="pa-module-text">
+              <strong>{{ m.moduleName }}</strong>
+              <small>{{ m.description }}</small>
+            </span>
+            <span class="pa-status" [class.off]="!m.isEnabled">{{ m.isEnabled ? 'On · ' + m.userCount + ' users' : 'Off' }}</span>
+          </label>
+        } @empty {
+          <div class="pa-hint">No modules.</div>
+        }
+        @if (formError()) { <div class="pa-error">{{ formError() }}</div> }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeModules()">Close</button>
+      </div>
+    </div>
+  </div>
 }
 
 <!-- ═══════════ COMPANY DIALOG ═══════════ -->

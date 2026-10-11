@@ -65,6 +65,19 @@ export interface ProjectAccess {
   grantedByName?: string;
 }
 
+/** One module of the catalogue as a company has it. */
+export interface CompanyModule {
+  moduleId: number;
+  moduleKey: string;
+  moduleName: string;
+  description: string;
+  icon: string;
+  sortOrder: number;
+  isEnabled: boolean;
+  /** Members who can open it now. */
+  userCount: number;
+}
+
 export interface PlatformMenu {
   menuId: number;
   menuName: string;
@@ -149,6 +162,22 @@ export class PlatformService {
 
   setProjectAccess(projectId: number, userId: number, hasAccess: boolean): Observable<ApiResponse<boolean>> {
     return this.http.post<ApiResponse<boolean>>(`${this.api}/projects/${projectId}/access`, { userId, hasAccess }, { headers: this.headers });
+  }
+
+  getCompanyModules(companyId: number): Observable<ApiResponse<CompanyModule[]>> {
+    return this.http.get<ApiResponse<CompanyModule[]>>(`${this.api}/companies/${companyId}/modules`, { headers: this.headers });
+  }
+
+  setCompanyModule(companyId: number, moduleKey: string, isEnabled: boolean): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/companies/${companyId}/modules`, { moduleKey, isEnabled }, { headers: this.headers });
+  }
+
+  getModuleAccess(companyId: number, moduleKey: string): Observable<ApiResponse<ProjectAccess[]>> {
+    return this.http.get<ApiResponse<ProjectAccess[]>>(`${this.api}/companies/${companyId}/modules/${encodeURIComponent(moduleKey)}/access`, { headers: this.headers });
+  }
+
+  setModuleAccess(companyId: number, moduleKey: string, userId: number, hasAccess: boolean): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/companies/${companyId}/modules/${encodeURIComponent(moduleKey)}/access`, { userId, hasAccess }, { headers: this.headers });
   }
 
   getMenus(): Observable<ApiResponse<PlatformMenu[]>> {
