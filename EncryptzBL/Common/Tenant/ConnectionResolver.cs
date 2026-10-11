@@ -32,7 +32,7 @@ namespace EncryptzBL.Common.Tenant
                 throw new ArgumentException("A tenant key is required to resolve a company database.", nameof(projectKey));
 
             var entry = await GetEntryAsync(projectKey)
-                ?? throw new InvalidOperationException("No active company database is registered for this key.");
+                ?? throw new TenantNotRoutableException();
 
             return entry.ConnectionString;
         }

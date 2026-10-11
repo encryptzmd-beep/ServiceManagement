@@ -3,6 +3,7 @@ using EncryptzAPI.Middleware;
 using EncryptzBL.Common.Tenant;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace EncryptzTests
@@ -12,10 +13,12 @@ namespace EncryptzTests
         private sealed class FakeResolver : IConnectionResolver
         {
             public List<string> Asked { get; } = new();
+            public Exception? Throws { get; set; }
 
             public Task<string> GetServiceConnectionAsync(string projectKey)
             {
                 Asked.Add(projectKey);
+                if (Throws != null) throw Throws;
                 return Task.FromResult("conn:" + projectKey);
             }
 
@@ -28,7 +31,7 @@ namespace EncryptzTests
         }
 
         private static async Task<(TenantContext Tenant, FakeResolver Resolver, HttpContext Http, bool NextCalled)> Run(
-            Claim[]? claims, Action<HttpContext>? setup = null)
+            Claim[]? claims, Action<HttpContext>? setup = null, Exception? resolverThrows = null)
         {
             var http = new DefaultHttpContext { RequestServices = new ServiceCollection().BuildServiceProvider() };
             http.Response.Body = new MemoryStream();
@@ -37,11 +40,11 @@ namespace EncryptzTests
             setup?.Invoke(http);
 
             var tenant = new TenantContext();
-            var resolver = new FakeResolver();
+            var resolver = new FakeResolver { Throws = resolverThrows };
             var nextCalled = false;
             var middleware = new TenantResolutionMiddleware(_ => { nextCalled = true; return Task.CompletedTask; });
 
-            await middleware.InvokeAsync(http, resolver, tenant);
+            await middleware.InvokeAsync(http, resolver, tenant, NullLogger<TenantResolutionMiddleware>.Instance);
             return (tenant, resolver, http, nextCalled);
         }
 
@@ -144,6 +147,30 @@ namespace EncryptzTests
             }, http => http.Request.Headers["X-Tenant-Key"] = "KNOWN");
 
             Assert.Equal("conn:C002-P001", r.Tenant.ServiceDbConnectionString);
+        }
+
+        private static readonly Claim[] ScopedClaims =
+        {
+            new Claim(ClaimTypes.NameIdentifier, "11"),
+            new Claim("TenantKey", "C002-P001"), new Claim("CompanyId", "2"),
+            new Claim("ProjectId", "5"), new Claim("LocationId", "9"), new Claim("ModuleKey", "SERVICE")
+        };
+
+        [Fact]
+        public async Task A_scoped_token_whose_company_is_not_routable_continues_unresolved()
+        {
+            var r = await Run(ScopedClaims, resolverThrows: new TenantNotRoutableException());
+
+            Assert.True(r.NextCalled);
+            Assert.False(r.Tenant.IsResolved);
+            Assert.Null(r.Tenant.ProjectKey);
+            Assert.Equal(0, r.Tenant.CompanyId);
+        }
+
+        [Fact]
+        public async Task Another_resolver_failure_still_surfaces()
+        {
+            await Assert.ThrowsAsync<TimeoutException>(() => Run(ScopedClaims, resolverThrows: new TimeoutException()));
         }
     }
 }

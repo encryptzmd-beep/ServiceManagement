@@ -35,7 +35,8 @@ namespace EncryptzAPI.Middleware
             _next = next;
         }
 
-        public async Task InvokeAsync(HttpContext context, IConnectionResolver resolver, TenantContext tenant)
+        public async Task InvokeAsync(HttpContext context, IConnectionResolver resolver, TenantContext tenant,
+            ILogger<TenantResolutionMiddleware> logger)
         {
             var user = context.User;
             if (user?.Identity?.IsAuthenticated == true)
@@ -44,6 +45,24 @@ namespace EncryptzAPI.Middleware
 
                 if (!string.IsNullOrEmpty(tenantKey))
                 {
+                    string connection;
+                    try
+                    {
+                        connection = await resolver.GetServiceConnectionAsync(tenantKey);
+                    }
+                    catch (TenantNotRoutableException)
+                    {
+                        // The company was deactivated or is not ready any more. Leave the tenant
+                        // unresolved: business calls get the usual 403, while the control-plane
+                        // calls (user-companies, select-company, set-scope) still work, so the
+                        // user can leave this company.
+                        logger.LogWarning("Company {CompanyId} has no active database to route to; the request continues without a tenant",
+                            user.FindFirst("CompanyId")?.Value ?? user.FindFirst("ClientId")?.Value);
+                        await _next(context);
+                        return;
+                    }
+
+                    tenant.ServiceDbConnectionString = connection;
                     tenant.ProjectKey = tenantKey;
                     tenant.CompanyId = ParseInt(user.FindFirst("CompanyId")?.Value
                                                 ?? user.FindFirst("ClientId")?.Value);
@@ -59,8 +78,6 @@ namespace EncryptzAPI.Middleware
                     tenant.TenantUserId = user.GetTenantUserId();
                     tenant.MainUserId = user.FindFirst("TenantUserId") != null ? nameId : 0;
                     tenant.TechnicianId = user.GetTechnicianId();
-
-                    tenant.ServiceDbConnectionString = await resolver.GetServiceConnectionAsync(tenantKey);
                 }
             }
             else
