@@ -3,15 +3,16 @@
    -----------------------------------------------------------------------------
    Run with the API STOPPED, then redeploy the previous API and UI.
 
-     1. renames Projects_Old, ProjectConnections_Old, UserProjectAccess_Old back
-     2. only when step 1 really restored the tables in THIS run: carries module
-        access back to project access (people whose Service access was removed
-        after the cut-over lose project access, people who got it after the
-        cut-over receive it) and attaches pending invitations created after the
-        cut-over to the company's project. When the tables were already in place,
-        project access is left as it is, so running this script again cannot
-        overwrite access changed under the previous API.
-     3. restores the procedures as they were on 2026-10-11
+     1. in ONE transaction: renames Projects_Old, ProjectConnections_Old,
+        UserProjectAccess_Old back and, when it renamed at least one of them,
+        carries module access back to project access (people whose Service access
+        was removed after the cut-over lose project access, people who got it after
+        the cut-over receive it) and attaches pending invitations created after the
+        cut-over to the company's project. The restore and the carry-back happen
+        together or not at all: on an error everything is rolled back, the *_Old
+        tables are still there and the script can simply be run again. When the
+        tables were already in place, project access is left as it is.
+     2. restores the procedures as they were on 2026-10-11
 
    Still true afterwards: the new columns and tables (13_Company_Tenancy_Schema.sql)
    are left in place (the previous API ignores them). A company created after the
@@ -21,10 +22,10 @@
    purpose.
    ============================================================================= */
 SET NOCOUNT ON;
+SET XACT_ABORT ON;
 SET QUOTED_IDENTIFIER ON;   -- same session options as the other tenancy scripts
 SET ANSI_NULLS ON;
 SET NOEXEC OFF;
-EXEC sys.sp_set_session_context @key = N'TenancyTablesRestored', @value = 0;   -- no stale flag from an earlier run
 GO
 
 IF DB_NAME() IN ('master', 'model', 'msdb', 'tempdb') OR OBJECT_ID('dbo.Companies') IS NULL
@@ -34,40 +35,35 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('dbo.Projects') IS NULL AND OBJECT_ID('dbo.Projects_Old') IS NOT NULL
-BEGIN
-    EXEC sp_rename 'dbo.Projects_Old', 'Projects';
-    EXEC sys.sp_set_session_context @key = N'TenancyTablesRestored', @value = 1;
-END
-IF OBJECT_ID('dbo.ProjectConnections') IS NULL AND OBJECT_ID('dbo.ProjectConnections_Old') IS NOT NULL
-    EXEC sp_rename 'dbo.ProjectConnections_Old', 'ProjectConnections';
-IF OBJECT_ID('dbo.UserProjectAccess') IS NULL AND OBJECT_ID('dbo.UserProjectAccess_Old') IS NOT NULL
-    EXEC sp_rename 'dbo.UserProjectAccess_Old', 'UserProjectAccess';
-GO
+DECLARE @Restored BIT = 0, @RestoreError NVARCHAR(2048);
 
-IF OBJECT_ID('dbo.Projects') IS NULL
-   OR OBJECT_ID('dbo.ProjectConnections') IS NULL
-   OR OBJECT_ID('dbo.UserProjectAccess') IS NULL
-BEGIN
-    RAISERROR('dbo.Projects, dbo.ProjectConnections and dbo.UserProjectAccess must all exist (or have a *_Old copy to restore).', 16, 1);
-    SET NOEXEC ON;
-END
-GO
+BEGIN TRY
+    BEGIN TRANSACTION;
 
-/* Bring project access in line with module access as it is now, but only when this
-   run restored the tables: otherwise project access has been maintained by the
-   previous API since and must not be overwritten. */
-IF ISNULL(CONVERT(INT, SESSION_CONTEXT(N'TenancyTablesRestored')), 0) <> 1
-    PRINT 'The project tables were already in place: project access was left as it is.';
-IF ISNULL(CONVERT(INT, SESSION_CONTEXT(N'TenancyTablesRestored')), 0) = 1
-   AND OBJECT_ID('dbo.fn_ModuleUsers') IS NOT NULL AND OBJECT_ID('dbo.UserModuleAccess') IS NOT NULL
-BEGIN
-    DECLARE @CarryError NVARCHAR(2000);
+    IF OBJECT_ID('dbo.Projects') IS NULL AND OBJECT_ID('dbo.Projects_Old') IS NOT NULL
+    BEGIN
+        EXEC sp_rename 'dbo.Projects_Old', 'Projects';
+        SET @Restored = 1;
+    END
+    IF OBJECT_ID('dbo.ProjectConnections') IS NULL AND OBJECT_ID('dbo.ProjectConnections_Old') IS NOT NULL
+    BEGIN
+        EXEC sp_rename 'dbo.ProjectConnections_Old', 'ProjectConnections';
+        SET @Restored = 1;
+    END
+    IF OBJECT_ID('dbo.UserProjectAccess') IS NULL AND OBJECT_ID('dbo.UserProjectAccess_Old') IS NOT NULL
+    BEGIN
+        EXEC sp_rename 'dbo.UserProjectAccess_Old', 'UserProjectAccess';
+        SET @Restored = 1;
+    END
 
-    BEGIN TRY
-        BEGIN TRANSACTION;
-
-        /* dynamic SQL: the function may not exist, which must not break compilation */
+    /* Bring project access in line with module access as it is now, but only when
+       this run restored tables: otherwise project access has been maintained by the
+       previous API since and must not be overwritten. */
+    IF @Restored = 1
+       AND OBJECT_ID('dbo.fn_ModuleUsers') IS NOT NULL AND OBJECT_ID('dbo.UserModuleAccess') IS NOT NULL
+       AND OBJECT_ID('dbo.Projects') IS NOT NULL AND OBJECT_ID('dbo.UserProjectAccess') IS NOT NULL
+    BEGIN
+        /* dynamic SQL: nothing here may be compiled before the tables above exist */
         EXEC sp_executesql N'
             /* removed after the cut-over: no project access */
             UPDATE upa SET IsActive = 0
@@ -92,26 +88,40 @@ BEGIN
             FROM dbo.Projects p
             CROSS APPLY dbo.fn_ModuleUsers(p.CompanyId, ''SERVICE'') mu
             WHERE p.IsActive = 1
-              AND NOT EXISTS (SELECT 1 FROM dbo.UserProjectAccess x WHERE x.UserId = mu.UserId AND x.ProjectId = p.ProjectId);';
+              AND NOT EXISTS (SELECT 1 FROM dbo.UserProjectAccess x WHERE x.UserId = mu.UserId AND x.ProjectId = p.ProjectId);
 
-        /* invitations created after the cut-over have no project; the old procedures need one */
-        UPDATE i SET i.ProjectId = p.ProjectId
-        FROM dbo.Invitations i
-        INNER JOIN dbo.Projects p ON p.CompanyId = i.CompanyId AND p.IsActive = 1
-        WHERE i.ProjectId IS NULL AND i.Status = 'Pending';
-
-        COMMIT TRANSACTION;
+            /* invitations created after the cut-over have no project; the old procedures need one */
+            UPDATE i SET i.ProjectId = p.ProjectId
+            FROM dbo.Invitations i
+            INNER JOIN dbo.Projects p ON p.CompanyId = i.CompanyId AND p.IsActive = 1
+            WHERE i.ProjectId IS NULL AND i.Status = ''Pending'';';
 
         PRINT 'Module access carried back to project access.';
-    END TRY
-    BEGIN CATCH
-        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        SET @CarryError = ERROR_MESSAGE();
-        RAISERROR('Could not carry module access back to project access. %s', 16, 1, @CarryError);
-        SET NOEXEC ON;
-    END CATCH
+    END
+    ELSE
+        PRINT 'No project tables were restored in this run: project access was left as it is.';
+
+    COMMIT TRANSACTION;
+
+    IF @Restored = 1 PRINT 'Project tables restored.';
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+    SET @RestoreError = ERROR_MESSAGE();
+    RAISERROR('Restoring the project tables failed and was rolled back. Run this script again. %s', 16, 1, @RestoreError);
+    SET NOEXEC ON;
+END CATCH
+GO
+
+IF OBJECT_ID('dbo.Projects') IS NULL
+   OR OBJECT_ID('dbo.ProjectConnections') IS NULL
+   OR OBJECT_ID('dbo.UserProjectAccess') IS NULL
+BEGIN
+    RAISERROR('dbo.Projects, dbo.ProjectConnections and dbo.UserProjectAccess must all exist (or have a *_Old copy to restore).', 16, 1);
+    SET NOEXEC ON;
 END
 GO
+
 
 
 /* ===== sp_Company_AcceptInvitation ===== */
