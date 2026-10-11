@@ -1647,6 +1647,15 @@ namespace EncryptzBL.DTO_s
             public string PhoneNumber { get; set; }
             public string RoleInCompany { get; set; }
             public bool IsLinked { get; set; }
+
+            /// <summary>State of the company's database: None | Provisioning | Ready | Failed.</summary>
+            public string ProvisionStatus { get; set; } = "None";
+
+            public static string StatusFrom(object? value)
+            {
+                var text = value == null || value == DBNull.Value ? "" : value.ToString()!.Trim();
+                return text.Length == 0 ? "None" : text;
+            }
         }
 
     public class SelectCompanyRequestDto

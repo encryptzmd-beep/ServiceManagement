@@ -639,7 +639,9 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 City = r["City"]?.ToString(),
                 PhoneNumber = r["PhoneNumber"]?.ToString(),
                 RoleInCompany = r["RoleInCompany"]?.ToString() ?? "",
-                IsLinked = Convert.ToBoolean(r["IsLinked"])
+                IsLinked = Convert.ToBoolean(r["IsLinked"]),
+                ProvisionStatus = CompanyResponseDto.StatusFrom(
+                    r.Table.Columns.Contains("ProvisionStatus") ? r["ProvisionStatus"] : null)
             }).ToList();
 
             return ApiResponse<List<CompanyResponseDto>>.Ok(companies, "Success");
