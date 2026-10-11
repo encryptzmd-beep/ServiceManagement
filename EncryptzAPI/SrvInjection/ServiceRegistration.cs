@@ -1,6 +1,8 @@
 
 
+using EncryptzAPI.Provisioning;
 using EncryptzBL.Common;
+using EncryptzBL.Common.Provisioning;
 using EncryptzBL.Common.Tenant;
 using EncryptzBL.Infrastructure.Complients.Modules;
 using EncryptzBL.Infrastructure.Customer.Modules;
@@ -33,6 +35,15 @@ namespace EncryptzAPI.SrvInjection
             services.AddSingleton<IConnectionResolver, ConnectionResolver>();      // ClientKey -> ServiceDB conn (cached)
             services.AddScoped<MainDbHelper>();                                     // fixed MainDB executor (control-plane)
             services.AddScoped<ITenantUserSyncService, TenantUserSyncService>();    // MainDB users -> project DB mirror
+
+            // company creation: the database of a new company is built in the background
+            services.AddSingleton<ProvisioningQueue>();
+            services.AddSingleton<IProvisioningQueue>(sp => sp.GetRequiredService<ProvisioningQueue>());
+            services.AddSingleton(new Lazy<TenantScript>(() => TenantScript.Load(TenantScript.DefaultPath)));
+            services.AddSingleton<ITenantDatabaseServer, SqlTenantDatabaseServer>();
+            services.AddScoped<IProvisionStore, ProvisionStore>();
+            services.AddScoped<TenantProvisioner>();
+            services.AddHostedService<ProvisioningWorker>();
 
             services.AddScoped<DbHelper>();                                         // tenant ServiceDB executor (business)
             services.AddScoped<DbTransactionHelper>();
