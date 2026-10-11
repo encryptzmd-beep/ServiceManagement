@@ -143,19 +143,26 @@
           @if (stage() === 'company') {
             <div class="brand-name">Select Company</div>
             <div class="brand-sub">Please choose a company to continue</div>
+          } @else if (stage() === 'module') {
+            <div class="brand-name">Modules</div>
+            <div class="brand-sub">Choose what you want to work with</div>
           } @else {
-            <div class="brand-name">Select Project & Location</div>
-            <div class="brand-sub">{{ selectedCompanyName() }} — choose where you'll work</div>
+            <div class="brand-name">Select Branch</div>
+            <div class="brand-sub">Choose where you'll work</div>
           }
         </div>
 
-        @if (loading() && stage() === 'company') {
+        @if (loading() || entering()) {
           <div class="loading-state">
             <div class="spinner"></div>
-            <span>Loading your companies...</span>
+            @if (stage() === 'company') { <span>Loading your companies...</span> }
+            @else if (stage() === 'module') { <span>Loading the modules...</span> }
+            @else if (entering()) { <span>Setting up your workspace…</span> }
+            @else { <span>Loading the branches...</span> }
           </div>
         }
 
+        <!-- STEP 1: COMPANY -->
         @if (!loading() && stage() === 'company' && companies().length === 0) {
           <div class="empty-state">
             <span class="material-icons">business_off</span>
@@ -178,6 +185,9 @@
                   <span class="role-badge" [class]="getRoleClass(company.roleInCompany)">
                     {{ company.roleInCompany }}
                   </span>
+                  @if (companyStatus(company)) {
+                    <span class="status-badge">{{ companyStatus(company) }}</span>
+                  }
                 </div>
                 <span class="material-icons arrow">chevron_right</span>
               </div>
@@ -185,11 +195,71 @@
           </div>
         }
 
-        @if (stage() === 'scope') {
+        <!-- STEP 2: MODULE (every module is listed; the ones this user cannot open are disabled) -->
+        @if (!loading() && stage() === 'module') {
+          <div class="company-list">
+            @for (module of modules(); track module.moduleKey) {
+              <div class="company-item module-item" [class.disabled]="module.state !== 'Available'"
+                   [attr.aria-disabled]="module.state !== 'Available'" (click)="openModule(module)">
+                <div class="company-avatar">
+                  <span class="material-icons">{{ module.icon || 'apps' }}</span>
+                </div>
+                <div class="company-info">
+                  <h3>{{ module.moduleName }}</h3>
+                  <p class="company-code">{{ module.description }}</p>
+                  @if (caption(module)) {
+                    <span class="status-badge">{{ caption(module) }}</span>
+                  }
+                </div>
+                @if (module.state === 'Available') {
+                  <span class="material-icons arrow">chevron_right</span>
+                } @else {
+                  <span class="material-icons arrow">lock</span>
+                }
+              </div>
+            }
+          </div>
+
           <div class="scope-step">
-            <!-- module and branch steps: see Task 7 -->
+            @if (canAdminister()) {
+              <button class="link-back" (click)="openAdministration()">
+                <span class="material-icons">admin_panel_settings</span> Administration
+              </button>
+            }
             <button class="link-back" (click)="backToCompanies()">
               <span class="material-icons">chevron_left</span> Back to companies
+            </button>
+          </div>
+        }
+
+        <!-- STEP 3: BRANCH -->
+        @if (!loading() && !entering() && stage() === 'branch') {
+          @if (noBranch()) {
+            <div class="empty-state">
+              <span class="material-icons">location_off</span>
+              <p>No branch assigned.</p>
+              <p class="small">Ask your administrator to give you a branch.</p>
+            </div>
+          } @else {
+            <div class="company-list">
+              @for (branch of branches(); track branch.locationId) {
+                <div class="company-item branch-item" (click)="enterBranch(branch)">
+                  <div class="company-avatar">
+                    <span class="material-icons">storefront</span>
+                  </div>
+                  <div class="company-info">
+                    <h3>{{ branch.locationName }}</h3>
+                    <p class="company-code">{{ branch.city || branch.locationCode }}</p>
+                  </div>
+                  <span class="material-icons arrow">chevron_right</span>
+                </div>
+              }
+            </div>
+          }
+
+          <div class="scope-step">
+            <button class="link-back" (click)="backToModules()">
+              <span class="material-icons">chevron_left</span> Back to modules
             </button>
           </div>
         }
@@ -198,7 +268,7 @@
           <div class="error-msg">
             <span class="material-icons">error_outline</span>
             {{ error() }}
-            <button (click)="loadCompanies()" class="retry-btn">Retry</button>
+            <button (click)="reload()" class="retry-btn">Retry</button>
           </div>
         }
 

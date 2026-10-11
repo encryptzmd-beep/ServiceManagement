@@ -1,8 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService, Company } from '../../Auth/auth-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LocationDto, ModuleDto } from '../../Models/ApiModels';
+import { branchDecision, landingRouteForRole, moduleCaption } from '../../Auth/scope-flow';
+
+type Stage = 'company' | 'module' | 'branch';
 
 @Component({
   selector: 'app-company-selector-component',
@@ -11,18 +15,26 @@ import { FormsModule } from '@angular/forms';
   styleUrl: './company-selector-component.scss',
 })
 export class CompanySelectorComponent {
-    private auth = inject(AuthService);
+  private auth = inject(AuthService);
   private router = inject(Router);
-   userId = this.auth.userId();
+  private route = inject(ActivatedRoute);
+
+  userId = this.auth.userId();
   loading = signal(true);
   error = signal('');
-  companies = signal<Company[]>([]);
-  showCreateCompany = signal(true); // Show disabled create company option
 
-  // Two-stage flow: pick company -> pick project/location (scope)
-  stage = signal<'company' | 'scope'>('company');
-  selectedCompanyName = signal('');
-  private pendingRole = '';
+  /** Which of the three steps this route shows (route data). */
+  stage = signal<Stage>('company');
+
+  companies = signal<Company[]>([]);
+  modules = signal<ModuleDto[]>([]);
+  branches = signal<LocationDto[]>([]);
+  /** The branch step found no branch for this user. */
+  noBranch = signal(false);
+  /** A single branch is being entered without asking. */
+  entering = signal(false);
+
+  private moduleKey = '';
 
   // Change Password States
   showChangePasswordModal = signal(false);
@@ -34,89 +46,189 @@ export class CompanySelectorComponent {
   changePasswordSuccess = signal('');
 
   ngOnInit() {
-      console.log('CompanySelector initialized'); // Debug
-    this.loadCompanies();
-  }
+    const stage = this.route.snapshot.data['stage'] as Stage | undefined;
+    this.stage.set(stage ?? 'company');
 
-loadCompanies() {
-  this.loading.set(true);
-
-  const companies = this.auth.companies();
-
-  if (companies.length > 0) {
-    this.companies.set(companies);
-    this.loading.set(false);
-    return;
-  }
-
-  const temp = localStorage.getItem('temp_login');
-
-  if (temp) {
-    const data = JSON.parse(temp);
-    this.companies.set(data.companies || []);
-    this.loading.set(false);
-    return;
-  }
-
-  this.loading.set(false);
-  this.error.set('No companies found. Please login again.');
-}
-  selectCompany(company: Company) {
-  this.loading.set(true);
-
-  this.auth.selectCompany(company.companyId).subscribe({
-    next: (res) => {
-      this.loading.set(false);
-
-      if (!res.success || !res.data) {
-        this.error.set(res.message || 'Failed to select company');
+    if (this.stage() === 'module') {
+      this.loadModules();
+    } else if (this.stage() === 'branch') {
+      this.moduleKey = this.route.snapshot.queryParamMap.get('module') || this.auth.selectedModuleKey() || '';
+      if (!this.moduleKey) {
+        this.router.navigate(['/select-module']);
         return;
       }
-
-      this.pendingRole = res.data.role;
-      this.selectedCompanyName.set(company.companyName);
-
-      // If a default project + location is already baked into the token, go
-      // straight in. Otherwise let the user pick project/location for this company.
-      if (res.data.projectId && res.data.locationId) {
-        this.redirectByRole(res.data.role);
-      } else {
-        this.stage.set('scope');
-      }
-    },
-    error: () => {
-      this.loading.set(false);
-      this.error.set('Failed to select company');
+      this.loadBranches();
+    } else {
+      this.loadCompanies();
     }
-  });
-}
-
-  /** Fired by the project/location switcher once a scope is applied. */
-  onScopeApplied(): void {
-    this.redirectByRole(this.pendingRole);
   }
 
-  /** Return to the company list to pick a different company. */
-  backToCompanies(): void {
-    this.stage.set('company');
+  /** Reload whatever this step shows (the Retry button). */
+  reload(): void {
     this.error.set('');
+    if (this.stage() === 'module') this.loadModules();
+    else if (this.stage() === 'branch') this.loadBranches();
+    else this.loadCompanies();
   }
 
-  private redirectByRole(role: string): void {
-    switch (role) {
-      case 'Admin':
-      case 'CompanyAdmin':
-        this.router.navigate(['/complaints/dashboard']);
-        break;
-      case 'Technician':
-        this.router.navigate(['/technicians/work-orders']);
-        break;
-      case 'Storekeeper':
-        this.router.navigate(['/spare-parts']);
-        break;
-      default:
-        this.router.navigate(['/complaints/dashboard']);
+  // ── STEP 1: COMPANY ───────────────────────────────────────────────
+
+  loadCompanies() {
+    this.loading.set(true);
+
+    const companies = this.auth.companies();
+
+    if (companies.length > 0) {
+      this.companies.set(companies);
+      this.loading.set(false);
+      return;
     }
+
+    const temp = localStorage.getItem('temp_login');
+
+    if (temp) {
+      const data = JSON.parse(temp);
+      this.companies.set(data.companies || []);
+      this.loading.set(false);
+      return;
+    }
+
+    this.loading.set(false);
+    this.error.set('No companies found. Please login again.');
+  }
+
+  selectCompany(company: Company) {
+    this.loading.set(true);
+
+    this.auth.selectCompany(company.companyId).subscribe({
+      next: (res) => {
+        this.loading.set(false);
+
+        if (!res.success || !res.data) {
+          this.error.set(res.message || 'Failed to select company');
+          return;
+        }
+
+        this.router.navigate(['/select-module']);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.error.set('Failed to select company');
+      }
+    });
+  }
+
+  /** Text of a company whose database is not ready ('' when it is). */
+  companyStatus(company: Company): string {
+    switch (company.provisionStatus) {
+      case 'Provisioning': return 'Setting up…';
+      case 'Failed': return 'Setup failed';
+      case 'None': return 'No database yet';
+      default: return '';
+    }
+  }
+
+  // ── STEP 2: MODULE ────────────────────────────────────────────────
+
+  private loadModules(): void {
+    this.loading.set(true);
+    this.auth.getModules().subscribe({
+      next: (res) => {
+        this.loading.set(false);
+        if (!res.success) {
+          this.error.set(res.message || 'Could not load the modules');
+          return;
+        }
+        this.modules.set(res.data || []);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.error.set('Could not load the modules. Please try again.');
+      }
+    });
+  }
+
+  caption(module: ModuleDto): string {
+    return moduleCaption(module.state);
+  }
+
+  openModule(module: ModuleDto): void {
+    if (module.state !== 'Available') return;
+    this.router.navigate(['/select-branch'], { queryParams: { module: module.moduleKey } });
+  }
+
+  /** Administrators of a company can work on it before any module can be opened. */
+  canAdminister(): boolean {
+    const role = this.auth.userRole();
+    return role === 'Admin' || role === 'CompanyAdmin' || !!this.auth.currentUser()?.isPlatformAdmin;
+  }
+
+  openAdministration(): void {
+    this.router.navigate(['/settings/platform']);
+  }
+
+  // ── STEP 3: BRANCH ────────────────────────────────────────────────
+
+  private loadBranches(): void {
+    this.loading.set(true);
+    this.noBranch.set(false);
+    this.auth.getBranches(this.moduleKey).subscribe({
+      next: (res) => {
+        this.loading.set(false);
+        if (!res.success) {
+          this.error.set(res.message || 'Could not load the branches');
+          return;
+        }
+
+        const list = res.data || [];
+        this.branches.set(list);
+
+        const decision = branchDecision(list.length);
+        if (decision === 'none') {
+          this.noBranch.set(true);
+        } else if (decision === 'auto') {
+          this.entering.set(true);
+          this.enterBranch(list[0]);
+        }
+      },
+      error: () => {
+        this.loading.set(false);
+        this.error.set('Could not load the branches. Please try again.');
+      }
+    });
+  }
+
+  enterBranch(branch: LocationDto): void {
+    this.loading.set(true);
+    this.error.set('');
+
+    this.auth.setScope(this.moduleKey, branch.locationId, branch.locationName).subscribe({
+      next: (res) => {
+        this.loading.set(false);
+        if (res.success && res.data) {
+          this.router.navigate([landingRouteForRole(res.data.role)]);
+          return;
+        }
+        // leave the "entering" spinner so the reason and the list are visible
+        this.entering.set(false);
+        this.error.set(res.message || 'Could not open this branch');
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.entering.set(false);
+        this.error.set(err?.name === 'TimeoutError'
+          ? 'Opening the branch timed out. Please try again.'
+          : 'Could not open this branch. Please try again.');
+      }
+    });
+  }
+
+  backToCompanies(): void {
+    this.router.navigate(['/select-company']);
+  }
+
+  backToModules(): void {
+    this.router.navigate(['/select-module']);
   }
 
   getRoleClass(role: string): string {

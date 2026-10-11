@@ -550,3 +550,25 @@
   .material-icons { font-size: 18px; }
 }
 .link-back:hover { color: #fff; }
+
+/* a module the user cannot open: listed, not clickable */
+.company-item.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.company-item.disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* why a module is disabled / the state of a company's database */
+.status-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(255, 183, 0, 0.18);
+  color: #ffd98a;
+  border: 1px solid rgba(255, 183, 0, 0.40);
+}
