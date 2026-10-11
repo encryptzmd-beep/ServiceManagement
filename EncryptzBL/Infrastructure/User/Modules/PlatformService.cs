@@ -109,7 +109,14 @@ namespace EncryptzBL.Infrastructure.User.Modules
             if (!actor.IsPlatformAdmin)
                 return ApiResponse<int>.Fail("Only a platform administrator can create or change projects");
 
-            var refusal = ProjectRefusal(req.ProjectId, req.CompanyId, await GetCompanyKey(req.CompanyId), req.ProjectKey);
+            // listed = the company already has a database (a migrated company may have a key without one)
+            var listed = await GetDataTableAsync("sp_Platform_GetProjects", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", req.CompanyId)
+            });
+            var hasDatabase = req.CompanyId > 0 && listed != null && listed.Rows.Count > 0;
+
+            var refusal = ProjectRefusal(req.ProjectId, req.CompanyId, hasDatabase, await GetCompanyKey(req.CompanyId), req.ProjectKey);
             if (refusal != null)
                 return ApiResponse<int>.Fail(refusal);
 
@@ -418,22 +425,21 @@ namespace EncryptzBL.Infrastructure.User.Modules
         }
 
         /// <summary>
-        /// Why a save must be refused before it reaches the procedure, or null. In platform
-        /// administration a "project" is the company's database and its id is the CompanyId;
-        /// the deployed UI sends ProjectId = 0 for "new project", which the procedure would
-        /// treat as an edit of the existing connection.
+        /// Why a "save project" request must be refused, or null when it may proceed.
+        /// A "project" is the company's database and its id is the company id.
+        /// hasDatabase = the company is listed as having a database (sp_Platform_GetProjects);
+        /// a migrated company can have a key without one.
         /// </summary>
-        public static string? ProjectRefusal(int requestedProjectId, int companyId, string? existingKey, string? requestedKey)
+        public static string? ProjectRefusal(int requestedProjectId, int companyId, bool hasDatabase, string? existingKey, string? requestedKey)
         {
             if (requestedProjectId != 0 && requestedProjectId != companyId)
                 return "Database not found for this company";
 
-            var hasDatabase = !string.IsNullOrWhiteSpace(existingKey);
             if (requestedProjectId == 0 && hasDatabase)
                 return "This company already has a database. Edit it instead";
 
-            if (hasDatabase && !string.IsNullOrWhiteSpace(requestedKey)
-                && !string.Equals(requestedKey.Trim(), existingKey!.Trim(), StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrWhiteSpace(existingKey) && !string.IsNullOrWhiteSpace(requestedKey)
+                && !string.Equals(requestedKey.Trim(), existingKey.Trim(), StringComparison.OrdinalIgnoreCase))
                 return "The key of a company cannot be changed";
 
             return null;
