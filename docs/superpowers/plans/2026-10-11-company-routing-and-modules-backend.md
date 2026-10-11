@@ -1195,6 +1195,8 @@ git commit -m "Require a module-scoped token on business controllers"
 
 ---
 
+> **Note (after review):** the SQL printed in Tasks 6 and 7 below is the first draft. Review hardened it (failure handling in the cut-over, an atomic rollback that carries access back). The committed files `13_Company_Tenancy_Schema.sql`, `14_Company_Tenancy_Cutover.sql` and `15_Company_Tenancy_Rollback.sql` are authoritative and are now frozen.
+
 ### Task 6: Main DB schema script (additive)
 
 **Files:**
