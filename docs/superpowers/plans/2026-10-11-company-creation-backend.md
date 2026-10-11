@@ -3310,3 +3310,14 @@ git commit -m "Record the rehearsal of company creation"
 | `New_Tenant_Database.sql`'s own guard against being run in the main database still looks for `dbo.ProjectConnections` (renamed by the cut-over); it matters only for a person running the script by hand in the wrong database, never for the API | when the tenant script is next rebuilt |
 | `UserLocationAccess` (branch access) in new tenant databases | 4 |
 | Removing the unused "project" layer; customer portal picker | 2c |
+
+## Amendments made during execution (fix round 1, commit 7ead2d5)
+
+The review of Tasks 2 and 4 changed the contract between the script, the store and the flow. Where a task above disagrees with this section, this section wins.
+
+- `Companies.ProvisionAttempt UNIQUEIDENTIFIER NULL`: NULL = queued, a value = the attempt that is building. `sp_Provision_Begin(@CompanyId)` replaces `sp_Provision_GetJob`: it claims the job atomically (stamping `ProvisionStartedAt`) and returns the job row, or no row when there is nothing to claim. `sp_Provision_Complete(@CompanyId, @Attempt, @DatabaseName, @ServerName, @AdminUser)` and `sp_Provision_Fail(@CompanyId, @Attempt, @Error)` act only for the attempt that owns the job. New: `sp_Provision_GetStatus(@CompanyId)`, `sp_Provision_GetQueued`. Script 20 has 16 procedures.
+- `IProvisionStore`: `BeginAsync(int) : Task<ProvisionJob?>`, `CompleteAsync(ProvisionJob, string) : Task<bool>`, `FailAsync(ProvisionJob, string)`, `GetStatusAsync(int) : Task<string>`, `FailStuckAsync(int) : Task<int>`, `GetQueuedAsync() : Task<IReadOnlyList<int>>`. `ProvisionJob` has `Attempt` and no `Status`.
+- A company "waiting for its first database" = `DbServerId IS NOT NULL` and no `DatabaseName`. Only such a company is retried or completed; a company whose database was attached by hand is never rebuilt.
+- While a user's Failed company waits for a retry, that user cannot create another one (`sp_Company_Create` answers "Your earlier company is waiting for a retry"; `sp_Company_GetCreationState` returns `PendingRetry`).
+- `sp_Company_Create` returns `ErrorNumber` and `ErrorDetail` for the API log (never for the user).
+- The sweeper gives up claimed jobs after 15 minutes and queued jobs after 2 hours. Task 6: at start the worker also enqueues `GetQueuedAsync()` (jobs whose queue entry was lost in a restart). Task 7: `GetCreationState` reports the pending retry; `CreateCompany` logs `ErrorNumber` / `ErrorDetail` when they are set.
