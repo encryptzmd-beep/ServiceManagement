@@ -7,6 +7,9 @@ its `Companies` row. Access to a module replaces access to a project.
 > only. They have **not been executed anywhere**. Rehearse them on restored
 > COPIES of the main database and of one tenant database before you run them on
 > the live server (see "Rehearsal on copies").
+>
+> The new API and the new UI have also **never run against a real API or
+> database**. Only unit tests and a build were run.
 
 The scripts, in the order they are used:
 
@@ -96,19 +99,37 @@ in the repository.
      database, provision status and the number of users who can open the Service
      module. Administrators are counted. Check it: each company with a database
      should be `Ready`.
-4. Deploy the new API. The new UI can be deployed with this release or later.
+4. Deploy the new API. The new UI can be deployed with this release or later,
+   but it works only with the new API (it needs `auth/modules`). Never serve
+   the new UI against the previous API.
 5. Start the API.
 
 ## Rehearsal on copies
 
 Do this once before the release, on restored copies.
 
-**Danger.** A restored copy of the main database contains the real connection
-details of every tenant. If you start the API against the copy and log in, it
-connects to the LIVE tenant databases and writes user-sync data into them. Do
-NOT start the API against the copy until every company row in the copy has been
-pointed at a tenant-database copy or set to not routable (`ProvisionStatus` not
-`Ready`).
+**Danger.** A restored copy of the main database holds the REAL connection
+details of every tenant, in TWO places:
+
+- `dbo.ProjectConnections`. The previous API reads it. Script 14 also copies it
+  onto `dbo.Companies`, every time script 14 runs for a company that has an
+  active project while the project tables exist (step 1a: it overwrites the
+  company's connection, key and scope from the active project and its
+  connection row).
+- `dbo.Companies`, after script 14. The new API reads it.
+
+If you start ANY API (the previous one or the new one) against the copy and log
+in, it connects to the LIVE tenant databases and writes user data into them.
+So:
+
+1. Before you run script 14 on the copy, and before you start any API against
+   the copy, point every `ProjectConnections` row in the copy at a
+   tenant-database copy, or set it inactive.
+2. Run script 14 on the copy.
+3. After script 14, check that `dbo.Companies` shows the copy too (server and
+   database name of every company), or that its `ProvisionStatus` is not
+   `Ready`.
+4. Only then start an API against the copy.
 
 The exact steps are in the plan file
 `docs/superpowers/plans/2026-10-11-company-routing-and-modules-backend.md`,
@@ -128,9 +149,33 @@ Task 13, steps 2 to 7. Besides what the plan lists, try these cases:
    and list that row. (Without a new cut-over, script 18 stops earlier with
    "already copied" and this check is never reached.)
 
+Then try the new UI against the new API on the copies:
+
+6. The company list is shown also when the user has only one company.
+7. The module screen shows the Service card.
+8. The branch screen is skipped when the user has only one branch.
+9. The branch name is shown in the header.
+10. Reload the page inside the application. The user stays logged in.
+11. After that reload, header, "Switch company" shows the company list.
+12. Two browser tabs on two different branches: the first tab reloads itself.
+13. A technician opens the site root and lands on the work orders.
+14. Reload the page on the company list before picking a company. The list is
+    still there and the user is still logged in.
+
+The detailed lists are in
+`docs/superpowers/plans/2026-10-11-company-routing-and-modules-backend.md`
+(Task 13) and `docs/superpowers/plans/2026-10-11-staff-scope-flow-ui.md`
+(Task 9).
+
 ## Check after the release
 
 - Staff login, select company, pick branch, open the dashboard.
+- New UI: the company list is shown (also with one company).
+- New UI: the module screen shows the Service card.
+- New UI: with one branch the branch screen is skipped.
+- New UI: the branch name is shown in the header.
+- New UI: reload the page inside the application. The user stays logged in.
+- New UI: after a reload, header, "Switch company" shows the company list.
 - Technician login, open work orders.
 - Customer portal login.
 - Platform Admin: the company's database is listed and "Test connection" succeeds.
@@ -155,9 +200,13 @@ Task 13, steps 2 to 7. Besides what the plan lists, try these cases:
    `Project tables restored.` and before the previous API is started.
    Run script 18 only if the previous API has NOT been started since script 15
    first restored the tables. If it has been started, do NOT run script 18. The
-   project tables are the live data. Correct connections in Platform Admin. (If
-   it is run anyway, it stops and lists the changed rows.)
-5. Deploy the previous API and UI, then start it.
+   project tables are the live data. Correct connections in Platform Admin. If
+   script 18 is run anyway: when a connection was saved since the rollback, it
+   stops and lists those rows. When none was saved, it copies, which changes
+   nothing that matters because the rows are unchanged.
+5. Deploy the previous API TOGETHER WITH the previous UI, then start it. The
+   new UI works only with the new API, so never leave the new UI in place.
+   Keep the previous UI build at hand for this.
 
 What the rollback (script 15) does:
 
@@ -201,6 +250,11 @@ What script 18 does:
     restored." Script 15 has not finished. Run it first.
   - "The connections were already copied back for this cut-over on ..." There is
     nothing more to do.
+  - "The check for connections changed after the rollback could not run.
+    Nothing was copied. ..." followed by the error text. Nothing was changed.
+    Do not start the previous API as if the copy had run: the connections in
+    `ProjectConnections` are still the old ones. Note the error text, fix the
+    cause, and run script 18 again.
   - "N connection row(s) were changed after the rollback. ..." Script 18 lists
     those rows (never a password). A connection was saved under the previous API
     since the rollback, so the project tables are the live data. Do not copy.
@@ -232,6 +286,13 @@ Still NOT restored:
 
 ## Things to know
 
+- Do not switch a company's Service module off by SQL
+  (`CompanyModules.IsEnabled = 0`) in production. Then no user can open the
+  Service module of that company (`dbo.fn_ModuleUsers` returns nobody), and the
+  next user synchronisation sends an empty user list to the company's database.
+  The full synchronisation deactivates every user and technician there that is
+  not in the list, so it would deactivate all of them. (This is fixed in a later
+  release.)
 - The API caches each company's connection without an expiry. A connection or
   an active flag changed directly in SQL needs an API restart before it takes
   effect. Changes made through Platform Admin do not: they drop the cached entry.
