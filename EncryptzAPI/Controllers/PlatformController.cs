@@ -96,6 +96,28 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SetProjectAccess(int projectId, [FromBody] SetProjectAccessRequest req)
             => Ok(await _service.SetProjectAccess(projectId, req, Actor()));
 
+        // ── MODULES OF A COMPANY ──────────────────
+
+        [PlatformUnlocked]
+        [HttpGet("companies/{companyId}/modules")]
+        public async Task<IActionResult> GetCompanyModules(int companyId)
+            => Ok(await _service.GetCompanyModules(companyId, Actor()));
+
+        [PlatformUnlocked]
+        [HttpPost("companies/{companyId}/modules")]
+        public async Task<IActionResult> SetCompanyModule(int companyId, [FromBody] SetCompanyModuleRequest req)
+            => Ok(await _service.SetCompanyModule(companyId, req, Actor()));
+
+        [PlatformUnlocked]
+        [HttpGet("companies/{companyId}/modules/{moduleKey}/access")]
+        public async Task<IActionResult> GetModuleAccess(int companyId, string moduleKey)
+            => Ok(await _service.GetModuleAccess(companyId, moduleKey, Actor()));
+
+        [PlatformUnlocked]
+        [HttpPost("companies/{companyId}/modules/{moduleKey}/access")]
+        public async Task<IActionResult> SetModuleAccess(int companyId, string moduleKey, [FromBody] SetProjectAccessRequest req)
+            => Ok(await _service.SetModuleAccess(companyId, moduleKey, req, Actor()));
+
         // ── MENU TREE ─────────────────────────────
 
         [PlatformUnlocked]

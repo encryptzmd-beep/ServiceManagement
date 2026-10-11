@@ -339,6 +339,110 @@ namespace EncryptzBL.Infrastructure.User.Modules
         }
 
         // ============================================
+        // MODULES OF A COMPANY + WHO MAY OPEN THEM
+        // ============================================
+
+        public async Task<ApiResponse<List<CompanyModuleDto>>> GetCompanyModules(int companyId, PlatformActor actor)
+        {
+            if (!ModuleAdminRules.CanViewModules(actor, companyId))
+                return ApiResponse<List<CompanyModuleDto>>.Fail(NotAllowed);
+
+            var list = await GetListAsync<CompanyModuleDto>("sp_Platform_GetCompanyModules", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId)
+            });
+
+            return ApiResponse<List<CompanyModuleDto>>.Ok(list);
+        }
+
+        public async Task<ApiResponse<bool>> SetCompanyModule(int companyId, SetCompanyModuleRequest req, PlatformActor actor)
+        {
+            // which modules a company has is its subscription: platform only
+            if (companyId <= 0 || !ModuleAdminRules.CanSwitchModules(actor))
+                return ApiResponse<bool>.Fail("Only a platform administrator can switch modules");
+
+            var moduleKey = ModuleAdminRules.NormalizeKey(req?.ModuleKey);
+            if (moduleKey == null)
+                return ApiResponse<bool>.Fail("Module not found");
+
+            var dt = await GetDataTableAsync("sp_Platform_SetCompanyModule", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId),
+                SqlParameterHelper.Input("@ModuleKey", moduleKey),
+                SqlParameterHelper.Input("@IsEnabled", req!.IsEnabled),
+                SqlParameterHelper.Input("@SavedBy", actor.UserId)
+            });
+
+            var result = ToFlag(dt);
+
+            // Switched ON: the company's users must be in its database again.
+            // Switched OFF: nothing is synchronised (the procedure behind the sync
+            // returns no company), so nobody in the tenant database changes.
+            if (result.Success && req.IsEnabled)
+                await _userSync.TrySyncCompanyUsersAsync(companyId);
+
+            return result;
+        }
+
+        public async Task<ApiResponse<List<ProjectAccessDto>>> GetModuleAccess(int companyId, string moduleKey, PlatformActor actor)
+        {
+            if (!ModuleAdminRules.CanManageAccess(actor, companyId))
+                return ApiResponse<List<ProjectAccessDto>>.Fail(NotAllowed);
+
+            var key = ModuleAdminRules.NormalizeKey(moduleKey);
+            if (key == null)
+                return ApiResponse<List<ProjectAccessDto>>.Fail("Module not found");
+
+            var list = await GetListAsync<ProjectAccessDto>("sp_Platform_GetModuleAccess", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId),
+                SqlParameterHelper.Input("@ModuleKey", key)
+            });
+
+            return ApiResponse<List<ProjectAccessDto>>.Ok(list);
+        }
+
+        public async Task<ApiResponse<bool>> SetModuleAccess(int companyId, string moduleKey, SetProjectAccessRequest req, PlatformActor actor)
+        {
+            if (!ModuleAdminRules.CanManageAccess(actor, companyId))
+                return ApiResponse<bool>.Fail(NotAllowed);
+
+            var key = ModuleAdminRules.NormalizeKey(moduleKey);
+            if (key == null || req == null || req.UserId <= 0)
+                return ApiResponse<bool>.Fail("Module or user not found");
+
+            var dt = await GetDataTableAsync("sp_Platform_SetModuleAccess", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId),
+                SqlParameterHelper.Input("@ModuleKey", key),
+                SqlParameterHelper.Input("@UserId", req.UserId),
+                SqlParameterHelper.Input("@HasAccess", req.HasAccess),
+                SqlParameterHelper.Input("@GrantedBy", actor.UserId)
+            });
+
+            var result = ToFlag(dt);
+
+            // the company DB mirrors who may work in the Service module (users, technicians)
+            if (result.Success && key == ModuleAccess.ServiceModuleKey)
+                await _userSync.TrySyncCompanyUsersAsync(companyId);
+
+            return result;
+        }
+
+        /// <summary>Procs answer with Success and Message.</summary>
+        private static ApiResponse<bool> ToFlag(DataTable? dt)
+        {
+            if (dt == null || dt.Rows.Count == 0)
+                return ApiResponse<bool>.Fail("Save failed");
+
+            var message = dt.Rows[0]["Message"]?.ToString() ?? "";
+
+            return Convert.ToInt32(dt.Rows[0]["Success"]) == 1
+                ? ApiResponse<bool>.Ok(true, message)
+                : ApiResponse<bool>.Fail(message);
+        }
+
+        // ============================================
         // MENU TREE
         // ============================================
 

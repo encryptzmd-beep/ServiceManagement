@@ -107,6 +107,26 @@ namespace EncryptzBL.DTO_s
         public bool HasAccess { get; set; }
     }
 
+    /// <summary>One module of the catalogue as a company has it.</summary>
+    public class CompanyModuleDto
+    {
+        public int ModuleId { get; set; }
+        public string ModuleKey { get; set; } = "";
+        public string ModuleName { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Icon { get; set; } = "";
+        public int SortOrder { get; set; }
+        public bool IsEnabled { get; set; }
+        /// <summary>Members who can open it now (0 while it is switched off).</summary>
+        public int UserCount { get; set; }
+    }
+
+    public class SetCompanyModuleRequest
+    {
+        public string ModuleKey { get; set; } = "";
+        public bool IsEnabled { get; set; }
+    }
+
     public class PlatformMenuDto
     {
         public int MenuId { get; set; }

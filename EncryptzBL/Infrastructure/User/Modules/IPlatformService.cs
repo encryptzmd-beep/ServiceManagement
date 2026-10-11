@@ -21,6 +21,12 @@ namespace EncryptzBL.Infrastructure.User.Modules
         Task<ApiResponse<List<ProjectAccessDto>>> GetProjectAccess(int projectId, PlatformActor actor);
         Task<ApiResponse<bool>> SetProjectAccess(int projectId, SetProjectAccessRequest req, PlatformActor actor);
 
+        Task<ApiResponse<List<CompanyModuleDto>>> GetCompanyModules(int companyId, PlatformActor actor);
+        Task<ApiResponse<bool>> SetCompanyModule(int companyId, SetCompanyModuleRequest req, PlatformActor actor);
+
+        Task<ApiResponse<List<ProjectAccessDto>>> GetModuleAccess(int companyId, string moduleKey, PlatformActor actor);
+        Task<ApiResponse<bool>> SetModuleAccess(int companyId, string moduleKey, SetProjectAccessRequest req, PlatformActor actor);
+
         Task<ApiResponse<List<PlatformMenuDto>>> GetMenus(PlatformActor actor);
         Task<ApiResponse<int>> SaveMenu(PlatformMenuDto dto, PlatformActor actor);
     }
