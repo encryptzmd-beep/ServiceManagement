@@ -165,7 +165,8 @@ export class PlatformAdminComponent implements OnInit {
     if (tab === 'locations' || tab === 'access') {
       // default to the project the admin is working in, else the first one
       if (!this.selectedProjectId()) {
-        const current = this.auth.selectedProjectId();
+        // a "project" is the company's database: its id is the company id
+        const current = this.auth.selectedCompanyId();
         const match = this.projects().find(p => p.projectId === current) ?? this.projects()[0];
         if (match) this.selectedProjectId.set(match.projectId);
       }

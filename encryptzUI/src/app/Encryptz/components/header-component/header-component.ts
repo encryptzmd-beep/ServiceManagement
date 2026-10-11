@@ -44,4 +44,9 @@ export class HeaderComponent {
 
     return name.split(' ').slice(1).join(' ');
   }
+
+  /** Branch the session works in ('' before one is chosen). */
+  get branchName(): string {
+    return this.auth.selectedLocationName();
+  }
 }

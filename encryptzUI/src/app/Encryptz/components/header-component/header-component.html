@@ -8,6 +8,9 @@
     {{ companyName }}
     <span class="brand-accent">{{ companySuffix }}</span>
   </span>
+  @if (branchName) {
+    <span class="brand-branch">· {{ branchName }}</span>
+  }
 </div>
   </div>
 
@@ -35,6 +38,15 @@
     <div class="dropdown" (click)="showDropdown = false">
       <a routerLink="/profile" class="dropdown-item">
         <span class="material-icons">person</span> Profile
+      </a>
+      <a routerLink="/select-branch" [queryParams]="{ module: auth.selectedModuleKey() }" class="dropdown-item">
+        <span class="material-icons">storefront</span> Switch branch
+      </a>
+      <a routerLink="/select-module" class="dropdown-item">
+        <span class="material-icons">apps</span> Modules
+      </a>
+      <a routerLink="/select-company" class="dropdown-item">
+        <span class="material-icons">apartment</span> Switch company
       </a>
       <a class="dropdown-item" (click)="auth.logout()">
         <span class="material-icons">logout</span> Logout

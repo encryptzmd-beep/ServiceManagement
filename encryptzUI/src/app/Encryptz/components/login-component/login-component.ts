@@ -145,31 +145,9 @@ private handlePostLogin(data: any): void {
 }
 
   private handlePostLoginWithData(userData: any, companies: any[]): void {
-    if (companies.length === 0) {
-      this.router.navigate(['/no-company']);
-    } else if (companies.length === 1) {
-      this.auth.selectCompany(companies[0].companyId).subscribe({
-        next: (res) => {
-          if (res.success && res.data) {
-            this.redirectByRole(res.data.role);
-          }
-        }
-      });
-    } else {
-      this.router.navigate(['/select-company']);
-    }
-  }
-
-  private redirectByRole(role: string): void {
-    if (role === 'Technician') {
-      this.router.navigate(['/technicians/work-orders']);
-    } else if (role === 'Admin' || role === 'CompanyAdmin') {
-      this.router.navigate(['/complaints/dashboard']);
-    } else if (role === 'Storekeeper') {
-      this.router.navigate(['/store/inventory']);
-    } else {
-      this.router.navigate(['/complaints/dashboard']);
-    }
+    // The company list is always shown, also for a single company (it is where a
+    // user creates or joins a company); the module and branch steps follow it.
+    this.router.navigate([companies.length === 0 ? '/no-company' : '/select-company']);
   }
 
   // ============================================
