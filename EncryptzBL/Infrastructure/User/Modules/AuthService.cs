@@ -744,16 +744,11 @@ namespace EncryptzBL.Infrastructure.User.Modules
             var role = row["RoleInCompany"]?.ToString() ?? "";
 
             var tenantKey = row["TenantKey"]?.ToString() ?? "";
-            if (row["ProvisionStatus"]?.ToString() != "Ready" || string.IsNullOrEmpty(tenantKey))
-                return (null, "Your company is still being set up. Please try again shortly");
-
-            var state = ModuleAccess.Evaluate(
+            var refusal = ModuleAccess.Refusal(
+                row["ProvisionStatus"]?.ToString(), tenantKey,
                 Convert.ToBoolean(row["CompanyEnabled"]), Convert.ToBoolean(row["UserGranted"]), role);
-
-            if (state == ModuleState.NotSubscribed)
-                return (null, "This module is not part of your company's subscription");
-            if (state == ModuleState.NoAccess)
-                return (null, "You don't have access to this module. Ask your administrator");
+            if (refusal != null)
+                return (null, refusal);
 
             return (new ModuleScope(tenantKey, Convert.ToInt32(row["TenantScopeId"]), role,
                 row["ModuleName"]?.ToString() ?? ""), "");
