@@ -1,4 +1,5 @@
 using EncryptzBL.Common;
+using EncryptzBL.Common.Provisioning;
 using EncryptzBL.Common.Tenant;
 using EncryptzBL.DTO_s;
 using Microsoft.Data.SqlClient;
@@ -44,6 +45,9 @@ namespace EncryptzBL.Infrastructure.User.Modules
             {
                 SqlParameterHelper.Input("@CompanyId", actor.IsPlatformAdmin ? 0 : actor.CompanyId)
             });
+
+            // why a set-up failed and where the database is: platform administrators only
+            PlatformCompanyDto.HideDatabaseDetail(list, actor.IsPlatformAdmin);
 
             return ApiResponse<List<PlatformCompanyDto>>.Ok(list);
         }
@@ -462,6 +466,141 @@ namespace EncryptzBL.Infrastructure.User.Modules
             return Convert.ToInt32(dt.Rows[0]["Success"]) == 1
                 ? ApiResponse<bool>.Ok(true, message)
                 : ApiResponse<bool>.Fail(message);
+        }
+
+        // ============================================
+        // DATABASE SERVERS + PLATFORM SETTINGS (platform administrators only)
+        // ============================================
+
+        public async Task<ApiResponse<List<DbServerDto>>> GetDbServers(PlatformActor actor)
+        {
+            if (!actor.IsPlatformAdmin)
+                return ApiResponse<List<DbServerDto>>.Fail(NotAllowed);
+
+            return ApiResponse<List<DbServerDto>>.Ok(await GetListAsync<DbServerDto>("sp_Platform_GetDbServers"));
+        }
+
+        public async Task<ApiResponse<int>> SaveDbServer(SaveDbServerRequest req, PlatformActor actor)
+        {
+            if (!actor.IsPlatformAdmin)
+                return ApiResponse<int>.Fail(NotAllowed);
+
+            if (req == null || string.IsNullOrWhiteSpace(req.ServerName) || string.IsNullOrWhiteSpace(req.AdminUser))
+                return ApiResponse<int>.Fail("Server and login are required");
+
+            if (req.ServerName.Trim().Length > 200 || req.AdminUser.Trim().Length > 100 || (req.ExtraOptions?.Length ?? 0) > 400)
+                return ApiResponse<int>.Fail("One of the values is too long");
+
+            // stored encrypted; empty on an edit keeps the stored one
+            var encrypted = string.IsNullOrEmpty(req.AdminPassword) ? null : _protector.Protect(req.AdminPassword);
+
+            var dt = await GetDataTableAsync("sp_Platform_SaveDbServer", new[]
+            {
+                SqlParameterHelper.Input("@DbServerId", req.DbServerId),
+                SqlParameterHelper.Input("@ServerName", req.ServerName.Trim()),
+                SqlParameterHelper.Input("@AdminUser", req.AdminUser.Trim()),
+                SqlParameterHelper.Input("@AdminPasswordEnc", (object?)encrypted ?? DBNull.Value),
+                SqlParameterHelper.Input("@ExtraOptions", Nullable(req.ExtraOptions)),
+                SqlParameterHelper.Input("@IsDefault", req.IsDefault),
+                SqlParameterHelper.Input("@IsActive", req.IsActive)
+            });
+
+            var result = ToResult(dt, "DbServerId");
+            if (result.Success)
+                _logger.LogInformation("Database server {DbServerId} saved by user {UserId} (default: {IsDefault})",
+                    result.Data, actor.UserId, req.IsDefault);
+
+            return result;
+        }
+
+        /// <summary>Can the API log in, and may that login create databases?</summary>
+        public async Task<ApiResponse<ConnectionTestResult>> TestDbServer(SaveDbServerRequest req, PlatformActor actor)
+        {
+            if (!actor.IsPlatformAdmin)
+                return ApiResponse<ConnectionTestResult>.Fail(NotAllowed);
+
+            if (req == null || string.IsNullOrWhiteSpace(req.ServerName) || string.IsNullOrWhiteSpace(req.AdminUser))
+                return ApiResponse<ConnectionTestResult>.Fail("Server and login are required");
+
+            var password = req.AdminPassword;
+
+            // editing without retyping the password: test with the stored one
+            if (string.IsNullOrEmpty(password) && req.DbServerId > 0)
+            {
+                var stored = await GetDataTableAsync("sp_Platform_GetDbServerSecret", new[]
+                {
+                    SqlParameterHelper.Input("@DbServerId", req.DbServerId)
+                });
+
+                if (stored != null && stored.Rows.Count > 0)
+                {
+                    try { password = _protector.Unprotect(stored.Rows[0]["AdminPasswordEnc"]?.ToString() ?? ""); }
+                    catch { password = null; }
+                }
+            }
+
+            if (string.IsNullOrEmpty(password))
+                return ApiResponse<ConnectionTestResult>.Fail("Enter the password to test the connection");
+
+            var result = new ConnectionTestResult();
+
+            try
+            {
+                var connectionString = new SqlConnectionStringBuilder(
+                    TenantConnectionString.Build(req.ServerName, "master", req.AdminUser, password, req.ExtraOptions))
+                { ConnectTimeout = 10, Pooling = false }.ConnectionString;
+
+                var master = new ExplicitDbHelper(connectionString);
+                var dt = await master.ExecuteQueryDataTableAsync(
+                    "SELECT CASE WHEN IS_SRVROLEMEMBER('dbcreator') = 1 OR IS_SRVROLEMEMBER('sysadmin') = 1 THEN 1 ELSE 0 END AS CanCreate");
+
+                result.Connected = true;
+                result.SchemaReady = dt.Rows.Count > 0 && Convert.ToInt32(dt.Rows[0]["CanCreate"]) == 1;
+                result.Message = result.SchemaReady
+                    ? "Connected. This login can create databases"
+                    : "Connected, but this login cannot create databases. Give it the dbcreator server role";
+            }
+            catch (Exception ex) when (ex is SqlException || ex is ArgumentException || ex is FormatException)
+            {
+                // never the exception text: it can name the server and the login, and a bad
+                // connection string can quote the password
+                _logger.LogWarning("Connection test of a database server failed ({ExceptionType}, user {UserId})",
+                    ex.GetType().Name, actor.UserId);
+                result.Message = "Could not connect. Check the server, login, password and options";
+            }
+
+            return ApiResponse<ConnectionTestResult>.Ok(result, result.Message);
+        }
+
+        public async Task<ApiResponse<List<PlatformSettingDto>>> GetSettings(PlatformActor actor)
+        {
+            if (!actor.IsPlatformAdmin)
+                return ApiResponse<List<PlatformSettingDto>>.Fail(NotAllowed);
+
+            return ApiResponse<List<PlatformSettingDto>>.Ok(await GetListAsync<PlatformSettingDto>("sp_Platform_GetSettings"));
+        }
+
+        public async Task<ApiResponse<bool>> SaveSetting(SavePlatformSettingRequest req, PlatformActor actor)
+        {
+            if (!actor.IsPlatformAdmin)
+                return ApiResponse<bool>.Fail(NotAllowed);
+
+            var (value, error) = PlatformSettingRules.Validate(req?.SettingKey, req?.SettingValue);
+            if (value == null)
+                return ApiResponse<bool>.Fail(error ?? "Unknown setting");
+
+            var dt = await GetDataTableAsync("sp_Platform_SaveSetting", new[]
+            {
+                SqlParameterHelper.Input("@SettingKey", req!.SettingKey),
+                SqlParameterHelper.Input("@SettingValue", value),
+                SqlParameterHelper.Input("@UpdatedBy", actor.UserId)
+            });
+
+            var result = ToFlag(dt);
+            if (result.Success)
+                _logger.LogInformation("Platform setting {SettingKey} changed by user {UserId}", req.SettingKey, actor.UserId);
+
+            return result;
         }
 
         // ============================================

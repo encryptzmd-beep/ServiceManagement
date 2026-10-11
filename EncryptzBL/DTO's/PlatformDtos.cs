@@ -34,6 +34,28 @@ namespace EncryptzBL.DTO_s
         public DateTime CreatedAt { get; set; }
         public int ProjectCount { get; set; }
         public int UserCount { get; set; }
+        /// <summary>None | Provisioning | Ready | Failed.</summary>
+        public string ProvisionStatus { get; set; } = "None";
+        /// <summary>Why the set-up failed. Platform administrators only.</summary>
+        public string ProvisionError { get; set; } = "";
+        /// <summary>Platform administrators only.</summary>
+        public string DatabaseName { get; set; } = "";
+
+        /// <summary>
+        /// Why a set-up failed and where the database is: platform administrators only
+        /// (the error text can name servers and logins). The status stays visible.
+        /// </summary>
+        public static void HideDatabaseDetail(IEnumerable<PlatformCompanyDto> companies, bool isPlatformAdmin)
+        {
+            if (isPlatformAdmin)
+                return;
+
+            foreach (var company in companies)
+            {
+                company.ProvisionError = "";
+                company.DatabaseName = "";
+            }
+        }
     }
 
     public class PlatformProjectDto
@@ -125,6 +147,46 @@ namespace EncryptzBL.DTO_s
     {
         public string ModuleKey { get; set; } = "";
         public bool IsEnabled { get; set; }
+    }
+
+    /// <summary>A SQL server on which company databases are created. The password is never sent out.</summary>
+    public class DbServerDto
+    {
+        public int DbServerId { get; set; }
+        public string ServerName { get; set; } = "";
+        public string AdminUser { get; set; } = "";
+        public string ExtraOptions { get; set; } = "";
+        public bool IsDefault { get; set; }
+        public bool IsActive { get; set; } = true;
+        public DateTime CreatedAt { get; set; }
+        public bool HasPassword { get; set; }
+        public int CompanyCount { get; set; }
+    }
+
+    public class SaveDbServerRequest
+    {
+        public int DbServerId { get; set; }
+        public string ServerName { get; set; } = "";
+        public string AdminUser { get; set; } = "";
+        /// <summary>Empty on an edit = keep the stored password.</summary>
+        public string? AdminPassword { get; set; }
+        public string? ExtraOptions { get; set; }
+        public bool IsDefault { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class PlatformSettingDto
+    {
+        public string SettingKey { get; set; } = "";
+        public string SettingValue { get; set; } = "";
+        public DateTime UpdatedAt { get; set; }
+        public string UpdatedByName { get; set; } = "";
+    }
+
+    public class SavePlatformSettingRequest
+    {
+        public string SettingKey { get; set; } = "";
+        public string? SettingValue { get; set; }
     }
 
     public class PlatformMenuDto

@@ -118,6 +118,33 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SetModuleAccess(int companyId, string moduleKey, [FromBody] SetProjectAccessRequest req)
             => Ok(await _service.SetModuleAccess(companyId, moduleKey, req, Actor()));
 
+        // ── DATABASE SERVERS + SETTINGS ───────────
+
+        [PlatformUnlocked]
+        [HttpGet("db-servers")]
+        public async Task<IActionResult> GetDbServers()
+            => Ok(await _service.GetDbServers(Actor()));
+
+        [PlatformUnlocked]
+        [HttpPost("db-servers/save")]
+        public async Task<IActionResult> SaveDbServer([FromBody] SaveDbServerRequest req)
+            => Ok(await _service.SaveDbServer(req, Actor()));
+
+        [PlatformUnlocked]
+        [HttpPost("db-servers/test")]
+        public async Task<IActionResult> TestDbServer([FromBody] SaveDbServerRequest req)
+            => Ok(await _service.TestDbServer(req, Actor()));
+
+        [PlatformUnlocked]
+        [HttpGet("settings")]
+        public async Task<IActionResult> GetSettings()
+            => Ok(await _service.GetSettings(Actor()));
+
+        [PlatformUnlocked]
+        [HttpPost("settings/save")]
+        public async Task<IActionResult> SaveSetting([FromBody] SavePlatformSettingRequest req)
+            => Ok(await _service.SaveSetting(req, Actor()));
+
         // ── MENU TREE ─────────────────────────────
 
         [PlatformUnlocked]
