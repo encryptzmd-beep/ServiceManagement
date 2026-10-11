@@ -3,11 +3,10 @@ import { Router } from '@angular/router';
 import { AuthService, Company } from '../../Auth/auth-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ProjectLocationSwitcherComponent } from '../project-location-switcher-component/project-location-switcher-component';
 
 @Component({
   selector: 'app-company-selector-component',
-  imports: [CommonModule, FormsModule, ProjectLocationSwitcherComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './company-selector-component.html',
   styleUrl: './company-selector-component.scss',
 })
