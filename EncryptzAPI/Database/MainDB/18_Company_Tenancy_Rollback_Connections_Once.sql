@@ -30,9 +30,10 @@
    That means the previous API has saved a connection since the rollback: the
    project tables are the live data and copying the company values would point a
    tenant back at an old server, database or password. It lists those rows
-   (never the passwords) and changes nothing. If script 15 printed "No project
-   tables were restored in this run", or the previous API has been started, do
-   not run this script. Correct connections in Platform Admin instead.
+   (never the passwords) and changes nothing. Run this script only if the
+   previous API has NOT been started since script 15 first restored the tables.
+   If it has been started, do not run this script: correct connections in
+   Platform Admin instead.
 
    It first lists the rows it will change (never the passwords), then changes
    them in ONE transaction. On an error everything is rolled back and the
@@ -109,32 +110,48 @@ GO
    ProjectConnections.UpdatedAt on every save. A newer row means ProjectConnections is
    the live data and the company rows are stale. The statements that name
    dbo.ProjectConnections and UpdatedAt are dynamic SQL, see the note below. */
-DECLARE @RolledBackAt DATETIME, @Changed INT = 0;
+DECLARE @RolledBackAt DATETIME, @Changed INT = 0, @Refuse TINYINT = 0, @GuardError NVARCHAR(2048);
 
-SELECT @RolledBackAt = o.create_date
-FROM sys.objects o
-WHERE o.object_id = OBJECT_ID('dbo.sp_Project_GetConnection');
+/* A RAISERROR of severity 16 inside a TRY block jumps to the CATCH, so the checks
+   only set @Refuse; the messages are raised after the CATCH. A runtime error in the
+   check itself also stops the script (it must fail closed). */
+BEGIN TRY
+    SELECT @RolledBackAt = o.create_date
+    FROM sys.objects o
+    WHERE o.object_id = OBJECT_ID('dbo.sp_Project_GetConnection');
 
-IF @RolledBackAt IS NULL
+    IF @RolledBackAt IS NULL
+        SET @Refuse = 1;
+    ELSE
+    BEGIN
+        EXEC sp_executesql N'SELECT @n = COUNT(*) FROM dbo.ProjectConnections WHERE UpdatedAt > @since',
+             N'@n INT OUTPUT, @since DATETIME', @n = @Changed OUTPUT, @since = @RolledBackAt;
+
+        IF @Changed > 0
+        BEGIN
+            SET @Refuse = 2;
+            EXEC sp_executesql N'SELECT ''Connection changed after the rollback'' AS Info, pc.ProjectKey, pc.DatabaseName, pc.IsActive, pc.UpdatedAt
+                                 FROM dbo.ProjectConnections pc WHERE pc.UpdatedAt > @since ORDER BY pc.ProjectKey',
+                 N'@since DATETIME', @since = @RolledBackAt;
+        END
+    END
+END TRY
+BEGIN CATCH
+    SET @GuardError = ERROR_MESSAGE();
+    RAISERROR('The check for connections changed after the rollback could not run. Nothing was copied. %s', 16, 1, @GuardError);
+    SET NOEXEC ON;
+END CATCH
+
+IF @Refuse = 1
 BEGIN
     RAISERROR('Run 15_Company_Tenancy_Rollback.sql first: the previous procedures are not restored.', 16, 1);
     SET NOEXEC ON;
 END
-ELSE
+ELSE IF @Refuse = 2
 BEGIN
-    EXEC sp_executesql N'SELECT @n = COUNT(*) FROM dbo.ProjectConnections WHERE UpdatedAt > @since',
-         N'@n INT OUTPUT, @since DATETIME', @n = @Changed OUTPUT, @since = @RolledBackAt;
-
-    IF @Changed > 0
-    BEGIN
-        EXEC sp_executesql N'SELECT ''Connection changed after the rollback'' AS Info, pc.ProjectKey, pc.DatabaseName, pc.IsActive, pc.UpdatedAt
-                             FROM dbo.ProjectConnections pc WHERE pc.UpdatedAt > @since ORDER BY pc.ProjectKey',
-             N'@since DATETIME', @since = @RolledBackAt;
-        RAISERROR('%d connection row(s) were changed after the rollback. The project tables are the live data now: nothing was copied. Correct connections in Platform Admin instead.', 16, 1, @Changed);
-        SET NOEXEC ON;
-    END
+    RAISERROR('%d connection row(s) were changed after the rollback. The project tables are the live data now: nothing was copied. Correct connections in Platform Admin instead.', 16, 1, @Changed);
+    SET NOEXEC ON;
 END
-GO
 
 /* The statements that name Projects, ProjectConnections or the columns added by
    script 13 are dynamic SQL on purpose: this batch is compiled even when a guard

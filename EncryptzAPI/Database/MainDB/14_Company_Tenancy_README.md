@@ -31,8 +31,7 @@ The scripts, in the order they are used:
 The six files are frozen. If something needs correcting, add a NEW numbered
 file. The next free number in this folder is 19. A later script must not
 re-create `dbo.sp_Tenant_GetConnection` or `dbo.sp_Project_GetConnection`:
-scripts 14, 15 and 18 use their dates to know where a cut-over and a rollback
-happened. Every SQL change must be a file
+script 14 and script 15 set these dates and script 18 reads them. Every SQL change must be a file
 in the repository.
 
 ## Before the release (any time, the running API is not affected)
@@ -124,9 +123,10 @@ Task 13, steps 2 to 7. Besides what the plan lists, try these cases:
    Platform Admin, run script 15, then script 18. The connection in
    `ProjectConnections` must follow.
 4. Run script 18 a second time. It must stop with "already copied".
-5. Roll back again, then edit a connection in Platform Admin under the previous
-   API without running script 18, and run script 18. It must stop and list that
-   row.
+5. Run script 14 again (a new cut-over), then script 15. Start the previous API
+   and edit a connection in Platform Admin. Then run script 18. It must stop
+   and list that row. (Without a new cut-over, script 18 stops earlier with
+   "already copied" and this check is never reached.)
 
 ## Check after the release
 
@@ -153,10 +153,10 @@ Task 13, steps 2 to 7. Besides what the plan lists, try these cases:
 4. In the main database run `18_Company_Tenancy_Rollback_Connections_Once.sql`.
    Run it in the same sitting, right after script 15 printed
    `Project tables restored.` and before the previous API is started.
-   If the previous API has been started since script 15 ran, or script 15
-   printed `No project tables were restored in this run: project access was left as it is.`,
-   do NOT run script 18. The project tables are already the live data. Correct
-   connections in Platform Admin.
+   Run script 18 only if the previous API has NOT been started since script 15
+   first restored the tables. If it has been started, do NOT run script 18. The
+   project tables are the live data. Correct connections in Platform Admin. (If
+   it is run anyway, it stops and lists the changed rows.)
 5. Deploy the previous API and UI, then start it.
 
 What the rollback (script 15) does:
@@ -205,6 +205,9 @@ What script 18 does:
     those rows (never a password). A connection was saved under the previous API
     since the rollback, so the project tables are the live data. Do not copy.
     Correct connections in Platform Admin.
+    It can also appear after a cut-over attempt that did not finish, where the
+    newer row may be script 18's own earlier copy. The action is the same:
+    there is nothing to copy; use Platform Admin.
 - Script 18 copies once per cut-over. Run again, it stops with a message and
   changes nothing. Once the previous API has been running, the project tables
   are the live data.
