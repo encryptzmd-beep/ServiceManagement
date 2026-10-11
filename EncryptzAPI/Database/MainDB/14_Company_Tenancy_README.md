@@ -17,6 +17,7 @@ The scripts, in the order they are used:
 - `13_Company_Tenancy_Schema.sql` - adds columns and tables. Safe ahead of the release.
 - `14_Company_Tenancy_Cutover.sql` - the cut-over, run during the release.
 - `19_Module_Management.sql` - run after script 14: the procedures behind the Modules switch and module access in Platform Admin; also makes switching the Service module off safe. Run it again every time script 14 is run again.
+- `20_Company_Provisioning.sql` - run after script 19: lets users create a company and the API build its database. See `20_Company_Provisioning_README.md`. Run it again every time script 14 is run again.
 - `15_Company_Tenancy_Rollback.sql` - the undo: restores the project tables and project access.
 - `18_Company_Tenancy_Rollback_Connections_Once.sql` - run right after script 15: copies connection changes made since the cut-over back to the project tables, once per cut-over.
 - `17_Company_Tenancy_Rollback_Connections.sql` - superseded by script 18. Do not run it.
@@ -32,8 +33,8 @@ The scripts, in the order they are used:
 
 ## Never edit these scripts
 
-The seven files (13 to 19) are frozen. If something needs correcting, add a NEW numbered
-file. The next free number in this folder is 20. A later script must not
+The eight files (13 to 20) are frozen. If something needs correcting, add a NEW numbered
+file. The next free number in this folder is 21. A later script must not
 re-create `dbo.sp_Tenant_GetConnection` or `dbo.sp_Project_GetConnection`:
 script 14 and script 15 set these dates and script 18 reads them. Every SQL change must be a file
 in the repository.
@@ -92,7 +93,7 @@ in the repository.
    - After such an error, fix the cause and run script 14 again. It is safe to
      run again. Once the tables are renamed, a second run prints
      `Project tables are already renamed: data copy skipped, procedures refreshed.`
-     and only refreshes the procedures. Then run script 19 again.
+     and only refreshes the procedures. Then run scripts 19 and 20 again.
    - The script also lists project grants of people who are not members of the
      company. They could not enter before and cannot enter now. They are not
      migrated.
@@ -104,7 +105,7 @@ in the repository.
    and re-creates `dbo.sp_Company_GetUsersForSync`. It changes no table and no
    data, and nothing in any tenant database. It is safe to run again. Run it
    after script 14 and before the API is started. **Every time script 14 is run
-   again, run script 19 again afterwards.** Script 14 re-creates one procedure
+   again, run scripts 19 and 20 again afterwards.** Script 14 re-creates one procedure
    in its earlier form.
 5. Deploy the new API. The new UI can be deployed with this release or later,
    but it works only with the new API (it needs `auth/modules`). Never serve
@@ -327,7 +328,7 @@ Still NOT restored:
   module is opened). User and technician changes made while the module is off
   reach the company's database only after it is switched on again.
   Without script 19 the earlier danger applies: do not switch a module off
-  before script 19 has been run (and run script 19 again after script 14). The
+  before script 19 has been run (and run scripts 19 and 20 again after script 14). The
   API also refuses to send an empty user list, so script 19 is the first
   safeguard and the API check the second.
 - Before an Undo, switch the Service module on again for every company where it
@@ -340,7 +341,7 @@ Still NOT restored:
   last Service user of a company stays active in the company's database until a
   later synchronisation has at least one user (login is still decided by the main
   database).
-- Every time script 14 is run again, run script 19 again afterwards. Script 14
+- Every time script 14 is run again, run scripts 19 and 20 again afterwards. Script 14
   re-creates one procedure in its earlier form.
 - The API caches each company's connection without an expiry. A connection or
   an active flag changed directly in SQL needs an API restart before it takes
