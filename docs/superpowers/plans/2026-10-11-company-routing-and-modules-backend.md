@@ -21,6 +21,9 @@
 
 - The SQL Server in `EncryptzAPI/appsettings.json` is the LIVE server. Only `MainDBEncryptz` and `HamsterserviceDB` may be touched, and only with read-only `SELECT` statements. Never run a script from this plan, or any repo script, against the live server. Scripts are run by the owner.
 - Never run `EncryptzAPI/Database/MainDB/01_Schema.sql`, `02_Routing_Procs.sql`, `04_ControlPlane_Procs.sql` or `EncryptzAPI/mainDB.sql` to build a test database: they contain `USE MainDBEncryptz` / `CREATE DATABASE MainDBEncryptz`.
+- Every SQL change is a file in the repo whose name starts with a number: `EncryptzAPI/Database/MainDB/NN_Name.sql` (main DB) or `EncryptzAPI/Database/ProjectDB/NN_Name.sql` (tenant DB), each with its own number. This plan uses `13`, `14` and `15` in `MainDB`; the next free number there is `16`.
+- An SQL file is frozen once it is committed. Never edit a committed SQL file, including the ones this plan creates and every script that already exists in the repo. A correction found later (by a reviewer, a test or the owner) goes in a NEW file with the next free number (for example `16_Company_Tenancy_Fixes.sql`) that alters what the earlier file created. While a file is still being written inside its own task, before its commit, it may be edited.
+- Never give the owner SQL only in a message and never run SQL that is not in such a file. The only exception is the test-only statements of Task 13, which are run on database copies and must never be saved as a script.
 - New SQL scripts contain no `USE` statement. They refuse to run in a system database or in a database without `dbo.Companies`.
 - All new SQL is re-runnable (`IF NOT EXISTS`, `CREATE OR ALTER`).
 - Do not change any stored procedure or table inside a tenant database.
@@ -52,7 +55,7 @@
 | `EncryptzAPI/Middleware/TenantResolutionMiddleware.cs` | Reads `TenantKey`, fallbacks, no location header |
 | `EncryptzAPI/Database/MainDB/13_Company_Tenancy_Schema.sql` (new) | Additive schema + module seed |
 | `EncryptzAPI/Database/MainDB/14_Company_Tenancy_Cutover.sql` (new) | Data copy, procedures, rename of old tables |
-| `EncryptzAPI/Database/MainDB/14_Company_Tenancy_Rollback.sql` (new) | Undo of the cut-over |
+| `EncryptzAPI/Database/MainDB/15_Company_Tenancy_Rollback.sql` (new) | Undo of the cut-over |
 | `EncryptzBL/Common/Tenant/ConnectionResolver.cs` | Resolve by tenant key from `Companies` |
 | `EncryptzBL/Common/Tenant/TenantUserSyncService.cs`, `ITenantUserSyncService.cs` | Sync by company |
 | `EncryptzBL/Infrastructure/User/Modules/AuthService.cs`, `IAuthService.cs` | Modules, branches, set-scope, token, invitations |
@@ -1366,7 +1369,7 @@ git commit -m "Add main DB schema for company-level tenancy and modules"
 
 **Files:**
 - Create: `EncryptzAPI/Database/MainDB/14_Company_Tenancy_Cutover.sql`
-- Create: `EncryptzAPI/Database/MainDB/14_Company_Tenancy_Rollback.sql`
+- Create: `EncryptzAPI/Database/MainDB/15_Company_Tenancy_Rollback.sql`
 - Reference: `docs/superpowers/plans/assets/2026-10-11-maindb-project-procs-live.sql` (the definitions being replaced)
 
 **Interfaces:**
@@ -1411,7 +1414,7 @@ Create `EncryptzAPI/Database/MainDB/14_Company_Tenancy_Cutover.sql` with this co
 
    Select the SaaS main database in SSMS before running. No USE statement on
    purpose. SAFE TO RE-RUN (after the rename it only refreshes the procedures).
-   Undo: 14_Company_Tenancy_Rollback.sql
+   Undo: 15_Company_Tenancy_Rollback.sql
    ============================================================================= */
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
@@ -2497,7 +2500,7 @@ GO
 
 - [ ] **Step 5: Write the rollback script**
 
-Create `EncryptzAPI/Database/MainDB/14_Company_Tenancy_Rollback.sql` by running this from the repository root (it writes the header, then the previous definitions of every replaced procedure taken from the live snapshot):
+Create `EncryptzAPI/Database/MainDB/15_Company_Tenancy_Rollback.sql` by running this from the repository root (it writes the header, then the previous definitions of every replaced procedure taken from the live snapshot):
 
 ```bash
 {
@@ -2557,7 +2560,7 @@ GO
 SET NOEXEC OFF;
 GO
 EOF
-} > EncryptzAPI/Database/MainDB/14_Company_Tenancy_Rollback.sql
+} > EncryptzAPI/Database/MainDB/15_Company_Tenancy_Rollback.sql
 ```
 
 - [ ] **Step 6: Check both scripts**
@@ -2565,10 +2568,10 @@ EOF
 Run:
 
 ```bash
-grep -nEi "^\s*USE |CREATE DATABASE|DROP DATABASE|DROP TABLE" EncryptzAPI/Database/MainDB/14_Company_Tenancy_Cutover.sql EncryptzAPI/Database/MainDB/14_Company_Tenancy_Rollback.sql
+grep -nEi "^\s*USE |CREATE DATABASE|DROP DATABASE|DROP TABLE" EncryptzAPI/Database/MainDB/14_Company_Tenancy_Cutover.sql EncryptzAPI/Database/MainDB/15_Company_Tenancy_Rollback.sql
 grep -c "^CREATE OR ALTER" EncryptzAPI/Database/MainDB/14_Company_Tenancy_Cutover.sql
-grep -c "^CREATE OR ALTER PROCEDURE" EncryptzAPI/Database/MainDB/14_Company_Tenancy_Rollback.sql
-grep -n "^CREATE   PROCEDURE\|^CREATE PROCEDURE" EncryptzAPI/Database/MainDB/14_Company_Tenancy_Rollback.sql
+grep -c "^CREATE OR ALTER PROCEDURE" EncryptzAPI/Database/MainDB/15_Company_Tenancy_Rollback.sql
+grep -n "^CREATE   PROCEDURE\|^CREATE PROCEDURE" EncryptzAPI/Database/MainDB/15_Company_Tenancy_Rollback.sql
 ```
 
 Expected: first command prints nothing; second prints `23` (1 function + 22 procedures); third prints `22`; fourth prints nothing.
@@ -2591,7 +2594,7 @@ NOT HANDLED: sp_User_SelectCompany
 - [ ] **Step 7: Commit**
 
 ```bash
-git add EncryptzAPI/Database/MainDB/14_Company_Tenancy_Cutover.sql EncryptzAPI/Database/MainDB/14_Company_Tenancy_Rollback.sql docs/superpowers/plans/assets
+git add EncryptzAPI/Database/MainDB/14_Company_Tenancy_Cutover.sql EncryptzAPI/Database/MainDB/15_Company_Tenancy_Rollback.sql docs/superpowers/plans/assets
 git commit -m "Add main DB cut-over to company-level tenancy with rollback"
 ```
 
@@ -3901,7 +3904,7 @@ its `Companies` row; access to a module replaces access to a project.
 ## Undo
 
 1. Stop the API.
-2. In the main database run `14_Company_Tenancy_Rollback.sql`.
+2. In the main database run `15_Company_Tenancy_Rollback.sql`.
 3. Deploy the previous API and start it.
 
 Module access granted or removed after the cut-over is not carried back.
@@ -3993,7 +3996,7 @@ Restart the API (the resolver caches). Call 6. Expected: `success: false`, `"You
 
 - [ ] **Step 7: Check the rollback in the copy**
 
-Stop the API. Run `14_Company_Tenancy_Rollback.sql` in the main-database copy.
+Stop the API. Run `15_Company_Tenancy_Rollback.sql` in the main-database copy.
 Expected: `Project tables restored.` then `Rollback complete.` and:
 
 ```sql
