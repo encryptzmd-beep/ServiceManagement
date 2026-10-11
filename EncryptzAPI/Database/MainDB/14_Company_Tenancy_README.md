@@ -157,10 +157,15 @@ Then try the new UI against the new API on the copies:
 9. The branch name is shown in the header.
 10. Reload the page inside the application. The user stays logged in.
 11. After that reload, header, "Switch company" shows the company list.
-12. Two browser tabs on two different branches: the first tab reloads itself.
-13. A technician opens the site root and lands on the work orders.
+12. Two browser tabs on two different branches: the first tab reloads itself
+    and then shows the branch chosen in the second tab.
+13. A technician opens the site root: they arrive at the company list (not at
+    an error), and after choosing company, module and branch they are on the
+    work orders.
 14. Reload the page on the company list before picking a company. The list is
     still there and the user is still logged in.
+15. Two tabs: log out in one, then log in again in the other. The login must
+    succeed and stay logged in (no bouncing back to the login page).
 
 The detailed lists are in
 `docs/superpowers/plans/2026-10-11-company-routing-and-modules-backend.md`
@@ -202,8 +207,8 @@ The detailed lists are in
    first restored the tables. If it has been started, do NOT run script 18. The
    project tables are the live data. Correct connections in Platform Admin. If
    script 18 is run anyway: when a connection was saved since the rollback, it
-   stops and lists those rows. When none was saved, it copies, which changes
-   nothing that matters because the rows are unchanged.
+   stops and lists those rows. When none was saved, it copies; that is
+   still correct, because no connection was saved under the previous API.
 5. Deploy the previous API TOGETHER WITH the previous UI, then start it. The
    new UI works only with the new API, so never leave the new UI in place.
    Keep the previous UI build at hand for this.
@@ -291,7 +296,7 @@ Still NOT restored:
   Service module of that company (`dbo.fn_ModuleUsers` returns nobody), and the
   next user synchronisation sends an empty user list to the company's database.
   The full synchronisation deactivates every user and technician there that is
-  not in the list, so it would deactivate all of them. (This is fixed in a later
+  not in the list, so it would deactivate all of them. (This will be fixed in a later
   release.)
 - The API caches each company's connection without an expiry. A connection or
   an active flag changed directly in SQL needs an API restart before it takes

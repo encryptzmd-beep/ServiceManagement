@@ -113,6 +113,8 @@ export class AuthService {
 
     // another tab changed the session this tab is really using (the token is shared): reload to show it
     const onStorage = (event: StorageEvent) => {
+      // a tab without a session (the login page) has nothing to mislabel; a customer page uses other keys
+      if (!this.isLoggedIn() || this.currentPath().startsWith('/customer')) return;
       const watched = ['encryptz_token', 'selected_company_id', 'selected_module_key', 'selected_location_id'];
       if (event.key === null || (watched.includes(event.key) && event.oldValue !== event.newValue)) {
         this.reloadPage();
@@ -120,6 +122,10 @@ export class AuthService {
     };
     window.addEventListener('storage', onStorage);
     inject(DestroyRef).onDestroy(() => window.removeEventListener('storage', onStorage));
+  }
+
+  protected currentPath(): string {
+    return window.location.pathname;
   }
 
   protected reloadPage(): void {

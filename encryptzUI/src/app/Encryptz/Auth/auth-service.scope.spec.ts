@@ -209,8 +209,10 @@ describe('AuthService scope', () => {
 
   describe('changes made in another tab', () => {
     const fire = (init: StorageEventInit) => window.dispatchEvent(new StorageEvent('storage', init));
-    const watch = () => {
+    const watch = (loggedIn = true, path = '/complaints/dashboard') => {
+      if (loggedIn) localStorage.setItem('encryptz_user', JSON.stringify({ token: 't', userId: 5, role: 'Admin', menus: [] }));
       const auth = create();
+      vi.spyOn(auth as any, 'currentPath').mockReturnValue(path);
       const spy = vi.spyOn(auth as any, 'reloadPage').mockImplementation(() => {});
       return spy;
     };
@@ -225,6 +227,18 @@ describe('AuthService scope', () => {
       const spy = watch();
       fire({ key: null });
       expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not reload a tab that has no session', () => {
+      const spy = watch(false, '/login');
+      fire({ key: 'encryptz_token', oldValue: null, newValue: 'new' });
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('does not reload a customer portal page', () => {
+      const spy = watch(true, '/customer/dashboard');
+      fire({ key: 'encryptz_token', oldValue: 'a', newValue: 'b' });
+      expect(spy).not.toHaveBeenCalled();
     });
 
     it('ignores an unrelated key', () => {
