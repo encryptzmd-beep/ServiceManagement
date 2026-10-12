@@ -1165,6 +1165,122 @@ describe('PlatformAdminComponent branch access', () => {
     expect(fixture.componentInstance.branchAccess()!.users.length).toBe(0);
   });
 
+  it('says Loading while the load is on its way', () => {
+    const pending = new Subject<any>();
+    api.getBranchAccess = () => pending;
+    const fixture = create();
+
+    expect(text(fixture)).toContain('Loading…');
+    expect(fixture.nativeElement.querySelector('.pa-branch-table')).toBeNull();
+
+    pending.next({ success: true, message: '', data: view() });
+    fixture.detectChanges();
+    expect(text(fixture)).not.toContain('Loading…');
+    expect(fixture.nativeElement.querySelector('.pa-branch-table')).not.toBeNull();
+  });
+
+  it('says it could not load on an HTTP error and loads again on Refresh', () => {
+    let attempts = 0;
+    api.getBranchAccess = (companyId: number) => {
+      attempts++;
+      calls.push(['getBranchAccess', companyId]);
+      return attempts === 1 ? throwError(() => ({ status: 500, error: {} })) : of({ success: true, message: '', data: view() });
+    };
+    const fixture = create();
+
+    expect(text(fixture)).toContain('Could not load branch access.');
+    expect(text(fixture)).not.toContain('Loading…');
+    const refresh = (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(b => b.textContent?.trim() === 'Refresh')!;
+    expect(refresh).toBeTruthy();
+
+    refresh.click();
+    fixture.detectChanges();
+
+    expect(attempts).toBe(2);
+    expect(text(fixture)).not.toContain('Could not load branch access.');
+    expect(fixture.nativeElement.querySelector('.pa-branch-table')).not.toBeNull();
+  });
+
+  it('does not show the failure for the "not set up" note', () => {
+    api.getBranchAccess = () => of({ success: false, message: "Branch access is not set up in this company's database yet", data: null });
+    const fixture = create();
+
+    expect(fixture.componentInstance.branchAccessFailed()).toBe(false);
+    expect(text(fixture)).not.toContain('Could not load branch access.');
+  });
+
+  it('keeps the new company untouched when a toggle answers after another company was picked', () => {
+    const pending = new Subject<any>();
+    api.setBranchAccess = () => pending;
+    const fixture = create();
+    const c = fixture.componentInstance;
+    const data = c.branchAccess()!;
+
+    c.toggleBranch(data.users[1], data.branches[1]);   // Tech T, North, company 2
+    c.onProjectPicked(3);
+    fixture.detectChanges();
+    pending.next({ success: true, message: 'Branch access granted', data: true });
+    pending.complete();
+    fixture.detectChanges();
+
+    expect(c.branchAccess()!.users[1].locationIds).toEqual([10]);
+  });
+
+  it('puts the checkbox back and says so when the change fails with an HTTP error', () => {
+    api.setBranchAccess = () => throwError(() => ({ status: 500, error: {} }));
+    const fixture = create();
+    const box = boxes(fixture)[1];
+    box.click();
+    fixture.detectChanges();
+
+    expect(box.checked).toBe(false);
+    expect(text(fixture)).toContain('Could not change branch access');
+    expect(fixture.componentInstance.branchAccess()!.users[1].locationIds).toEqual([10]);
+  });
+
+  it('forgets the branch access when the screen is locked', () => {
+    const fixture = create();
+    expect(fixture.componentInstance.branchAccess()).not.toBeNull();
+
+    fixture.componentInstance.lockNow();
+
+    expect(fixture.componentInstance.branchAccess()).toBeNull();
+  });
+
+  it('explains that lists of technicians stay company-wide', () => {
+    const fixture = create();
+    expect(text(fixture)).toContain('Lists of technicians stay company-wide: a technician only sees the jobs of the branches ticked here.');
+  });
+
+  it('shows a hint under the Branches table about new branches', () => {
+    api.getLocations = () => of({ success: true, message: '', data: [] });
+    const fixture = create();
+    fixture.componentInstance.setTab('locations');
+    fixture.detectChanges();
+
+    expect(text(fixture)).toContain('A new branch is given to nobody but company administrators until it is ticked under Branch Access.');
+  });
+
+  it('points to Branch Access after a new branch is saved, but not after an edit', () => {
+    api.getLocations = () => of({ success: true, message: '', data: [] });
+    api.saveLocation = () => of({ success: true, message: 'Branch saved.', data: 1 });
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('locations');
+    fixture.detectChanges();
+
+    c.newLocation();
+    c.locationForm!.locationName = 'South';
+    c.saveLocation();
+    fixture.detectChanges();
+    expect(text(fixture)).toContain('Branch saved. Tick it for the members under Branch Access.');
+
+    c.editLocation({ locationId: 5, locationName: 'South', locationCode: '', address: '', city: '', isActive: true } as any);
+    c.saveLocation();
+    fixture.detectChanges();
+    expect(text(fixture)).not.toContain('Branch saved. Tick it');
+  });
+
   it('never says Project or Location', () => {
     const fixture = create();
     expect(text(fixture)).not.toMatch(/Project/i);

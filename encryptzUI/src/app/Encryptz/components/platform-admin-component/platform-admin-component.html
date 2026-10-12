@@ -245,9 +245,12 @@
             }
           </tbody>
         </table>
+        <div class="pa-hint">A new branch is given to nobody but company administrators until it is ticked under Branch Access.</div>
       } @else if (tab() === 'branchAccess') {
         @if (branchAccessNote()) {
           <div class="pa-hint">{{ branchAccessNote() }}@if (branchAccessNote() === branchAccessNotSetUp) { Until then every member can work in every branch.}</div>
+        } @else if (branchAccessFailed()) {
+          <div class="pa-hint">Could not load branch access. <button class="fx-action-btn" (click)="refreshBranchAccess()">Refresh</button></div>
         } @else if (branchAccess(); as ba) {
           @if (activeBranches().length === 0) {
             <div class="pa-hint">No active branch yet.</div>
@@ -284,8 +287,10 @@
                 }
               </tbody>
             </table>
-            <div class="pa-hint">Company administrators always have every branch. A branch created later is given to nobody until it is ticked here.</div>
+            <div class="pa-hint">Company administrators always have every branch. A branch created later is given to nobody until it is ticked here. Lists of technicians stay company-wide: a technician only sees the jobs of the branches ticked here.</div>
           }
+        } @else {
+          <div class="pa-hint">Loading…</div>
         }
       } @else if (modulesFailed() && !loading()) {
         <div class="pa-hint">Could not load the modules.</div>

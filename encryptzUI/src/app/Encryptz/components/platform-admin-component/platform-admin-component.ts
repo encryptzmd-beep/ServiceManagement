@@ -103,6 +103,8 @@ export class PlatformAdminComponent implements OnInit {
   branchAccess = signal<BranchAccess | null>(null);
   /** Shown in place of the table (e.g. the company database has no branch access yet). */
   branchAccessNote = signal('');
+  /** The branch access load ended with an HTTP error (not the "not set up" note). */
+  branchAccessFailed = signal(false);
   branchBusy = signal<ReadonlySet<string>>(new Set());
   /** The running load of the Branches or Module Access tab; dropped when another load starts or the tab changes. */
   private tabSub = new Subscription();
@@ -211,6 +213,7 @@ export class PlatformAdminComponent implements OnInit {
     this.branchAccess.set(null);
     this.branchBusy.set(new Set());
     this.branchAccessNote.set('');
+    this.branchAccessFailed.set(false);
     this.resetTabLoad();
     this.otpSent.set(false);
     this.otpMessage.set('');
@@ -259,6 +262,8 @@ export class PlatformAdminComponent implements OnInit {
   }
 
   // ── loading ───────────────────────────────────────────────────────────────
+
+  refreshBranchAccess(): void { this.loadProjectData(); }
 
   loadCompanies(): void {
     this.loading.set(true);
@@ -309,6 +314,7 @@ export class PlatformAdminComponent implements OnInit {
     } else if (this.tab() === 'branchAccess') {
       this.branchAccess.set(null);
       this.branchAccessNote.set('');
+      this.branchAccessFailed.set(false);
       this.tabSub.add(this.api.getBranchAccess(projectId).subscribe({
         next: res => {
           this.tabPending = false;
@@ -317,7 +323,7 @@ export class PlatformAdminComponent implements OnInit {
           // "not set up yet" is a state of the company database, not an error
           this.branchAccessNote.set(res.message || 'Could not load branch access');
         },
-        error: err => { this.tabPending = false; this.fail(err, 'Could not load branch access'); },
+        error: err => { this.tabPending = false; this.branchAccessFailed.set(true); this.fail(err, 'Could not load branch access'); },
       }));
     } else {
       // the picker holds a company id: a "project" is the company's database
@@ -623,6 +629,7 @@ export class PlatformAdminComponent implements OnInit {
     if (!form || !projectId) return;
     if (!form.locationName.trim()) { this.formError.set('Branch name is required'); return; }
 
+    const isNew = !form.locationId;
     this.saving.set(true);
     const token = this.saveToken;
     this.api.saveLocation(projectId, form).subscribe({
@@ -631,7 +638,7 @@ export class PlatformAdminComponent implements OnInit {
         if (current) this.saving.set(false);
         if (!res.success) { if (current) this.formError.set(res.message); return; }
         if (current) this.locationForm = null;
-        this.notify(res.message, true);
+        this.notify(isNew ? `${res.message}${/[.!?]$/.test(res.message ?? '') ? '' : '.'} Tick it for the members under Branch Access.` : res.message, true);
         // a late answer reloads the branches only while that tab is still shown
         if (current || this.tab() === 'locations') this.loadProjectData();
       },
