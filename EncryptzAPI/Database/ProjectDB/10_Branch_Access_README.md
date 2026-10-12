@@ -41,9 +41,13 @@ mark.
 ## Rules
 
 - Company administrators (`Admin`, `CompanyAdmin`) always have every branch;
-  nothing is stored for them.
+  the API ignores any stored rows for them. (The first run of the script also
+  stores rows for the administrators that exist then; an administrator who is
+  later made an ordinary member keeps those branches and gets no later ones.)
 - A new member gets every active branch the first time their branches are
-  asked for (at their first login).
+  asked for: at their first login, or when an administrator opens Branch Access
+  or changes one of their branches. A member whose company has no active branch
+  at that moment is not marked and gets them when a branch exists.
 - A branch created later is given to nobody until an administrator ticks it in
   Platform Admin -> Branch Access.
 - A member with no branch sees "No branch assigned" and cannot enter. Removing a
@@ -58,8 +62,9 @@ the five procedures by hand; the API then falls back to "every branch".
 
 ## Check after running
 
-- `SELECT COUNT(*) FROM dbo.UserLocationAccessInit` equals the number of linked
-  users (`Users.MainUserId` not null).
+- Straight after the first run, `SELECT COUNT(*) FROM dbo.UserLocationAccessInit`
+  equals the number of linked users (`Users.MainUserId` greater than 0). Later it
+  grows: members are marked at their first use, before they are mirrored.
 - Log in as a technician: the branches are the same as before.
 
 ## Rehearsal on a copy
@@ -72,3 +77,11 @@ the five procedures by hand; the API then falls back to "every branch".
    after logging in again.
 5. Add a new branch: only administrators see it.
 6. An administrator still sees all branches.
+
+## One company per database
+
+The "set once" mark is kept per member, not per company. In a database that
+holds more than one company or project (the older shared layout), a member who
+was given branches for one of them gets none automatically for another: an
+administrator ticks them in Branch Access. Databases created by the API hold
+one company, so this does not arise there.

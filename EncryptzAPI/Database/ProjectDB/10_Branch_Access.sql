@@ -14,7 +14,7 @@
 
    A member is identified by the MAIN user id (MainDB.dbo.Users.UserId, which is
    dbo.Users.MainUserId here). Company administrators have every branch: the API
-   says so with @IsAdmin and nothing is stored for them.
+   says so with @IsAdmin and ignores any rows stored for them.
 
    First branches: a member who has no "set once" mark gets every ACTIVE branch
    and the mark. This happens here for the members that exist now, and later the
@@ -40,7 +40,7 @@ ELSE IF OBJECT_ID('dbo.Locations') IS NULL OR OBJECT_ID('dbo.Users') IS NULL OR 
 
 IF @problem IS NOT NULL
 BEGIN
-    RAISERROR(@problem, 16, 1);
+    RAISERROR('%s', 16, 1, @problem);
     SET NOEXEC ON;
 END
 GO
@@ -98,7 +98,11 @@ BEGIN
       AND NOT EXISTS (SELECT 1 FROM dbo.UserLocationAccessInit i WITH (UPDLOCK, HOLDLOCK)
                       WHERE i.MainUserId = j.MainUserId);
 
+    /* no active branch yet: nothing to give, and no mark, so the member gets
+       their first branches when one exists */
     IF EXISTS (SELECT 1 FROM @new)
+       AND EXISTS (SELECT 1 FROM dbo.Locations
+                   WHERE CompanyId = @CompanyId AND ProjectId = @ProjectId AND IsActive = 1)
     BEGIN
         INSERT INTO dbo.UserLocationAccess (MainUserId, LocationId)
         SELECT n.MainUserId, l.LocationId
