@@ -44,9 +44,4 @@ export class CompanyService {
     return this.http.get<any>(`${this.apiUrl}/available-roles`)
       .pipe(map(res => (Array.isArray(res) ? res : (res?.data ?? [])) as string[]));
   }
-
-  // Create company (DISABLED - returns error message)
-  createCompany(data: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/create-company`, data);
-  }
 }

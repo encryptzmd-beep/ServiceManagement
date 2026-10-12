@@ -7,6 +7,7 @@ import {environment} from '../../../../src/environments/environment.development'
 import { MenuAccessDto, RoleDto, UserDto } from '../components/auth-management-component/auth-management-component';
 import { LocationMonitorService } from '../Services/location-monitor-service';
 import { legacyModuleKey, ScopeState } from './scope-flow';
+import { CompanyCreationState, NewCompanyForm } from './company-creation';
 
 export interface Company {
   companyId: number;
@@ -19,6 +20,8 @@ export interface Company {
   isLinked: boolean;
   /** State of the company's database: None | Provisioning | Ready | Failed. */
   provisionStatus?: string;
+  /** The user created this company and may retry a failed set-up. */
+  isCreator?: boolean;
 }
 
 export interface MyProfile {
@@ -483,6 +486,28 @@ private setSessionWithCompanies(data: ExtendedLoginResponse): void {
   //       }
   //     }));
   // }
+
+  /** Whether the user may create a company now, and why not. */
+  getCompanyCreation(): Observable<ApiResponse<CompanyCreationState>> {
+    return this.http.get<ApiResponse<CompanyCreationState>>(`${this.apiUrl}/company-creation`);
+  }
+
+  /** Who creates it comes from the token: nothing about the user is sent. */
+  createCompany(form: NewCompanyForm): Observable<ApiResponse<{ companyId: number; provisionStatus: string }>> {
+    const text = (value: string) => (value ?? '').trim();
+    return this.http.post<ApiResponse<{ companyId: number; provisionStatus: string }>>(`${this.apiUrl}/create-company`, {
+      companyName: text(form.companyName),
+      companyCode: text(form.companyCode).toUpperCase(),
+      firstBranchName: text(form.firstBranchName),
+      address: text(form.address),
+      city: text(form.city),
+      phoneNumber: text(form.phoneNumber),
+    });
+  }
+
+  retryProvision(companyId: number): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.apiUrl}/companies/${companyId}/retry-provision`, {});
+  }
 
   // NEW: Get User's Companies
   getUserCompanies(): Observable<Company[]> {
