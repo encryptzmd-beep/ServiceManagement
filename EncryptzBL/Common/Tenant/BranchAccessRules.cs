@@ -1,3 +1,5 @@
+using System.Data;
+using EncryptzBL.Common.Provisioning;
 using EncryptzBL.DTO_s;
 
 namespace EncryptzBL.Common.Tenant
@@ -21,6 +23,33 @@ namespace EncryptzBL.Common.Tenant
         {
             if (!branchFound) return UnknownBranchMessage;
             return hasAccess ? null : NoAccessMessage;
+        }
+
+        /// <summary>
+        /// The company database does not have the branch-access script yet (the procedure
+        /// does not exist): the caller falls back to "every branch", as before the script.
+        /// </summary>
+        public static bool IsMissingBranchAccess(Exception? ex)
+            => CompanyCreateRules.IsNotInstalled(ex);
+
+        /// <summary>
+        /// Reads the answer of the branch validation. With the new procedure the row says
+        /// whether the member has the branch; with the old one a row means "yes" (that
+        /// database has no branch access). An unexpected shape never opens a branch.
+        /// </summary>
+        public static (bool Found, bool HasAccess) ValidationOutcome(DataTable? table, bool newProcedure)
+        {
+            if (table == null || table.Rows.Count == 0)
+                return (false, false);
+
+            if (!newProcedure)
+                return (true, true);
+
+            if (!table.Columns.Contains("HasAccess"))
+                return (true, false);
+
+            var value = table.Rows[0]["HasAccess"];
+            return (true, value != DBNull.Value && Convert.ToBoolean(value));
         }
 
         /// <summary>Why this member's branches cannot be changed; null when they can.</summary>

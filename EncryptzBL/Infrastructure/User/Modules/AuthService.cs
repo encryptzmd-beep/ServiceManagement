@@ -806,6 +806,61 @@ namespace EncryptzBL.Infrastructure.User.Modules
             }, "Success");
         }
 
+        /// <summary>
+        /// The branches of the company this member may work in. A company database without
+        /// the branch-access script answers as before it: every active branch.
+        /// </summary>
+        private static async Task<DataTable?> ReadBranchesAsync(ExplicitDbHelper tenantDb, int companyId, int scopeId, int userId, bool isAdmin)
+        {
+            try
+            {
+                return await tenantDb.ExecuteDataTableAsync("sp_Branch_GetForUser", new[]
+                {
+                    SqlParameterHelper.Input("@CompanyId", companyId),
+                    SqlParameterHelper.Input("@ProjectId", scopeId),
+                    SqlParameterHelper.Input("@MainUserId", userId),
+                    SqlParameterHelper.Input("@IsAdmin", isAdmin)
+                });
+            }
+            catch (Exception ex) when (BranchAccessRules.IsMissingBranchAccess(ex))
+            {
+                return await tenantDb.ExecuteDataTableAsync("sp_Project_GetLocations", new[]
+                {
+                    SqlParameterHelper.Input("@CompanyId", companyId),
+                    SqlParameterHelper.Input("@ProjectId", scopeId)
+                });
+            }
+        }
+
+        /// <summary>Whether the branch exists and whether this member may work in it.</summary>
+        private static async Task<(bool Found, bool HasAccess)> ValidateBranchAsync(ExplicitDbHelper tenantDb, int companyId, int scopeId, int locationId, int userId, bool isAdmin)
+        {
+            try
+            {
+                var table = await tenantDb.ExecuteDataTableAsync("sp_Branch_ValidateForUser", new[]
+                {
+                    SqlParameterHelper.Input("@CompanyId", companyId),
+                    SqlParameterHelper.Input("@ProjectId", scopeId),
+                    SqlParameterHelper.Input("@LocationId", locationId),
+                    SqlParameterHelper.Input("@MainUserId", userId),
+                    SqlParameterHelper.Input("@IsAdmin", isAdmin)
+                });
+
+                return BranchAccessRules.ValidationOutcome(table, newProcedure: true);
+            }
+            catch (Exception ex) when (BranchAccessRules.IsMissingBranchAccess(ex))
+            {
+                var table = await tenantDb.ExecuteDataTableAsync("sp_Location_Validate", new[]
+                {
+                    SqlParameterHelper.Input("@CompanyId", companyId),
+                    SqlParameterHelper.Input("@ProjectId", scopeId),
+                    SqlParameterHelper.Input("@LocationId", locationId)
+                });
+
+                return BranchAccessRules.ValidationOutcome(table, newProcedure: false);
+            }
+        }
+
         public async Task<ApiResponse<List<LocationDto>>> GetLocations(int userId, int companyId, string moduleKey)
         {
             var (scope, error) = await ResolveModuleScope(userId, companyId, moduleKey);
@@ -818,11 +873,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             {
                 var tenantDb = new ExplicitDbHelper(await _connectionResolver.GetServiceConnectionAsync(scope.TenantKey));
 
-                dt = await tenantDb.ExecuteDataTableAsync("sp_Project_GetLocations", new[]
-                {
-                    SqlParameterHelper.Input("@CompanyId", companyId),
-                    SqlParameterHelper.Input("@ProjectId", scope.ScopeId)
-                });
+                dt = await ReadBranchesAsync(tenantDb, companyId, scope.ScopeId, userId, BranchAccessRules.HasEveryBranch(scope.Role));
             }
             catch (Exception ex)
             {
@@ -855,17 +906,12 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 return ApiResponse<LoginResponseDto>.Fail(error);
 
             // 2) The branch exists and is active in the COMPANY's OWN DB
-            DataTable? vl;
+            (bool Found, bool HasAccess) branch;
             try
             {
                 var tenantDb = new ExplicitDbHelper(await _connectionResolver.GetServiceConnectionAsync(scope.TenantKey));
 
-                vl = await tenantDb.ExecuteDataTableAsync("sp_Location_Validate", new[]
-                {
-                    SqlParameterHelper.Input("@CompanyId", companyId),
-                    SqlParameterHelper.Input("@ProjectId", scope.ScopeId),
-                    SqlParameterHelper.Input("@LocationId", locationId)
-                });
+                branch = await ValidateBranchAsync(tenantDb, companyId, scope.ScopeId, locationId, userId, BranchAccessRules.HasEveryBranch(scope.Role));
             }
             catch (Exception ex)
             {
@@ -873,8 +919,9 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 return ApiResponse<LoginResponseDto>.Fail("Your company database is not reachable right now. Please try again shortly");
             }
 
-            if (vl == null || vl.Rows.Count == 0)
-                return ApiResponse<LoginResponseDto>.Fail("Invalid location for this company");
+            var branchRefusal = BranchAccessRules.EntryRefusal(branch.Found, branch.HasAccess);
+            if (branchRefusal != null)
+                return ApiResponse<LoginResponseDto>.Fail(branchRefusal);
 
             // 3) Users/technicians are owned by MainDB: refresh the company DB's mirror and
             //    resolve this user's ids inside it (business procs + FKs use the local ids)
