@@ -159,7 +159,7 @@ namespace EncryptzTests
             public Task<ProvisionJob?> BeginAsync(int companyId) => throw new NotSupportedException();
             public Task<bool> CompleteAsync(ProvisionJob job, string databaseName) => throw new NotSupportedException();
             public Task FailAsync(ProvisionJob job, string error) => throw new NotSupportedException();
-            public Task<ProvisionState?> GetStateAsync(int companyId) => throw new NotSupportedException();
+            public Task<AbandonResult?> AbandonAsync(ProvisionJob job, string databaseName) => throw new NotSupportedException();
         }
 
         private sealed class WorkerLogger : Microsoft.Extensions.Logging.ILogger<ProvisioningWorker>
@@ -211,7 +211,7 @@ namespace EncryptzTests
             public Task<ProvisionJob?> BeginAsync(int companyId) => throw new NotSupportedException();
             public Task<bool> CompleteAsync(ProvisionJob job, string databaseName) => throw new NotSupportedException();
             public Task FailAsync(ProvisionJob job, string error) => throw new NotSupportedException();
-            public Task<ProvisionState?> GetStateAsync(int companyId) => throw new NotSupportedException();
+            public Task<AbandonResult?> AbandonAsync(ProvisionJob job, string databaseName) => throw new NotSupportedException();
             public Task<int> FailStuckAsync(int olderThanMinutes) => throw new NotSupportedException();
         }
     }

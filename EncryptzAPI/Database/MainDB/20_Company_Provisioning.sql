@@ -141,7 +141,10 @@ GO
 /* How many companies the user has created, the limit, whether a server is there
    and whether an earlier company of the user is waiting for a retry.
    A company whose set-up failed does not count, unless it has a database (one
-   attached by hand and switched off). */
+   attached by hand and switched off).
+   PendingRetry: a Failed company without a database blocks its creator only
+   while the creator is still an ACTIVE member of it, that is while the creator
+   may retry it (same rule as sp_Provision_Retry). */
 CREATE OR ALTER PROCEDURE dbo.sp_Company_GetCreationState
     @UserId INT
 AS
@@ -161,7 +164,9 @@ BEGIN
                                WHERE c.CreatedBy = @UserId AND c.IsActive = 1
                                  AND c.ProvisionStatus = 'Failed'
                                  AND c.DbServerId IS NOT NULL
-                                 AND NULLIF(LTRIM(RTRIM(ISNULL(c.DatabaseName, ''))), '') IS NULL)
+                                 AND NULLIF(LTRIM(RTRIM(ISNULL(c.DatabaseName, ''))), '') IS NULL
+                                 AND EXISTS (SELECT 1 FROM dbo.CompanyUsers cu
+                                             WHERE cu.CompanyId = c.CompanyId AND cu.UserId = @UserId AND cu.IsActive = 1))
                   THEN 1 ELSE 0 END AS BIT)                                                         AS PendingRetry;
 END
 GO
@@ -172,6 +177,8 @@ GO
    Two requests of the same user wait for each other, so the limit holds. A user
    whose earlier company is waiting for a retry cannot create another one: failed
    companies do not count, so they could otherwise be used to pass the limit.
+   (Only while the user is still an active member of that company: otherwise the
+   user cannot retry it, see sp_Provision_Retry, and would be blocked for good.)
    ErrorNumber / ErrorDetail are for the API's log only, never for the caller. */
 CREATE OR ALTER PROCEDURE dbo.sp_Company_Create
     @CompanyName     NVARCHAR(200),
@@ -227,11 +234,13 @@ BEGIN
         ELSE IF ISNULL(@IsPlatformAdmin, 0) = 0 AND @Created >= @Limit
             SET @Message = 'You have reached the number of companies you can create';
         ELSE IF ISNULL(@IsPlatformAdmin, 0) = 0
-                AND EXISTS (SELECT 1 FROM dbo.Companies
-                            WHERE CreatedBy = @CreatedBy AND IsActive = 1
-                              AND ProvisionStatus = 'Failed'
-                              AND DbServerId IS NOT NULL
-                              AND NULLIF(LTRIM(RTRIM(ISNULL(DatabaseName, ''))), '') IS NULL)
+                AND EXISTS (SELECT 1 FROM dbo.Companies c
+                            WHERE c.CreatedBy = @CreatedBy AND c.IsActive = 1
+                              AND c.ProvisionStatus = 'Failed'
+                              AND c.DbServerId IS NOT NULL
+                              AND NULLIF(LTRIM(RTRIM(ISNULL(c.DatabaseName, ''))), '') IS NULL
+                              AND EXISTS (SELECT 1 FROM dbo.CompanyUsers cu
+                                          WHERE cu.CompanyId = c.CompanyId AND cu.UserId = @CreatedBy AND cu.IsActive = 1))
             SET @Message = 'Your earlier company is waiting for a retry';
         ELSE IF EXISTS (SELECT 1 FROM dbo.Companies WHERE CompanyCode = @CompanyCode)
             SET @Message = 'This company code is already in use';
@@ -350,7 +359,10 @@ GO
    a job that was given up, retried or overtaken (a database attached by hand)
    must not become Ready through an old attempt. @ServerName / @AdminUser are
    what the attempt connected with: if the server row was edited meanwhile, the
-   database was built somewhere else than the row now says, and nothing is saved. */
+   database was built somewhere else than the row now says, and nothing is saved.
+   Nothing is saved either when ANOTHER company already names this database (a
+   platform administrator attached the generated name to it by hand while the
+   build ran): two companies never become Ready on one database here. */
 CREATE OR ALTER PROCEDURE dbo.sp_Provision_Complete
     @CompanyId    INT,
     @Attempt      UNIQUEIDENTIFIER,
@@ -378,7 +390,8 @@ BEGIN
       AND NULLIF(LTRIM(RTRIM(ISNULL(c.DatabaseName, ''))), '') IS NULL
       AND NULLIF(LTRIM(RTRIM(ISNULL(@DatabaseName, ''))), '') IS NOT NULL
       AND s.ServerName = @ServerName
-      AND s.AdminUser  = @AdminUser;
+      AND s.AdminUser  = @AdminUser
+      AND NOT EXISTS (SELECT 1 FROM dbo.Companies x WHERE x.CompanyId <> c.CompanyId AND x.DatabaseName = @DatabaseName);
 
     SELECT CAST(CASE WHEN @@ROWCOUNT = 1 THEN 1 ELSE 0 END AS INT) AS Success,
            ISNULL((SELECT TenantKey FROM dbo.Companies WHERE CompanyId = @CompanyId), '') AS TenantKey;
@@ -389,9 +402,10 @@ GO
    still waiting for its first database (see section 4). It is the LAST thing an
    attempt does, after its clean-up: it RELEASES the job (ProvisionAttempt NULL),
    and only a released job can be retried at once (sp_Provision_Retry).
-   It also acts when the sweeper marked the company Failed first
-   (sp_Provision_FailStuck keeps the attempt): the attempt's own reason, and its
-   note about a database left on the server, replace the sweeper's text. */
+   It also acts when the company is Failed already and the attempt was kept (the
+   sweeper, sp_Provision_FailStuck, or the attempt's own sp_Provision_Abandon):
+   the attempt's own reason, and its note about a database left on the server,
+   replace that text. */
 CREATE OR ALTER PROCEDURE dbo.sp_Provision_Fail
     @CompanyId INT,
     @Attempt   UNIQUEIDENTIFIER,
@@ -412,22 +426,56 @@ BEGIN
 END
 GO
 
-/* For the worker: what the company's set-up looks like now. Asked before a
-   database is dropped (is the job still this attempt's? does the company name
-   this database?) and when the answer of sp_Provision_Complete was lost.
-   ProvisionAttempt is NULL for a queued or released job. No row when the company
-   does not exist. */
-CREATE OR ALTER PROCEDURE dbo.sp_Provision_GetStatus
-    @CompanyId INT
+/* The attempt gives its job up and asks, in the same statement, whether it may
+   drop the database it built. The drop goes by NAME, so the answer is yes only
+   when ALL of this holds at one moment:
+     - the job is still this attempt's;
+     - the company is still waiting for its first database (see section 4) and is
+       Provisioning, or Failed (the sweeper gave it up and kept the attempt);
+     - NO company at all names this database (a platform administrator can attach
+       the generated name to any company by hand).
+   Then the company is marked Failed and the attempt is KEPT: nothing can complete
+   or retry the job while the attempt drops its database. The attempt releases the
+   job afterwards with sp_Provision_Fail. If it dies before that, the company can
+   be retried 30 minutes after the attempt started (sp_Provision_Retry):
+   ProvisionStartedAt is not touched here.
+   One row: MayDrop (1 only when the UPDATE changed the row) and what the company
+   looks like now, so that the caller can tell why not. No row when the company
+   does not exist. Also asked when the answer of sp_Provision_Complete was lost. */
+CREATE OR ALTER PROCEDURE dbo.sp_Provision_Abandon
+    @CompanyId    INT,
+    @Attempt      UNIQUEIDENTIFIER,
+    @DatabaseName NVARCHAR(200)
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT ProvisionStatus, ProvisionAttempt,
-           ISNULL(DatabaseName, '') AS DatabaseName,
-           ISNULL(ServerName, '')   AS ServerName
-    FROM dbo.Companies
-    WHERE CompanyId = @CompanyId;
+    DECLARE @MayDrop BIT = 0;
+
+    UPDATE c
+    SET c.ProvisionStatus = 'Failed',
+        c.ProvisionError  = CASE WHEN c.ProvisionStatus = 'Failed' THEN c.ProvisionError
+                                 ELSE 'The set-up failed and is being cleaned up.' END
+    FROM dbo.Companies c
+    WHERE c.CompanyId = @CompanyId
+      AND c.ProvisionAttempt = @Attempt
+      AND c.ProvisionStatus IN ('Provisioning', 'Failed')
+      AND c.DbServerId IS NOT NULL
+      AND NULLIF(LTRIM(RTRIM(ISNULL(c.DatabaseName, ''))), '') IS NULL
+      AND NULLIF(LTRIM(RTRIM(ISNULL(@DatabaseName, ''))), '') IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM dbo.Companies x WHERE x.DatabaseName = @DatabaseName);
+
+    IF @@ROWCOUNT = 1 SET @MayDrop = 1;
+
+    SELECT @MayDrop                   AS MayDrop,
+           c.ProvisionStatus,
+           c.ProvisionAttempt,
+           ISNULL(c.DatabaseName, '') AS DatabaseName,
+           CAST(CASE WHEN EXISTS (SELECT 1 FROM dbo.Companies x
+                                  WHERE x.CompanyId <> c.CompanyId AND x.DatabaseName = @DatabaseName)
+                     THEN 1 ELSE 0 END AS BIT) AS UsedByAnother
+    FROM dbo.Companies c
+    WHERE c.CompanyId = @CompanyId;
 END
 GO
 
@@ -456,8 +504,10 @@ GO
    must have been released (ProvisionAttempt NULL: sp_Provision_Fail, or a queued
    job given up by the sweeper), or its attempt must have started more than 30
    minutes ago (an attempt that died without releasing it: the API was stopped
-   hard). 30 minutes is longer than any attempt lives (12-minute time-out plus
-   its clean-up), so a Failed company can always be retried by then. */
+   hard, also right after sp_Provision_Abandon marked the company Failed). 30
+   minutes is longer than any attempt lives (12-minute time-out plus its
+   clean-up), so a Failed company can be retried by then - by those who may, and
+   while there is an active default server. */
 CREATE OR ALTER PROCEDURE dbo.sp_Provision_Retry
     @CompanyId       INT,
     @UserId          INT,
@@ -523,7 +573,8 @@ GO
    that timed out has finished its clean-up before it is given up here.
    ProvisionAttempt of a claimed job is KEPT: the attempt may still be alive. It
    then finds the company no longer Provisioning, cannot complete, removes its own
-   database and releases the job itself (sp_Provision_Fail). Until then, or until
+   database (sp_Provision_Abandon says whether it may) and releases the job itself
+   (sp_Provision_Fail). Until then, or until
    30 minutes after the attempt started, the company cannot be retried
    (sp_Provision_Retry). */
 CREATE OR ALTER PROCEDURE dbo.sp_Provision_FailStuck
@@ -567,7 +618,8 @@ BEGIN
 END
 GO
 
-/* For the API only (connection test with the stored password). */
+/* For the API only (connection test with the stored password; before a save, to
+   see whether the server name or login changes). Never expose through an endpoint. */
 CREATE OR ALTER PROCEDURE dbo.sp_Platform_GetDbServerSecret
     @DbServerId INT
 AS

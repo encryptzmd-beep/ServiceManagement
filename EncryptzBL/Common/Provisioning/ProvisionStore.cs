@@ -75,11 +75,14 @@ namespace EncryptzBL.Common.Provisioning
             });
         }
 
-        public async Task<ProvisionState?> GetStateAsync(int companyId)
+        public async Task<AbandonResult?> AbandonAsync(ProvisionJob job, string databaseName)
         {
-            var dt = await GetDataTableAsync("sp_Provision_GetStatus", new[]
+            // one statement decides and marks: see sp_Provision_Abandon
+            var dt = await GetDataTableAsync("sp_Provision_Abandon", new[]
             {
-                SqlParameterHelper.Input("@CompanyId", companyId)
+                SqlParameterHelper.Input("@CompanyId", job.CompanyId),
+                SqlParameterHelper.Input("@Attempt", job.Attempt),
+                SqlParameterHelper.Input("@DatabaseName", databaseName)
             });
 
             if (dt == null || dt.Rows.Count == 0)
@@ -90,11 +93,12 @@ namespace EncryptzBL.Common.Provisioning
             // NULL while the job is queued or was released
             Guid? attempt = row["ProvisionAttempt"] is Guid value ? value : null;
 
-            return new ProvisionState(
+            return new AbandonResult(
+                row["MayDrop"] != DBNull.Value && Convert.ToBoolean(row["MayDrop"]),
                 (row["ProvisionStatus"]?.ToString() ?? "").Trim(),
                 attempt,
                 (row["DatabaseName"]?.ToString() ?? "").Trim(),
-                (row["ServerName"]?.ToString() ?? "").Trim());
+                row["UsedByAnother"] != DBNull.Value && Convert.ToBoolean(row["UsedByAnother"]));
         }
 
         public async Task<int> FailStuckAsync(int olderThanMinutes)

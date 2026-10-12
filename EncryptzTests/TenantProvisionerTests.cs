@@ -17,12 +17,14 @@ namespace EncryptzTests
                 ServerName = "srv", AdminUser = "creator", AdminPassword = "secret-pw", ExtraOptions = "", LookupSourceDb = ""
             };
             public bool CompleteAnswer = true;
-            public Exception? BeginThrows, CompleteThrows, StateThrows, FailThrows;
-            /// <summary>What the main database says when asked: by default the job is still this attempt's.</summary>
-            public ProvisionState? State = new("Provisioning", TenantProvisionerTests.Attempt, "", "");
+            public Exception? BeginThrows, CompleteThrows, AbandonThrows, FailThrows;
+            /// <summary>The answer of sp_Provision_Abandon: by default the job was still this attempt's and nobody names the database.</summary>
+            public AbandonResult? Abandon = new(true, "Failed", TenantProvisionerTests.Attempt, "", false);
             public readonly List<string> Calls = new();
             public readonly List<Guid> Attempts = new();
             public string? Error;
+            /// <summary>Shared with the server when a test needs the order across both.</summary>
+            public List<string>? Timeline;
 
             public Task<ProvisionJob?> BeginAsync(int companyId)
             {
@@ -40,16 +42,19 @@ namespace EncryptzTests
             public Task FailAsync(ProvisionJob job, string error)
             {
                 Calls.Add("fail");
+                Timeline?.Add("fail");
                 Attempts.Add(job.Attempt);
                 Error = error;
                 if (FailThrows != null) throw FailThrows;
                 return Task.CompletedTask;
             }
-            public Task<ProvisionState?> GetStateAsync(int companyId)
+            public Task<AbandonResult?> AbandonAsync(ProvisionJob job, string databaseName)
             {
-                Calls.Add("state");
-                if (StateThrows != null) throw StateThrows;
-                return Task.FromResult(State);
+                Calls.Add("abandon:" + databaseName);
+                Timeline?.Add("abandon:" + databaseName);
+                Attempts.Add(job.Attempt);
+                if (AbandonThrows != null) throw AbandonThrows;
+                return Task.FromResult(Abandon);
             }
             public Task<int> FailStuckAsync(int olderThanMinutes) => Task.FromResult(0);
             public Task<IReadOnlyList<int>> GetQueuedAsync() => Task.FromResult<IReadOnlyList<int>>(Array.Empty<int>());
@@ -60,6 +65,8 @@ namespace EncryptzTests
             public bool Exists;
             public Exception? EnsureThrows, ExistsThrows, CreateThrows, BuildThrows, DropThrows;
             public int EnsureCalls;
+            /// <summary>Shared with the store when a test needs the order across both.</summary>
+            public List<string>? Timeline;
             /// <summary>What was done on the server (EnsureReady touches no server and is counted apart).</summary>
             public readonly List<string> Calls = new();
 
@@ -91,6 +98,7 @@ namespace EncryptzTests
             public Task DropDatabaseAsync(ProvisionJob job, string databaseName)
             {
                 Calls.Add("drop:" + databaseName);
+                Timeline?.Add("drop:" + databaseName);
                 if (DropThrows != null) throw DropThrows;
                 return Task.CompletedTask;
             }
@@ -154,7 +162,7 @@ namespace EncryptzTests
             Assert.Equal(ProvisionOutcome.Skipped, await provisioner.RunAsync(7, CancellationToken.None));
             Assert.Empty(server.Calls);
             Assert.DoesNotContain("fail", store.Calls);
-            Assert.DoesNotContain("state", store.Calls);
+            Assert.DoesNotContain(store.Calls, c => c.StartsWith("abandon"));
         }
 
         [Fact]
@@ -285,25 +293,25 @@ namespace EncryptzTests
         public async Task A_job_that_was_given_up_meanwhile_drops_its_database()
         {
             var (provisioner, store, server) = Make();
-            store.CompleteAnswer = false;   // the sweeper marked the company Failed while the script ran,
-            store.State = new ProvisionState("Failed", Attempt, "", "");   // and left the job with this attempt
+            store.CompleteAnswer = false;   // the sweeper marked the company Failed while the script ran and left the job with this attempt
 
             Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
             Assert.Contains("drop:" + Db, server.Calls);
             Assert.Equal("The set-up was given up before it finished.", store.Error);
-            Assert.Equal(new[] { "begin", "complete:" + Db, "state", "fail" }, store.Calls);   // asked before the drop, released after it
+            Assert.Equal(new[] { "begin", "complete:" + Db, "abandon:" + Db, "fail" }, store.Calls);   // asked before the drop, released after it
         }
 
-        // -- the clean-up drops by NAME: only while this attempt owns the job and the company does not use the database --
+        // -- the clean-up drops by NAME: only after the main database answered that it may (sp_Provision_Abandon) --
 
         private const string LeftNote = " The database " + Db + " was left on the server.";
+        private const string UsedNote = " The database " + Db + " was left on the server: another company uses it.";
 
         [Theory]
         [InlineData("Failed")]   // a platform administrator attached the generated name and switched it off
         [InlineData("Ready")]    // ... or attached it while this attempt was running
         public async Task When_the_company_names_this_database_it_is_not_dropped(string status)
         {
-            var store = new FakeStore { CompleteAnswer = false, State = new ProvisionState(status, Attempt, "encryptztenant_000007", "srv") };
+            var store = new FakeStore { CompleteAnswer = false, Abandon = new AbandonResult(false, status, Attempt, "encryptztenant_000007", false) };
             var server = new FakeServer();
             var logger = new ListLogger();
 
@@ -316,9 +324,36 @@ namespace EncryptzTests
         }
 
         [Fact]
+        public async Task When_another_company_uses_the_database_it_is_not_dropped()
+        {
+            // a platform administrator attached the generated name to another company while the build ran
+            var store = new FakeStore { Abandon = new AbandonResult(false, "Provisioning", Attempt, "", true) };
+            var server = new FakeServer { BuildThrows = new InvalidOperationException("script error") };
+            var logger = new ListLogger();
+
+            Assert.Equal(ProvisionOutcome.Failed, await new TenantProvisioner(store, server, logger).RunAsync(7, CancellationToken.None));
+            Assert.DoesNotContain(server.Calls, c => c.StartsWith("drop"));
+            Assert.Equal(new[] { "begin", "abandon:" + Db, "fail" }, store.Calls);   // the job is still released for a retry
+            Assert.Equal("script error" + UsedNote, store.Error);
+            Assert.DoesNotContain("remove", store.Error!, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(logger.Lines, line => line.Contains("7") && line.Contains(Db) && line.Contains("another company uses this database"));
+        }
+
+        [Fact]
+        public async Task When_marking_ready_is_refused_because_another_company_uses_the_database_it_is_not_dropped()
+        {
+            var store = new FakeStore { CompleteAnswer = false, Abandon = new AbandonResult(false, "Provisioning", Attempt, "", true) };
+            var server = new FakeServer();
+
+            Assert.Equal(ProvisionOutcome.Failed, await new TenantProvisioner(store, server, new ListLogger()).RunAsync(7, CancellationToken.None));
+            Assert.DoesNotContain(server.Calls, c => c.StartsWith("drop"));
+            Assert.Equal("The set-up was given up before it finished." + UsedNote, store.Error);
+        }
+
+        [Fact]
         public async Task When_the_job_is_no_longer_this_attempts_the_database_is_not_dropped_and_the_note_is_stored()
         {
-            var store = new FakeStore { CompleteAnswer = false, State = new ProvisionState("Provisioning", Guid.NewGuid(), "", "") };
+            var store = new FakeStore { CompleteAnswer = false, Abandon = new AbandonResult(false, "Provisioning", Guid.NewGuid(), "", false) };
             var server = new FakeServer();
             var logger = new ListLogger();
 
@@ -335,38 +370,68 @@ namespace EncryptzTests
         {
             var (provisioner, store, server) = Make();
             server.BuildThrows = new InvalidOperationException("script error");
-            store.State = rowExists ? new ProvisionState("Provisioning", null, "", "") : null;
+            store.Abandon = rowExists ? new AbandonResult(false, "Provisioning", null, "", false) : null;
 
             Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
             Assert.DoesNotContain(server.Calls, c => c.StartsWith("drop"));
             Assert.Equal("script error" + LeftNote, store.Error);
         }
 
-        [Fact]
-        public async Task When_the_state_cannot_be_read_the_database_is_not_dropped()
+        // whatever else the answer says: without MayDrop there is no drop
+        [Theory]
+        [InlineData("Provisioning", "", false)]
+        [InlineData("Failed", "", false)]
+        [InlineData("Failed", "", true)]
+        [InlineData("None", "", false)]
+        [InlineData("", "", false)]
+        [InlineData("Ready", "CustomerDb", false)]
+        [InlineData("Ready", "EncryptzTenant_000007", false)]
+        [InlineData("Failed", "CustomerDb", true)]
+        public async Task Without_the_answer_that_it_may_nothing_is_dropped(string status, string databaseOnRow, bool usedByAnother)
         {
-            var store = new FakeStore { StateThrows = new InvalidOperationException("main database unreachable: Password=main-db-pw") };
+            foreach (var completeThrows in new[] { false, true })
+            foreach (var sameAttempt in new[] { false, true })
+            {
+                var store = new FakeStore
+                {
+                    CompleteAnswer = false,
+                    CompleteThrows = completeThrows ? new InvalidOperationException("connection lost") : null,
+                    Abandon = new AbandonResult(false, status, sameAttempt ? Attempt : Guid.NewGuid(), databaseOnRow, usedByAnother)
+                };
+                var server = new FakeServer();
+
+                await new TenantProvisioner(store, server, new ListLogger()).RunAsync(7, CancellationToken.None);
+
+                Assert.DoesNotContain(server.Calls, c => c.StartsWith("drop"));
+            }
+        }
+
+        [Fact]
+        public async Task When_the_main_database_cannot_be_asked_the_database_is_not_dropped()
+        {
+            var store = new FakeStore { AbandonThrows = new InvalidOperationException("main database unreachable: Password=main-db-pw") };
             var server = new FakeServer { BuildThrows = new InvalidOperationException("script error") };
             var logger = new ListLogger();
 
             Assert.Equal(ProvisionOutcome.Failed, await new TenantProvisioner(store, server, logger).RunAsync(7, CancellationToken.None));
             Assert.DoesNotContain(server.Calls, c => c.StartsWith("drop"));
             Assert.Equal("script error" + LeftNote, store.Error);
-            Assert.Contains(logger.Lines, line => line.Contains("7") && line.Contains(Db) && line.Contains("state could not be read"));
+            Assert.Contains(logger.Lines, line => line.Contains("7") && line.Contains(Db) && line.Contains("could not be asked"));
             Assert.Empty(logger.Exceptions);
             Assert.DoesNotContain(logger.Lines, line => line.Contains("main-db-pw"));
         }
 
         [Fact]
-        public async Task The_state_is_read_before_every_drop_and_the_job_is_released_after_it()
+        public async Task The_main_database_is_asked_before_every_drop_and_the_job_is_released_after_it()
         {
-            var (provisioner, store, server) = Make();
-            server.BuildThrows = new InvalidOperationException("script error");
+            var timeline = new List<string>();
+            var store = new FakeStore { Timeline = timeline };
+            var server = new FakeServer { Timeline = timeline, BuildThrows = new InvalidOperationException("script error") };
 
-            await provisioner.RunAsync(7, CancellationToken.None);
+            await new TenantProvisioner(store, server, new ListLogger()).RunAsync(7, CancellationToken.None);
 
-            Assert.Equal(new[] { "begin", "state", "fail" }, store.Calls);
-            Assert.Equal("drop:" + Db, server.Calls.Last());
+            Assert.Equal(new[] { "abandon:" + Db, "drop:" + Db, "fail" }, timeline);
+            Assert.Equal(new[] { "begin", "abandon:" + Db, "fail" }, store.Calls);
             Assert.Equal("script error", store.Error);   // dropped: nothing was left, no note
         }
 
@@ -375,7 +440,7 @@ namespace EncryptzTests
         {
             var (provisioner, store, server) = Make();
             server.BuildThrows = new InvalidOperationException(new string('x', 5000));
-            store.State = new ProvisionState("Provisioning", Guid.NewGuid(), "", "");
+            store.Abandon = new AbandonResult(false, "Provisioning", Guid.NewGuid(), "", false);
 
             await provisioner.RunAsync(7, CancellationToken.None);
 
@@ -408,19 +473,19 @@ namespace EncryptzTests
             Assert.Equal(1, server.EnsureCalls);
         }
 
-        // -- CompleteAsync throws: nobody knows whether the main database committed --
+        // -- CompleteAsync throws: nobody knows whether the main database committed; sp_Provision_Abandon tells --
 
         [Fact]
         public async Task When_marking_ready_throws_but_the_company_is_ready_the_database_is_kept()
         {
             var (provisioner, store, server) = Make();
             store.CompleteThrows = new InvalidOperationException("connection lost after the commit");
-            store.State = new ProvisionState("Ready", Attempt, Db, "srv");
+            store.Abandon = new AbandonResult(false, "Ready", Attempt, Db, false);
 
             Assert.Equal(ProvisionOutcome.Ready, await provisioner.RunAsync(7, CancellationToken.None));
             Assert.DoesNotContain(server.Calls, c => c.StartsWith("drop"));
             Assert.DoesNotContain("fail", store.Calls);
-            Assert.Equal(new[] { "begin", "complete:" + Db, "state" }, store.Calls);
+            Assert.Equal(new[] { "begin", "complete:" + Db, "abandon:" + Db }, store.Calls);
         }
 
         [Fact]
@@ -429,7 +494,7 @@ namespace EncryptzTests
             var store = new FakeStore
             {
                 CompleteThrows = new InvalidOperationException("connection lost"),
-                State = new ProvisionState("Ready", Attempt, "CustomerDb", "other-srv")   // attached by hand meanwhile
+                Abandon = new AbandonResult(false, "Ready", Attempt, "CustomerDb", false)   // attached by hand meanwhile
             };
             var server = new FakeServer();
             var logger = new ListLogger();
@@ -437,7 +502,7 @@ namespace EncryptzTests
             Assert.Equal(ProvisionOutcome.Skipped, await new TenantProvisioner(store, server, logger).RunAsync(7, CancellationToken.None));
             Assert.DoesNotContain(server.Calls, c => c.StartsWith("drop"));
             Assert.DoesNotContain("fail", store.Calls);
-            Assert.Contains(logger.Lines, line => line.Contains("7") && line.Contains(Db));   // the extra database is an orphan
+            Assert.Contains(logger.Lines, line => line.Contains("7") && line.Contains(Db) && line.Contains("ready with another database"));   // the extra database is an orphan
         }
 
         [Fact]
@@ -445,7 +510,7 @@ namespace EncryptzTests
         {
             var (provisioner, store, server) = Make();
             store.CompleteThrows = new InvalidOperationException("connection lost after the commit");
-            store.State = new ProvisionState("Failed", Attempt, Db, "srv");   // committed, then deactivated: the row names it
+            store.Abandon = new AbandonResult(false, "Failed", Attempt, Db, false);   // committed, then deactivated: the row names it
 
             Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
             Assert.DoesNotContain(server.Calls, c => c.StartsWith("drop"));
@@ -457,11 +522,28 @@ namespace EncryptzTests
         {
             var (provisioner, store, server) = Make();
             store.CompleteThrows = new InvalidOperationException("main database unreachable");
-            store.State = new ProvisionState("Provisioning", Guid.NewGuid(), "", "");
+            store.Abandon = new AbandonResult(false, "Provisioning", Guid.NewGuid(), "", false);
 
             Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
             Assert.DoesNotContain(server.Calls, c => c.StartsWith("drop"));
             Assert.EndsWith(LeftNote, store.Error);
+        }
+
+        [Fact]
+        public async Task When_marking_ready_throws_and_the_main_database_says_it_may_the_database_is_dropped()
+        {
+            var timeline = new List<string>();
+            var store = new FakeStore
+            {
+                Timeline = timeline,
+                CompleteThrows = new InvalidOperationException("main database unreachable"),
+                Abandon = new AbandonResult(true, "Failed", Attempt, "", false)   // not committed: still this attempt's, nobody names the database
+            };
+            var server = new FakeServer { Timeline = timeline };
+
+            Assert.Equal(ProvisionOutcome.Failed, await new TenantProvisioner(store, server, new ListLogger()).RunAsync(7, CancellationToken.None));
+            Assert.Equal(new[] { "abandon:" + Db, "drop:" + Db, "fail" }, timeline);
+            Assert.Equal("main database unreachable", store.Error);
         }
 
         [Theory]
@@ -469,25 +551,40 @@ namespace EncryptzTests
         [InlineData("Failed")]
         [InlineData("None")]
         [InlineData("")]
-        public async Task When_marking_ready_throws_and_the_company_is_not_ready_the_database_is_dropped(string status)
+        public async Task When_marking_ready_throws_and_the_main_database_does_not_say_it_may_the_database_is_left_and_the_failure_recorded(string status)
         {
             var (provisioner, store, server) = Make();
             store.CompleteThrows = new InvalidOperationException("main database unreachable");
-            store.State = new ProvisionState(status, Attempt, "", "");   // still this attempt's job, no database on the row
+            store.Abandon = new AbandonResult(false, status, Attempt, "", false);
 
             Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
-            Assert.Contains("drop:" + Db, server.Calls);
+            Assert.DoesNotContain(server.Calls, c => c.StartsWith("drop"));
             Assert.Contains("fail", store.Calls);
-            Assert.Equal("main database unreachable", store.Error);
+            Assert.Equal("main database unreachable" + LeftNote, store.Error);
         }
 
         [Fact]
-        public async Task When_marking_ready_throws_and_the_status_cannot_be_read_the_database_is_kept_for_a_person_to_decide()
+        public async Task When_marking_ready_throws_and_another_company_uses_the_database_it_is_not_dropped()
+        {
+            var (provisioner, store, server) = Make();
+            store.CompleteThrows = new InvalidOperationException("main database unreachable");
+            store.Abandon = new AbandonResult(false, "Provisioning", Attempt, "", true);
+
+            Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
+            Assert.DoesNotContain(server.Calls, c => c.StartsWith("drop"));
+            Assert.Equal("main database unreachable" + UsedNote, store.Error);
+        }
+
+        [Theory]
+        [InlineData(true)]    // the main database cannot be asked
+        [InlineData(false)]   // the company is gone
+        public async Task When_marking_ready_throws_and_there_is_no_answer_the_database_is_kept_for_a_person_to_decide(bool abandonThrows)
         {
             var store = new FakeStore
             {
                 CompleteThrows = new InvalidOperationException("main database unreachable"),
-                StateThrows = new InvalidOperationException("main database unreachable")
+                AbandonThrows = abandonThrows ? new InvalidOperationException("main database unreachable") : null,
+                Abandon = null
             };
             var server = new FakeServer();
             var logger = new ListLogger();
@@ -495,8 +592,10 @@ namespace EncryptzTests
 
             Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
             Assert.DoesNotContain(server.Calls, c => c.StartsWith("drop"));
-            Assert.DoesNotContain("fail", store.Calls);
-            Assert.Contains(logger.Lines, line => line.Contains("7") && line.Contains(Db));
+            Assert.Contains(logger.Lines, line => line.Contains("7") && line.Contains(Db) && line.Contains("was not removed"));
+            // recorded only if the attempt still owns a company that waits for its database (sp_Provision_Fail decides)
+            Assert.Equal("main database unreachable" + LeftNote, store.Error);
+            Assert.DoesNotContain("remove", store.Error!, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]
@@ -549,12 +648,12 @@ namespace EncryptzTests
             (provisioner, store, server) = Make();
             server.BuildThrows = new InvalidOperationException("script error");
             await provisioner.RunAsync(7, CancellationToken.None);
-            Assert.Equal(new[] { Attempt }, store.Attempts);
+            Assert.Equal(new[] { Attempt, Attempt }, store.Attempts);   // abandon, then fail
 
             (provisioner, store, server) = Make();
             store.CompleteAnswer = false;
             await provisioner.RunAsync(7, CancellationToken.None);
-            Assert.Equal(new[] { Attempt, Attempt }, store.Attempts);   // complete, then fail
+            Assert.Equal(new[] { Attempt, Attempt, Attempt }, store.Attempts);   // complete, abandon, then fail
         }
 
         [Fact]

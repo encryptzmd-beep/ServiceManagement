@@ -30,11 +30,16 @@ namespace EncryptzBL.Common.Provisioning
     }
 
     /// <summary>
-    /// What the main database says about a company's set-up at one moment
-    /// (sp_Provision_GetStatus). Attempt is null while the job is queued or released;
-    /// DatabaseName and ServerName are "" while the company has no database.
+    /// The answer of the main database when an attempt gives its job up and asks whether
+    /// it may drop the database it built (sp_Provision_Abandon, one statement).
+    /// MayDrop is true only when, at that moment, the job was this attempt's, the company
+    /// was still waiting for its first database and NO company named the database; the
+    /// company is then Failed and the attempt keeps the job until it releases it.
+    /// The rest says what the company looks like now, so the caller can tell why not:
+    /// Attempt is null while the job is queued or released, DatabaseName is "" while the
+    /// company has no database, UsedByAnother says that another company names the database.
     /// </summary>
-    public sealed record ProvisionState(string Status, Guid? Attempt, string DatabaseName, string ServerName);
+    public sealed record AbandonResult(bool MayDrop, string Status, Guid? Attempt, string DatabaseName, bool UsedByAnother);
 
     /// <summary>The main-database side of a provisioning job.</summary>
     public interface IProvisionStore
@@ -47,13 +52,18 @@ namespace EncryptzBL.Common.Provisioning
 
         /// <summary>
         /// Marks the company Failed and releases the job, when this attempt still owns it
-        /// (also when the sweeper gave it up meanwhile: the attempt's own reason replaces
-        /// the sweeper's). The last thing an attempt does: only then can it be retried.
+        /// (also when the sweeper or <see cref="AbandonAsync"/> marked it Failed meanwhile:
+        /// the attempt's own reason replaces that text). The last thing an attempt does:
+        /// only then can it be retried.
         /// </summary>
         Task FailAsync(ProvisionJob job, string error);
 
-        /// <summary>The company's provisioning columns now. Null when the company does not exist.</summary>
-        Task<ProvisionState?> GetStateAsync(int companyId);
+        /// <summary>
+        /// Gives the job up and says, decided in the same statement, whether this attempt may
+        /// drop the database it built. Null when the company does not exist. The ONLY thing
+        /// that allows a drop is <see cref="AbandonResult.MayDrop"/> being true.
+        /// </summary>
+        Task<AbandonResult?> AbandonAsync(ProvisionJob job, string databaseName);
 
         /// <summary>
         /// Gives up claimed jobs that have been running for longer than the given time, and
@@ -83,8 +93,8 @@ namespace EncryptzBL.Common.Provisioning
 
         /// <summary>
         /// Clean-up of a failed attempt. Not cancellable on purpose. Only TenantProvisioner
-        /// calls it, and only after it has checked that the attempt still owns the job and
-        /// that the company does not use this database.
+        /// calls it, and only after <see cref="IProvisionStore.AbandonAsync"/> answered that
+        /// it may (the attempt owns the job and no company names this database).
         /// </summary>
         Task DropDatabaseAsync(ProvisionJob job, string databaseName);
     }
