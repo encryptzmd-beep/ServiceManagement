@@ -149,6 +149,39 @@ namespace EncryptzBL.DTO_s
         public bool IsEnabled { get; set; }
     }
 
+    /// <summary>A branch of a company (a row of the company database's Locations).</summary>
+    public class BranchDto
+    {
+        public int LocationId { get; set; }
+        public string LocationName { get; set; } = "";
+        public bool IsActive { get; set; } = true;
+    }
+
+    /// <summary>A member and the branches they may work in.</summary>
+    public class BranchAccessUserDto
+    {
+        public int UserId { get; set; }
+        public string FullName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string RoleInCompany { get; set; } = "";
+        /// <summary>Company administrators: every branch, not changeable per branch.</summary>
+        public bool AllBranches { get; set; }
+        public List<int> LocationIds { get; set; } = new();
+    }
+
+    public class BranchAccessDto
+    {
+        public List<BranchDto> Branches { get; set; } = new();
+        public List<BranchAccessUserDto> Users { get; set; } = new();
+    }
+
+    public class SetBranchAccessRequest
+    {
+        public int UserId { get; set; }
+        public int LocationId { get; set; }
+        public bool HasAccess { get; set; }
+    }
+
     /// <summary>A SQL server on which company databases are created. The password is never sent out.</summary>
     public class DbServerDto
     {
