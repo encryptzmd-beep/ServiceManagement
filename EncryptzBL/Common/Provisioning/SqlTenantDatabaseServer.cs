@@ -40,7 +40,11 @@ namespace EncryptzBL.Common.Provisioning
         /// file is missing or does not have the expected shape, so the caller can stop before
         /// a database exists.
         /// </summary>
-        public void EnsureReady() => _ = _script.Value;
+        public void EnsureReady()
+        {
+            if (!_script.Value.FollowUps.Any(f => string.Equals(f.FileName, "10_Branch_Access.sql", StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException("The tenant script 10_Branch_Access.sql was not shipped with the API.");
+        }
 
         public async Task<bool> DatabaseExistsAsync(ProvisionJob job, string databaseName, CancellationToken ct)
         {

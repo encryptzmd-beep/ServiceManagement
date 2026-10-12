@@ -34,8 +34,10 @@ namespace EncryptzBL.Common.Provisioning
         private static readonly Regex LineComment = new(@"--[^\n]*", RegexOptions.CultureInvariant);
 
         private static readonly Regex DatabaseLevel = new(
-            @"^\s*((CREATE|ALTER|DROP)\s+DATABASE\b|USE\s+\[)",
+            @"^\s*((CREATE|ALTER|DROP)\s+DATABASE\b|USE\s+\S)",
             RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant);
+
+        private static readonly Regex DigitsThenUnderscore = new(@"^[0-9]+_", RegexOptions.CultureInvariant);
 
         private static readonly Regex FollowUpName = new(@"^(?<number>[0-9]{2})_.*\.sql\z",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -75,6 +77,13 @@ namespace EncryptzBL.Common.Provisioning
             var folder = Path.GetDirectoryName(path);
             if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
                 return script;
+
+            foreach (var file in Directory.GetFiles(folder, "*.sql"))
+            {
+                var name = Path.GetFileName(file);
+                if (DigitsThenUnderscore.IsMatch(name) && !FollowUpName.IsMatch(name))
+                    throw new InvalidOperationException($"Tenant scripts are numbered with two digits (10 to 99): {name}");
+            }
 
             var followUps = Directory.GetFiles(folder, "*.sql")
                 .Select(file => (File: file, Name: Path.GetFileName(file), Match: FollowUpName.Match(Path.GetFileName(file))))

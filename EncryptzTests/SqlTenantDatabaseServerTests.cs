@@ -132,13 +132,29 @@ namespace EncryptzTests
         [Fact]
         public void A_good_script_is_accepted()
         {
-            var loads = 0;
-            var server = new SqlTenantDatabaseServer(new Lazy<TenantScript>(() => { loads++; return TenantScript.Parse(GoodScript); }));
+            var dir = Path.Combine(Path.GetTempPath(), "encryptz-tenant-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                File.WriteAllText(Path.Combine(dir, "New_Tenant_Database.sql"), GoodScript);
+                File.WriteAllText(Path.Combine(dir, "10_Branch_Access.sql"), "SELECT 10;");
 
-            server.EnsureReady();
-            server.EnsureReady();
+                var loads = 0;
+                var server = new SqlTenantDatabaseServer(new Lazy<TenantScript>(() =>
+                {
+                    loads++;
+                    return TenantScript.Load(Path.Combine(dir, "New_Tenant_Database.sql"));
+                }));
 
-            Assert.Equal(1, loads);   // read once for the life of the API
+                server.EnsureReady();
+                server.EnsureReady();
+
+                Assert.Equal(1, loads);   // read once for the life of the API
+            }
+            finally
+            {
+                Directory.Delete(dir, recursive: true);
+            }
         }
 
         [Theory]

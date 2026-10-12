@@ -202,6 +202,75 @@ VALUES (0, 0, N'Head Office', N'HO', NULL, N'FelixServiceDB');";
             }
         }
 
+        private static void WithFolder(Action<string> test)
+        {
+            var dir = Path.Combine(Path.GetTempPath(), "encryptz-tenant-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                File.WriteAllText(Path.Combine(dir, "New_Tenant_Database.sql"), Script(Settings, "SELECT 1;"));
+                test(dir);
+            }
+            finally
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+        }
+
+        [Theory]
+        [InlineData("100_x.sql")]
+        [InlineData("9_x.sql")]
+        public void A_numbered_script_without_exactly_two_digits_is_refused(string name)
+        {
+            WithFolder(dir =>
+            {
+                File.WriteAllText(Path.Combine(dir, name), "SELECT 1;");
+
+                var ex = Assert.Throws<InvalidOperationException>(() => TenantScript.Load(Path.Combine(dir, "New_Tenant_Database.sql")));
+                Assert.Contains("two digits", ex.Message);
+                Assert.Contains(name, ex.Message);
+            });
+        }
+
+        [Fact]
+        public void A_script_numbered_below_10_is_still_ignored()
+        {
+            WithFolder(dir =>
+            {
+                File.WriteAllText(Path.Combine(dir, "09_Old.sql"), "SELECT 1;");
+
+                Assert.Empty(TenantScript.Load(Path.Combine(dir, "New_Tenant_Database.sql")).FollowUps);
+            });
+        }
+
+        [Fact]
+        public void A_follow_up_that_picks_a_database_without_brackets_is_refused()
+        {
+            Assert.Throws<InvalidOperationException>(() => TenantScript.ParseFollowUp("10_X.sql", "SELECT 1;\nGO\nUSE master\nGO\n"));
+            Assert.Throws<InvalidOperationException>(() => TenantScript.Parse(Script(Settings, "SELECT 1;\nuse master")));
+        }
+
+        [Fact]
+        public void The_tenant_database_is_not_ready_without_the_branch_access_script()
+        {
+            var server = new SqlTenantDatabaseServer(new Lazy<TenantScript>(() => TenantScript.Parse(Script(Settings, "SELECT 1;"))));
+
+            var ex = Assert.Throws<InvalidOperationException>(() => server.EnsureReady());
+            Assert.Contains("10_Branch_Access.sql", ex.Message);
+        }
+
+        [Fact]
+        public void The_tenant_database_is_ready_with_the_branch_access_script()
+        {
+            WithFolder(dir =>
+            {
+                File.WriteAllText(Path.Combine(dir, "10_Branch_Access.sql"), "SELECT 10;");
+
+                var path = Path.Combine(dir, "New_Tenant_Database.sql");
+                new SqlTenantDatabaseServer(new Lazy<TenantScript>(() => TenantScript.Load(path))).EnsureReady();
+            });
+        }
+
         [Fact]
         public void Every_follow_up_script_of_the_repository_is_shipped_and_loads()
         {
