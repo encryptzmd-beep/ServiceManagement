@@ -1,7 +1,7 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription, interval } from 'rxjs';
+import { Subscription, finalize, interval } from 'rxjs';
 import { AuthService, Company } from '../../Auth/auth-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -61,6 +61,12 @@ export class CompanySelectorComponent {
   private pollSub?: Subscription;
   private pollStarted = 0;
   private gone = false;
+  /** A company is being entered: late answers must not touch the screen. */
+  private enteringCompany = false;
+  /** Number of the latest refresh; an answer of an older one is ignored. */
+  private refreshSeq = 0;
+  /** A refresh of the list is still on its way. */
+  private refreshing = false;
 
   private moduleKey = '';
 
@@ -130,28 +136,39 @@ export class CompanySelectorComponent {
 
   /** Reads the list and the creation state again, without the spinner. */
   private refreshCompanies(onError?: () => void): void {
-    this.auth.getUserCompanies().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    const seq = ++this.refreshSeq;
+    this.refreshing = true;
+    this.auth.getUserCompanies().pipe(
+      finalize(() => { if (seq === this.refreshSeq) this.refreshing = false; }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
       next: (list) => {
-        if (this.gone) return;
+        if (this.gone || this.enteringCompany || seq !== this.refreshSeq) return;
         this.loading.set(false);
         this.companies.set(list);
         this.watchSetUps();
       },
       error: () => {
-        if (this.gone) return;
+        if (this.gone || this.enteringCompany || seq !== this.refreshSeq) return;
         this.loading.set(false);
         onError?.();
       }
     });
 
     this.auth.getCompanyCreation().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (res) => { if (!this.gone) this.creation.set(res.success ? res.data ?? null : null); },
-      error: () => { if (!this.gone) this.creation.set(null); }
+      next: (res) => {
+        if (this.gone || this.enteringCompany || seq !== this.refreshSeq) return;
+        // a failed read keeps what was known before (null when nothing was)
+        this.creation.set(res.success ? res.data ?? this.creation() : this.creation());
+      },
+      error: () => { /* keeps the previous state; it is null when nothing was known yet */ }
     });
   }
 
   selectCompany(company: Company) {
     if (!canEnter(company.provisionStatus)) return;
+    if (this.enteringCompany) return;
+    this.enteringCompany = true;
     this.stopPolling();
     this.loading.set(true);
 
@@ -160,7 +177,9 @@ export class CompanySelectorComponent {
         this.loading.set(false);
 
         if (!res.success || !res.data) {
+          this.enteringCompany = false;
           this.error.set(res.message || 'Failed to select company');
+          this.watchSetUps();
           return;
         }
 
@@ -168,7 +187,9 @@ export class CompanySelectorComponent {
       },
       error: () => {
         this.loading.set(false);
+        this.enteringCompany = false;
         this.error.set('Failed to select company');
+        this.watchSetUps();
       }
     });
   }
@@ -182,6 +203,13 @@ export class CompanySelectorComponent {
     return canEnter(company.provisionStatus);
   }
 
+  /** Space / Enter on the row itself (not on a button inside it). */
+  onRowKey(company: Company, event: Event, preventDefault = false): void {
+    if (event.target !== event.currentTarget) return;
+    if (preventDefault) event.preventDefault();
+    this.selectCompany(company);
+  }
+
   // ── creating a company ────────────────────────────────────────────
 
   openCreate(): void {
@@ -189,6 +217,7 @@ export class CompanySelectorComponent {
     this.createForm = emptyCompanyForm();
     this.codeTyped = false;
     this.createError.set('');
+    this.error.set('');
     this.showCreate.set(true);
   }
 
@@ -219,6 +248,7 @@ export class CompanySelectorComponent {
         if (!res.success) { this.createError.set(res.message || 'Could not create the company'); return; }
         this.showCreate.set(false);
         this.error.set('');
+        this.pollStarted = Date.now();
         this.refreshCompanies();
       },
       error: (err) => {
@@ -239,6 +269,7 @@ export class CompanySelectorComponent {
       next: (res) => {
         this.retrying.set(null);
         if (!res.success) { this.error.set(res.message || 'Could not retry the set-up'); return; }
+        this.pollStarted = Date.now();
         this.refreshCompanies();
       },
       error: (err) => {
@@ -274,7 +305,7 @@ export class CompanySelectorComponent {
 
   /** One round of asking again (also called by the timer). */
   pollOnce(): void {
-    if (this.gone) return;
+    if (this.gone || this.refreshing) return;
     this.refreshCompanies();
   }
 

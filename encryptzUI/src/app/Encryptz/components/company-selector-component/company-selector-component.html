@@ -182,7 +182,7 @@
               <div class="company-item" [class.disabled]="!enterable(company)"
                    [attr.aria-disabled]="!enterable(company)" (click)="selectCompany(company)"
                    role="button" [attr.tabindex]="enterable(company) ? 0 : -1"
-                   (keydown.enter)="selectCompany(company)" (keydown.space)="selectCompany(company); $event.preventDefault()">
+                   (keydown.enter)="onRowKey(company, $event)" (keydown.space)="onRowKey(company, $event, true)">
                 <div class="company-avatar">
                   <span class="material-icons">apartment</span>
                 </div>
@@ -343,7 +343,7 @@
           </div>
         }
 
-        @if (error()) {
+        @if (error() && !showCreate()) {
           <div class="error-msg">
             <span class="material-icons">error_outline</span>
             {{ error() }}

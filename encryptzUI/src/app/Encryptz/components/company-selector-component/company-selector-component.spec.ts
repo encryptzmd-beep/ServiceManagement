@@ -581,4 +581,155 @@ describe('CompanySelectorComponent company creation', () => {
       vi.useRealTimers();
     }
   });
+
+  const count = (name: string) => calls.filter(x => x[0] === name).length;
+
+  it('ignores a poll answer that arrives while a company is being entered', () => {
+    vi.useFakeTimers();
+    try {
+      list = [company(2, 'Ready'), company(3, 'Provisioning', true)];
+      const fixture = create();
+      const c = fixture.componentInstance;
+      expect(c.polling()).toBe(true);
+
+      const late = new Subject<any[]>();
+      auth.getUserCompanies = () => { calls.push(['getUserCompanies']); return late; };
+      c.pollOnce();
+      const sel = new Subject<any>();
+      auth.selectCompany = (id: number) => { calls.push(['selectCompany', id]); return sel; };
+      (fixture.nativeElement.querySelector('.company-item') as HTMLElement).click();
+      expect(c.loading()).toBe(true);
+      expect(c.polling()).toBe(false);
+
+      late.next([company(2, 'Ready'), company(3, 'Provisioning', true)]);
+      late.complete();
+      expect(c.loading()).toBe(true);
+      expect(c.polling()).toBe(false);
+
+      const before = count('getUserCompanies');
+      vi.advanceTimersByTime(10000);
+      expect(count('getUserCompanies')).toBe(before);
+
+      c.selectCompany(company(2, 'Ready'));
+      expect(count('selectCompany')).toBe(1);
+      fixture.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('lets the company be entered again, and polls again, when entering is refused', () => {
+    list = [company(2, 'Ready'), company(3, 'Provisioning', true)];
+    auth.selectCompany = (id: number) => { calls.push(['selectCompany', id]); return of({ success: false, message: 'No access', data: null }); };
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    c.selectCompany(list[0]);
+    expect(c.polling()).toBe(true);
+    c.selectCompany(list[0]);
+
+    expect(count('selectCompany')).toBe(2);
+    fixture.destroy();
+  });
+
+  it('does not stack requests while an answer is still on its way', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+    const pending: Subject<any[]>[] = [];
+    auth.getUserCompanies = () => { calls.push(['getUserCompanies']); const s = new Subject<any[]>(); pending.push(s); return s; };
+    const before = count('getUserCompanies');
+
+    c.pollOnce();
+    c.pollOnce();
+    c.pollOnce();
+    expect(count('getUserCompanies')).toBe(before + 1);
+
+    pending[0].next(list);
+    pending[0].complete();
+    c.pollOnce();
+    expect(count('getUserCompanies')).toBe(before + 2);
+  });
+
+  it('ignores an older answer that arrives after a newer one', () => {
+    list = [company(3, 'Failed', true)];
+    const fixture = create();
+    const c = fixture.componentInstance;
+    const older = new Subject<any[]>();
+    auth.getUserCompanies = () => older;
+    c.pollOnce();
+    auth.getUserCompanies = () => of([company(3, 'Ready', true)]);
+    c.retry(list[0]);
+    expect(c.companies()[0].provisionStatus).toBe('Ready');
+
+    older.next([company(3, 'Provisioning', true)]);
+    older.complete();
+
+    expect(c.companies()[0].provisionStatus).toBe('Ready');
+    expect(c.polling()).toBe(false);
+  });
+
+  it('keeps the known creation state when a later read fails', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+    expect(c.creation()?.canCreate).toBe(true);
+
+    auth.getCompanyCreation = () => throwError(() => new Error('offline'));
+    c.pollOnce();
+
+    expect(c.creation()?.canCreate).toBe(true);
+  });
+
+  it('does not let the row take Space or Enter pressed on the Retry button', () => {
+    list = [company(4, 'Failed', true)];
+    const fixture = create();
+    const retryBtn = fixture.nativeElement.querySelector('.retry-btn') as HTMLElement;
+
+    for (const key of [' ', 'Enter']) {
+      const ev = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      retryBtn.dispatchEvent(ev);
+      expect(ev.defaultPrevented).toBe(false);
+    }
+    expect(count('selectCompany')).toBe(0);
+  });
+
+  it('enters a ready company with Enter on the row itself', () => {
+    const fixture = create();
+    const row = fixture.nativeElement.querySelector('.company-item') as HTMLElement;
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    expect(calls).toContainEqual(['selectCompany', 2]);
+  });
+
+  it('starts the 25 minute limit again after a successful retry', () => {
+    vi.useFakeTimers();
+    try {
+      list = [company(3, 'Provisioning', true)];
+      const fixture = create();
+      const c = fixture.componentInstance;
+
+      vi.advanceTimersByTime(20 * 60 * 1000);
+      expect(c.polling()).toBe(true);
+      c.retry(list[0]);
+      vi.advanceTimersByTime(10 * 60 * 1000);
+
+      expect(c.polling()).toBe(true);
+      expect(c.pollStopped()).toBe(false);
+      fixture.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows no general error beside the create form', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.error.set('Could not retry the set-up');
+    c.openCreate();
+    expect(c.error()).toBe('');
+
+    c.error.set('Something else');
+    fixture.detectChanges();
+    const outside = (Array.from(fixture.nativeElement.querySelectorAll('.error-msg')) as HTMLElement[])
+      .filter(e => !e.closest('.create-form'));
+    expect(outside.length).toBe(0);
+  });
 });
