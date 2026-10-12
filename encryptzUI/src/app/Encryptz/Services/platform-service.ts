@@ -112,6 +112,26 @@ export interface PlatformSetting {
   updatedByName: string;
 }
 
+export interface Branch {
+  locationId: number;
+  locationName: string;
+  isActive: boolean;
+}
+
+export interface BranchAccessUser {
+  userId: number;
+  fullName: string;
+  email: string;
+  roleInCompany: string;
+  allBranches: boolean;
+  locationIds: number[];
+}
+
+export interface BranchAccess {
+  branches: Branch[];
+  users: BranchAccessUser[];
+}
+
 export interface PlatformMenu {
   menuId: number;
   menuName: string;
@@ -212,6 +232,16 @@ export class PlatformService {
 
   setModuleAccess(companyId: number, moduleKey: string, userId: number, hasAccess: boolean): Observable<ApiResponse<boolean>> {
     return this.http.post<ApiResponse<boolean>>(`${this.api}/companies/${companyId}/modules/${encodeURIComponent(moduleKey)}/access`, { userId, hasAccess }, { headers: this.headers });
+  }
+
+  // ── branch access (rows live in the company's own database) ───────────────
+
+  getBranchAccess(companyId: number): Observable<ApiResponse<BranchAccess>> {
+    return this.http.get<ApiResponse<BranchAccess>>(`${this.api}/companies/${companyId}/branch-access`, { headers: this.headers });
+  }
+
+  setBranchAccess(companyId: number, userId: number, locationId: number, hasAccess: boolean): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/companies/${companyId}/branch-access`, { userId, locationId, hasAccess }, { headers: this.headers });
   }
 
   // ── database servers + platform settings (platform administrators) ────────

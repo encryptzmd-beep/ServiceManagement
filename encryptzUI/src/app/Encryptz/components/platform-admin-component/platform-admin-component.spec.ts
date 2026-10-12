@@ -1010,3 +1010,164 @@ describe('PlatformAdminComponent servers, settings and database state', () => {
     expect(c.retryingCompany()).toBeNull();
   });
 });
+
+describe('PlatformAdminComponent branch access', () => {
+  const project = { projectId: 2, companyId: 2, companyName: 'Hamster A/C', projectName: 'Service Management', projectKey: 'C002-P001', isActive: true, serverName: '', databaseName: '', dbUser: '', extraOptions: '' };
+  const other = { ...project, projectId: 3, companyId: 3, companyName: 'Other Co' };
+  const view = () => ({
+    branches: [{ locationId: 10, locationName: 'Main', isActive: true }, { locationId: 20, locationName: 'North', isActive: true }, { locationId: 30, locationName: 'Closed', isActive: false }],
+    users: [
+      { userId: 1, fullName: 'Amy Admin', email: 'amy@x.test', roleInCompany: 'Admin', allBranches: true, locationIds: [] },
+      { userId: 8, fullName: 'Tech T', email: 't@x.test', roleInCompany: 'Technician', allBranches: false, locationIds: [10] },
+      { userId: 9, fullName: 'New N', email: 'n@x.test', roleInCompany: 'Manager', allBranches: false, locationIds: [] },
+    ],
+  });
+
+  let api: any;
+  let calls: any[][];
+
+  const create = () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [PlatformAdminComponent],
+      providers: [
+        { provide: PlatformService, useValue: api },
+        { provide: AuthService, useValue: { currentUser: () => ({ userId: 5, fullName: 'A', role: 'Admin', isPlatformAdmin: false }), selectedCompanyId: () => 2 } },
+      ],
+    });
+    const fixture = TestBed.createComponent(PlatformAdminComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.setTab('branchAccess' as any);
+    fixture.detectChanges();
+    return fixture;
+  };
+
+  const text = (fixture: any) => fixture.nativeElement.textContent as string;
+  const boxes = (fixture: any) => Array.from(fixture.nativeElement.querySelectorAll('.pa-branch-table input[type=checkbox]')) as HTMLInputElement[];
+
+  beforeEach(() => {
+    calls = [];
+    api = {
+      isUnlocked: () => of({ success: true, unlocked: true }),
+      getCompanies: () => of({ success: true, message: '', data: [] }),
+      getProjects: () => of({ success: true, message: '', data: [project, other] }),
+      getBranchAccess: (companyId: number) => { calls.push(['getBranchAccess', companyId]); return of({ success: true, message: '', data: view() }); },
+      setBranchAccess: (companyId: number, userId: number, locationId: number, on: boolean) => { calls.push(['setBranchAccess', companyId, userId, locationId, on]); return of({ success: true, message: on ? 'Branch access granted' : 'Branch access removed', data: true }); },
+      lock: () => {},
+    };
+  });
+
+  it('is offered as a tab and loads the company being worked in', () => {
+    const fixture = create();
+    const tabs = (Array.from(fixture.nativeElement.querySelectorAll('.pa-tabs button')) as HTMLButtonElement[]).map(b => b.textContent?.trim());
+
+    expect(tabs).toContain('Branch Access');
+    expect(calls).toContainEqual(['getBranchAccess', 2]);
+  });
+
+  it('shows a column per active branch and a row per member', () => {
+    const fixture = create();
+    const head = Array.from(fixture.nativeElement.querySelectorAll('.pa-branch-table thead th')).map((th: any) => th.textContent.trim());
+
+    expect(head).toContain('Main');
+    expect(head).toContain('North');
+    expect(head).not.toContain('Closed');
+    expect(fixture.nativeElement.querySelectorAll('.pa-branch-table tbody tr').length).toBe(3);
+  });
+
+  it('shows an administrator as having all branches, without checkboxes', () => {
+    const fixture = create();
+    const row = fixture.nativeElement.querySelectorAll('.pa-branch-table tbody tr')[0] as HTMLElement;
+
+    expect(row.textContent).toContain('All branches');
+    expect(row.querySelectorAll('input[type=checkbox]').length).toBe(0);
+  });
+
+  it('ticks the branches a member has and warns when a member has none', () => {
+    const fixture = create();
+    const all = boxes(fixture);   // Tech T: Main, North; New N: Main, North
+
+    expect(all.map(b => b.checked)).toEqual([true, false, false, false]);
+    expect(text(fixture)).toContain('No branch — cannot enter');
+  });
+
+  it('gives a member a branch', () => {
+    const fixture = create();
+    boxes(fixture)[1].click();   // Tech T, North
+    fixture.detectChanges();
+
+    expect(calls).toContainEqual(['setBranchAccess', 2, 8, 20, true]);
+    expect(fixture.componentInstance.branchAccess()!.users[1].locationIds).toEqual([10, 20]);
+  });
+
+  it('takes a branch away and then warns that the member cannot enter', () => {
+    const fixture = create();
+    boxes(fixture)[0].click();   // Tech T, Main
+    fixture.detectChanges();
+
+    expect(calls).toContainEqual(['setBranchAccess', 2, 8, 10, false]);
+    expect(fixture.componentInstance.branchAccess()!.users[1].locationIds).toEqual([]);
+    expect((fixture.nativeElement.querySelectorAll('.pa-branch-table tbody tr')[1] as HTMLElement).textContent).toContain('No branch — cannot enter');
+  });
+
+  it('puts the checkbox back and says why when the server refuses', () => {
+    api.setBranchAccess = () => of({ success: false, message: 'Company administrators have every branch. Change the role instead.', data: false });
+    const fixture = create();
+    const box = boxes(fixture)[1];
+    box.click();
+    fixture.detectChanges();
+
+    expect(box.checked).toBe(false);
+    expect(text(fixture)).toContain('Company administrators have every branch');
+    expect(fixture.componentInstance.branchAccess()!.users[1].locationIds).toEqual([10]);
+  });
+
+  it('sends one request while a cell is being saved', () => {
+    const pending = new Subject<any>();
+    api.setBranchAccess = (companyId: number, userId: number, locationId: number, on: boolean) => { calls.push(['setBranchAccess', companyId, userId, locationId, on]); return pending; };
+    const fixture = create();
+    const c = fixture.componentInstance;
+    const data = c.branchAccess()!;
+
+    c.toggleBranch(data.users[1], data.branches[1]);
+    c.toggleBranch(data.users[1], data.branches[1]);
+    fixture.detectChanges();
+
+    expect(calls.filter(x => x[0] === 'setBranchAccess').length).toBe(1);
+    expect(boxes(fixture)[1].disabled).toBe(true);
+
+    pending.next({ success: true, message: 'ok', data: true });
+    pending.complete();
+    fixture.detectChanges();
+    expect(boxes(fixture)[1].disabled).toBe(false);
+  });
+
+  it('says so when the company database has no branch access yet', () => {
+    api.getBranchAccess = () => of({ success: false, message: "Branch access is not set up in this company's database yet", data: null });
+    const fixture = create();
+
+    expect(text(fixture)).toContain("Branch access is not set up in this company's database yet");
+    expect(text(fixture)).toContain('Until then every member can work in every branch.');
+    expect(fixture.nativeElement.querySelector('.pa-branch-table')).toBeNull();
+  });
+
+  it('ignores a late answer after another company was picked', () => {
+    const late = new Subject<any>();
+    api.getBranchAccess = (companyId: number) => {
+      calls.push(['getBranchAccess', companyId]);
+      return companyId === 2 ? late : of({ success: true, message: '', data: { branches: [], users: [] } });
+    };
+    const fixture = create();
+    fixture.componentInstance.onProjectPicked(3);
+    late.next({ success: true, message: '', data: view() });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.branchAccess()!.users.length).toBe(0);
+  });
+
+  it('never says Project or Location', () => {
+    const fixture = create();
+    expect(text(fixture)).not.toMatch(/Project/i);
+    expect(text(fixture)).not.toMatch(/Location/i);
+  });
+});

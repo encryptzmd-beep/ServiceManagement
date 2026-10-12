@@ -69,6 +69,7 @@
     <button [class.active]="tab() === 'companies'" (click)="setTab('companies')">Companies</button>
     <button [class.active]="tab() === 'projects'" (click)="setTab('projects')">Company Databases</button>
     <button [class.active]="tab() === 'locations'" (click)="setTab('locations')">Branches</button>
+    <button [class.active]="tab() === 'branchAccess'" (click)="setTab('branchAccess')">Branch Access</button>
     <button [class.active]="tab() === 'access'" (click)="setTab('access')">Module Access</button>
     @if (isPlatformAdmin()) {
       <button [class.active]="tab() === 'servers'" (click)="setTab('servers')">Database Servers</button>
@@ -189,13 +190,14 @@
   }
 
   <!-- ═══════════ LOCATIONS / ACCESS share the project picker ═══════════ -->
-  @if (tab() === 'locations' || tab() === 'access') {
+  @if (tab() === 'locations' || tab() === 'branchAccess' || tab() === 'access') {
     <div class="fx-table-wrap">
       <div class="fx-table-toolbar">
         <div class="fx-toolbar-left">
-          <span class="fx-table-title">{{ tab() === 'locations' ? 'Branches' : 'Who can open the module' }}</span>
+          <span class="fx-table-title">{{ tab() === 'locations' ? 'Branches' : tab() === 'branchAccess' ? 'Who can work in which branch' : 'Who can open the module' }}</span>
           <span class="fx-table-count">
             @if (tab() === 'locations') { {{ locations().length }} }
+            @else if (tab() === 'branchAccess') { {{ branchAccess()?.users?.length ?? 0 }} }
             @else { {{ usersWithAccess() }} of {{ access().length }} }
           </span>
         </div>
@@ -243,6 +245,48 @@
             }
           </tbody>
         </table>
+      } @else if (tab() === 'branchAccess') {
+        @if (branchAccessNote()) {
+          <div class="pa-hint">{{ branchAccessNote() }}@if (branchAccessNote() === branchAccessNotSetUp) { Until then every member can work in every branch.}</div>
+        } @else if (branchAccess(); as ba) {
+          @if (activeBranches().length === 0) {
+            <div class="pa-hint">No active branch yet.</div>
+          } @else {
+            <table class="fx-table pa-branch-table">
+              <thead>
+                <tr>
+                  <th>User</th><th>Role in company</th>
+                  @for (b of activeBranches(); track b.locationId) { <th class="pa-branch-col">{{ b.locationName }}</th> }
+                </tr>
+              </thead>
+              <tbody>
+                @for (u of ba.users; track u.userId) {
+                  <tr>
+                    <td>
+                      <strong>{{ u.fullName }}</strong>
+                      <div class="pa-sub">{{ u.email }}</div>
+                      @if (hasNoBranch(u)) { <div class="pa-sub pa-warn">No branch — cannot enter</div> }
+                    </td>
+                    <td><span class="fx-badge">{{ u.roleInCompany }}</span></td>
+                    @if (u.allBranches) {
+                      <td [attr.colspan]="activeBranches().length">All branches</td>
+                    } @else {
+                      @for (b of activeBranches(); track b.locationId) {
+                        <td class="pa-branch-col">
+                          <input type="checkbox" [checked]="hasBranch(u, b)" [disabled]="branchCellBusy(u, b)"
+                                 [attr.aria-label]="b.locationName + ' for ' + u.fullName" (change)="toggleBranch(u, b, $event)" />
+                        </td>
+                      }
+                    }
+                  </tr>
+                } @empty {
+                  <tr class="fx-empty-row"><td [attr.colspan]="2 + activeBranches().length">{{ loading() ? 'Loading…' : 'The company has no members yet' }}</td></tr>
+                }
+              </tbody>
+            </table>
+            <div class="pa-hint">Company administrators always have every branch. A branch created later is given to nobody until it is ticked here.</div>
+          }
+        }
       } @else if (modulesFailed() && !loading()) {
         <div class="pa-hint">Could not load the modules.</div>
       } @else if (!accessModuleKey() && !loading()) {

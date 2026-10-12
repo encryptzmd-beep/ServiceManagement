@@ -4,6 +4,9 @@ import { Subscription, finalize } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../Auth/auth-service';
 import {
+  Branch,
+  BranchAccess,
+  BranchAccessUser,
   CompanyModule,
   ConnectionTestResult,
   DbServer,
@@ -18,7 +21,7 @@ import {
 } from '../../Services/platform-service';
 import { provisionLabel, requestErrorMessage } from '../../Auth/company-creation';
 
-type Tab = 'companies' | 'projects' | 'locations' | 'access' | 'menus' | 'servers' | 'settings';
+type Tab = 'companies' | 'projects' | 'locations' | 'branchAccess' | 'access' | 'menus' | 'servers' | 'settings';
 
 /**
  * Administration of the main database: companies and their modules, the database each
@@ -96,6 +99,11 @@ export class PlatformAdminComponent implements OnInit {
   modulesFailed = signal(false);
   /** Access changes in flight, keyed by company, module and user. */
   accessBusy = signal<ReadonlySet<string>>(new Set());
+  /** Branch Access tab: the members of the picked company and their branches (null = not loaded). */
+  branchAccess = signal<BranchAccess | null>(null);
+  /** Shown in place of the table (e.g. the company database has no branch access yet). */
+  branchAccessNote = signal('');
+  branchBusy = signal<ReadonlySet<string>>(new Set());
   /** The running load of the Branches or Module Access tab; dropped when another load starts or the tab changes. */
   private tabSub = new Subscription();
   private tabPending = false;
@@ -109,6 +117,7 @@ export class PlatformAdminComponent implements OnInit {
   activeProjects = computed(() => this.projects().filter(p => p.isActive).length);
   topLevelMenus = computed(() => this.menus().filter(m => !m.parentMenuId));
   usersWithAccess = computed(() => this.access().filter(a => a.hasAccess).length);
+  activeBranches = computed(() => (this.branchAccess()?.branches ?? []).filter(b => b.isActive));
 
   // ── edit forms (null = dialog closed) ─────────────────────────────────────
   companyForm: PlatformCompany | null = null;
@@ -199,6 +208,9 @@ export class PlatformAdminComponent implements OnInit {
     this.servers.set([]); this.settings.set([]); this.settingDraft = {}; this.editedSettings.clear();
     this.accessModules.set([]);
     this.modulesFailed.set(false);
+    this.branchAccess.set(null);
+    this.branchBusy.set(new Set());
+    this.branchAccessNote.set('');
     this.resetTabLoad();
     this.otpSent.set(false);
     this.otpMessage.set('');
@@ -229,7 +241,7 @@ export class PlatformAdminComponent implements OnInit {
 
     if (tab === 'menus' && !this.menus().length) this.loadMenus();
 
-    if (tab === 'locations' || tab === 'access') {
+    if (tab === 'locations' || tab === 'access' || tab === 'branchAccess') {
       // default to the project the admin is working in, else the first one
       if (!this.selectedProjectId()) {
         // a "project" is the company's database: its id is the company id
@@ -293,6 +305,19 @@ export class PlatformAdminComponent implements OnInit {
           else this.notify(res.message, false);
         },
         error: err => { this.tabPending = false; this.fail(err, 'Could not load the branches'); },
+      }));
+    } else if (this.tab() === 'branchAccess') {
+      this.branchAccess.set(null);
+      this.branchAccessNote.set('');
+      this.tabSub.add(this.api.getBranchAccess(projectId).subscribe({
+        next: res => {
+          this.tabPending = false;
+          this.loading.set(false);
+          if (res.success) { this.branchAccess.set(res.data ?? { branches: [], users: [] }); return; }
+          // "not set up yet" is a state of the company database, not an error
+          this.branchAccessNote.set(res.message || 'Could not load branch access');
+        },
+        error: err => { this.tabPending = false; this.fail(err, 'Could not load branch access'); },
       }));
     } else {
       // the picker holds a company id: a "project" is the company's database
@@ -643,6 +668,64 @@ export class PlatformAdminComponent implements OnInit {
         this.redraw(event, user.hasAccess);
         if (this.isLocked(err)) return;
         this.notify(this.message(err, 'Could not change access'), false);
+      },
+    });
+  }
+
+  // ── branch access ─────────────────────────────────────────────────────────
+
+  private branchKey(companyId: number, userId: number, locationId: number): string {
+    return `${companyId}|${userId}|${locationId}`;
+  }
+
+  branchCellBusy(user: BranchAccessUser, branch: Branch): boolean {
+    return this.branchBusy().has(this.branchKey(this.selectedProjectId() ?? 0, user.userId, branch.locationId));
+  }
+
+  hasBranch(user: BranchAccessUser, branch: Branch): boolean {
+    return user.locationIds.includes(branch.locationId);
+  }
+
+  /** A member without any active branch cannot enter the company. */
+  hasNoBranch(user: BranchAccessUser): boolean {
+    return !user.allBranches && !this.activeBranches().some(b => user.locationIds.includes(b.locationId));
+  }
+
+  /** The note is only extended for the one state it explains. */
+  readonly branchAccessNotSetUp = "Branch access is not set up in this company's database yet";
+
+  toggleBranch(user: BranchAccessUser, branch: Branch, event?: Event): void {
+    const companyId = this.selectedProjectId();
+    const had = this.hasBranch(user, branch);
+    if (!companyId || user.allBranches) { this.redraw(event, had); return; }
+
+    const key = this.branchKey(companyId, user.userId, branch.locationId);
+    if (this.branchBusy().has(key)) { this.redraw(event, had); return; }
+
+    const grant = !had;
+    this.branchBusy.update(set => new Set(set).add(key));
+    this.api.setBranchAccess(companyId, user.userId, branch.locationId, grant).pipe(
+      finalize(() => this.branchBusy.update(set => { const next = new Set(set); next.delete(key); return next; })),
+    ).subscribe({
+      next: res => {
+        this.notify(res.message, res.success);
+        if (!res.success) { this.redraw(event, had); return; }
+        // the answer belongs to the company it was sent for
+        if (this.selectedProjectId() !== companyId) return;
+        this.branchAccess.update(data => data && ({
+          ...data,
+          users: data.users.map(u => u.userId !== user.userId ? u : {
+            ...u,
+            locationIds: grant
+              ? [...u.locationIds.filter(id => id !== branch.locationId), branch.locationId].sort((a, b) => a - b)
+              : u.locationIds.filter(id => id !== branch.locationId),
+          }),
+        }));
+      },
+      error: err => {
+        this.redraw(event, had);
+        if (this.isLocked(err)) return;
+        this.notify(this.message(err, 'Could not change branch access'), false);
       },
     });
   }
