@@ -78,6 +78,11 @@ namespace EncryptzAPI.Provisioning
                     await RunOneAsync(companyId, stoppingToken);
             }
             catch (OperationCanceledException) { /* the host is stopping */ }
+            catch (Exception ex) when (stoppingToken.IsCancellationRequested)
+            {
+                // anything thrown while the host stops must not fault ExecuteAsync
+                _logger.LogInformation("Provisioning worker: the host is stopping; the job loop ended ({ErrorType})", ex.GetType().Name);
+            }
         }
 
         private async Task RunOneAsync(int companyId, CancellationToken stoppingToken)
@@ -136,6 +141,12 @@ namespace EncryptzAPI.Provisioning
                 while (await timer.WaitForNextTickAsync(stoppingToken));
             }
             catch (OperationCanceledException) { /* the host is stopping */ }
+            catch (Exception ex) when (stoppingToken.IsCancellationRequested)
+            {
+                // e.g. a database call cut off by the shutdown that did not end as a
+                // cancellation: it must not fault ExecuteAsync
+                _logger.LogInformation("Provisioning worker: the host is stopping; the sweeper ended ({ErrorType})", ex.GetType().Name);
+            }
         }
 
         /// <summary>

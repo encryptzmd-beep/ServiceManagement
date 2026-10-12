@@ -71,12 +71,10 @@ builder.Services.AddRateLimiter(options =>
     });
 
     // Each permitted call can start a database build: per logged-in user, else per IP.
+    // The user is known here because UseRateLimiter() comes after UseAuthentication() below.
     options.AddPolicy(RateLimitPolicies.CompanyCreation, context =>
     {
-        var user = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        var key = !string.IsNullOrEmpty(user)
-            ? "u:" + user
-            : "ip:" + (context.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+        var key = RateLimitPolicies.CompanyCreationKey(context.User, context.Connection.RemoteIpAddress);
 
         return RateLimitPartition.GetFixedWindowLimiter(
             key,
@@ -144,8 +142,9 @@ app.UseHttpsRedirection();
 
 // 🔥 VERY IMPORTANT ORDER (Most people do wrong)
 app.UseCors("CorsPolicy");     // 1️⃣ FIRST CORS
-app.UseRateLimiter();          // 1️⃣.5 after CORS so a 429 still carries the CORS headers
 app.UseAuthentication();       // 2️⃣ Auth
+app.UseRateLimiter();          // 2️⃣.2 after CORS so a 429 still carries the CORS headers, and after
+                               //       authentication so a policy can limit per logged-in user
 app.UseMiddleware<TenantResolutionMiddleware>();  // 2️⃣.5 Resolve tenant/ServiceDB from JWT claims
 app.UseAuthorization();        // 3️⃣ Authorization
 

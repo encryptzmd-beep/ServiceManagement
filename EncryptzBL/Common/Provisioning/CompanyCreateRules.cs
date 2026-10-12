@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Microsoft.Data.SqlClient;
 
 namespace EncryptzBL.Common.Provisioning
 {
@@ -55,6 +56,17 @@ namespace EncryptzBL.Common.Provisioning
 
         public const string NotAvailableMessage = "Company creation is not available right now";
         public const string PendingRetryMessage = "Your earlier company is waiting for a retry";
+
+        /// <summary>SQL Server error 2812: "Could not find stored procedure".</summary>
+        public const int ProcedureNotFound = 2812;
+
+        /// <summary>
+        /// The procedures of script 20 are not in the main database (the script has not been
+        /// run there yet): company creation is simply not available. Any other database
+        /// error is a real error.
+        /// </summary>
+        public static bool IsNotInstalled(Exception? ex)
+            => ex is SqlException sql && sql.Number == ProcedureNotFound;
 
         /// <summary>Why the user cannot create a company now; null when they can.</summary>
         public static string? CreationBlockedReason(bool serverAvailable, bool pendingRetry, int created, int limit, bool isPlatformAdmin)

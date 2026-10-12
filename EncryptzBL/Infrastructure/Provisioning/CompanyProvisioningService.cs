@@ -20,7 +20,32 @@ namespace EncryptzBL.Infrastructure.Provisioning
             _logger = logger;
         }
 
-        public async Task<ApiResponse<CompanyCreatedDto>> CreateCompany(CreateCompanyRequest req, int userId, bool isPlatformAdmin)
+        /// <summary>
+        /// Runs a call that needs the procedures of script 20. While the script has not been
+        /// run in the main database (SQL error 2812, procedure not found) the caller gets the
+        /// "not available" answer instead of an HTTP 500, and the log one warning without a
+        /// stack trace. Every other error keeps propagating.
+        /// </summary>
+        internal static async Task<T> WhenInstalledAsync<T>(Func<Task<T>> call, Func<T> notInstalled, ILogger logger, string procedure)
+        {
+            try
+            {
+                return await call();
+            }
+            catch (Exception ex) when (CompanyCreateRules.IsNotInstalled(ex))
+            {
+                logger.LogWarning("Company creation is not available: {Procedure} was not found in the main database. Run 20_Company_Provisioning.sql.", procedure);
+                return notInstalled();
+            }
+        }
+
+        public Task<ApiResponse<CompanyCreatedDto>> CreateCompany(CreateCompanyRequest req, int userId, bool isPlatformAdmin)
+            => WhenInstalledAsync(
+                () => CreateCompanyCore(req, userId, isPlatformAdmin),
+                () => ApiResponse<CompanyCreatedDto>.Fail(CompanyCreateRules.NotAvailableMessage),
+                _logger, "sp_Company_Create");
+
+        private async Task<ApiResponse<CompanyCreatedDto>> CreateCompanyCore(CreateCompanyRequest req, int userId, bool isPlatformAdmin)
         {
             if (userId <= 0)
                 return ApiResponse<CompanyCreatedDto>.Fail("Please log in again");
@@ -73,7 +98,13 @@ namespace EncryptzBL.Infrastructure.Provisioning
             return ApiResponse<CompanyCreatedDto>.Ok(new CompanyCreatedDto { CompanyId = companyId }, message);
         }
 
-        public async Task<ApiResponse<bool>> RetryProvision(int companyId, int userId, bool isPlatformAdmin)
+        public Task<ApiResponse<bool>> RetryProvision(int companyId, int userId, bool isPlatformAdmin)
+            => WhenInstalledAsync(
+                () => RetryProvisionCore(companyId, userId, isPlatformAdmin),
+                () => ApiResponse<bool>.Fail(CompanyCreateRules.NotAvailableMessage),
+                _logger, "sp_Provision_Retry");
+
+        private async Task<ApiResponse<bool>> RetryProvisionCore(int companyId, int userId, bool isPlatformAdmin)
         {
             if (companyId <= 0 || userId <= 0)
                 return ApiResponse<bool>.Fail("Company not found");
@@ -98,7 +129,13 @@ namespace EncryptzBL.Infrastructure.Provisioning
             return ApiResponse<bool>.Ok(true, message);
         }
 
-        public async Task<ApiResponse<CompanyCreationStateDto>> GetCreationState(int userId, bool isPlatformAdmin)
+        public Task<ApiResponse<CompanyCreationStateDto>> GetCreationState(int userId, bool isPlatformAdmin)
+            => WhenInstalledAsync(
+                () => GetCreationStateCore(userId, isPlatformAdmin),
+                () => ApiResponse<CompanyCreationStateDto>.Ok(new CompanyCreationStateDto { CanCreate = false, Message = CompanyCreateRules.NotAvailableMessage }),
+                _logger, "sp_Company_GetCreationState");
+
+        private async Task<ApiResponse<CompanyCreationStateDto>> GetCreationStateCore(int userId, bool isPlatformAdmin)
         {
             var dt = await GetDataTableAsync("sp_Company_GetCreationState", new[]
             {

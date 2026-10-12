@@ -45,6 +45,15 @@ namespace EncryptzBL.Common.Provisioning
 
         public static TenantScript Load(string path) => Parse(File.ReadAllText(path));
 
+        /// <summary>
+        /// The script, read when it is first needed and kept from then on. PublicationOnly:
+        /// a read that failed is NOT remembered (the default mode would rethrow the first
+        /// exception for the life of the API), so a file that was missing or locked once is
+        /// read again at the next attempt.
+        /// </summary>
+        public static Lazy<TenantScript> LoadLazily(string path)
+            => new(() => Load(path), LazyThreadSafetyMode.PublicationOnly);
+
         public static TenantScript Parse(string text)
         {
             var all = SqlBatchSplitter.Split(text);

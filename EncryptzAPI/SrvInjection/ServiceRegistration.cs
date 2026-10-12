@@ -40,7 +40,8 @@ namespace EncryptzAPI.SrvInjection
             // company creation: the database of a new company is built in the background
             services.AddSingleton<ProvisioningQueue>();
             services.AddSingleton<IProvisioningQueue>(sp => sp.GetRequiredService<ProvisioningQueue>());
-            services.AddSingleton(new Lazy<TenantScript>(() => TenantScript.Load(TenantScript.DefaultPath)));
+            // read at the first set-up and kept; a read that failed (file missing or locked) is tried again
+            services.AddSingleton(TenantScript.LoadLazily(TenantScript.DefaultPath));
             services.AddSingleton<ITenantDatabaseServer, SqlTenantDatabaseServer>();
             services.AddScoped<IProvisionStore, ProvisionStore>();
             services.AddScoped<TenantProvisioner>();

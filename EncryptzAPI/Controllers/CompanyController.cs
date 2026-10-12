@@ -198,7 +198,8 @@ namespace EncryptzAPI.Controllers
         [EnableRateLimiting(RateLimitPolicies.CompanyCreation)]
         public async Task<IActionResult> CreateCompany([FromBody] CreateCompanyDto dto)
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            // like AuthController: a claim that is not a number is "no user", not an error
+            var userId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
             var req = new CreateCompanyRequest
             {
                 CompanyName = dto?.CompanyName,
