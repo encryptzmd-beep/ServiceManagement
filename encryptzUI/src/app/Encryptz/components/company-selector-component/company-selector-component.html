@@ -172,6 +172,10 @@
             @if (creation() && !creation()!.canCreate) {
               <p class="small create-reason">{{ creation()!.message }}</p>
             }
+            @if (creationFailed() && !creation()) {
+              <p class="small create-reason">Could not check whether you can create a company.</p>
+              <button class="link-back" (click)="reload()">Refresh</button>
+            }
             <button class="link-back" (click)="openInvitations()">Invitations and join requests</button>
           </div>
         }
@@ -227,6 +231,10 @@
             <button class="btn-signin create-company-btn" (click)="openCreate()" [disabled]="!creation()?.canCreate">Create Company</button>
             @if (creation() && !creation()!.canCreate) {
               <p class="small create-reason">{{ creation()!.message }}</p>
+            }
+            @if (creationFailed() && !creation()) {
+              <p class="small create-reason">Could not check whether you can create a company.</p>
+              <button class="link-back" (click)="reload()">Refresh</button>
             }
           </div>
         }
@@ -347,7 +355,7 @@
           <div class="error-msg">
             <span class="material-icons">error_outline</span>
             {{ error() }}
-            <button (click)="reload()" class="retry-btn">Retry</button>
+            <button (click)="reload()" class="retry-btn">{{ stage() === 'company' ? 'Refresh' : 'Retry' }}</button>
           </div>
         }
 

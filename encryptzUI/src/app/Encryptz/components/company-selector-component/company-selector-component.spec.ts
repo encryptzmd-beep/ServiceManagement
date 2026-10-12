@@ -732,4 +732,163 @@ describe('CompanySelectorComponent company creation', () => {
       .filter(e => !e.closest('.create-form'));
     expect(outside.length).toBe(0);
   });
+
+  it('reads the list again after a retry was refused', () => {
+    list = [company(4, 'Failed', true)];
+    auth.retryProvision = () => of({ success: false, message: 'This company is not waiting for a retry', data: false });
+    const fixture = create();
+    const before = count('getUserCompanies');
+    list = [company(4, 'Ready', true)];
+
+    fixture.componentInstance.retry(list[0]);
+    fixture.detectChanges();
+
+    expect(count('getUserCompanies')).toBe(before + 1);
+    expect(fixture.componentInstance.companies()[0].provisionStatus).toBe('Ready');
+    expect(text(fixture)).toContain('This company is not waiting for a retry');
+  });
+
+  it('reads the list again when the answer to a create was lost', () => {
+    auth.createCompany = () => throwError(() => ({ status: 0 }));
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.openCreate();
+    c.createForm.companyName = 'New Co';
+    c.createForm.companyCode = 'NEW1';
+    const before = count('getUserCompanies');
+    list = [...list, company(9, 'Provisioning', true)];
+
+    c.submitCreate();
+
+    expect(c.createError()).toBe('Could not create the company');
+    expect(count('getUserCompanies')).toBe(before + 1);
+    expect(c.companies().length).toBe(2);
+  });
+
+  it('polls after a create even when the list cannot be read, and the next tick heals the list', () => {
+    vi.useFakeTimers();
+    try {
+      const fixture = create();
+      const c = fixture.componentInstance;
+      expect(c.polling()).toBe(false);
+      c.openCreate();
+      c.createForm.companyName = 'New Co';
+      c.createForm.companyCode = 'NEW1';
+      auth.createCompany = () => {
+        calls.push(['createCompany']);
+        list = [...list, company(9, 'Provisioning', true)];
+        auth.getUserCompanies = () => throwError(() => new Error('offline'));
+        return of({ success: true, message: 'ok', data: { companyId: 9, provisionStatus: 'Provisioning' } });
+      };
+      c.submitCreate();
+      expect(c.polling()).toBe(true);
+
+      auth.getUserCompanies = () => { calls.push(['getUserCompanies']); return of(list); };
+      const before = count('getUserCompanies');
+      vi.advanceTimersByTime(5000);
+
+      expect(count('getUserCompanies')).toBe(before + 1);
+      expect(c.companies().length).toBe(2);
+      expect(c.polling()).toBe(true);
+      fixture.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('polls after a retry even when the list cannot be read, and shows the row as being set up', () => {
+    list = [company(4, 'Failed', true)];
+    const fixture = create();
+    const c = fixture.componentInstance;
+    auth.getUserCompanies = () => throwError(() => new Error('offline'));
+
+    c.retry(list[0]);
+
+    expect(c.companies()[0].provisionStatus).toBe('Provisioning');
+    expect(c.polling()).toBe(true);
+    fixture.destroy();
+  });
+
+  it('polls when the screen opens with a kept company being set up and the API cannot be read', () => {
+    auth.companies = () => [company(3, 'Provisioning', true)];
+    auth.getUserCompanies = () => throwError(() => new Error('offline'));
+    const fixture = create();
+
+    expect(fixture.componentInstance.polling()).toBe(true);
+    fixture.destroy();
+  });
+
+  it('says so, with Refresh, when the creation state could not be read; not while it is on its way', () => {
+    const pending = new Subject<any>();
+    auth.getCompanyCreation = () => pending;
+    const fixture = create();
+    fixture.detectChanges();
+    expect(text(fixture)).not.toContain('Could not check whether you can create a company.');
+    expect(button(fixture, 'Create Company')!.disabled).toBe(true);
+
+    pending.error(new Error('offline'));
+    fixture.detectChanges();
+    expect(text(fixture)).toContain('Could not check whether you can create a company.');
+    expect(button(fixture, 'Refresh')).toBeDefined();
+
+    auth.getCompanyCreation = () => { calls.push(['getCompanyCreation']); return of(state(true)); };
+    button(fixture, 'Refresh')!.click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.creation()?.canCreate).toBe(true);
+    expect(text(fixture)).not.toContain('Could not check whether you can create a company.');
+  });
+
+  it('says so in the empty state too', () => {
+    list = [];
+    auth.getCompanyCreation = () => throwError(() => new Error('offline'));
+    const fixture = create();
+    fixture.detectChanges();
+
+    expect(text(fixture)).toContain('You are not in a company yet');
+    expect(text(fixture)).toContain('Could not check whether you can create a company.');
+    expect(button(fixture, 'Refresh')).toBeDefined();
+  });
+
+  it('labels the general error button Refresh on the company screen', () => {
+    const fixture = create();
+    fixture.componentInstance.error.set('Something went wrong');
+    fixture.detectChanges();
+    const btn = fixture.nativeElement.querySelector('.error-msg .retry-btn') as HTMLElement;
+    expect(btn.textContent?.trim()).toBe('Refresh');
+  });
+
+  it('does not navigate when the screen is gone before the company is entered', () => {
+    const sel = new Subject<any>();
+    auth.selectCompany = () => sel;
+    const fixture = create();
+    fixture.componentInstance.selectCompany(company(2, 'Ready'));
+    fixture.destroy();
+
+    sel.next({ success: true, message: '', data: { role: 'Admin' } });
+
+    expect(navigated.length).toBe(0);
+  });
+
+  it('gives up a list read that never answers after 20 seconds and sends a new request on a later tick', () => {
+    vi.useFakeTimers();
+    try {
+      list = [company(3, 'Provisioning', true)];
+      const fixture = create();
+      const c = fixture.componentInstance;
+      auth.getUserCompanies = () => { calls.push(['getUserCompanies']); return new Subject<any[]>(); };
+      const before = count('getUserCompanies');
+
+      vi.advanceTimersByTime(5000);
+      expect(count('getUserCompanies')).toBe(before + 1);
+      vi.advanceTimersByTime(19000);
+      expect(count('getUserCompanies')).toBe(before + 1);
+
+      vi.advanceTimersByTime(7000);
+      expect(count('getUserCompanies')).toBeGreaterThanOrEqual(before + 2);
+      expect(c.polling()).toBe(true);
+      fixture.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

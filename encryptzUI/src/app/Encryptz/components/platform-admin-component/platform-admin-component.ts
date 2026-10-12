@@ -67,6 +67,8 @@ export class PlatformAdminComponent implements OnInit {
   private settingsSub = new Subscription();
   /** Bumped whenever a dialog opens or closes; a connection-test answer of an older number is ignored. */
   private testToken = 0;
+  /** Bumped whenever a dialog opens or closes; a save answer of an older number does not touch the dialog. */
+  private saveToken = 0;
 
   readonly settingHelp: Record<string, { label: string; help: string }> = {
     MaxCompaniesPerUser: {
@@ -377,6 +379,7 @@ export class PlatformAdminComponent implements OnInit {
 
   newCompany(): void {
     this.formError.set('');
+    this.saveToken++;
     this.companyForm = {
       companyId: 0, companyName: '', companyCode: '', address: '', city: '', phoneNumber: '', isActive: true,
     };
@@ -384,6 +387,7 @@ export class PlatformAdminComponent implements OnInit {
 
   editCompany(company: PlatformCompany): void {
     this.formError.set('');
+    this.saveToken++;
     this.companyForm = { ...company };
   }
 
@@ -396,15 +400,17 @@ export class PlatformAdminComponent implements OnInit {
     }
 
     this.saving.set(true);
+    const token = this.saveToken;
     this.api.saveCompany(form).subscribe({
       next: res => {
-        this.saving.set(false);
-        if (!res.success) { this.formError.set(res.message); return; }
-        this.companyForm = null;
+        const current = token === this.saveToken;
+        if (current) this.saving.set(false);
+        if (!res.success) { if (current) this.formError.set(res.message); return; }
+        if (current) this.companyForm = null;
         this.notify(res.message, true);
         this.loadCompanies();
       },
-      error: err => this.failForm(err),
+      error: err => this.failForm(err, token),
     });
   }
 
@@ -500,6 +506,7 @@ export class PlatformAdminComponent implements OnInit {
 
   newProject(): void {
     this.formError.set('');
+    this.saveToken++;
     this.resetTest();
     const company = this.companies().find(c => c.companyId === this.companyFilter()) ?? this.companies()[0];
     this.projectForm = {
@@ -515,6 +522,7 @@ export class PlatformAdminComponent implements OnInit {
 
   editProject(project: PlatformProject): void {
     this.formError.set('');
+    this.saveToken++;
     this.resetTest();
     this.projectForm = { ...project, dbPassword: '' };
   }
@@ -555,16 +563,18 @@ export class PlatformAdminComponent implements OnInit {
     if (invalid) { this.formError.set(invalid); return; }
 
     this.saving.set(true);
+    const token = this.saveToken;
     this.api.saveProject(form).subscribe({
       next: res => {
-        this.saving.set(false);
-        if (!res.success) { this.formError.set(res.message); return; }
-        this.projectForm = null;
+        const current = token === this.saveToken;
+        if (current) this.saving.set(false);
+        if (!res.success) { if (current) this.formError.set(res.message); return; }
+        if (current) this.projectForm = null;
         this.notify(res.message, true);
         this.loadProjects();
         this.loadCompanies();
       },
-      error: err => this.failForm(err),
+      error: err => this.failForm(err, token),
     });
   }
 
@@ -572,11 +582,13 @@ export class PlatformAdminComponent implements OnInit {
 
   newLocation(): void {
     this.formError.set('');
+    this.saveToken++;
     this.locationForm = { locationId: 0, locationName: '', locationCode: '', address: '', city: '', isActive: true };
   }
 
   editLocation(location: PlatformLocation): void {
     this.formError.set('');
+    this.saveToken++;
     this.locationForm = { ...location };
   }
 
@@ -587,15 +599,18 @@ export class PlatformAdminComponent implements OnInit {
     if (!form.locationName.trim()) { this.formError.set('Branch name is required'); return; }
 
     this.saving.set(true);
+    const token = this.saveToken;
     this.api.saveLocation(projectId, form).subscribe({
       next: res => {
-        this.saving.set(false);
-        if (!res.success) { this.formError.set(res.message); return; }
-        this.locationForm = null;
+        const current = token === this.saveToken;
+        if (current) this.saving.set(false);
+        if (!res.success) { if (current) this.formError.set(res.message); return; }
+        if (current) this.locationForm = null;
         this.notify(res.message, true);
-        this.loadProjectData();
+        // a late answer reloads the branches only while that tab is still shown
+        if (current || this.tab() === 'locations') this.loadProjectData();
       },
-      error: err => this.failForm(err),
+      error: err => this.failForm(err, token),
     });
   }
 
@@ -654,12 +669,14 @@ export class PlatformAdminComponent implements OnInit {
 
   newServer(): void {
     this.formError.set('');
+    this.saveToken++;
     this.resetTest();
     this.serverForm = { dbServerId: 0, serverName: '', adminUser: '', adminPassword: '', extraOptions: '', isDefault: this.servers().length === 0, isActive: true };
   }
 
   editServer(server: DbServer): void {
     this.formError.set('');
+    this.saveToken++;
     this.resetTest();
     // the password is never known here: the field starts empty each time
     this.serverForm = {
@@ -683,16 +700,20 @@ export class PlatformAdminComponent implements OnInit {
 
     this.formError.set('');
     this.saving.set(true);
+    const token = this.saveToken;
     this.api.saveDbServer(form).subscribe({
       next: res => {
-        this.saving.set(false);
-        if (!res.success) { this.formError.set(res.message); return; }
-        this.serverForm = null;
-        this.testResult.set(null);
+        const current = token === this.saveToken;
+        if (current) this.saving.set(false);
+        if (!res.success) { if (current) this.formError.set(res.message); return; }
+        if (current) {
+          this.serverForm = null;
+          this.testResult.set(null);
+        }
         this.notify(res.message, true);
         this.loadServers();
       },
-      error: err => this.failForm(err),
+      error: err => this.failForm(err, token),
     });
   }
 
@@ -746,19 +767,20 @@ export class PlatformAdminComponent implements OnInit {
   saveSetting(key: string): void {
     if (this.savingSettings().has(key)) return;
     const value = this.settingDraft[key] ?? '';
+    // typing from here on marks the key again; the stored value then must not replace it
+    this.editedSettings.delete(key);
     this.settingError.update(e => ({ ...e, [key]: '' }));
     this.savingSettings.update(s => new Set(s).add(key));
     this.api.saveSetting(key, value).pipe(
       finalize(() => this.savingSettings.update(s => { const n = new Set(s); n.delete(key); return n; })),
     ).subscribe({
       next: res => {
-        if (!res.success) { this.settingError.update(e => ({ ...e, [key]: res.message })); return; }
-        this.editedSettings.delete(key);
+        if (!res.success) { this.editedSettings.add(key); this.settingError.update(e => ({ ...e, [key]: res.message })); return; }
         this.settings.update(list => list.map(s => s.settingKey === key ? { ...s, settingValue: value.trim() } : s));
         this.notify(res.message, true);
         this.showStoredValue(key);
       },
-      error: err => { if (this.isLocked(err)) return; this.settingError.update(e => ({ ...e, [key]: this.message(err, 'Could not save the setting') })); },
+      error: err => { this.editedSettings.add(key); if (this.isLocked(err)) return; this.settingError.update(e => ({ ...e, [key]: this.message(err, 'Could not save the setting') })); },
     });
   }
 
@@ -770,7 +792,7 @@ export class PlatformAdminComponent implements OnInit {
         if (!stored) return;
         const value = stored.settingValue ?? '';
         this.settings.update(list => list.map(s => s.settingKey === key ? { ...s, settingValue: value } : s));
-        this.settingDraft[key] = value;
+        if (!this.editedSettings.has(key)) this.settingDraft[key] = value;
       },
       error: () => { /* keep the typed value */ },
     }));
@@ -799,11 +821,12 @@ export class PlatformAdminComponent implements OnInit {
       next: res => {
         this.retryingCompany.set(null);
         this.notify(res.message, res.success);
-        if (res.success) this.loadCompanies();
+        this.loadCompanies();
       },
       error: err => {
         this.retryingCompany.set(null);
         this.notify(requestErrorMessage(err, 'Could not retry the set-up'), false);
+        this.loadCompanies();
       },
     });
   }
@@ -812,6 +835,7 @@ export class PlatformAdminComponent implements OnInit {
 
   newMenu(): void {
     this.formError.set('');
+    this.saveToken++;
     this.menuForm = {
       menuId: 0, menuName: '', menuPath: '', icon: '', parentMenuId: null,
       sortOrder: this.menus().length + 1, isActive: true, module: 'Services',
@@ -820,6 +844,7 @@ export class PlatformAdminComponent implements OnInit {
 
   editMenu(menu: PlatformMenu): void {
     this.formError.set('');
+    this.saveToken++;
     this.menuForm = { ...menu, parentMenuId: menu.parentMenuId ?? null };
   }
 
@@ -829,15 +854,17 @@ export class PlatformAdminComponent implements OnInit {
     if (!form.menuName.trim()) { this.formError.set('Menu name is required'); return; }
 
     this.saving.set(true);
+    const token = this.saveToken;
     this.api.saveMenu(form).subscribe({
       next: res => {
-        this.saving.set(false);
-        if (!res.success) { this.formError.set(res.message); return; }
-        this.menuForm = null;
+        const current = token === this.saveToken;
+        if (current) this.saving.set(false);
+        if (!res.success) { if (current) this.formError.set(res.message); return; }
+        if (current) this.menuForm = null;
         this.notify(res.message, true);
         this.loadMenus();
       },
-      error: err => this.failForm(err),
+      error: err => this.failForm(err, token),
     });
   }
 
@@ -848,6 +875,7 @@ export class PlatformAdminComponent implements OnInit {
     this.companyForm = this.projectForm = this.locationForm = this.menuForm = null;
     this.serverForm = null;
     this.formError.set('');
+    this.saveToken++;
     this.saving.set(false);
     this.resetTest();
   }
@@ -879,8 +907,8 @@ export class PlatformAdminComponent implements OnInit {
     this.notify(this.message(err, fallback), false);
   }
 
-  private failForm(err: any): void {
-    if (this.isLocked(err)) return;
+  private failForm(err: any, token: number): void {
+    if (this.isLocked(err) || token !== this.saveToken) return;
     this.saving.set(false);
     this.formError.set(this.message(err, 'Save failed'));
   }

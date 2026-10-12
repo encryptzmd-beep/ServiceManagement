@@ -932,4 +932,81 @@ describe('PlatformAdminComponent servers, settings and database state', () => {
     expect(c.serverForm).toBeNull();
     expect(c.unlocked()).toBe(false);
   });
+
+  it('lets a late save success after Cancel leave the newly opened dialog alone, and still reloads the servers', () => {
+    const late = new Subject<any>();
+    api.saveDbServer = (form: any) => { calls.push(['saveDbServer', { ...form }]); return late; };
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('servers' as any);
+    c.editServer(server(1) as any);
+    c.saveServer();
+    c.closeForms();
+    c.editServer(server(2) as any);
+    const before = calls.filter(x => x[0] === 'getDbServers').length;
+
+    late.next({ success: true, message: 'Server saved', data: 1 });
+
+    expect(c.serverForm?.dbServerId).toBe(2);
+    expect(c.formError()).toBe('');
+    expect(c.saving()).toBe(false);
+    expect(calls.filter(x => x[0] === 'getDbServers').length).toBe(before + 1);
+  });
+
+  it('does not write a late refusal or failure of a save into a dialog opened meanwhile', () => {
+    const late = new Subject<any>();
+    api.saveDbServer = () => late;
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('servers' as any);
+    c.editServer(server(1) as any);
+    c.saveServer();
+    c.closeForms();
+    c.editServer(server(2) as any);
+
+    late.next({ success: false, message: 'Refused late', data: 0 });
+    expect(c.formError()).toBe('');
+    expect(c.serverForm?.dbServerId).toBe(2);
+
+    const lateFail = new Subject<any>();
+    api.saveDbServer = () => lateFail;
+    c.saveServer();
+    c.closeForms();
+    c.editServer(server(2) as any);
+    lateFail.error({ status: 500, error: { message: 'Broke late' } });
+    expect(c.formError()).toBe('');
+  });
+
+  it('keeps what the user typed in a setting while the stored value is read again', () => {
+    const late = new Subject<any>();
+    let reads = 0;
+    api.getSettings = () => { reads++; return reads === 1 ? of(settingsList('1')) : reads === 2 ? late : of(settingsList('1')); };
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('settings' as any);
+    fixture.detectChanges();
+    c.settingDraft['MaxCompaniesPerUser'] = '3';
+    c.saveSetting('MaxCompaniesPerUser');
+
+    const input = fixture.nativeElement.querySelector('input[aria-label="Companies a user may create"]') as HTMLInputElement;
+    input.value = '9';
+    input.dispatchEvent(new Event('input'));
+    late.next(settingsList('3'));
+
+    expect(c.settingDraft['MaxCompaniesPerUser']).toBe('9');
+    expect(c.settings().find(s => s.settingKey === 'MaxCompaniesPerUser')!.settingValue).toBe('3');
+  });
+
+  it('reloads the companies when a retry is refused', () => {
+    auth = { retryProvision: (id: number) => { calls.push(['retryProvision', id]); return of({ success: false, message: 'This company is not waiting for a retry', data: false }); } };
+    api.getCompanies = () => { calls.push(['getCompanies']); return of({ success: true, message: '', data: [companyRow(4, { provisionStatus: 'Failed' })] }); };
+    const fixture = create();
+    const c = fixture.componentInstance;
+    const before = calls.filter(x => x[0] === 'getCompanies').length;
+
+    c.retryCompany(c.companies()[0]);
+
+    expect(calls.filter(x => x[0] === 'getCompanies').length).toBe(before + 1);
+    expect(c.retryingCompany()).toBeNull();
+  });
 });

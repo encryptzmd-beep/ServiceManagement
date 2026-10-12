@@ -1,7 +1,7 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription, finalize, interval } from 'rxjs';
+import { Subscription, finalize, interval, timeout } from 'rxjs';
 import { AuthService, Company } from '../../Auth/auth-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -45,6 +45,8 @@ export class CompanySelectorComponent {
   // ── creating a company ────────────────────────────────────────────
   /** Whether this user may create a company now (null = not known yet). */
   creation = signal<CompanyCreationState | null>(null);
+  /** The creation state could not be read and is still not known. */
+  creationFailed = signal(false);
   showCreate = signal(false);
   createForm: NewCompanyForm = emptyCompanyForm();
   createError = signal('');
@@ -67,6 +69,8 @@ export class CompanySelectorComponent {
   private refreshSeq = 0;
   /** A refresh of the list is still on its way. */
   private refreshing = false;
+  /** A create / retry went through but the list could not be read: keep asking until it shows. */
+  private expectSetUp = false;
 
   private moduleKey = '';
 
@@ -109,6 +113,7 @@ export class CompanySelectorComponent {
   /** Reload whatever this step shows (the Retry button). */
   reload(): void {
     this.pollStopped.set(false);
+    this.creationFailed.set(false);
     this.error.set('');
     if (this.stage() === 'module') this.loadModules();
     else if (this.stage() === 'branch') this.loadBranches();
@@ -129,6 +134,7 @@ export class CompanySelectorComponent {
 
     this.companies.set(kept);
     this.loading.set(kept.length === 0);
+    this.watchSetUps();
     this.refreshCompanies(() => {
       if (kept.length === 0) this.error.set('Could not load your companies. Please try again.');
     });
@@ -139,6 +145,7 @@ export class CompanySelectorComponent {
     const seq = ++this.refreshSeq;
     this.refreshing = true;
     this.auth.getUserCompanies().pipe(
+      timeout(20000),
       finalize(() => { if (seq === this.refreshSeq) this.refreshing = false; }),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
@@ -146,6 +153,7 @@ export class CompanySelectorComponent {
         if (this.gone || this.enteringCompany || seq !== this.refreshSeq) return;
         this.loading.set(false);
         this.companies.set(list);
+        this.expectSetUp = false;
         this.watchSetUps();
       },
       error: () => {
@@ -160,8 +168,13 @@ export class CompanySelectorComponent {
         if (this.gone || this.enteringCompany || seq !== this.refreshSeq) return;
         // a failed read keeps what was known before (null when nothing was)
         this.creation.set(res.success ? res.data ?? this.creation() : this.creation());
+        this.creationFailed.set(!this.creation());
       },
-      error: () => { /* keeps the previous state; it is null when nothing was known yet */ }
+      error: () => {
+        // keeps the previous state; it is null when nothing was known yet
+        if (this.gone || this.enteringCompany || seq !== this.refreshSeq) return;
+        this.creationFailed.set(!this.creation());
+      }
     });
   }
 
@@ -172,7 +185,7 @@ export class CompanySelectorComponent {
     this.stopPolling();
     this.loading.set(true);
 
-    this.auth.selectCompany(company.companyId).subscribe({
+    this.auth.selectCompany(company.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.loading.set(false);
 
@@ -249,11 +262,14 @@ export class CompanySelectorComponent {
         this.showCreate.set(false);
         this.error.set('');
         this.pollStarted = Date.now();
-        this.refreshCompanies();
+        this.expectSetUp = true;
+        this.refreshCompanies(() => this.watchSetUps());
       },
       error: (err) => {
         this.creating.set(false);
         this.createError.set(requestErrorMessage(err, 'Could not create the company'));
+        // the answer may have been lost after the company was made
+        this.refreshCompanies();
       }
     });
   }
@@ -268,13 +284,19 @@ export class CompanySelectorComponent {
     this.auth.retryProvision(company.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.retrying.set(null);
-        if (!res.success) { this.error.set(res.message || 'Could not retry the set-up'); return; }
+        if (!res.success) {
+          this.error.set(res.message || 'Could not retry the set-up');
+          this.refreshCompanies();
+          return;
+        }
         this.pollStarted = Date.now();
-        this.refreshCompanies();
+        this.companies.update(list => list.map(c => c.companyId === company.companyId ? { ...c, provisionStatus: 'Provisioning' } : c));
+        this.refreshCompanies(() => this.watchSetUps());
       },
       error: (err) => {
         this.retrying.set(null);
         this.error.set(requestErrorMessage(err, 'Could not retry the set-up'));
+        this.refreshCompanies();
       }
     });
   }
@@ -287,7 +309,7 @@ export class CompanySelectorComponent {
 
   /** Starts or stops asking again, depending on whether a company is being set up. */
   private watchSetUps(): void {
-    if (!anyProvisioning(this.companies())) { this.stopPolling(); return; }
+    if (!anyProvisioning(this.companies()) && !this.expectSetUp) { this.stopPolling(); return; }
     if (this.pollSub) return;
 
     this.pollStopped.set(false);
@@ -312,6 +334,7 @@ export class CompanySelectorComponent {
   private stopPolling(): void {
     this.pollSub?.unsubscribe();
     this.pollSub = undefined;
+    this.expectSetUp = false;
     this.polling.set(false);
   }
 
