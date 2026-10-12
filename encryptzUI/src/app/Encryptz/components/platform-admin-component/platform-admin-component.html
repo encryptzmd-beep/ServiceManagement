@@ -116,7 +116,7 @@
               <td><span class="pa-status" [class.off]="!c.isActive">{{ c.isActive ? 'Active' : 'Inactive' }}</span></td>
               <td class="pa-actions">
                 @if (isPlatformAdmin() && canRetry(c)) {
-                  <button class="fx-action-btn" (click)="retryCompany(c)" [disabled]="retryingCompany() !== null">{{ retryingCompany() === c.companyId ? 'Retrying…' : 'Retry' }}</button>
+                  <button class="fx-action-btn" (click)="retryCompany(c)" [attr.aria-label]="'Retry set-up of ' + c.companyName" [disabled]="retryingCompany() !== null">{{ retryingCompany() === c.companyId ? 'Retrying…' : 'Retry' }}</button>
                 }
                 <button class="fx-action-btn" (click)="openModules(c)">Modules</button>
                 <button class="fx-action-btn" (click)="editCompany(c)">Edit</button>
@@ -333,13 +333,13 @@
               </td>
               <td>
                 @if (settingHelp[s.settingKey]) {
-                  <input class="form-input" [(ngModel)]="settingDraft[s.settingKey]" [attr.aria-label]="settingHelp[s.settingKey].label" />
+                  <input class="form-input" [(ngModel)]="settingDraft[s.settingKey]" (ngModelChange)="markSettingEdited(s.settingKey)" [attr.aria-label]="settingHelp[s.settingKey].label" />
                 } @else {
                   {{ s.settingValue }}
                 }
               </td>
               <td class="pa-actions">
-                @if (settingHelp[s.settingKey]) { <button class="fx-action-btn" (click)="saveSetting(s.settingKey)">Save</button> }
+                @if (settingHelp[s.settingKey]) { <button class="fx-action-btn" (click)="saveSetting(s.settingKey)" [disabled]="savingSettings().has(s.settingKey)">{{ savingSettings().has(s.settingKey) ? 'Saving…' : 'Save' }}</button> }
               </td>
             </tr>
           } @empty {

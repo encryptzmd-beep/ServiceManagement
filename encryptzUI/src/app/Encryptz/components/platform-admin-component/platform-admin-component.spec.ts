@@ -743,4 +743,193 @@ describe('PlatformAdminComponent servers, settings and database state', () => {
 
     expect(buttons).not.toContain('Retry');
   });
+
+  const settingsList = (max: string) => ({ success: true, message: '', data: [
+    { settingKey: 'MaxCompaniesPerUser', settingValue: max, updatedByName: '' },
+    { settingKey: 'TenantLookupSourceDb', settingValue: '', updatedByName: '' },
+  ] });
+  const buttonsOf = (fixture: any) => Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+
+  it('shows the value the server stored after a setting was saved', () => {
+    let reads = 0;
+    api.getSettings = () => { reads++; return of(reads === 1 ? settingsList('1') : settingsList('7')); };
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('settings' as any);
+    c.settingDraft['MaxCompaniesPerUser'] = '007';
+    c.settingDraft['TenantLookupSourceDb'] = 'typed-elsewhere';
+    c.saveSetting('MaxCompaniesPerUser');
+
+    expect(c.settingDraft['MaxCompaniesPerUser']).toBe('7');
+    expect(c.settings().find(s => s.settingKey === 'MaxCompaniesPerUser')!.settingValue).toBe('7');
+    expect(c.settingDraft['TenantLookupSourceDb']).toBe('typed-elsewhere');
+  });
+
+  it('keeps the trimmed typed value when the setting cannot be read again', () => {
+    let reads = 0;
+    api.getSettings = () => { reads++; return reads === 1 ? of(settingsList('1')) : throwError(() => ({ status: 500, error: {} })); };
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('settings' as any);
+    c.settingDraft['MaxCompaniesPerUser'] = ' 3 ';
+    c.saveSetting('MaxCompaniesPerUser');
+
+    expect(c.settings().find(s => s.settingKey === 'MaxCompaniesPerUser')!.settingValue).toBe('3');
+  });
+
+  it('sends one request when Save is pressed twice for a setting, and disables the button meanwhile', () => {
+    const late = new Subject<any>();
+    api.saveSetting = (key: string, value: string) => { calls.push(['saveSetting', key, value]); return late; };
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('settings' as any);
+    fixture.detectChanges();
+    c.settingDraft['MaxCompaniesPerUser'] = '3';
+
+    c.saveSetting('MaxCompaniesPerUser');
+    c.saveSetting('MaxCompaniesPerUser');
+    fixture.detectChanges();
+
+    expect(calls.filter(x => x[0] === 'saveSetting').length).toBe(1);
+    const busy = buttonsOf(fixture).filter(b => b.textContent?.trim() === 'Saving…');
+    expect(busy.length).toBe(1);
+    expect(busy[0].disabled).toBe(true);
+
+    late.next({ success: true, message: 'Setting saved', data: true });
+    late.complete();
+    fixture.detectChanges();
+    expect(buttonsOf(fixture).some(b => b.textContent?.trim() === 'Saving…')).toBe(false);
+    c.saveSetting('MaxCompaniesPerUser');
+    expect(calls.filter(x => x[0] === 'saveSetting').length).toBe(2);
+  });
+
+  it('leaves the server list empty when its answer comes after the screen was locked', () => {
+    const late = new Subject<any>();
+    api.getDbServers = () => late;
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('servers' as any);
+
+    c.lockNow();
+    late.next({ success: true, message: '', data: [server(1)] });
+
+    expect(c.servers()).toEqual([]);
+    expect(c.unlocked()).toBe(false);
+  });
+
+  it('does not overwrite a setting the user edited while the list was loading', () => {
+    const late = new Subject<any>();
+    let reads = 0;
+    api.getSettings = () => { reads++; return reads === 1 ? of(settingsList('1')) : late; };
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('settings' as any);
+    fixture.detectChanges();
+
+    c.loadSettings();
+    const input = fixture.nativeElement.querySelector('input[aria-label="Companies a user may create"]') as HTMLInputElement;
+    input.value = '9';
+    input.dispatchEvent(new Event('input'));
+    late.next(settingsList('5'));
+
+    expect(c.settingDraft['MaxCompaniesPerUser']).toBe('9');
+    expect(c.settings().find(s => s.settingKey === 'MaxCompaniesPerUser')!.settingValue).toBe('5');
+  });
+
+  it('closes the server dialog when the tab is changed', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('servers' as any);
+    c.editServer(server(1) as any);
+    c.serverForm!.adminPassword = 'typed-secret';
+
+    c.setTab('settings' as any);
+
+    expect(c.serverForm).toBeNull();
+  });
+
+  it('ignores the answer of a connection test after its dialog was closed', () => {
+    const late = new Subject<any>();
+    api.testDbServer = () => late;
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('servers' as any);
+    c.newServer();
+    c.serverForm!.serverName = 'sql-9';
+    c.serverForm!.adminUser = 'creator';
+    c.testServer();
+    expect(c.testing()).toBe(true);
+
+    c.closeForms();
+    expect(c.testing()).toBe(false);
+    late.next({ success: true, message: 'Connected', data: { connected: true, schemaReady: true, locationCount: 0, message: 'Connected' } });
+
+    expect(c.testResult()).toBeNull();
+    expect(c.formError()).toBe('');
+
+    const lateFail = new Subject<any>();
+    api.testDbServer = () => lateFail;
+    c.newServer();
+    c.serverForm!.serverName = 'sql-9';
+    c.serverForm!.adminUser = 'creator';
+    c.testServer();
+    c.closeForms();
+    lateFail.error({ status: 500, error: {} });
+
+    expect(c.formError()).toBe('');
+  });
+
+  it('does not show the answer of a company-database test in a server dialog opened meanwhile', () => {
+    const late = new Subject<any>();
+    api.testConnection = () => late;
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.editProject({ projectId: 2, companyId: 2, projectName: 'P', projectKey: 'K', isActive: true, serverName: 's', databaseName: 'd', dbUser: 'u', extraOptions: '' } as any);
+    c.testProjectConnection();
+
+    c.newServer();
+    late.next({ success: true, message: 'Connected', data: { connected: true, schemaReady: true, locationCount: 0, message: 'Connected' } });
+
+    expect(c.testResult()).toBeNull();
+    expect(c.testing()).toBe(false);
+    expect(c.formError()).toBe('');
+  });
+
+  it('shows a company administrator the status text only, without database name, reason or Retry', () => {
+    api.getCompanies = () => of({ success: true, message: '', data: [companyRow(4, { provisionStatus: 'Failed', provisionError: 'Script 12 failed', databaseName: 'SecretDb' })] });
+    const fixture = create(false);
+
+    expect(text(fixture)).toContain('Setup failed');
+    expect(text(fixture)).not.toContain('SecretDb');
+    expect(text(fixture)).not.toContain('Script 12 failed');
+    expect(buttonsOf(fixture).map(b => b.textContent?.trim())).not.toContain('Retry');
+  });
+
+  it('shows a status it does not know as that text', () => {
+    api.getCompanies = () => of({ success: true, message: '', data: [companyRow(4, { provisionStatus: 'Migrating' })] });
+    const fixture = create();
+
+    expect(text(fixture)).toContain('Migrating');
+  });
+
+  it('names the company on its Retry button', () => {
+    api.getCompanies = () => of({ success: true, message: '', data: [companyRow(4, { provisionStatus: 'Failed' })] });
+    const fixture = create();
+    const retry = buttonsOf(fixture).find(b => b.textContent?.trim() === 'Retry')!;
+
+    expect(retry.getAttribute('aria-label')).toBe('Retry set-up of Co 4');
+  });
+
+  it('goes back to the code screen when saving a server finds the lock ended', () => {
+    api.saveDbServer = () => throwError(() => ({ status: 403, error: { code: 'PLATFORM_LOCKED' } }));
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('servers' as any);
+    c.editServer(server(1) as any);
+    c.saveServer();
+
+    expect(c.saving()).toBe(false);
+    expect(c.serverForm).toBeNull();
+    expect(c.unlocked()).toBe(false);
+  });
 });

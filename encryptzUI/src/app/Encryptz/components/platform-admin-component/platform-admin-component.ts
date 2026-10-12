@@ -58,6 +58,15 @@ export class PlatformAdminComponent implements OnInit {
   settingError = signal<Record<string, string>>({});
   /** Company whose set-up is being retried (null = none). */
   retryingCompany = signal<number | null>(null);
+  /** Setting keys with a save in flight. */
+  savingSettings = signal<ReadonlySet<string>>(new Set());
+  /** Setting keys the user typed in since the last load / successful save. */
+  private editedSettings = new Set<string>();
+  /** The running loads of the servers list and the settings (and the re-reads after a save). */
+  private serversSub = new Subscription();
+  private settingsSub = new Subscription();
+  /** Bumped whenever a dialog opens or closes; a connection-test answer of an older number is ignored. */
+  private testToken = 0;
 
   readonly settingHelp: Record<string, { label: string; help: string }> = {
     MaxCompaniesPerUser: {
@@ -184,7 +193,8 @@ export class PlatformAdminComponent implements OnInit {
     this.closeForms();
     this.companies.set([]); this.projects.set([]); this.locations.set([]);
     this.access.set([]); this.menus.set([]);
-    this.servers.set([]); this.settings.set([]); this.settingDraft = {};
+    this.cancelServersLoad(); this.cancelSettingsLoad();
+    this.servers.set([]); this.settings.set([]); this.settingDraft = {}; this.editedSettings.clear();
     this.accessModules.set([]);
     this.modulesFailed.set(false);
     this.resetTabLoad();
@@ -208,6 +218,7 @@ export class PlatformAdminComponent implements OnInit {
 
   setTab(tab: Tab): void {
     if ((tab === 'servers' || tab === 'settings') && !this.isPlatformAdmin()) return;
+    if (tab !== this.tab()) { this.closeForms(); this.cancelServersLoad(); this.cancelSettingsLoad(); }
     this.tab.set(tab);
     if (tab === 'servers') this.loadServers();
     if (tab === 'settings') this.loadSettings();
@@ -489,7 +500,7 @@ export class PlatformAdminComponent implements OnInit {
 
   newProject(): void {
     this.formError.set('');
-    this.testResult.set(null);
+    this.resetTest();
     const company = this.companies().find(c => c.companyId === this.companyFilter()) ?? this.companies()[0];
     this.projectForm = {
       projectId: 0,
@@ -504,7 +515,7 @@ export class PlatformAdminComponent implements OnInit {
 
   editProject(project: PlatformProject): void {
     this.formError.set('');
-    this.testResult.set(null);
+    this.resetTest();
     this.projectForm = { ...project, dbPassword: '' };
   }
 
@@ -524,13 +535,15 @@ export class PlatformAdminComponent implements OnInit {
     this.formError.set('');
     this.testResult.set(null);
     this.testing.set(true);
+    const token = ++this.testToken;
     this.api.testConnection(form).subscribe({
       next: res => {
+        if (token !== this.testToken) return;
         this.testing.set(false);
         if (res.success && res.data) this.testResult.set(res.data);
         else this.formError.set(res.message);
       },
-      error: err => { if (this.isLocked(err)) return; this.testing.set(false); this.formError.set(this.message(err, 'Connection test failed')); },
+      error: err => { if (this.isLocked(err) || token !== this.testToken) return; this.testing.set(false); this.formError.set(this.message(err, 'Connection test failed')); },
     });
   }
 
@@ -627,21 +640,27 @@ export class PlatformAdminComponent implements OnInit {
   // ── database servers ──────────────────────────────────────────────────────
 
   loadServers(): void {
-    this.api.getDbServers().subscribe({
+    this.cancelServersLoad();
+    this.serversSub.add(this.api.getDbServers().subscribe({
       next: res => { if (res.success) this.servers.set(res.data ?? []); else this.notify(res.message, false); },
       error: err => this.fail(err, 'Could not load the database servers'),
-    });
+    }));
+  }
+
+  private cancelServersLoad(): void {
+    this.serversSub.unsubscribe();
+    this.serversSub = new Subscription();
   }
 
   newServer(): void {
     this.formError.set('');
-    this.testResult.set(null);
+    this.resetTest();
     this.serverForm = { dbServerId: 0, serverName: '', adminUser: '', adminPassword: '', extraOptions: '', isDefault: this.servers().length === 0, isActive: true };
   }
 
   editServer(server: DbServer): void {
     this.formError.set('');
-    this.testResult.set(null);
+    this.resetTest();
     // the password is never known here: the field starts empty each time
     this.serverForm = {
       dbServerId: server.dbServerId, serverName: server.serverName, adminUser: server.adminUser,
@@ -685,42 +704,76 @@ export class PlatformAdminComponent implements OnInit {
     this.formError.set('');
     this.testResult.set(null);
     this.testing.set(true);
+    const token = ++this.testToken;
     this.api.testDbServer(form).subscribe({
       next: res => {
+        if (token !== this.testToken) return;
         this.testing.set(false);
         if (res.success && res.data) this.testResult.set(res.data);
         else this.formError.set(res.message);
       },
-      error: err => { if (this.isLocked(err)) return; this.testing.set(false); this.formError.set(this.message(err, 'Connection test failed')); },
+      error: err => { if (this.isLocked(err) || token !== this.testToken) return; this.testing.set(false); this.formError.set(this.message(err, 'Connection test failed')); },
     });
   }
 
   // ── platform settings ─────────────────────────────────────────────────────
 
   loadSettings(): void {
-    this.api.getSettings().subscribe({
+    this.cancelSettingsLoad();
+    this.settingsSub.add(this.api.getSettings().subscribe({
       next: res => {
         if (!res.success) { this.notify(res.message, false); return; }
         const list = res.data ?? [];
         this.settings.set(list);
-        this.settingDraft = Object.fromEntries(list.map(s => [s.settingKey, s.settingValue ?? '']));
+        // what the user typed since this load started stays as typed
+        this.settingDraft = Object.fromEntries(list.map(s =>
+          [s.settingKey, this.editedSettings.has(s.settingKey) ? (this.settingDraft[s.settingKey] ?? '') : (s.settingValue ?? '')]));
         this.settingError.set({});
       },
       error: err => this.fail(err, 'Could not load the settings'),
-    });
+    }));
+  }
+
+  private cancelSettingsLoad(): void {
+    this.settingsSub.unsubscribe();
+    this.settingsSub = new Subscription();
+  }
+
+  markSettingEdited(key: string): void {
+    this.editedSettings.add(key);
   }
 
   saveSetting(key: string): void {
+    if (this.savingSettings().has(key)) return;
     const value = this.settingDraft[key] ?? '';
     this.settingError.update(e => ({ ...e, [key]: '' }));
-    this.api.saveSetting(key, value).subscribe({
+    this.savingSettings.update(s => new Set(s).add(key));
+    this.api.saveSetting(key, value).pipe(
+      finalize(() => this.savingSettings.update(s => { const n = new Set(s); n.delete(key); return n; })),
+    ).subscribe({
       next: res => {
         if (!res.success) { this.settingError.update(e => ({ ...e, [key]: res.message })); return; }
+        this.editedSettings.delete(key);
         this.settings.update(list => list.map(s => s.settingKey === key ? { ...s, settingValue: value.trim() } : s));
         this.notify(res.message, true);
+        this.showStoredValue(key);
       },
       error: err => { if (this.isLocked(err)) return; this.settingError.update(e => ({ ...e, [key]: this.message(err, 'Could not save the setting') })); },
     });
+  }
+
+  /** The server may store a setting differently from what was typed ("007" becomes "7"): show what it stored. */
+  private showStoredValue(key: string): void {
+    this.settingsSub.add(this.api.getSettings().subscribe({
+      next: res => {
+        const stored = res.success ? (res.data ?? []).find(s => s.settingKey === key) : undefined;
+        if (!stored) return;
+        const value = stored.settingValue ?? '';
+        this.settings.update(list => list.map(s => s.settingKey === key ? { ...s, settingValue: value } : s));
+        this.settingDraft[key] = value;
+      },
+      error: () => { /* keep the typed value */ },
+    }));
   }
 
   // ── database state of a company ───────────────────────────────────────────
@@ -729,7 +782,7 @@ export class PlatformAdminComponent implements OnInit {
     switch (company.provisionStatus) {
       case 'Ready': return 'Ready';
       case 'None': case undefined: case '': return 'No database';
-      default: return provisionLabel(company.provisionStatus);
+      default: return provisionLabel(company.provisionStatus) || (company.provisionStatus ?? '');
     }
   }
 
@@ -795,6 +848,14 @@ export class PlatformAdminComponent implements OnInit {
     this.companyForm = this.projectForm = this.locationForm = this.menuForm = null;
     this.serverForm = null;
     this.formError.set('');
+    this.saving.set(false);
+    this.resetTest();
+  }
+
+  /** A dialog opens or closes: an answer of a connection test started before is no longer wanted. */
+  private resetTest(): void {
+    this.testToken++;
+    this.testing.set(false);
     this.testResult.set(null);
   }
 
