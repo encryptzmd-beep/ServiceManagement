@@ -35,6 +35,13 @@ namespace EncryptzBL.Common.Provisioning
                 ? databaseName
                 : throw new InvalidOperationException("Not a generated tenant database name.");
 
+        /// <summary>
+        /// Reads and checks the tenant script (once for the life of the API). Throws when the
+        /// file is missing or does not have the expected shape, so the caller can stop before
+        /// a database exists.
+        /// </summary>
+        public void EnsureReady() => _ = _script.Value;
+
         public async Task<bool> DatabaseExistsAsync(ProvisionJob job, string databaseName, CancellationToken ct)
         {
             var connectionString = Master(job);
@@ -51,7 +58,7 @@ namespace EncryptzBL.Common.Provisioning
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                throw Safe(ex, connectionString, job);
+                throw Wrapped(ex, connectionString, job, ct);
             }
         }
 
@@ -69,7 +76,7 @@ namespace EncryptzBL.Common.Provisioning
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                throw Safe(ex, connectionString, job);
+                throw Wrapped(ex, connectionString, job, ct);
             }
         }
 
@@ -84,6 +91,11 @@ namespace EncryptzBL.Common.Provisioning
             {
                 await using var conn = new SqlConnection(connectionString);
                 await conn.OpenAsync(ct);
+
+                // Before the first batch: the script must run in the database this attempt
+                // created and nowhere else, whatever the connection settings say.
+                await using (var current = new SqlCommand("SELECT DB_NAME();", conn))
+                    EnsureConnectedTo((await current.ExecuteScalarAsync(ct))?.ToString(), databaseName);
 
                 // A parameterised command runs inside sp_executesql, where a temporary table
                 // would vanish at once: create it with a plain command, fill it with parameters.
@@ -115,6 +127,9 @@ namespace EncryptzBL.Common.Provisioning
                     }
                     catch (SqlException ex)
                     {
+                        // a cancelled command comes back as a SqlException too: it is a cancellation
+                        if (ct.IsCancellationRequested) throw new OperationCanceledException(ct);
+
                         // the script's own safety checks raise an error and switch NOEXEC on: stop at once
                         throw new InvalidOperationException($"Tenant script batch {number} of {script.Batches.Count} failed: {ex.Message}");
                     }
@@ -124,8 +139,16 @@ namespace EncryptzBL.Common.Provisioning
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                throw Safe(ex, connectionString, job);
+                throw Wrapped(ex, connectionString, job, ct);
             }
+        }
+
+        /// <summary>Refuses to go on when the open connection is not in the expected database.</summary>
+        internal static void EnsureConnectedTo(string? actualDatabase, string expectedDatabase)
+        {
+            if (!string.Equals(actualDatabase, expectedDatabase, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException(
+                    $"The connection is not in the database {expectedDatabase}. The tenant script was not run.");
         }
 
         /// <summary>The same readiness test "Test connection" uses, plus the first branch.</summary>
@@ -182,10 +205,12 @@ namespace EncryptzBL.Common.Provisioning
         {
             try
             {
-                // set after the typed options are read: they cannot switch pooling on
+                // set after the typed options are read: they cannot switch pooling on, and
+                // they cannot choose another database (Database=X) for the create, the
+                // drop or the tenant script
                 return new SqlConnectionStringBuilder(
                            TenantConnectionString.Build(job.ServerName, databaseName, job.AdminUser, job.AdminPassword, job.ExtraOptions))
-                       { Pooling = false, ConnectTimeout = 15 }.ConnectionString;
+                       { InitialCatalog = databaseName, Pooling = false, ConnectTimeout = 15 }.ConnectionString;
             }
             catch (Exception)
             {
@@ -200,6 +225,16 @@ namespace EncryptzBL.Common.Provisioning
         /// </summary>
         private static InvalidOperationException Safe(Exception ex, string connectionString, ProvisionJob job)
             => new(WithoutSecrets(ex.Message, connectionString, job));
+
+        /// <summary>
+        /// What a cancellable step throws instead of the error it caught. When the token was
+        /// cancelled the error IS the cancellation (the driver reports a cancelled command as an
+        /// ordinary error), so it is recorded as "cancelled or timed out" and not as server text.
+        /// </summary>
+        internal static Exception Wrapped(Exception ex, string connectionString, ProvisionJob job, CancellationToken ct)
+            => ct.IsCancellationRequested
+                ? new OperationCanceledException(ct)
+                : Safe(ex, connectionString, job);
 
         internal static string WithoutSecrets(string? message, string connectionString, ProvisionJob job)
         {

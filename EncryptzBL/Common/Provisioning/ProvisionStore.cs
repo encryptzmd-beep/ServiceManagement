@@ -75,14 +75,26 @@ namespace EncryptzBL.Common.Provisioning
             });
         }
 
-        public async Task<string> GetStatusAsync(int companyId)
+        public async Task<ProvisionState?> GetStateAsync(int companyId)
         {
             var dt = await GetDataTableAsync("sp_Provision_GetStatus", new[]
             {
                 SqlParameterHelper.Input("@CompanyId", companyId)
             });
 
-            return dt != null && dt.Rows.Count > 0 ? dt.Rows[0]["ProvisionStatus"]?.ToString() ?? "" : "";
+            if (dt == null || dt.Rows.Count == 0)
+                return null;
+
+            var row = dt.Rows[0];
+
+            // NULL while the job is queued or was released
+            Guid? attempt = row["ProvisionAttempt"] is Guid value ? value : null;
+
+            return new ProvisionState(
+                (row["ProvisionStatus"]?.ToString() ?? "").Trim(),
+                attempt,
+                (row["DatabaseName"]?.ToString() ?? "").Trim(),
+                (row["ServerName"]?.ToString() ?? "").Trim());
         }
 
         public async Task<int> FailStuckAsync(int olderThanMinutes)

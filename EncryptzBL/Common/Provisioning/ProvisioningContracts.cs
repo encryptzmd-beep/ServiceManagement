@@ -29,6 +29,13 @@ namespace EncryptzBL.Common.Provisioning
         Skipped
     }
 
+    /// <summary>
+    /// What the main database says about a company's set-up at one moment
+    /// (sp_Provision_GetStatus). Attempt is null while the job is queued or released;
+    /// DatabaseName and ServerName are "" while the company has no database.
+    /// </summary>
+    public sealed record ProvisionState(string Status, Guid? Attempt, string DatabaseName, string ServerName);
+
     /// <summary>The main-database side of a provisioning job.</summary>
     public interface IProvisionStore
     {
@@ -38,11 +45,15 @@ namespace EncryptzBL.Common.Provisioning
         /// <summary>Marks the company Ready. False when this attempt no longer owns the job.</summary>
         Task<bool> CompleteAsync(ProvisionJob job, string databaseName);
 
-        /// <summary>Marks the company Failed, when this attempt still owns the job.</summary>
+        /// <summary>
+        /// Marks the company Failed and releases the job, when this attempt still owns it
+        /// (also when the sweeper gave it up meanwhile: the attempt's own reason replaces
+        /// the sweeper's). The last thing an attempt does: only then can it be retried.
+        /// </summary>
         Task FailAsync(ProvisionJob job, string error);
 
-        /// <summary>Companies.ProvisionStatus now ("" when the company does not exist).</summary>
-        Task<string> GetStatusAsync(int companyId);
+        /// <summary>The company's provisioning columns now. Null when the company does not exist.</summary>
+        Task<ProvisionState?> GetStateAsync(int companyId);
 
         /// <summary>
         /// Gives up claimed jobs that have been running for longer than the given time, and
@@ -57,13 +68,24 @@ namespace EncryptzBL.Common.Provisioning
     /// <summary>The SQL server a company database is created on.</summary>
     public interface ITenantDatabaseServer
     {
+        /// <summary>
+        /// Makes sure everything a build needs besides the server is there (the tenant
+        /// script can be read and has the expected shape). Called before anything is
+        /// created; throws when it is not.
+        /// </summary>
+        void EnsureReady();
+
         Task<bool> DatabaseExistsAsync(ProvisionJob job, string databaseName, CancellationToken ct);
         Task CreateDatabaseAsync(ProvisionJob job, string databaseName, CancellationToken ct);
 
         /// <summary>Runs the tenant script in the database and checks the result. Throws when anything is wrong.</summary>
         Task BuildTenantAsync(ProvisionJob job, string databaseName, CancellationToken ct);
 
-        /// <summary>Clean-up of a failed attempt. Not cancellable on purpose.</summary>
+        /// <summary>
+        /// Clean-up of a failed attempt. Not cancellable on purpose. Only TenantProvisioner
+        /// calls it, and only after it has checked that the attempt still owns the job and
+        /// that the company does not use this database.
+        /// </summary>
         Task DropDatabaseAsync(ProvisionJob job, string databaseName);
     }
 

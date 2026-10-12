@@ -46,6 +46,11 @@ namespace EncryptzAPI.SrvInjection
             services.AddScoped<TenantProvisioner>();
             services.AddHostedService<ProvisioningWorker>();
 
+            // On shutdown a running set-up is cancelled and then cleans up: it asks the main
+            // database, drops its half-built database (up to about two minutes) and records
+            // the failure. The default of 30 seconds would cut that off and leave the database.
+            services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromMinutes(3));
+
             services.AddScoped<DbHelper>();                                         // tenant ServiceDB executor (business)
             services.AddScoped<DbTransactionHelper>();
             services.AddScoped<IAuthService, AuthService>();

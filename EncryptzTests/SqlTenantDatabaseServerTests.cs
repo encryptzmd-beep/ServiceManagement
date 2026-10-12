@@ -44,6 +44,103 @@ namespace EncryptzTests
             Assert.Equal(15, tenant.ConnectTimeout);
         }
 
+        // Extra options are typed by a platform administrator: they must not send the
+        // tenant script (or the create / drop) to another database.
+        [Theory]
+        [InlineData("Database=MainDBEncryptz")]
+        [InlineData("Initial Catalog=MainDBEncryptz")]
+        [InlineData("Connect Timeout=30;database=master;Pooling=true")]
+        public void Extra_options_cannot_choose_another_database(string extraOptions)
+        {
+            var master = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(SqlTenantDatabaseServer.Master(Job(extraOptions)));
+            var tenant = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(SqlTenantDatabaseServer.Tenant(Job(extraOptions), "EncryptzTenant_000007"));
+
+            Assert.Equal("master", master.InitialCatalog);
+            Assert.Equal("EncryptzTenant_000007", tenant.InitialCatalog);
+            Assert.False(master.Pooling);
+            Assert.False(tenant.Pooling);
+        }
+
+        [Theory]
+        [InlineData("EncryptzTenant_000007")]
+        [InlineData("encryptztenant_000007")]
+        public void The_database_the_connection_is_in_is_accepted_when_it_is_the_generated_one(string actual)
+        {
+            SqlTenantDatabaseServer.EnsureConnectedTo(actual, "EncryptzTenant_000007");
+        }
+
+        [Theory]
+        [InlineData("master")]
+        [InlineData("MainDBEncryptz")]
+        [InlineData("EncryptzTenant_000008")]
+        [InlineData("")]
+        [InlineData(null)]
+        public void The_script_is_not_run_when_the_connection_is_in_another_database(string? actual)
+        {
+            var ex = Assert.Throws<InvalidOperationException>(
+                () => SqlTenantDatabaseServer.EnsureConnectedTo(actual, "EncryptzTenant_000007"));
+
+            Assert.Contains("EncryptzTenant_000007", ex.Message);
+        }
+
+        [Fact]
+        public void An_error_of_a_cancelled_command_is_a_cancellation_not_the_servers_text()
+        {
+            var job = Job();
+            using var cts = new CancellationTokenSource();
+            var error = new InvalidOperationException("Operation cancelled by user. s3cret;pw");
+
+            // not cancelled: the text, without secrets
+            var wrapped = SqlTenantDatabaseServer.Wrapped(error, "Server=srv-01", job, cts.Token);
+            Assert.IsType<InvalidOperationException>(wrapped);
+            Assert.DoesNotContain("s3cret", wrapped.Message);
+            Assert.Null(wrapped.InnerException);
+
+            cts.Cancel();
+
+            var cancelled = SqlTenantDatabaseServer.Wrapped(error, "Server=srv-01", job, cts.Token);
+            var oce = Assert.IsAssignableFrom<OperationCanceledException>(cancelled);
+            Assert.Equal(cts.Token, oce.CancellationToken);
+            Assert.DoesNotContain("s3cret", cancelled.ToString());
+        }
+
+        private const string GoodScript =
+            "CREATE TABLE #TenantSettings (CompanyId INT NOT NULL, ProjectId INT NOT NULL, LocationName NVARCHAR(200) NOT NULL, "
+            + "LocationCode NVARCHAR(50) NULL, LocationCity NVARCHAR(100) NULL, CopyLookupsFrom SYSNAME NULL);\nGO\nSELECT 1;";
+
+        [Fact]
+        public void A_script_that_does_not_have_the_expected_shape_is_refused_before_anything_is_created()
+        {
+            var server = new SqlTenantDatabaseServer(new Lazy<TenantScript>(() => TenantScript.Parse("SELECT 1;")));
+
+            var ex = Assert.Throws<InvalidOperationException>(() => server.EnsureReady());
+            Assert.Contains("settings batch", ex.Message);
+
+            // and again at the next job: the answer does not change
+            Assert.Throws<InvalidOperationException>(() => server.EnsureReady());
+        }
+
+        [Fact]
+        public void A_script_file_that_is_missing_is_refused_before_anything_is_created()
+        {
+            var missing = Path.Combine(Path.GetTempPath(), "no-such-folder-" + Guid.NewGuid().ToString("N"), "New_Tenant_Database.sql");
+            var server = new SqlTenantDatabaseServer(new Lazy<TenantScript>(() => TenantScript.Load(missing)));
+
+            Assert.ThrowsAny<IOException>(() => server.EnsureReady());
+        }
+
+        [Fact]
+        public void A_good_script_is_accepted()
+        {
+            var loads = 0;
+            var server = new SqlTenantDatabaseServer(new Lazy<TenantScript>(() => { loads++; return TenantScript.Parse(GoodScript); }));
+
+            server.EnsureReady();
+            server.EnsureReady();
+
+            Assert.Equal(1, loads);   // read once for the life of the API
+        }
+
         [Theory]
         [InlineData("NoSuchKeyword=1;Password=other-secret")]
         [InlineData("this is not a connection string")]
