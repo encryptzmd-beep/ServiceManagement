@@ -150,5 +150,77 @@ VALUES (0, 0, N'Head Office', N'HO', NULL, N'FelixServiceDB');";
             Assert.Contains("New_Tenant_Database.sql", csproj);
             Assert.Contains("CopyToOutputDirectory", csproj);
         }
+
+        [Fact]
+        public void A_follow_up_script_is_split_into_batches()
+        {
+            var followUp = TenantScript.ParseFollowUp("10_X.sql", "SELECT 1;\nGO\nSELECT 2;\nGO\n");
+
+            Assert.Equal("10_X.sql", followUp.FileName);
+            Assert.Equal(new[] { "SELECT 1;", "SELECT 2;" }, followUp.Batches);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("GO\nGO\n")]
+        [InlineData("SELECT 1;\nGO\nUSE [master]\nGO\n")]
+        [InlineData("CREATE DATABASE X;")]
+        [InlineData("DROP DATABASE X;")]
+        public void A_follow_up_script_that_is_empty_or_touches_a_database_is_refused(string text)
+        {
+            Assert.Throws<InvalidOperationException>(() => TenantScript.ParseFollowUp("10_X.sql", text));
+        }
+
+        [Fact]
+        public void Parsing_text_alone_has_no_follow_ups()
+        {
+            Assert.Empty(TenantScript.Parse(Script(Settings, "SELECT 1;")).FollowUps);
+        }
+
+        [Fact]
+        public void Follow_ups_are_the_numbered_scripts_from_10_on_in_number_order()
+        {
+            var dir = Path.Combine(Path.GetTempPath(), "encryptz-tenant-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                File.WriteAllText(Path.Combine(dir, "New_Tenant_Database.sql"), Script(Settings, "SELECT 1;"));
+                File.WriteAllText(Path.Combine(dir, "09_Old.sql"), "SELECT 'in the base script already';");
+                File.WriteAllText(Path.Combine(dir, "11_Later.sql"), "SELECT 11;");
+                File.WriteAllText(Path.Combine(dir, "10_First.sql"), "SELECT 10;\nGO\nSELECT 100;");
+                File.WriteAllText(Path.Combine(dir, "10_Branch_Access_README.md"), "not a script");
+                File.WriteAllText(Path.Combine(dir, "FelixServiceDB_Migration.sql"), "SELECT 'not numbered';");
+
+                var script = TenantScript.Load(Path.Combine(dir, "New_Tenant_Database.sql"));
+
+                Assert.Equal(new[] { "10_First.sql", "11_Later.sql" }, script.FollowUps.Select(f => f.FileName));
+                Assert.Equal(new[] { "SELECT 10;", "SELECT 100;" }, script.FollowUps[0].Batches);
+            }
+            finally
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+        }
+
+        [Fact]
+        public void Every_follow_up_script_of_the_repository_is_shipped_and_loads()
+        {
+            var projectDb = Path.GetDirectoryName(RepositoryScriptPath())!;
+            var numbered = Directory.GetFiles(projectDb, "*.sql")
+                .Select(Path.GetFileName)
+                .Where(name => System.Text.RegularExpressions.Regex.IsMatch(name!, @"^[1-9][0-9]_.*\.sql$"))
+                .OrderBy(name => name)
+                .ToList();
+
+            Assert.Contains("10_Branch_Access.sql", numbered);
+
+            var csproj = File.ReadAllText(Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(projectDb)!)!, "EncryptzAPI.csproj"));
+            foreach (var name in numbered)
+                Assert.Contains(name!, csproj);
+
+            var script = TenantScript.Load(RepositoryScriptPath());
+            Assert.Equal(numbered, script.FollowUps.Select(f => f.FileName));
+            Assert.All(script.FollowUps, f => Assert.NotEmpty(f.Batches));
+        }
     }
 }

@@ -135,6 +135,29 @@ namespace EncryptzBL.Common.Provisioning
                     }
                 }
 
+                foreach (var followUp in script.FollowUps)
+                {
+                    var part = 0;
+                    foreach (var batch in followUp.Batches)
+                    {
+                        part++;
+                        ct.ThrowIfCancellationRequested();
+
+                        try
+                        {
+                            await using var cmd = new SqlCommand(batch, conn) { CommandTimeout = BatchTimeoutSeconds };
+                            await cmd.ExecuteNonQueryAsync(ct);
+                        }
+                        catch (SqlException ex)
+                        {
+                            // a cancelled command comes back as a SqlException too: it is a cancellation
+                            if (ct.IsCancellationRequested) throw new OperationCanceledException(ct);
+
+                            throw new InvalidOperationException($"Tenant script {followUp.FileName} batch {part} of {followUp.Batches.Count} failed: {ex.Message}");
+                        }
+                    }
+                }
+
                 await VerifyAsync(conn, ct);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -164,6 +187,7 @@ namespace EncryptzBL.Common.Provisioning
                       AND OBJECT_ID('dbo.sp_Location_Validate') IS NOT NULL
                       AND OBJECT_ID('dbo.sp_Tenant_SyncUsers') IS NOT NULL
                       AND COL_LENGTH('dbo.Users', 'MainUserId') IS NOT NULL
+                      AND OBJECT_ID('dbo.UserLocationAccess') IS NOT NULL AND OBJECT_ID('dbo.sp_Branch_GetForUser') IS NOT NULL
                      THEN 1 ELSE 0 END;";
 
             await using (var ready = new SqlCommand(sql, conn))

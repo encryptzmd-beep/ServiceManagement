@@ -2,6 +2,9 @@ using System.Text.RegularExpressions;
 
 namespace EncryptzBL.Common.Provisioning
 {
+    /// <summary>A tenant script added after the base script was generated (10_..., 11_...).</summary>
+    public sealed record TenantFollowUp(string FileName, IReadOnlyList<string> Batches);
+
     /// <summary>
     /// New_Tenant_Database.sql as the API runs it. The script is written for a person:
     /// one batch creates #TenantSettings and inserts values that are edited by hand.
@@ -34,6 +37,29 @@ namespace EncryptzBL.Common.Provisioning
             @"^\s*((CREATE|ALTER|DROP)\s+DATABASE\b|USE\s+\[)",
             RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant);
 
+        private static readonly Regex FollowUpName = new(@"^(?<number>[0-9]{2})_.*\.sql\z",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        /// <summary>
+        /// Scripts numbered 10 and up that lie next to the base script, in number order.
+        /// The base script is generated from the scripts up to 09 and is never changed,
+        /// so what comes later is run right after it when a company database is built.
+        /// </summary>
+        public IReadOnlyList<TenantFollowUp> FollowUps { get; private init; } = Array.Empty<TenantFollowUp>();
+
+        public static TenantFollowUp ParseFollowUp(string fileName, string text)
+        {
+            var batches = SqlBatchSplitter.Split(text);
+            if (batches.Count == 0)
+                throw new InvalidOperationException($"The tenant script {fileName} is empty.");
+
+            if (batches.Any(b => DatabaseLevel.IsMatch(b)))
+                throw new InvalidOperationException(
+                    $"The tenant script {fileName} contains a database-level statement (CREATE/ALTER/DROP DATABASE or USE).");
+
+            return new TenantFollowUp(fileName, batches);
+        }
+
         private TenantScript(IReadOnlyList<string> batches) => Batches = batches;
 
         /// <summary>Every batch of the script except the hand-edited settings batch.</summary>
@@ -43,7 +69,22 @@ namespace EncryptzBL.Common.Provisioning
         public static string DefaultPath
             => Path.Combine(AppContext.BaseDirectory, "Database", "ProjectDB", "New_Tenant_Database.sql");
 
-        public static TenantScript Load(string path) => Parse(File.ReadAllText(path));
+        public static TenantScript Load(string path)
+        {
+            var script = Parse(File.ReadAllText(path));
+            var folder = Path.GetDirectoryName(path);
+            if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
+                return script;
+
+            var followUps = Directory.GetFiles(folder, "*.sql")
+                .Select(file => (File: file, Name: Path.GetFileName(file), Match: FollowUpName.Match(Path.GetFileName(file))))
+                .Where(x => x.Match.Success && int.Parse(x.Match.Groups["number"].Value) >= 10)
+                .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(x => ParseFollowUp(x.Name, File.ReadAllText(x.File)))
+                .ToList();
+
+            return new TenantScript(script.Batches) { FollowUps = followUps };
+        }
 
         /// <summary>
         /// The script, read when it is first needed and kept from then on. PublicationOnly:

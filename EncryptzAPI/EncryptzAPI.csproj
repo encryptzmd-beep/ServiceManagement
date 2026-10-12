@@ -20,6 +20,8 @@
   <ItemGroup>
     <!-- run by the API when a company's database is created -->
     <Content Include="Database\ProjectDB\New_Tenant_Database.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- tenant scripts added after the base script: run right after it for a new company database -->
+    <Content Include="Database\ProjectDB\10_Branch_Access.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
