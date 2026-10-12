@@ -71,6 +71,8 @@
     <button [class.active]="tab() === 'locations'" (click)="setTab('locations')">Branches</button>
     <button [class.active]="tab() === 'access'" (click)="setTab('access')">Module Access</button>
     @if (isPlatformAdmin()) {
+      <button [class.active]="tab() === 'servers'" (click)="setTab('servers')">Database Servers</button>
+      <button [class.active]="tab() === 'settings'" (click)="setTab('settings')">Settings</button>
       <button [class.active]="tab() === 'menus'" (click)="setTab('menus')">Menus</button>
     }
   </div>
@@ -94,7 +96,7 @@
         <thead>
           <tr>
             <th>Company</th><th>Code</th><th>City</th><th>Phone</th>
-            <th class="fx-num">Databases</th><th class="fx-num">Users</th><th>Status</th><th></th>
+            <th class="fx-num">Databases</th><th class="fx-num">Users</th><th>Database</th><th>Status</th><th></th>
           </tr>
         </thead>
         <tbody>
@@ -106,14 +108,22 @@
               <td>{{ c.phoneNumber || '—' }}</td>
               <td class="fx-num">{{ c.projectCount }}</td>
               <td class="fx-num">{{ c.userCount }}</td>
+              <td>
+                <span class="pa-status" [class.off]="c.provisionStatus !== 'Ready'">{{ companyDatabase(c) }}</span>
+                @if (isPlatformAdmin() && c.databaseName) { <div class="pa-sub"><code>{{ c.databaseName }}</code></div> }
+                @if (isPlatformAdmin() && c.provisionStatus === 'Failed' && c.provisionError) { <div class="pa-sub pa-warn">{{ c.provisionError }}</div> }
+              </td>
               <td><span class="pa-status" [class.off]="!c.isActive">{{ c.isActive ? 'Active' : 'Inactive' }}</span></td>
               <td class="pa-actions">
+                @if (isPlatformAdmin() && canRetry(c)) {
+                  <button class="fx-action-btn" (click)="retryCompany(c)" [disabled]="retryingCompany() !== null">{{ retryingCompany() === c.companyId ? 'Retrying…' : 'Retry' }}</button>
+                }
                 <button class="fx-action-btn" (click)="openModules(c)">Modules</button>
                 <button class="fx-action-btn" (click)="editCompany(c)">Edit</button>
               </td>
             </tr>
           } @empty {
-            <tr class="fx-empty-row"><td colspan="8">{{ loading() ? 'Loading…' : 'No companies yet' }}</td></tr>
+            <tr class="fx-empty-row"><td colspan="9">{{ loading() ? 'Loading…' : 'No companies yet' }}</td></tr>
           }
         </tbody>
       </table>
@@ -264,6 +274,79 @@
           </tbody>
         </table>
       }
+    </div>
+  }
+
+  <!-- ═══════════ DATABASE SERVERS ═══════════ -->
+  @if (tab() === 'servers' && isPlatformAdmin()) {
+    <div class="fx-table-wrap">
+      <div class="fx-table-toolbar">
+        <div class="fx-toolbar-left">
+          <span class="fx-table-title">Database servers</span>
+          <span class="fx-table-count">{{ servers().length }}</span>
+        </div>
+        <div class="fx-toolbar-right">
+          <button class="fx-btn-new" (click)="newServer()">+ New Server</button>
+        </div>
+      </div>
+
+      <table class="fx-table">
+        <thead>
+          <tr><th>Server</th><th>Login</th><th>Options</th><th>Default</th><th>Status</th><th class="fx-num">Companies</th><th>Password</th><th></th></tr>
+        </thead>
+        <tbody>
+          @for (s of servers(); track s.dbServerId) {
+            <tr>
+              <td><strong>{{ s.serverName }}</strong></td>
+              <td>{{ s.adminUser }}</td>
+              <td>{{ s.extraOptions || '—' }}</td>
+              <td>{{ s.isDefault ? 'Default' : '—' }}</td>
+              <td><span class="pa-status" [class.off]="!s.isActive">{{ s.isActive ? 'Active' : 'Inactive' }}</span></td>
+              <td class="fx-num">{{ s.companyCount }}</td>
+              <td>@if (s.hasPassword) { Stored } @else { <span class="pa-warn">Missing</span> }</td>
+              <td class="pa-actions"><button class="fx-action-btn" (click)="editServer(s)">Edit</button></td>
+            </tr>
+          } @empty {
+            <tr class="fx-empty-row"><td colspan="8">No server yet — nobody can create a company until an active default server exists</td></tr>
+          }
+        </tbody>
+      </table>
+      <div class="pa-hint">New company databases are created on the default server. A login with the dbcreator role can also alter and drop other databases on the same SQL Server: prefer a server that holds nothing else.</div>
+    </div>
+  }
+
+  <!-- ═══════════ SETTINGS ═══════════ -->
+  @if (tab() === 'settings' && isPlatformAdmin()) {
+    <div class="fx-table-wrap">
+      <div class="fx-table-toolbar">
+        <div class="fx-toolbar-left"><span class="fx-table-title">Platform settings</span></div>
+      </div>
+      <table class="fx-table">
+        <thead><tr><th>Setting</th><th>Value</th><th></th></tr></thead>
+        <tbody>
+          @for (s of settings(); track s.settingKey) {
+            <tr>
+              <td>
+                <strong>{{ settingHelp[s.settingKey]?.label || s.settingKey }}</strong>
+                <div class="pa-sub">{{ settingHelp[s.settingKey]?.help }}</div>
+                @if (settingError()[s.settingKey]) { <div class="pa-error">{{ settingError()[s.settingKey] }}</div> }
+              </td>
+              <td>
+                @if (settingHelp[s.settingKey]) {
+                  <input class="form-input" [(ngModel)]="settingDraft[s.settingKey]" [attr.aria-label]="settingHelp[s.settingKey].label" />
+                } @else {
+                  {{ s.settingValue }}
+                }
+              </td>
+              <td class="pa-actions">
+                @if (settingHelp[s.settingKey]) { <button class="fx-action-btn" (click)="saveSetting(s.settingKey)">Save</button> }
+              </td>
+            </tr>
+          } @empty {
+            <tr class="fx-empty-row"><td colspan="3">No settings</td></tr>
+          }
+        </tbody>
+      </table>
     </div>
   }
 
@@ -502,6 +585,56 @@
       <div class="modal-footer">
         <button class="btn-secondary" (click)="closeForms()">Cancel</button>
         <button class="fx-btn-navy" (click)="saveLocation()" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══════════ DATABASE SERVER DIALOG ═══════════ -->
+@if (serverForm; as f) {
+  <div class="modal-overlay" (click)="closeForms()">
+    <div class="modal-content wide" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ f.dbServerId ? 'Edit Database Server' : 'New Database Server' }}</h2>
+        <button class="modal-close" aria-label="Close" (click)="closeForms()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Server *</label>
+            <input class="form-input" [(ngModel)]="f.serverName" placeholder="server name or IP" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>Login *</label>
+            <input class="form-input" [(ngModel)]="f.adminUser" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>Password {{ f.dbServerId ? '' : '*' }}</label>
+            <input class="form-input" type="password" [(ngModel)]="f.adminPassword" autocomplete="new-password"
+                   [placeholder]="f.dbServerId ? 'leave empty to keep the current one' : ''" />
+          </div>
+          <div class="form-group">
+            <label>Options</label>
+            <input class="form-input" [(ngModel)]="f.extraOptions" placeholder="optional, e.g. Encrypt=True" />
+          </div>
+          <div class="form-group">
+            <label class="pa-check"><input type="checkbox" [(ngModel)]="f.isDefault" /> Default for new companies</label>
+          </div>
+          <div class="form-group">
+            <label class="pa-check"><input type="checkbox" [(ngModel)]="f.isActive" /> Active</label>
+          </div>
+        </div>
+        <div class="form-note">This login creates each new company's database and is then used to connect to it. It needs the dbcreator role. Options may not set the server, database, login or password. Type the password again when you change the server or the login.</div>
+
+        @if (testResult(); as t) {
+          <div class="pa-test" [class.ok]="t.connected && t.schemaReady" [class.warn]="t.connected && !t.schemaReady" [class.bad]="!t.connected">{{ t.message }}</div>
+        }
+        @if (formError()) { <div class="pa-error">{{ formError() }}</div> }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary pa-left" (click)="testServer()" [disabled]="testing()">{{ testing() ? 'Testing…' : 'Test connection' }}</button>
+        <button class="btn-secondary" (click)="closeForms()">Cancel</button>
+        <button class="fx-btn-navy" (click)="saveServer()" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
       </div>
     </div>
   </div>

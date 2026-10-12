@@ -6,15 +6,19 @@ import { AuthService } from '../../Auth/auth-service';
 import {
   CompanyModule,
   ConnectionTestResult,
+  DbServer,
+  DbServerForm,
   PlatformCompany,
   PlatformLocation,
   PlatformMenu,
   PlatformProject,
   PlatformService,
+  PlatformSetting,
   ProjectAccess,
 } from '../../Services/platform-service';
+import { provisionLabel, requestErrorMessage } from '../../Auth/company-creation';
 
-type Tab = 'companies' | 'projects' | 'locations' | 'access' | 'menus';
+type Tab = 'companies' | 'projects' | 'locations' | 'access' | 'menus' | 'servers' | 'settings';
 
 /**
  * Administration of the main database: companies and their modules, the database each
@@ -45,6 +49,26 @@ export class PlatformAdminComponent implements OnInit {
   locations = signal<PlatformLocation[]>([]);
   access = signal<ProjectAccess[]>([]);
   menus = signal<PlatformMenu[]>([]);
+  servers = signal<DbServer[]>([]);
+  settings = signal<PlatformSetting[]>([]);
+  /** Server dialog (null = closed). Dropped on close so a typed password does not stay in memory. */
+  serverForm: DbServerForm | null = null;
+  /** What is typed per setting key. */
+  settingDraft: Record<string, string> = {};
+  settingError = signal<Record<string, string>>({});
+  /** Company whose set-up is being retried (null = none). */
+  retryingCompany = signal<number | null>(null);
+
+  readonly settingHelp: Record<string, { label: string; help: string }> = {
+    MaxCompaniesPerUser: {
+      label: 'Companies a user may create',
+      help: '0 switches company creation off for everyone but platform administrators.',
+    },
+    TenantLookupSourceDb: {
+      label: 'Lookup source database',
+      help: 'Leave empty (recommended): new companies start with the built-in defaults. Never name a live company\'s database: its print header and running numbers would be copied.',
+    },
+  };
 
   /** Company whose Modules dialog is open (null = closed). */
   modulesCompany = signal<PlatformCompany | null>(null);
@@ -160,6 +184,7 @@ export class PlatformAdminComponent implements OnInit {
     this.closeForms();
     this.companies.set([]); this.projects.set([]); this.locations.set([]);
     this.access.set([]); this.menus.set([]);
+    this.servers.set([]); this.settings.set([]); this.settingDraft = {};
     this.accessModules.set([]);
     this.modulesFailed.set(false);
     this.resetTabLoad();
@@ -182,7 +207,10 @@ export class PlatformAdminComponent implements OnInit {
   }
 
   setTab(tab: Tab): void {
+    if ((tab === 'servers' || tab === 'settings') && !this.isPlatformAdmin()) return;
     this.tab.set(tab);
+    if (tab === 'servers') this.loadServers();
+    if (tab === 'settings') this.loadSettings();
 
     this.resetTabLoad();
 
@@ -596,6 +624,137 @@ export class PlatformAdminComponent implements OnInit {
     return `${companyId}|${moduleKey}|${userId}`;
   }
 
+  // ── database servers ──────────────────────────────────────────────────────
+
+  loadServers(): void {
+    this.api.getDbServers().subscribe({
+      next: res => { if (res.success) this.servers.set(res.data ?? []); else this.notify(res.message, false); },
+      error: err => this.fail(err, 'Could not load the database servers'),
+    });
+  }
+
+  newServer(): void {
+    this.formError.set('');
+    this.testResult.set(null);
+    this.serverForm = { dbServerId: 0, serverName: '', adminUser: '', adminPassword: '', extraOptions: '', isDefault: this.servers().length === 0, isActive: true };
+  }
+
+  editServer(server: DbServer): void {
+    this.formError.set('');
+    this.testResult.set(null);
+    // the password is never known here: the field starts empty each time
+    this.serverForm = {
+      dbServerId: server.dbServerId, serverName: server.serverName, adminUser: server.adminUser,
+      adminPassword: '', extraOptions: server.extraOptions ?? '', isDefault: server.isDefault, isActive: server.isActive,
+    };
+  }
+
+  private serverProblem(form: DbServerForm): string {
+    if (!form.serverName.trim() || !form.adminUser.trim()) return 'Server and login are required';
+    if (!form.dbServerId && !form.adminPassword) return 'Enter the password';
+    return '';
+  }
+
+  saveServer(): void {
+    const form = this.serverForm;
+    if (!form || this.saving()) return;
+
+    const problem = this.serverProblem(form);
+    if (problem) { this.formError.set(problem); return; }
+
+    this.formError.set('');
+    this.saving.set(true);
+    this.api.saveDbServer(form).subscribe({
+      next: res => {
+        this.saving.set(false);
+        if (!res.success) { this.formError.set(res.message); return; }
+        this.serverForm = null;
+        this.testResult.set(null);
+        this.notify(res.message, true);
+        this.loadServers();
+      },
+      error: err => this.failForm(err),
+    });
+  }
+
+  testServer(): void {
+    const form = this.serverForm;
+    if (!form || this.testing()) return;
+    if (!form.serverName.trim() || !form.adminUser.trim()) { this.formError.set('Server and login are required'); return; }
+
+    this.formError.set('');
+    this.testResult.set(null);
+    this.testing.set(true);
+    this.api.testDbServer(form).subscribe({
+      next: res => {
+        this.testing.set(false);
+        if (res.success && res.data) this.testResult.set(res.data);
+        else this.formError.set(res.message);
+      },
+      error: err => { if (this.isLocked(err)) return; this.testing.set(false); this.formError.set(this.message(err, 'Connection test failed')); },
+    });
+  }
+
+  // ── platform settings ─────────────────────────────────────────────────────
+
+  loadSettings(): void {
+    this.api.getSettings().subscribe({
+      next: res => {
+        if (!res.success) { this.notify(res.message, false); return; }
+        const list = res.data ?? [];
+        this.settings.set(list);
+        this.settingDraft = Object.fromEntries(list.map(s => [s.settingKey, s.settingValue ?? '']));
+        this.settingError.set({});
+      },
+      error: err => this.fail(err, 'Could not load the settings'),
+    });
+  }
+
+  saveSetting(key: string): void {
+    const value = this.settingDraft[key] ?? '';
+    this.settingError.update(e => ({ ...e, [key]: '' }));
+    this.api.saveSetting(key, value).subscribe({
+      next: res => {
+        if (!res.success) { this.settingError.update(e => ({ ...e, [key]: res.message })); return; }
+        this.settings.update(list => list.map(s => s.settingKey === key ? { ...s, settingValue: value.trim() } : s));
+        this.notify(res.message, true);
+      },
+      error: err => { if (this.isLocked(err)) return; this.settingError.update(e => ({ ...e, [key]: this.message(err, 'Could not save the setting') })); },
+    });
+  }
+
+  // ── database state of a company ───────────────────────────────────────────
+
+  companyDatabase(company: PlatformCompany): string {
+    switch (company.provisionStatus) {
+      case 'Ready': return 'Ready';
+      case 'None': case undefined: case '': return 'No database';
+      default: return provisionLabel(company.provisionStatus);
+    }
+  }
+
+  /** Only a company that never got a database can be retried. */
+  canRetry(company: PlatformCompany): boolean {
+    return company.provisionStatus === 'Failed' && !company.databaseName;
+  }
+
+  retryCompany(company: PlatformCompany): void {
+    if (this.retryingCompany() !== null) return;
+
+    this.retryingCompany.set(company.companyId);
+    this.auth.retryProvision(company.companyId).subscribe({
+      next: res => {
+        this.retryingCompany.set(null);
+        this.notify(res.message, res.success);
+        if (res.success) this.loadCompanies();
+      },
+      error: err => {
+        this.retryingCompany.set(null);
+        this.notify(requestErrorMessage(err, 'Could not retry the set-up'), false);
+      },
+    });
+  }
+
   // ── menus ─────────────────────────────────────────────────────────────────
 
   newMenu(): void {
@@ -634,6 +793,7 @@ export class PlatformAdminComponent implements OnInit {
   closeForms(): void {
     this.closeModules();
     this.companyForm = this.projectForm = this.locationForm = this.menuForm = null;
+    this.serverForm = null;
     this.formError.set('');
     this.testResult.set(null);
   }

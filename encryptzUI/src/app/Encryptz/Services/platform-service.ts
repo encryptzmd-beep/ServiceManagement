@@ -17,6 +17,9 @@ export interface PlatformCompany {
   createdAt?: string;
   projectCount?: number;
   userCount?: number;
+  provisionStatus?: string;
+  provisionError?: string;
+  databaseName?: string;
 }
 
 export interface PlatformProject {
@@ -76,6 +79,37 @@ export interface CompanyModule {
   isEnabled: boolean;
   /** Members who can open it now. */
   userCount: number;
+}
+
+/** A SQL Server that holds new company databases. The password is never returned. */
+export interface DbServer {
+  dbServerId: number;
+  serverName: string;
+  adminUser: string;
+  extraOptions: string;
+  isDefault: boolean;
+  isActive: boolean;
+  createdAt?: string;
+  hasPassword: boolean;
+  companyCount: number;
+}
+
+/** Sent when saving or testing a server. An empty adminPassword on an edit keeps the stored one. */
+export interface DbServerForm {
+  dbServerId: number;
+  serverName: string;
+  adminUser: string;
+  adminPassword: string;
+  extraOptions: string;
+  isDefault: boolean;
+  isActive: boolean;
+}
+
+export interface PlatformSetting {
+  settingKey: string;
+  settingValue: string;
+  updatedAt?: string;
+  updatedByName: string;
 }
 
 export interface PlatformMenu {
@@ -178,6 +212,29 @@ export class PlatformService {
 
   setModuleAccess(companyId: number, moduleKey: string, userId: number, hasAccess: boolean): Observable<ApiResponse<boolean>> {
     return this.http.post<ApiResponse<boolean>>(`${this.api}/companies/${companyId}/modules/${encodeURIComponent(moduleKey)}/access`, { userId, hasAccess }, { headers: this.headers });
+  }
+
+  // ── database servers + platform settings (platform administrators) ────────
+
+  getDbServers(): Observable<ApiResponse<DbServer[]>> {
+    return this.http.get<ApiResponse<DbServer[]>>(`${this.api}/db-servers`, { headers: this.headers });
+  }
+
+  /** An empty adminPassword on an edit keeps the stored one. */
+  saveDbServer(form: DbServerForm): Observable<ApiResponse<number>> {
+    return this.http.post<ApiResponse<number>>(`${this.api}/db-servers/save`, form, { headers: this.headers });
+  }
+
+  testDbServer(form: DbServerForm): Observable<ApiResponse<ConnectionTestResult>> {
+    return this.http.post<ApiResponse<ConnectionTestResult>>(`${this.api}/db-servers/test`, form, { headers: this.headers });
+  }
+
+  getSettings(): Observable<ApiResponse<PlatformSetting[]>> {
+    return this.http.get<ApiResponse<PlatformSetting[]>>(`${this.api}/settings`, { headers: this.headers });
+  }
+
+  saveSetting(settingKey: string, settingValue: string): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/settings/save`, { settingKey, settingValue }, { headers: this.headers });
   }
 
   getMenus(): Observable<ApiResponse<PlatformMenu[]>> {

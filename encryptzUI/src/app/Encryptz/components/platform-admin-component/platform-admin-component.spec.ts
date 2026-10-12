@@ -519,3 +519,228 @@ describe('PlatformAdminComponent module access', () => {
     });
   });
 });
+
+describe('PlatformAdminComponent servers, settings and database state', () => {
+  const server = (id: number, over: any = {}) => ({ dbServerId: id, serverName: 'sql-' + id, adminUser: 'creator', extraOptions: '', isDefault: id === 1, isActive: true, hasPassword: true, companyCount: 2, ...over });
+  const companyRow = (id: number, over: any = {}) => ({ companyId: id, companyName: 'Co ' + id, companyCode: 'C' + id, address: '', city: '', phoneNumber: '', isActive: true, projectCount: 1, userCount: 1, provisionStatus: 'Ready', provisionError: '', databaseName: '', ...over });
+
+  let api: any;
+  let auth: any;
+  let calls: any[][];
+
+  const create = (isPlatformAdmin = true) => {
+    TestBed.resetTestingModule();
+    auth = {
+      currentUser: () => ({ userId: 5, fullName: 'A', role: 'Admin', isPlatformAdmin }),
+      selectedCompanyId: () => 2,
+      retryProvision: (id: number) => { calls.push(['retryProvision', id]); return of({ success: true, message: 'The database is being set up.', data: true }); },
+      ...auth,
+    };
+    TestBed.configureTestingModule({
+      imports: [PlatformAdminComponent],
+      providers: [{ provide: PlatformService, useValue: api }, { provide: AuthService, useValue: auth }],
+    });
+    const fixture = TestBed.createComponent(PlatformAdminComponent);
+    fixture.detectChanges();
+    return fixture;
+  };
+
+  const text = (fixture: any) => fixture.nativeElement.textContent as string;
+  const tabs = (fixture: any) => (Array.from(fixture.nativeElement.querySelectorAll('.pa-tabs button')) as HTMLButtonElement[]).map(b => b.textContent?.trim());
+
+  beforeEach(() => {
+    calls = [];
+    auth = {};
+    api = {
+      isUnlocked: () => of({ success: true, unlocked: true }),
+      getCompanies: () => { calls.push(['getCompanies']); return of({ success: true, message: '', data: [companyRow(2)] }); },
+      getProjects: () => of({ success: true, message: '', data: [] }),
+      getDbServers: () => { calls.push(['getDbServers']); return of({ success: true, message: '', data: [server(1), server(2, { hasPassword: false, isActive: false })] }); },
+      saveDbServer: (form: any) => { calls.push(['saveDbServer', { ...form }]); return of({ success: true, message: 'Server saved', data: 3 }); },
+      testDbServer: (form: any) => { calls.push(['testDbServer', { ...form }]); return of({ success: true, message: 'Connected. This login can create databases', data: { connected: true, schemaReady: true, locationCount: 0, message: 'Connected. This login can create databases' } }); },
+      getSettings: () => { calls.push(['getSettings']); return of({ success: true, message: '', data: [
+        { settingKey: 'MaxCompaniesPerUser', settingValue: '1', updatedByName: '' },
+        { settingKey: 'TenantLookupSourceDb', settingValue: '', updatedByName: '' },
+      ] }); },
+      saveSetting: (key: string, value: string) => { calls.push(['saveSetting', key, value]); return of({ success: true, message: 'Setting saved', data: true }); },
+      lock: () => {},
+    };
+  });
+
+  it('shows the two tabs to a platform administrator only', () => {
+    expect(tabs(create(true))).toEqual(expect.arrayContaining(['Database Servers', 'Settings']));
+
+    // create() keeps what the previous call put into `auth`: start the second user from scratch
+    auth = {};
+    const other = create(false);
+    expect(tabs(other)).not.toContain('Database Servers');
+    expect(tabs(other)).not.toContain('Settings');
+    other.componentInstance.setTab('servers' as any);
+    expect(calls.some(c => c[0] === 'getDbServers')).toBe(false);
+  });
+
+  it('lists the servers without any password', () => {
+    const fixture = create();
+    fixture.componentInstance.setTab('servers' as any);
+    fixture.detectChanges();
+
+    expect(calls).toContainEqual(['getDbServers']);
+    expect(text(fixture)).toContain('sql-1');
+    expect(text(fixture)).toContain('Stored');
+    expect(text(fixture)).toContain('Missing');
+    expect(fixture.nativeElement.querySelectorAll('input[type=password]').length).toBe(0);
+  });
+
+  it('opens an edit with an empty password every time', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('servers' as any);
+
+    c.editServer(server(1) as any);
+    c.serverForm!.adminPassword = 'typed-secret';
+    c.closeForms();
+    expect(c.serverForm).toBeNull();
+
+    c.editServer(server(1) as any);
+    expect(c.serverForm!.adminPassword).toBe('');
+    fixture.detectChanges();
+    const box = fixture.nativeElement.querySelector('input[type=password]') as HTMLInputElement;
+    expect(box.value).toBe('');
+    expect(box.placeholder).toContain('leave empty to keep');
+  });
+
+  it('saves an edit without a password when none was typed, then forgets the form', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('servers' as any);
+    c.editServer(server(1) as any);
+    c.serverForm!.extraOptions = 'Encrypt=True';
+    c.saveServer();
+
+    const sent = calls.find(x => x[0] === 'saveDbServer')![1];
+    expect(sent.adminPassword).toBe('');
+    expect(sent.extraOptions).toBe('Encrypt=True');
+    expect(c.serverForm).toBeNull();
+    expect(calls.filter(x => x[0] === 'getDbServers').length).toBe(2);
+  });
+
+  it('needs server, login and, for a new server, the password', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('servers' as any);
+    c.newServer();
+    c.serverForm!.serverName = 'sql-9';
+    c.serverForm!.adminUser = 'creator';
+    c.saveServer();
+
+    expect(c.formError()).toBe('Enter the password');
+    expect(calls.some(x => x[0] === 'saveDbServer')).toBe(false);
+  });
+
+  it('shows why the server refused a save and keeps the dialog', () => {
+    api.saveDbServer = () => of({ success: false, message: 'The options must not set the server, database, login or password', data: 0 });
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('servers' as any);
+    c.editServer(server(1) as any);
+    c.saveServer();
+    fixture.detectChanges();
+
+    expect(c.serverForm).not.toBeNull();
+    expect(text(fixture)).toContain('The options must not set the server');
+  });
+
+  it('tests the connection with what is typed and shows the answer', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('servers' as any);
+    c.newServer();
+    c.serverForm!.serverName = 'sql-9';
+    c.serverForm!.adminUser = 'creator';
+    c.serverForm!.adminPassword = 'pw';
+    c.testServer();
+    fixture.detectChanges();
+
+    expect(calls.find(x => x[0] === 'testDbServer')![1].serverName).toBe('sql-9');
+    expect(text(fixture)).toContain('This login can create databases');
+  });
+
+  it('lists the settings with their help and saves one', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('settings' as any);
+    fixture.detectChanges();
+
+    expect(text(fixture)).toContain('Companies a user may create');
+    expect(text(fixture)).toContain('Never name a live company');
+
+    c.settingDraft['MaxCompaniesPerUser'] = '3';
+    c.saveSetting('MaxCompaniesPerUser');
+    expect(calls).toContainEqual(['saveSetting', 'MaxCompaniesPerUser', '3']);
+  });
+
+  it('shows a refused setting next to its row and keeps what was typed', () => {
+    api.saveSetting = () => of({ success: false, message: 'Enter a number from 0 to 100', data: false });
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.setTab('settings' as any);
+    c.settingDraft['MaxCompaniesPerUser'] = 'many';
+    c.saveSetting('MaxCompaniesPerUser');
+    fixture.detectChanges();
+
+    expect(text(fixture)).toContain('Enter a number from 0 to 100');
+    expect(c.settingDraft['MaxCompaniesPerUser']).toBe('many');
+  });
+
+  it('shows the database state of each company, with the reason for a platform administrator', () => {
+    api.getCompanies = () => of({ success: true, message: '', data: [
+      companyRow(2, { databaseName: 'EncryptzTenant_000002' }),
+      companyRow(3, { provisionStatus: 'Provisioning' }),
+      companyRow(4, { provisionStatus: 'Failed', provisionError: 'Tenant script batch 12 of 1468 failed' }),
+      companyRow(5, { provisionStatus: 'None' }),
+    ] });
+    const fixture = create();
+
+    expect(text(fixture)).toContain('EncryptzTenant_000002');
+    expect(text(fixture)).toContain('Setting up…');
+    expect(text(fixture)).toContain('Setup failed');
+    expect(text(fixture)).toContain('Tenant script batch 12 of 1468 failed');
+    expect(text(fixture)).toContain('No database');
+  });
+
+  it('retries a failed set-up once and reloads the companies', () => {
+    const pending = new Subject<any>();
+    auth = { retryProvision: (id: number) => { calls.push(['retryProvision', id]); return pending; } };
+    api.getCompanies = () => { calls.push(['getCompanies']); return of({ success: true, message: '', data: [companyRow(4, { provisionStatus: 'Failed' })] }); };
+    const fixture = create();
+    const c = fixture.componentInstance;
+    const row = c.companies()[0];
+
+    c.retryCompany(row);
+    c.retryCompany(row);
+    expect(calls.filter(x => x[0] === 'retryProvision')).toEqual([['retryProvision', 4]]);
+
+    const before = calls.filter(x => x[0] === 'getCompanies').length;
+    pending.next({ success: true, message: 'The database is being set up.', data: true });
+    pending.complete();
+    expect(calls.filter(x => x[0] === 'getCompanies').length).toBe(before + 1);
+  });
+
+  it('explains a rate limit on retry', () => {
+    auth = { retryProvision: () => throwError(() => ({ status: 429 })) };
+    api.getCompanies = () => of({ success: true, message: '', data: [companyRow(4, { provisionStatus: 'Failed' })] });
+    const fixture = create();
+    fixture.componentInstance.retryCompany(fixture.componentInstance.companies()[0]);
+    fixture.detectChanges();
+
+    expect(text(fixture)).toContain('Too many attempts. Please try again later.');
+  });
+
+  it('offers no Retry for a failed company that has a database', () => {
+    api.getCompanies = () => of({ success: true, message: '', data: [companyRow(4, { provisionStatus: 'Failed', databaseName: 'HandAttachedDb' })] });
+    const fixture = create();
+    const buttons = (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).map(b => b.textContent?.trim());
+
+    expect(buttons).not.toContain('Retry');
+  });
+});
