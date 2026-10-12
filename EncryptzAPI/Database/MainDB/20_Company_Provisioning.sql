@@ -12,9 +12,9 @@
      dbo.PlatformSettings     MaxCompaniesPerUser (1), TenantLookupSourceDb ('')
      dbo.Companies            DbServerId, ProvisionError, ProvisionStartedAt,
                               CreatedBy, FirstBranchName,
-                              ProvisionAttempt (NULL = queued, nobody is building;
-                              a value = the attempt that is building, or was the
-                              last to build)
+                              ProvisionAttempt (NULL = queued or released, nobody
+                              is building; a value = the attempt that owns the
+                              job: it is building or cleaning up, or it died)
      procedures               sp_Company_Create, sp_Company_GetCreationState,
                               sp_Provision_*, sp_Platform_*DbServer*, sp_Platform_*Setting*
    RE-CREATES with extra columns at the end:
@@ -120,7 +120,7 @@ IF COL_LENGTH('dbo.Companies', 'CreatedBy') IS NULL
 IF COL_LENGTH('dbo.Companies', 'FirstBranchName') IS NULL
     ALTER TABLE dbo.Companies ADD FirstBranchName NVARCHAR(200) NULL;
 IF COL_LENGTH('dbo.Companies', 'ProvisionAttempt') IS NULL
-    ALTER TABLE dbo.Companies ADD ProvisionAttempt UNIQUEIDENTIFIER NULL;  -- NULL = queued; a value = the attempt that is (or was last) building
+    ALTER TABLE dbo.Companies ADD ProvisionAttempt UNIQUEIDENTIFIER NULL;  -- NULL = queued or released; a value = the attempt that owns the job
 GO
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Companies_CreatedBy' AND object_id = OBJECT_ID('dbo.Companies'))
@@ -299,7 +299,10 @@ GO
 /* A job is QUEUED while the company is Provisioning and ProvisionAttempt is
    NULL. sp_Provision_Begin claims it: it writes a new ProvisionAttempt and starts
    the clock (ProvisionStartedAt). Completing and failing name that attempt, so a
-   late answer of an earlier attempt changes nothing. */
+   late answer of an earlier attempt changes nothing.
+   The attempt OWNS the job until it releases it (sp_Provision_Fail sets
+   ProvisionAttempt NULL) or completes it. Nothing else takes a job away from an
+   attempt, except a retry 30 minutes after the attempt started. */
 
 /* API-internal (background worker) only: claims the job and returns the encrypted server password. Never expose through an endpoint. */
 CREATE OR ALTER PROCEDURE dbo.sp_Provision_Begin
@@ -382,7 +385,13 @@ BEGIN
 END
 GO
 
-/* Only the attempt that owns the job can fail it. */
+/* Only the attempt that owns the job can fail it, and only while the company is
+   still waiting for its first database (see section 4). It is the LAST thing an
+   attempt does, after its clean-up: it RELEASES the job (ProvisionAttempt NULL),
+   and only a released job can be retried at once (sp_Provision_Retry).
+   It also acts when the sweeper marked the company Failed first
+   (sp_Provision_FailStuck keeps the attempt): the attempt's own reason, and its
+   note about a database left on the server, replace the sweeper's text. */
 CREATE OR ALTER PROCEDURE dbo.sp_Provision_Fail
     @CompanyId INT,
     @Attempt   UNIQUEIDENTIFIER,
@@ -392,23 +401,31 @@ BEGIN
     SET NOCOUNT ON;
 
     UPDATE dbo.Companies
-    SET ProvisionStatus = 'Failed',
-        ProvisionError  = LEFT(ISNULL(@Error, ''), 2000)
+    SET ProvisionStatus  = 'Failed',
+        ProvisionError   = LEFT(ISNULL(@Error, ''), 2000),
+        ProvisionAttempt = NULL
     WHERE CompanyId = @CompanyId
-      AND ProvisionStatus = 'Provisioning'
-      AND ProvisionAttempt = @Attempt;
+      AND ProvisionAttempt = @Attempt
+      AND ProvisionStatus IN ('Provisioning', 'Failed')
+      AND DbServerId IS NOT NULL
+      AND NULLIF(LTRIM(RTRIM(ISNULL(DatabaseName, ''))), '') IS NULL;
 END
 GO
 
-/* For the worker, when the answer of sp_Provision_Complete was lost. No row when
-   the company does not exist. */
+/* For the worker: what the company's set-up looks like now. Asked before a
+   database is dropped (is the job still this attempt's? does the company name
+   this database?) and when the answer of sp_Provision_Complete was lost.
+   ProvisionAttempt is NULL for a queued or released job. No row when the company
+   does not exist. */
 CREATE OR ALTER PROCEDURE dbo.sp_Provision_GetStatus
     @CompanyId INT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT ProvisionStatus, ProvisionAttempt
+    SELECT ProvisionStatus, ProvisionAttempt,
+           ISNULL(DatabaseName, '') AS DatabaseName,
+           ISNULL(ServerName, '')   AS ServerName
     FROM dbo.Companies
     WHERE CompanyId = @CompanyId;
 END
@@ -434,7 +451,13 @@ GO
    A company whose database was attached by hand and then switched off is Failed
    too, but it HAS a database: it is never rebuilt here.
    The single UPDATE is the gate, so two retries cannot both start a job. It
-   queues the job again (ProvisionAttempt NULL) on the current default server. */
+   queues the job again (ProvisionAttempt NULL) on the current default server.
+   A retry must not overtake an attempt that may still be cleaning up: the job
+   must have been released (ProvisionAttempt NULL: sp_Provision_Fail, or a queued
+   job given up by the sweeper), or its attempt must have started more than 30
+   minutes ago (an attempt that died without releasing it: the API was stopped
+   hard). 30 minutes is longer than any attempt lives (12-minute time-out plus
+   its clean-up), so a Failed company can always be retried by then. */
 CREATE OR ALTER PROCEDURE dbo.sp_Provision_Retry
     @CompanyId       INT,
     @UserId          INT,
@@ -469,10 +492,19 @@ BEGIN
     WHERE CompanyId = @CompanyId
       AND ProvisionStatus = 'Failed'
       AND DbServerId IS NOT NULL
-      AND NULLIF(LTRIM(RTRIM(ISNULL(DatabaseName, ''))), '') IS NULL;
+      AND NULLIF(LTRIM(RTRIM(ISNULL(DatabaseName, ''))), '') IS NULL
+      AND (   ProvisionAttempt IS NULL
+           OR ISNULL(ProvisionStartedAt, '19000101') < DATEADD(MINUTE, -30, GETDATE()));
 
     IF @@ROWCOUNT = 1
         SELECT CAST(1 AS INT) AS Success, 'The database is being set up.' AS Message;
+    ELSE IF EXISTS (SELECT 1 FROM dbo.Companies
+                    WHERE CompanyId = @CompanyId
+                      AND ProvisionStatus = 'Failed'
+                      AND DbServerId IS NOT NULL
+                      AND NULLIF(LTRIM(RTRIM(ISNULL(DatabaseName, ''))), '') IS NULL)
+        /* waiting for a retry, but its last attempt has not released the job yet */
+        SELECT CAST(0 AS INT) AS Success, 'The earlier set-up is still being cleaned up. Try again in a few minutes.' AS Message;
     ELSE
         SELECT CAST(0 AS INT) AS Success, 'This company is not waiting for a retry' AS Message;
 END
@@ -484,16 +516,23 @@ GO
        The clock starts when the job is claimed, not when the company was created,
        so a job that waited in the queue is not given up while it is being built;
      - a QUEUED job (ProvisionAttempt NULL) that nobody claimed for 8 times as long
-       (2 hours with the default).
-   ProvisionAttempt is left as it is: an attempt that is still running finds the
-   company no longer Provisioning, cannot complete, and removes its own database. */
+       (160 minutes, about 2.5 hours, with the default). It has no attempt, so it
+       can be retried at once.
+   The default of 20 minutes is the API's value (ProvisioningWorker.StuckAfterMinutes):
+   at least 5 minutes more than the API's job time-out of 12 minutes, so an attempt
+   that timed out has finished its clean-up before it is given up here.
+   ProvisionAttempt of a claimed job is KEPT: the attempt may still be alive. It
+   then finds the company no longer Provisioning, cannot complete, removes its own
+   database and releases the job itself (sp_Provision_Fail). Until then, or until
+   30 minutes after the attempt started, the company cannot be retried
+   (sp_Provision_Retry). */
 CREATE OR ALTER PROCEDURE dbo.sp_Provision_FailStuck
-    @OlderThanMinutes INT = 15
+    @OlderThanMinutes INT = 20
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @Minutes INT = ABS(ISNULL(@OlderThanMinutes, 15));
+    DECLARE @Minutes INT = ABS(ISNULL(@OlderThanMinutes, 20));
     IF @Minutes > 100000 SET @Minutes = 100000;   -- keeps 8 times the value inside DATEADD's range
 
     UPDATE dbo.Companies
@@ -673,7 +712,8 @@ END
 GO
 
 /* + ProvisionStatus, ProvisionError, DatabaseName (the API blanks the last two
-   for anyone who is not a platform administrator). */
+   for anyone who is not a platform administrator). A Ready company shows no
+   error: a text left by an earlier attempt says nothing about it any more. */
 CREATE OR ALTER PROCEDURE dbo.sp_Platform_GetCompanies
     @CompanyId INT = NULL          -- NULL/0 = all (platform admin)
 AS
@@ -689,7 +729,7 @@ BEGIN
         CASE WHEN c.ProvisionStatus = 'None' THEN 0 ELSE 1 END AS ProjectCount,
         (SELECT COUNT(*) FROM dbo.CompanyUsers cu WHERE cu.CompanyId = c.CompanyId AND cu.IsActive = 1) AS UserCount,
         c.ProvisionStatus,
-        ISNULL(c.ProvisionError, '') AS ProvisionError,
+        CASE WHEN c.ProvisionStatus = 'Ready' THEN '' ELSE ISNULL(c.ProvisionError, '') END AS ProvisionError,
         ISNULL(c.DatabaseName, '')   AS DatabaseName
     FROM dbo.Companies c
     WHERE ISNULL(@CompanyId, 0) = 0 OR c.CompanyId = @CompanyId

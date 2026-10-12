@@ -82,23 +82,66 @@ companies rests on the API, not on SQL Server permissions.
 4. Checks the result, then marks the company `Ready`
    (`sp_Provision_Complete`, which copies the server details onto the company).
 
+Before step 2 the API checks that it can read `New_Tenant_Database.sql` and that
+the script has the shape it expects. If not, the attempt fails and no database
+is created.
+
 If the script or the last step fails, the API drops the database it created in
 that same attempt and marks the company `Failed`. It never drops or reuses a
 database that already existed under that name: then the attempt fails and a
 platform administrator must look.
 
-Three cases leave something for a platform administrator to check on the server:
+### Dropping
+
+The API drops a database by name. Just before every drop it asks the main
+database (`sp_Provision_GetStatus`) and drops only when both are true:
+
+- the job still belongs to this attempt (`ProvisionAttempt` is the attempt's);
+- the company does not name this database as its own.
+
+When the answer cannot be read, it does not drop either. To drop, the API sets
+the database to single user (open connections are cut off) and then drops it. If
+that fails half-way, the database can be left on the server in single-user mode.
+
+Only after the clean-up does the attempt record its failure
+(`sp_Provision_Fail`). That also releases the job, so that the company can be
+retried (see "Retry").
+
+### Databases that stay on the server
+
+In these cases a database is left on the server for a platform administrator:
+
+1. The clean-up failed. The error text on the company says that the database
+   could not be removed and was left on the server.
+2. The API was stopped hard (killed, crash, power) in the middle of a build. The
+   half-built database stays. The company is given up after 20 minutes. A retry
+   is possible 30 minutes after that set-up started; it then fails with
+   "already exists" until a platform administrator removes that database on the
+   server.
+3. The answer of the final step was lost and the company became `Ready` by other
+   means (a database attached by hand meanwhile). The database the API built is
+   an orphan: no company uses it. This is written to the API log only, with the
+   company id and the database name.
+4. The attempt no longer owned the job when it wanted to clean up, or it could
+   not read the state of the job. The API log says so, with the company id and
+   the database name. The note "The database ... was left on the server." is
+   stored on the company when the attempt still could store it, that is when it
+   turned out to own the job after all.
+
+Two more cases need a look at the server:
 
 - `CREATE DATABASE` itself failed or was cut off. The API does not drop anything,
   because it never saw the database as its own. The error text says that the
   database may have been created.
-- The clean-up failed. The error text says that the database was left on the
-  server.
 - The answer of the main database was lost while the company was being marked
   `Ready`, and its status could not be read afterwards. The API leaves the
   database in place and writes this to its log with the company id and the
   database name. If the company did not become `Ready`, it is given up later as
   a stuck job (see "Stuck jobs"); the database is still there then.
+
+A database that a company names as its own is never dropped by the API, and the
+error text never tells anyone to remove such a database. Before removing a
+database by hand, check under Company Databases that no company uses it.
 
 Editing a server's name or login in Platform Admin while a set-up is running on
 it makes that set-up fail: it is given up and its database is removed. Retry it.
@@ -123,20 +166,47 @@ Kept in `dbo.PlatformSettings`, changed in Platform Admin:
 `sp_Provision_FailStuck` is called at API start and every 5 minutes. It marks a
 company `Failed` in two cases:
 
-- its set-up has been running for more than 15 minutes. The time is counted
+- its set-up has been running for more than 20 minutes. The time is counted
   from the moment the API picked the job up, not from the moment the company was
   created;
-- its set-up is queued and nobody picked it up for 2 hours.
+- its set-up is queued and nobody picked it up for 160 minutes (about 2.5
+  hours).
+
+The API itself cancels a set-up after 12 minutes and then cleans up. The 20
+minutes leave it time for that, so a set-up that is given up here is normally
+one whose API was stopped.
+
+A set-up that is given up while it is still running keeps its job: when it
+notices, it removes its own database and releases the job itself.
 
 After an API restart, set-ups that were still queued are picked up again
-(`sp_Provision_GetQueued`). A set-up that was running when the API stopped is
-not continued: it is given up after 15 minutes and can be retried.
+(`sp_Provision_GetQueued`). If that fails at start (the main database is not
+reachable), it is tried again every 5 minutes until it has worked once. A set-up
+that was running when the API stopped is not continued: it is given up after 20
+minutes.
+
+When the API is stopped in the normal way, a running set-up is cancelled, cleans
+up and is marked `Failed`; the API waits up to 3 minutes for that. After a hard
+stop the half-built database stays on the server (see "Databases that stay on
+the server", case 2).
 
 ## Retry
 
 Retry (`sp_Provision_Retry`) is only for a company that never got a database.
 It can be started by the company's creator, as long as they are still an active
 member of the company, or by a platform administrator.
+
+A `Failed` company can be retried:
+
+- at once, when its last set-up has finished cleaning up and released the job,
+  or when it was given up while still queued;
+- otherwise 30 minutes after that set-up started. This is the case when the API
+  was stopped hard: nobody is left to release the job.
+
+Until then Retry answers "The earlier set-up is still being cleaned up. Try
+again in a few minutes." This keeps a retry from starting while the earlier
+set-up may still be removing its database. A failed company can therefore always
+be retried at the latest 30 minutes after its set-up started.
 
 A company whose database was attached by hand is never rebuilt by Retry, also
 not when that database was switched off in Platform Admin (such a company is
