@@ -423,4 +423,151 @@ namespace EncryptzTests
             Assert.Equal("Unknown setting", PlatformSettingRules.Validate(key, "1").Error);
         }
     }
+
+    public class DbServerRulesTests
+    {
+        private const string Forbidden = "The options must not set the server, database, login or password";
+
+        [Theory]
+        [InlineData("Encrypt=True;Connect Timeout=30", "Encrypt=True;Connect Timeout=30")]
+        [InlineData("  Encrypt=True;Connect Timeout=30;  ", "Encrypt=True;Connect Timeout=30;")]
+        [InlineData("Application Name=Encryptz;Max Pool Size=50", "Application Name=Encryptz;Max Pool Size=50")]
+        [InlineData("", "")]
+        [InlineData("   ", "")]
+        [InlineData(null, "")]
+        public void Plain_connection_options_and_no_options_are_accepted(string? input, string stored)
+        {
+            var (value, error) = PlatformSettingRules.ValidateServerOptions(input);
+
+            Assert.Null(error);
+            Assert.Equal(stored, value);
+        }
+
+        [Theory]
+        [InlineData("Data Source=other")]
+        [InlineData("Server=other")]
+        [InlineData("server = other")]
+        [InlineData("Address=other")]
+        [InlineData("Addr=other")]
+        [InlineData("Network Address=other")]
+        [InlineData("Initial Catalog=master")]
+        [InlineData("Database=master")]
+        [InlineData("DATABASE=master")]
+        [InlineData("User ID=sa")]
+        [InlineData("UID=sa")]
+        [InlineData("User=sa")]
+        [InlineData("Password=x")]
+        [InlineData("PWD=x")]
+        [InlineData("Integrated Security=true")]
+        [InlineData("Integrated Security=false")]
+        [InlineData("Trusted_Connection=yes")]
+        [InlineData("AttachDBFilename=c:/x.mdf")]
+        [InlineData("Extended Properties=c:/x.mdf")]
+        [InlineData("Initial File Name=c:/x.mdf")]
+        [InlineData("Failover Partner=other")]
+        [InlineData("Authentication=Active Directory Integrated")]
+        [InlineData("Encrypt=True;Database=master")]
+        [InlineData("Connect Timeout=30;;  Server=other  ;")]
+        [InlineData("Application Name='a';Database='master'")]
+        public void Options_that_set_the_server_database_login_or_password_are_refused(string input)
+        {
+            var (value, error) = PlatformSettingRules.ValidateServerOptions(input);
+
+            Assert.Null(value);
+            Assert.Equal(Forbidden, error);
+        }
+
+        // an empty value still overrides what the API set when it is appended to the connection string
+        [Theory]
+        [InlineData("Database=")]
+        [InlineData("Encrypt=True;Database=;")]
+        [InlineData("Server=;Connect Timeout=5")]
+        [InlineData("Password=")]
+        public void A_forbidden_keyword_without_a_value_is_refused_too(string input)
+        {
+            Assert.Equal(Forbidden, PlatformSettingRules.ValidateServerOptions(input).Error);
+        }
+
+        [Theory]
+        [InlineData("this is not a connection string")]
+        [InlineData("Encrypt=True;NoSuchKeyword=1")]
+        [InlineData("Connect Timeout=soon")]
+        [InlineData("=5")]
+        [InlineData("Application Name='unterminated")]
+        public void Garbage_is_refused(string input)
+        {
+            var (value, error) = PlatformSettingRules.ValidateServerOptions(input);
+
+            Assert.Null(value);
+            Assert.Equal("The options are not valid connection options", error);
+        }
+
+        [Fact]
+        public void Options_longer_than_their_column_are_refused()
+        {
+            var fits = "Application Name=" + new string('a', 400 - "Application Name=".Length);
+
+            Assert.Null(PlatformSettingRules.ValidateServerOptions(fits).Error);
+            Assert.Equal("The options are too long", PlatformSettingRules.ValidateServerOptions(fits + "a").Error);
+        }
+
+        // -- the stored password is only ever used for the stored server and login --
+
+        [Theory]
+        [InlineData("SRV1", "creator", "SRV1", "creator")]
+        [InlineData("SRV1", "creator", "  srv1 ", " CREATOR ")]
+        [InlineData("srv1/SQL2022", "Creator", "SRV1/sql2022", "creator")]
+        public void The_same_server_and_login_are_recognised_whatever_the_case_and_the_blanks(string storedServer, string storedLogin, string server, string login)
+        {
+            Assert.True(DbServerRules.SameServerAndLogin(storedServer, storedLogin, server, login));
+            Assert.Null(DbServerRules.SaveProblem(storedServer, storedLogin, server, login, passwordTyped: false));
+            Assert.Null(DbServerRules.TestWithStoredPasswordProblem(storedServer, storedLogin, server, login));
+        }
+
+        [Theory]
+        [InlineData("SRV1", "creator", "SRV2", "creator")]
+        [InlineData("SRV1", "creator", "SRV1", "sa")]
+        [InlineData("SRV1", "creator", "SRV1,1433", "creator")]
+        [InlineData("SRV1", "creator", "evil.example.com", "creator")]
+        [InlineData("SRV1", "creator", "", "creator")]
+        [InlineData("SRV1", "creator", null, null)]
+        public void A_changed_server_or_login_needs_the_password_typed_again(string storedServer, string storedLogin, string? server, string? login)
+        {
+            Assert.False(DbServerRules.SameServerAndLogin(storedServer, storedLogin, server, login));
+
+            Assert.Equal("Enter the password again when the server or login changes",
+                DbServerRules.SaveProblem(storedServer, storedLogin, server, login, passwordTyped: false));
+            Assert.Null(DbServerRules.SaveProblem(storedServer, storedLogin, server, login, passwordTyped: true));
+
+            Assert.Equal("Enter the password to test a changed server or login",
+                DbServerRules.TestWithStoredPasswordProblem(storedServer, storedLogin, server, login));
+        }
+
+        [Fact]
+        public void A_typed_password_is_at_most_128_characters_and_fits_its_column_when_encrypted()
+        {
+            Assert.Null(DbServerRules.PasswordProblem(null));
+            Assert.Null(DbServerRules.PasswordProblem(""));
+            Assert.Null(DbServerRules.PasswordProblem(new string('p', 128)));
+            Assert.Equal("The password is too long", DbServerRules.PasswordProblem(new string('p', 129)));
+
+            // 16 bytes IV + AES blocks, in base64, must fit NVARCHAR(500): at most 351 bytes of UTF-8
+            Assert.Null(DbServerRules.PasswordProblem(new string('\u0D15', 117)));                       // 351 bytes
+            Assert.Equal("The password is too long", DbServerRules.PasswordProblem(new string('\u0D15', 118)));   // 354 bytes
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(128)]
+        [InlineData(351)]
+        public void The_longest_password_that_is_accepted_fits_the_column_when_encrypted(int bytes)
+        {
+            // what AesTenantSecretProtector produces: base64( IV(16) + PKCS7-padded cipher text )
+            var cipherLength = (bytes / 16 + 1) * 16;
+            var base64Length = 4 * ((16 + cipherLength + 2) / 3);
+
+            Assert.True(bytes <= DbServerRules.MaxPasswordBytes);
+            Assert.True(base64Length <= 500);
+        }
+    }
 }

@@ -491,6 +491,31 @@ namespace EncryptzBL.Infrastructure.User.Modules
             if (req.ServerName.Trim().Length > 200 || req.AdminUser.Trim().Length > 100 || (req.ExtraOptions?.Length ?? 0) > 400)
                 return ApiResponse<int>.Fail("One of the values is too long");
 
+            // the options end up, as typed, in the connection string of every company created
+            // on this server: they must not say where to connect or as whom
+            var (options, optionsError) = PlatformSettingRules.ValidateServerOptions(req.ExtraOptions);
+            if (options == null)
+                return ApiResponse<int>.Fail(optionsError ?? "The options are not valid connection options");
+
+            var passwordProblem = DbServerRules.PasswordProblem(req.AdminPassword);
+            if (passwordProblem != null)
+                return ApiResponse<int>.Fail(passwordProblem);
+
+            // The stored password belongs to the stored server and login: when one of them
+            // changes, it must be typed again, or it would be sent to the new place.
+            if (req.DbServerId > 0)
+            {
+                var stored = await GetStoredDbServer(req.DbServerId);
+                if (stored == null)
+                    return ApiResponse<int>.Fail("Server not found");
+
+                var saveProblem = DbServerRules.SaveProblem(
+                    stored.ServerName, stored.AdminUser, req.ServerName, req.AdminUser,
+                    passwordTyped: !string.IsNullOrEmpty(req.AdminPassword));
+                if (saveProblem != null)
+                    return ApiResponse<int>.Fail(saveProblem);
+            }
+
             // stored encrypted; empty on an edit keeps the stored one
             var encrypted = string.IsNullOrEmpty(req.AdminPassword) ? null : _protector.Protect(req.AdminPassword);
 
@@ -500,7 +525,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 SqlParameterHelper.Input("@ServerName", req.ServerName.Trim()),
                 SqlParameterHelper.Input("@AdminUser", req.AdminUser.Trim()),
                 SqlParameterHelper.Input("@AdminPasswordEnc", (object?)encrypted ?? DBNull.Value),
-                SqlParameterHelper.Input("@ExtraOptions", Nullable(req.ExtraOptions)),
+                SqlParameterHelper.Input("@ExtraOptions", Nullable(options)),
                 SqlParameterHelper.Input("@IsDefault", req.IsDefault),
                 SqlParameterHelper.Input("@IsActive", req.IsActive)
             });
@@ -513,6 +538,28 @@ namespace EncryptzBL.Infrastructure.User.Modules
             return result;
         }
 
+        /// <summary>A server row as stored, with its encrypted password. Never leaves this class.</summary>
+        private sealed record StoredDbServer(string ServerName, string AdminUser, string AdminPasswordEnc, string ExtraOptions);
+
+        private async Task<StoredDbServer?> GetStoredDbServer(int dbServerId)
+        {
+            var dt = await GetDataTableAsync("sp_Platform_GetDbServerSecret", new[]
+            {
+                SqlParameterHelper.Input("@DbServerId", dbServerId)
+            });
+
+            if (dt == null || dt.Rows.Count == 0)
+                return null;
+
+            var row = dt.Rows[0];
+
+            return new StoredDbServer(
+                row["ServerName"]?.ToString() ?? "",
+                row["AdminUser"]?.ToString() ?? "",
+                row["AdminPasswordEnc"]?.ToString() ?? "",
+                row["ExtraOptions"]?.ToString() ?? "");
+        }
+
         /// <summary>Can the API log in, and may that login create databases?</summary>
         public async Task<ApiResponse<ConnectionTestResult>> TestDbServer(SaveDbServerRequest req, PlatformActor actor)
         {
@@ -522,19 +569,35 @@ namespace EncryptzBL.Infrastructure.User.Modules
             if (req == null || string.IsNullOrWhiteSpace(req.ServerName) || string.IsNullOrWhiteSpace(req.AdminUser))
                 return ApiResponse<ConnectionTestResult>.Fail("Server and login are required");
 
+            var passwordProblem = DbServerRules.PasswordProblem(req.AdminPassword);
+            if (passwordProblem != null)
+                return ApiResponse<ConnectionTestResult>.Fail(passwordProblem);
+
+            // what is tested: the request's values with a typed password ...
+            var serverName = req.ServerName;
+            var adminUser = req.AdminUser;
+            var extraOptions = req.ExtraOptions;
             var password = req.AdminPassword;
 
-            // editing without retyping the password: test with the stored one
+            // ... but without one (editing without retyping it) ONLY the stored server, login
+            // and options, with the stored password: the stored password is never sent to a
+            // server, or used for a login, that the caller names.
             if (string.IsNullOrEmpty(password) && req.DbServerId > 0)
             {
-                var stored = await GetDataTableAsync("sp_Platform_GetDbServerSecret", new[]
-                {
-                    SqlParameterHelper.Input("@DbServerId", req.DbServerId)
-                });
+                var stored = await GetStoredDbServer(req.DbServerId);
 
-                if (stored != null && stored.Rows.Count > 0)
+                if (stored != null)
                 {
-                    try { password = _protector.Unprotect(stored.Rows[0]["AdminPasswordEnc"]?.ToString() ?? ""); }
+                    var testProblem = DbServerRules.TestWithStoredPasswordProblem(
+                        stored.ServerName, stored.AdminUser, req.ServerName, req.AdminUser);
+                    if (testProblem != null)
+                        return ApiResponse<ConnectionTestResult>.Fail(testProblem);
+
+                    serverName = stored.ServerName;
+                    adminUser = stored.AdminUser;
+                    extraOptions = stored.ExtraOptions;
+
+                    try { password = _protector.Unprotect(stored.AdminPasswordEnc); }
                     catch { password = null; }
                 }
             }
@@ -542,12 +605,16 @@ namespace EncryptzBL.Infrastructure.User.Modules
             if (string.IsNullOrEmpty(password))
                 return ApiResponse<ConnectionTestResult>.Fail("Enter the password to test the connection");
 
+            var (options, optionsError) = PlatformSettingRules.ValidateServerOptions(extraOptions);
+            if (options == null)
+                return ApiResponse<ConnectionTestResult>.Fail(optionsError ?? "The options are not valid connection options");
+
             var result = new ConnectionTestResult();
 
             try
             {
                 var connectionString = new SqlConnectionStringBuilder(
-                    TenantConnectionString.Build(req.ServerName, "master", req.AdminUser, password, req.ExtraOptions))
+                    TenantConnectionString.Build(serverName, "master", adminUser, password, options))
                 { ConnectTimeout = 10, Pooling = false }.ConnectionString;
 
                 var master = new ExplicitDbHelper(connectionString);
