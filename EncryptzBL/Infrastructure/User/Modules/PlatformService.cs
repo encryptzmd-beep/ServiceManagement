@@ -455,6 +455,115 @@ namespace EncryptzBL.Infrastructure.User.Modules
             return result;
         }
 
+        // ============================================
+        // BRANCH ACCESS (rows live in the company's own database)
+        // ============================================
+
+        /// <summary>The active members of the company, with their role in it.</summary>
+        private Task<List<ProjectAccessDto>> GetMembersAsync(int companyId)
+            => GetListAsync<ProjectAccessDto>("sp_Platform_GetModuleAccess", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId),
+                SqlParameterHelper.Input("@ModuleKey", ModuleAccess.ServiceModuleKey)
+            });
+
+        public async Task<ApiResponse<BranchAccessDto>> GetBranchAccess(int companyId, PlatformActor actor)
+        {
+            if (!ModuleAdminRules.CanManageAccess(actor, companyId))
+                return ApiResponse<BranchAccessDto>.Fail(NotAllowed);
+
+            var project = await GetManagedProject(companyId, actor);
+            if (project == null)
+                return ApiResponse<BranchAccessDto>.Fail(NotAllowed);
+
+            var members = await GetMembersAsync(companyId);
+
+            try
+            {
+                var db = await OpenProjectDb(project.Value.ProjectKey);
+                var scope = new[]
+                {
+                    SqlParameterHelper.Input("@CompanyId", project.Value.CompanyId),
+                    SqlParameterHelper.Input("@ProjectId", project.Value.ScopeId)
+                };
+
+                var branches = (await db.ExecuteDataTableAsync("sp_Location_GetAll", scope)).ToList<BranchDto>();
+
+                // members who were never given branches get every active one now (once),
+                // so the screen shows what they would get at their first login
+                await db.ExecuteNonQueryAsync("sp_Branch_EnsureInitialised", new[]
+                {
+                    SqlParameterHelper.Input("@CompanyId", project.Value.CompanyId),
+                    SqlParameterHelper.Input("@ProjectId", project.Value.ScopeId),
+                    SqlParameterHelper.Input("@MainUserIdsJson", System.Text.Json.JsonSerializer.Serialize(BranchAccessRules.MemberIdsToInitialise(members)))
+                });
+
+                var granted = await db.ExecuteDataTableAsync("sp_Branch_GetAccess", new[]
+                {
+                    SqlParameterHelper.Input("@CompanyId", project.Value.CompanyId),
+                    SqlParameterHelper.Input("@ProjectId", project.Value.ScopeId)
+                });
+
+                var pairs = granted.Rows.Cast<DataRow>()
+                    .Select(r => (Convert.ToInt32(r["MainUserId"]), Convert.ToInt32(r["LocationId"])));
+
+                return ApiResponse<BranchAccessDto>.Ok(BranchAccessRules.Build(members, branches, pairs));
+            }
+            catch (Exception ex) when (BranchAccessRules.IsMissingBranchAccess(ex))
+            {
+                return ApiResponse<BranchAccessDto>.Fail(BranchAccessRules.NotInstalledMessage);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Company database access failed for company {CompanyId}", companyId);
+                return ApiResponse<BranchAccessDto>.Fail("Could not read the company database");
+            }
+        }
+
+        public async Task<ApiResponse<bool>> SetBranchAccess(int companyId, SetBranchAccessRequest req, PlatformActor actor)
+        {
+            if (!ModuleAdminRules.CanManageAccess(actor, companyId))
+                return ApiResponse<bool>.Fail(NotAllowed);
+
+            if (req == null || req.UserId <= 0 || req.LocationId <= 0)
+                return ApiResponse<bool>.Fail("Branch or user not found");
+
+            var project = await GetManagedProject(companyId, actor);
+            if (project == null)
+                return ApiResponse<bool>.Fail(NotAllowed);
+
+            // the member list is the main database's: a user of another company is not in it
+            var member = (await GetMembersAsync(companyId)).FirstOrDefault(m => m.UserId == req.UserId);
+            var refusal = BranchAccessRules.ChangeRefusal(member, actor.UserId);
+            if (refusal != null)
+                return ApiResponse<bool>.Fail(refusal);
+
+            try
+            {
+                var db = await OpenProjectDb(project.Value.ProjectKey);
+                var dt = await db.ExecuteDataTableAsync("sp_Branch_SetAccess", new[]
+                {
+                    SqlParameterHelper.Input("@CompanyId", project.Value.CompanyId),
+                    SqlParameterHelper.Input("@ProjectId", project.Value.ScopeId),
+                    SqlParameterHelper.Input("@MainUserId", req.UserId),
+                    SqlParameterHelper.Input("@LocationId", req.LocationId),
+                    SqlParameterHelper.Input("@HasAccess", req.HasAccess),
+                    SqlParameterHelper.Input("@GrantedBy", actor.UserId)
+                });
+
+                return ToFlag(dt);
+            }
+            catch (Exception ex) when (BranchAccessRules.IsMissingBranchAccess(ex))
+            {
+                return ApiResponse<bool>.Fail(BranchAccessRules.NotInstalledMessage);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Company database access failed for company {CompanyId}", companyId);
+                return ApiResponse<bool>.Fail("Could not save to the company database");
+            }
+        }
+
         /// <summary>Procs answer with Success and Message.</summary>
         private static ApiResponse<bool> ToFlag(DataTable? dt)
         {

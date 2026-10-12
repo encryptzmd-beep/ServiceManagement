@@ -27,6 +27,9 @@ namespace EncryptzBL.Infrastructure.User.Modules
         Task<ApiResponse<List<ProjectAccessDto>>> GetModuleAccess(int companyId, string moduleKey, PlatformActor actor);
         Task<ApiResponse<bool>> SetModuleAccess(int companyId, string moduleKey, SetProjectAccessRequest req, PlatformActor actor);
 
+        Task<ApiResponse<BranchAccessDto>> GetBranchAccess(int companyId, PlatformActor actor);
+        Task<ApiResponse<bool>> SetBranchAccess(int companyId, SetBranchAccessRequest req, PlatformActor actor);
+
         Task<ApiResponse<List<DbServerDto>>> GetDbServers(PlatformActor actor);
         Task<ApiResponse<int>> SaveDbServer(SaveDbServerRequest req, PlatformActor actor);
         Task<ApiResponse<ConnectionTestResult>> TestDbServer(SaveDbServerRequest req, PlatformActor actor);

@@ -118,6 +118,18 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SetModuleAccess(int companyId, string moduleKey, [FromBody] SetProjectAccessRequest req)
             => Ok(await _service.SetModuleAccess(companyId, moduleKey, req, Actor()));
 
+        // ── BRANCH ACCESS ─────────────────────────
+
+        [PlatformUnlocked]
+        [HttpGet("companies/{companyId}/branch-access")]
+        public async Task<IActionResult> GetBranchAccess(int companyId)
+            => Ok(await _service.GetBranchAccess(companyId, Actor()));
+
+        [PlatformUnlocked]
+        [HttpPost("companies/{companyId}/branch-access")]
+        public async Task<IActionResult> SetBranchAccess(int companyId, [FromBody] SetBranchAccessRequest req)
+            => Ok(await _service.SetBranchAccess(companyId, req, Actor()));
+
         // ── DATABASE SERVERS + SETTINGS ───────────
 
         [PlatformUnlocked]
