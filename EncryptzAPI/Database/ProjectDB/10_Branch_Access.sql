@@ -258,6 +258,9 @@ BEGIN TRY
     SELECT DISTINCT u.MainUserId
     FROM dbo.Users u
     WHERE u.MainUserId IS NOT NULL AND u.MainUserId > 0
+      /* no active branch in this database yet: mark nobody, so everyone gets
+         their first branches when one exists */
+      AND EXISTS (SELECT 1 FROM dbo.Locations WHERE IsActive = 1)
       AND NOT EXISTS (SELECT 1 FROM dbo.UserLocationAccessInit i WITH (UPDLOCK, HOLDLOCK)
                       WHERE i.MainUserId = u.MainUserId);
 

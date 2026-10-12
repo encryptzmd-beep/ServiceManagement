@@ -18,7 +18,9 @@ branches were set once), and the procedures `sp_Branch_EnsureInitialised`,
 
 Run it in each existing company database (`FelixServiceDB`,
 `HamsterserviceDB`), with that database selected in SSMS. It can run before or
-after the new API is deployed: both orders work.
+after the new API is deployed: both orders work. If the script runs well before
+the new API, a branch created in between is given to nobody: check Branch
+Access after the API is deployed.
 
 Without it, the new API behaves as before (every member sees every branch) and
 the Branch Access tab says that branch access is not set up in this company's
@@ -58,7 +60,10 @@ mark.
 
 None is needed: the previous API ignores the new objects. No script here drops
 anything. To switch branch access off for one company database, an owner drops
-the five procedures by hand; the API then falls back to "every branch".
+ALL five procedures by hand; the API then falls back to "every branch". Never
+drop only some of them: a partly removed set also opens every branch, in ways
+that are hard to see (for example the list stays restricted while a typed
+branch id is accepted).
 
 ## Check after running
 
@@ -85,3 +90,17 @@ holds more than one company or project (the older shared layout), a member who
 was given branches for one of them gets none automatically for another: an
 administrator ticks them in Branch Access. Databases created by the API hold
 one company, so this does not arise there.
+
+## What branch access does not do
+
+- It decides which branches a member can ENTER. Lists that are company-wide stay
+  company-wide: a technician can still be chosen for a job in a branch they
+  cannot enter, and then does not see that job. Tick the branch for the
+  technician, or assign the job to someone who has it.
+- An administrator who is made an ordinary member: if they existed when the
+  script first ran they keep the branches stored then; otherwise they get every
+  active branch at their first login as an ordinary member.
+- A member removed from the company and added again comes back with the
+  branches they had (possibly none): the mark and the rows are kept.
+- A login that was already inside a branch keeps working there until it expires,
+  even after the branch was unticked.

@@ -11,7 +11,7 @@ Script 20 lets users create a company themselves. The procedures it adds record
 the company, make its creator the company `Admin` and give the company the
 Service module. The API then creates the company's database on a SQL server
 that a platform administrator has added, and marks the company `Ready`.
-After `New_Tenant_Database.sql` the API runs the tenant scripts numbered 10 and up
+After `New_Tenant_Database.sql` the API runs the tenant scripts numbered 10 to 99
 that are shipped with it (today `10_Branch_Access.sql`), in number order; a failure
 in one of them fails the set-up like a failure of the base script.
 
