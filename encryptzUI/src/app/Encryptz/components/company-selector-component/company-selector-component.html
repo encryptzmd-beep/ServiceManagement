@@ -163,20 +163,26 @@
         }
 
         <!-- STEP 1: COMPANY -->
-        @if (!loading() && !error() && stage() === 'company' && companies().length === 0) {
+        @if (!loading() && !error() && stage() === 'company' && companies().length === 0 && !showCreate()) {
           <div class="empty-state">
-            <span class="material-icons">business_off</span>
-            <p>No companies found.</p>
-            <p class="small">Please contact your administrator to get added to a company.</p>
-            <button class="btn-signin" (click)="logout()">Go to Login</button>
+            <span class="material-icons">business</span>
+            <p>You are not in a company yet.</p>
+            <p class="small">Create your own company, or join one you were invited to.</p>
+            <button class="btn-signin create-company-btn" (click)="openCreate()" [disabled]="!creation()?.canCreate">Create Company</button>
+            @if (creation() && !creation()!.canCreate) {
+              <p class="small create-reason">{{ creation()!.message }}</p>
+            }
+            <button class="link-back" (click)="openInvitations()">Invitations and join requests</button>
           </div>
         }
 
-        @if (!loading() && stage() === 'company' && companies().length > 0) {
+        @if (!loading() && stage() === 'company' && companies().length > 0 && !showCreate()) {
           <div class="company-list">
             @for (company of companies(); track company.companyId) {
-              <div class="company-item" (click)="selectCompany(company)"
-                   role="button" tabindex="0" (keydown.enter)="selectCompany(company)" (keydown.space)="selectCompany(company); $event.preventDefault()">
+              <div class="company-item" [class.disabled]="!enterable(company)"
+                   [attr.aria-disabled]="!enterable(company)" (click)="selectCompany(company)"
+                   role="button" [attr.tabindex]="enterable(company) ? 0 : -1"
+                   (keydown.enter)="selectCompany(company)" (keydown.space)="selectCompany(company); $event.preventDefault()">
                 <div class="company-avatar">
                   <span class="material-icons">apartment</span>
                 </div>
@@ -189,11 +195,73 @@
                   @if (companyStatus(company)) {
                     <span class="status-badge">{{ companyStatus(company) }}</span>
                   }
+                  @if (company.provisionStatus === 'Failed') {
+                    @if (company.isCreator) {
+                      <button class="retry-btn" (click)="retry(company, $event)" [disabled]="retrying() !== null">
+                        {{ retrying() === company.companyId ? 'Retrying…' : 'Retry' }}
+                      </button>
+                    } @else {
+                      <p class="small">Ask the person who created this company to retry.</p>
+                    }
+                  }
                 </div>
-                <span class="material-icons arrow">chevron_right</span>
+                @if (enterable(company)) {
+                  <span class="material-icons arrow">chevron_right</span>
+                } @else if (company.provisionStatus === 'Provisioning') {
+                  <span class="material-icons arrow">hourglass_top</span>
+                } @else {
+                  <span class="material-icons arrow">error_outline</span>
+                }
               </div>
             }
           </div>
+
+          @if (pollStopped()) {
+            <div class="scope-step">
+              <p class="small">Still setting up. Come back in a few minutes.</p>
+              <button class="link-back" (click)="reload()">Refresh</button>
+            </div>
+          }
+
+          <div class="scope-step">
+            <button class="btn-signin create-company-btn" (click)="openCreate()" [disabled]="!creation()?.canCreate">Create Company</button>
+            @if (creation() && !creation()!.canCreate) {
+              <p class="small create-reason">{{ creation()!.message }}</p>
+            }
+          </div>
+        }
+
+        <!-- STEP 1b: CREATE A COMPANY -->
+        @if (stage() === 'company' && showCreate()) {
+          <form class="create-form" (ngSubmit)="submitCreate()">
+            <label>Company name *
+              <input class="form-input" name="companyName" [(ngModel)]="createForm.companyName" (ngModelChange)="onNameTyped()" maxlength="200" autocomplete="organization" />
+            </label>
+            <label>Company code *
+              <input class="form-input" name="companyCode" [(ngModel)]="createForm.companyCode" (input)="onCodeTyped()" maxlength="20" placeholder="e.g. ACME" />
+              <small>Your customers type this code to reach your portal. Letters, digits, - and _.</small>
+            </label>
+            <label>First branch
+              <input class="form-input" name="firstBranchName" [(ngModel)]="createForm.firstBranchName" maxlength="200" placeholder="Head Office" />
+            </label>
+            <label>City
+              <input class="form-input" name="city" [(ngModel)]="createForm.city" maxlength="100" />
+            </label>
+            <label>Phone
+              <input class="form-input" name="phoneNumber" [(ngModel)]="createForm.phoneNumber" maxlength="30" />
+            </label>
+            <label>Address
+              <input class="form-input" name="address" [(ngModel)]="createForm.address" maxlength="400" />
+            </label>
+
+            @if (createError()) { <div class="error-msg">{{ createError() }}</div> }
+
+            <button class="btn-signin" type="submit" [disabled]="creating()">{{ creating() ? 'Creating…' : 'Create Company' }}</button>
+            <button class="link-back" type="button" (click)="closeCreate()" [disabled]="creating()">
+              <span class="material-icons">chevron_left</span> Back to companies
+            </button>
+            <p class="small">Setting up a new company takes a few minutes. You can stay on the next screen or come back later.</p>
+          </form>
         }
 
         <!-- STEP 2: MODULE (every module is listed; the ones this user cannot open are disabled) -->

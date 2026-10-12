@@ -139,6 +139,10 @@ export class NoCompanyComponent implements OnInit {
     });
   }
 
+  backToCompanies(): void {
+    this.router.navigate(['/select-company']);
+  }
+
   logout() {
     this.auth.logout();
     this.router.navigate(['/login']);

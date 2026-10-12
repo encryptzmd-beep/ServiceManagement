@@ -1,10 +1,16 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription, interval } from 'rxjs';
 import { AuthService, Company } from '../../Auth/auth-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LocationDto, ModuleDto } from '../../Models/ApiModels';
 import { branchDecision, landingRouteForRole, moduleCaption } from '../../Auth/scope-flow';
+import {
+  anyProvisioning, canEnter, CompanyCreationState, emptyCompanyForm, NewCompanyForm, POLL_LIMIT_MS, POLL_MS,
+  provisionLabel, requestErrorMessage, suggestCompanyCode, validateNewCompany
+} from '../../Auth/company-creation';
 
 type Stage = 'company' | 'module' | 'branch';
 
@@ -34,7 +40,33 @@ export class CompanySelectorComponent {
   /** A single branch is being entered without asking. */
   entering = signal(false);
 
+  private destroyRef = inject(DestroyRef);
+
+  // ── creating a company ────────────────────────────────────────────
+  /** Whether this user may create a company now (null = not known yet). */
+  creation = signal<CompanyCreationState | null>(null);
+  showCreate = signal(false);
+  createForm: NewCompanyForm = emptyCompanyForm();
+  createError = signal('');
+  creating = signal(false);
+  /** The code follows the name until the user types a code. */
+  private codeTyped = false;
+  /** Company whose set-up is being retried (null = none). */
+  retrying = signal<number | null>(null);
+
+  // ── watching a set-up ─────────────────────────────────────────────
+  polling = signal(false);
+  /** Polling ran out of time while a company was still being set up. */
+  pollStopped = signal(false);
+  private pollSub?: Subscription;
+  private pollStarted = 0;
+  private gone = false;
+
   private moduleKey = '';
+
+  constructor() {
+    this.destroyRef.onDestroy(() => { this.gone = true; this.stopPolling(); });
+  }
 
   // Change Password States
   showChangePasswordModal = signal(false);
@@ -70,6 +102,7 @@ export class CompanySelectorComponent {
 
   /** Reload whatever this step shows (the Retry button). */
   reload(): void {
+    this.pollStopped.set(false);
     this.error.set('');
     if (this.stage() === 'module') this.loadModules();
     else if (this.stage() === 'branch') this.loadBranches();
@@ -79,42 +112,47 @@ export class CompanySelectorComponent {
   // ── STEP 1: COMPANY ───────────────────────────────────────────────
 
   loadCompanies() {
-    this.loading.set(true);
-
-    const companies = this.auth.companies();
-
-    if (companies.length > 0) {
-      this.companies.set(companies);
-      this.loading.set(false);
-      return;
+    // what login kept is shown at once; the API has the current statuses
+    let kept = this.auth.companies();
+    if (kept.length === 0) {
+      try {
+        const temp = localStorage.getItem('temp_login');
+        if (temp) kept = JSON.parse(temp).companies || [];
+      } catch { kept = []; }
     }
 
-    let tempList: Company[] = [];
-    try {
-      const temp = localStorage.getItem('temp_login');
-      if (temp) tempList = JSON.parse(temp).companies || [];
-    } catch { tempList = []; }
+    this.companies.set(kept);
+    this.loading.set(kept.length === 0);
+    this.refreshCompanies(() => {
+      if (kept.length === 0) this.error.set('Could not load your companies. Please try again.');
+    });
+  }
 
-    if (tempList.length > 0) {
-      this.companies.set(tempList);
-      this.loading.set(false);
-      return;
-    }
-
-    // after a reload inside the application nothing is kept: ask the API
-    this.auth.getUserCompanies().subscribe({
+  /** Reads the list and the creation state again, without the spinner. */
+  private refreshCompanies(onError?: () => void): void {
+    this.auth.getUserCompanies().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (list) => {
-        this.companies.set(list);
+        if (this.gone) return;
         this.loading.set(false);
+        this.companies.set(list);
+        this.watchSetUps();
       },
       error: () => {
+        if (this.gone) return;
         this.loading.set(false);
-        this.error.set('Could not load your companies. Please try again.');
+        onError?.();
       }
+    });
+
+    this.auth.getCompanyCreation().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (res) => { if (!this.gone) this.creation.set(res.success ? res.data ?? null : null); },
+      error: () => { if (!this.gone) this.creation.set(null); }
     });
   }
 
   selectCompany(company: Company) {
+    if (!canEnter(company.provisionStatus)) return;
+    this.stopPolling();
     this.loading.set(true);
 
     this.auth.selectCompany(company.companyId).subscribe({
@@ -137,12 +175,113 @@ export class CompanySelectorComponent {
 
   /** Text of a company whose database is not ready ('' when it is). */
   companyStatus(company: Company): string {
-    switch (company.provisionStatus) {
-      case 'Provisioning': return 'Setting up…';
-      case 'Failed': return 'Setup failed';
-      case 'None': return 'No database yet';
-      default: return '';
-    }
+    return provisionLabel(company.provisionStatus);
+  }
+
+  enterable(company: Company): boolean {
+    return canEnter(company.provisionStatus);
+  }
+
+  // ── creating a company ────────────────────────────────────────────
+
+  openCreate(): void {
+    if (!this.creation()?.canCreate) return;
+    this.createForm = emptyCompanyForm();
+    this.codeTyped = false;
+    this.createError.set('');
+    this.showCreate.set(true);
+  }
+
+  closeCreate(): void {
+    this.showCreate.set(false);
+    this.createError.set('');
+  }
+
+  onNameTyped(): void {
+    if (!this.codeTyped) this.createForm.companyCode = suggestCompanyCode(this.createForm.companyName);
+  }
+
+  onCodeTyped(): void {
+    this.codeTyped = true;
+  }
+
+  submitCreate(): void {
+    if (this.creating()) return;
+
+    const problem = validateNewCompany(this.createForm);
+    if (problem) { this.createError.set(problem); return; }
+
+    this.createError.set('');
+    this.creating.set(true);
+    this.auth.createCompany(this.createForm).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (res) => {
+        this.creating.set(false);
+        if (!res.success) { this.createError.set(res.message || 'Could not create the company'); return; }
+        this.showCreate.set(false);
+        this.error.set('');
+        this.refreshCompanies();
+      },
+      error: (err) => {
+        this.creating.set(false);
+        this.createError.set(requestErrorMessage(err, 'Could not create the company'));
+      }
+    });
+  }
+
+  /** Retry of a failed set-up: by the user who created the company. */
+  retry(company: Company, event?: Event): void {
+    event?.stopPropagation();
+    if (this.retrying() !== null) return;
+
+    this.error.set('');
+    this.retrying.set(company.companyId);
+    this.auth.retryProvision(company.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (res) => {
+        this.retrying.set(null);
+        if (!res.success) { this.error.set(res.message || 'Could not retry the set-up'); return; }
+        this.refreshCompanies();
+      },
+      error: (err) => {
+        this.retrying.set(null);
+        this.error.set(requestErrorMessage(err, 'Could not retry the set-up'));
+      }
+    });
+  }
+
+  openInvitations(): void {
+    this.router.navigate(['/no-company']);
+  }
+
+  // ── watching a set-up ─────────────────────────────────────────────
+
+  /** Starts or stops asking again, depending on whether a company is being set up. */
+  private watchSetUps(): void {
+    if (!anyProvisioning(this.companies())) { this.stopPolling(); return; }
+    if (this.pollSub) return;
+
+    this.pollStopped.set(false);
+    this.pollStarted = Date.now();
+    this.polling.set(true);
+    this.pollSub = interval(POLL_MS).subscribe(() => {
+      if (Date.now() - this.pollStarted >= POLL_LIMIT_MS) {
+        this.stopPolling();
+        this.pollStopped.set(true);
+        return;
+      }
+      this.pollOnce();
+    });
+  }
+
+  /** One round of asking again (also called by the timer). */
+  pollOnce(): void {
+    if (this.gone) return;
+    this.refreshCompanies();
+  }
+
+  private stopPolling(): void {
+    this.pollSub?.unsubscribe();
+    this.pollSub = undefined;
+    this.polling.set(false);
   }
 
   // ── STEP 2: MODULE ────────────────────────────────────────────────

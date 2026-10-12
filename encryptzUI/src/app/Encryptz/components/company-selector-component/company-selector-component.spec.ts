@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { AuthService } from '../../Auth/auth-service';
 import { CompanySelectorComponent } from './company-selector-component';
 
@@ -45,7 +45,10 @@ describe('CompanySelectorComponent', () => {
       companies: () => [{ companyId: 2, companyName: 'Hamster A/C', companyCode: 'C002', roleInCompany: 'Admin', isLinked: false, provisionStatus: 'Ready' }],
       selectedModuleKey: () => null,
       scopeState: () => ({ loggedIn: true, companyId: 2, moduleKey: null, locationId: null }),
-      getUserCompanies: () => of([]),
+      getUserCompanies: () => of(auth.companies()),
+      getCompanyCreation: () => of({ success: true, message: '', data: { canCreate: true, created: 0, limit: 1, message: '' } }),
+      createCompany: () => of({ success: true, message: 'ok', data: { companyId: 9, provisionStatus: 'Provisioning' } }),
+      retryProvision: () => of({ success: true, message: 'ok', data: true }),
       selectCompany: () => of({ success: true, message: '', data: { role: 'Admin' } }),
       getModules: () => of({ success: true, message: '', data: modules }),
       getBranches: () => of({ success: true, message: '', data: [branch(1, 'Main'), branch(2, 'North')] }),
@@ -267,5 +270,315 @@ describe('CompanySelectorComponent', () => {
     const fixture = create('branch', 'SERVICE');
     expect(fixture.nativeElement.textContent).toContain('Ask your administrator to give you a branch.');
     expect(fixture.nativeElement.textContent).not.toContain('Administration');
+  });
+});
+
+describe('CompanySelectorComponent company creation', () => {
+  const company = (id: number, status: string, isCreator = false) =>
+    ({ companyId: id, companyName: 'Co ' + id, companyCode: 'C' + id, roleInCompany: 'Admin', isLinked: false, provisionStatus: status, isCreator });
+  const state = (canCreate: boolean, message = '') => ({ success: true, message: '', data: { canCreate, created: canCreate ? 0 : 1, limit: 1, message } });
+
+  let auth: any;
+  let calls: any[][];
+  let list: any[];
+  let navigated: any[][];
+
+  const create = () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [CompanySelectorComponent],
+      providers: [
+        provideRouter([]),
+        { provide: AuthService, useValue: auth },
+        { provide: ActivatedRoute, useValue: { snapshot: { data: { stage: 'company' }, queryParamMap: { get: () => null } } } },
+      ],
+    });
+    navigated = [];
+    const router = TestBed.inject(Router);
+    router.navigate = ((commands: any[], extras?: any) => { navigated.push(extras ? [commands, extras] : [commands]); return Promise.resolve(true); }) as any;
+    const fixture = TestBed.createComponent(CompanySelectorComponent);
+    fixture.detectChanges();
+    return fixture;
+  };
+
+  const text = (fixture: any) => fixture.nativeElement.textContent as string;
+  const button = (fixture: any, label: string) =>
+    (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(b => b.textContent?.trim().startsWith(label));
+
+  beforeEach(() => {
+    localStorage.clear();
+    calls = [];
+    list = [company(2, 'Ready')];
+    auth = {
+      userId: () => 5,
+      userRole: () => 'Admin',
+      currentUser: () => ({ userId: 5, fullName: 'A', role: 'Admin', isPlatformAdmin: false }),
+      companies: () => [],
+      selectedModuleKey: () => null,
+      scopeState: () => ({ loggedIn: true, companyId: null, moduleKey: null, locationId: null }),
+      getUserCompanies: () => { calls.push(['getUserCompanies']); return of(list); },
+      getCompanyCreation: () => { calls.push(['getCompanyCreation']); return of(state(true)); },
+      createCompany: (form: any) => { calls.push(['createCompany', form]); list = [...list, company(9, 'Provisioning', true)]; return of({ success: true, message: 'ok', data: { companyId: 9, provisionStatus: 'Provisioning' } }); },
+      retryProvision: (id: number) => { calls.push(['retryProvision', id]); return of({ success: true, message: 'ok', data: true }); },
+      selectCompany: (id: number) => { calls.push(['selectCompany', id]); return of({ success: true, message: '', data: { role: 'Admin' } }); },
+      logout: () => {},
+    };
+  });
+
+  it('reads the list and the creation state from the API when the step opens', () => {
+    create();
+    expect(calls).toContainEqual(['getUserCompanies']);
+    expect(calls).toContainEqual(['getCompanyCreation']);
+  });
+
+  it('keeps the list from login when the API cannot be reached', () => {
+    auth.companies = () => [company(2, 'Ready')];
+    auth.getUserCompanies = () => throwError(() => new Error('offline'));
+    const fixture = create();
+
+    expect(fixture.nativeElement.querySelectorAll('.company-item').length).toBe(1);
+    expect(fixture.componentInstance.error()).toBe('');
+  });
+
+  it('offers Create Company and opens the form', () => {
+    const fixture = create();
+    const btn = button(fixture, 'Create Company')!;
+    expect(btn.disabled).toBe(false);
+
+    btn.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.showCreate()).toBe(true);
+    expect(fixture.nativeElement.querySelector('.create-form')).not.toBeNull();
+  });
+
+  it('disables Create Company with the reason when the limit is reached', () => {
+    auth.getCompanyCreation = () => of(state(false, 'You can create 1 company. You have reached the limit.'));
+    const fixture = create();
+
+    expect(button(fixture, 'Create Company')!.disabled).toBe(true);
+    expect(text(fixture)).toContain('You have reached the limit');
+  });
+
+  it('shows the empty state with Create Company and the way to invitations', () => {
+    list = [];
+    const fixture = create();
+
+    expect(text(fixture)).toContain('You are not in a company yet');
+    expect(button(fixture, 'Create Company')).toBeDefined();
+    button(fixture, 'Invitations and join requests')!.click();
+    expect(navigated).toContainEqual([['/no-company']]);
+  });
+
+  it('suggests the code from the name until the code is typed by hand', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.openCreate();
+
+    c.createForm.companyName = 'Hamster A/C';
+    c.onNameTyped();
+    expect(c.createForm.companyCode).toBe('HAMSTERA');
+
+    c.createForm.companyCode = 'HAM';
+    c.onCodeTyped();
+    c.createForm.companyName = 'Hamster Cooling';
+    c.onNameTyped();
+    expect(c.createForm.companyCode).toBe('HAM');
+  });
+
+  it('does not send an incomplete form', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.openCreate();
+    c.createForm.companyName = 'A';
+    c.submitCreate();
+
+    expect(c.createError()).toBe('Enter the company name');
+    expect(calls.some(x => x[0] === 'createCompany')).toBe(false);
+  });
+
+  it('creates the company, closes the form, shows it as setting up and starts polling', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.openCreate();
+    c.createForm.companyName = 'New Co';
+    c.createForm.companyCode = 'NEW1';
+    c.submitCreate();
+    fixture.detectChanges();
+
+    expect(calls.filter(x => x[0] === 'createCompany').length).toBe(1);
+    expect(c.showCreate()).toBe(false);
+    expect(text(fixture)).toContain('Setting up…');
+    expect(c.polling()).toBe(true);
+  });
+
+  it('sends only one request when Create is pressed twice', () => {
+    const pending = new Subject<any>();
+    auth.createCompany = (form: any) => { calls.push(['createCompany', form]); return pending; };
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.openCreate();
+    c.createForm.companyName = 'New Co';
+    c.createForm.companyCode = 'NEW1';
+    c.submitCreate();
+    c.submitCreate();
+    fixture.detectChanges();
+
+    expect(calls.filter(x => x[0] === 'createCompany').length).toBe(1);
+    expect(button(fixture, 'Creating')!.disabled).toBe(true);
+  });
+
+  it('shows why the server refused, inside the form', () => {
+    auth.createCompany = () => of({ success: false, message: 'This company code is already in use', data: null });
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.openCreate();
+    c.createForm.companyName = 'New Co';
+    c.createForm.companyCode = 'NEW1';
+    c.submitCreate();
+    fixture.detectChanges();
+
+    expect(c.showCreate()).toBe(true);
+    expect(text(fixture)).toContain('This company code is already in use');
+  });
+
+  it('explains a rate limit', () => {
+    auth.createCompany = () => throwError(() => ({ status: 429 }));
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.openCreate();
+    c.createForm.companyName = 'New Co';
+    c.createForm.companyCode = 'NEW1';
+    c.submitCreate();
+
+    expect(c.createError()).toBe('Too many attempts. Please try again later.');
+  });
+
+  it('does not let a company that is being set up or failed be entered', () => {
+    list = [company(3, 'Provisioning', true), company(4, 'Failed', true)];
+    const fixture = create();
+    const rows = fixture.nativeElement.querySelectorAll('.company-item') as NodeListOf<HTMLElement>;
+
+    rows[0].click();
+    rows[1].click();
+    rows[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+    expect(calls.some(x => x[0] === 'selectCompany')).toBe(false);
+    expect(rows[0].getAttribute('aria-disabled')).toBe('true');
+    expect(rows[0].getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('still enters a ready company', () => {
+    const fixture = create();
+    (fixture.nativeElement.querySelector('.company-item') as HTMLElement).click();
+    expect(calls).toContainEqual(['selectCompany', 2]);
+  });
+
+  it('offers Retry to the creator of a failed company only', () => {
+    list = [company(4, 'Failed', true), company(5, 'Failed', false)];
+    const fixture = create();
+    const rows = fixture.nativeElement.querySelectorAll('.company-item') as NodeListOf<HTMLElement>;
+
+    expect(rows[0].querySelector('.retry-btn')).not.toBeNull();
+    expect(rows[1].querySelector('.retry-btn')).toBeNull();
+    expect(rows[1].textContent).toContain('Ask the person who created this company to retry');
+  });
+
+  it('retries once, then reloads and polls', () => {
+    list = [company(4, 'Failed', true)];
+    const pending = new Subject<any>();
+    auth.retryProvision = (id: number) => { calls.push(['retryProvision', id]); return pending; };
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    c.retry(list[0]);
+    c.retry(list[0]);
+    expect(calls.filter(x => x[0] === 'retryProvision')).toEqual([['retryProvision', 4]]);
+
+    list = [company(4, 'Provisioning', true)];
+    const before = calls.filter(x => x[0] === 'getUserCompanies').length;
+    pending.next({ success: true, message: 'ok', data: true });
+    pending.complete();
+    fixture.detectChanges();
+
+    expect(calls.filter(x => x[0] === 'getUserCompanies').length).toBe(before + 1);
+    expect(c.retrying()).toBeNull();
+    expect(c.polling()).toBe(true);
+  });
+
+  it('shows why a retry was refused', () => {
+    list = [company(4, 'Failed', true)];
+    auth.retryProvision = () => of({ success: false, message: 'The earlier set-up is still being cleaned up. Try again in a few minutes.', data: false });
+    const fixture = create();
+    fixture.componentInstance.retry(list[0]);
+    fixture.detectChanges();
+
+    expect(text(fixture)).toContain('still being cleaned up');
+  });
+
+  it('stops polling when nothing is being set up any more', () => {
+    list = [company(3, 'Provisioning', true)];
+    const fixture = create();
+    const c = fixture.componentInstance;
+    expect(c.polling()).toBe(true);
+
+    list = [company(3, 'Ready', true)];
+    c.pollOnce();
+    fixture.detectChanges();
+
+    expect(c.polling()).toBe(false);
+    expect(text(fixture)).not.toContain('Setting up…');
+  });
+
+  it('asks again on the timer while a company is being set up, and not after the screen is left', () => {
+    vi.useFakeTimers();
+    try {
+      list = [company(3, 'Provisioning', true)];
+      const fixture = create();
+      const count = () => calls.filter(x => x[0] === 'getUserCompanies').length;
+      const first = count();
+
+      vi.advanceTimersByTime(5000);
+      expect(count()).toBe(first + 1);
+
+      fixture.destroy();
+      vi.advanceTimersByTime(20000);
+      expect(count()).toBe(first + 1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('ignores a late answer after the screen was left', () => {
+    list = [company(3, 'Provisioning', true)];
+    const late = new Subject<any[]>();
+    const fixture = create();
+    const c = fixture.componentInstance;
+    auth.getUserCompanies = () => late;
+    c.pollOnce();
+    fixture.destroy();
+
+    late.next([company(3, 'Ready', true)]);
+
+    expect(c.companies()[0].provisionStatus).toBe('Provisioning');
+  });
+
+  it('gives up polling after the limit and offers Refresh', () => {
+    vi.useFakeTimers();
+    try {
+      list = [company(3, 'Provisioning', true)];
+      const fixture = create();
+      const c = fixture.componentInstance;
+
+      vi.advanceTimersByTime(25 * 60 * 1000 + 5000);
+      fixture.detectChanges();
+
+      expect(c.polling()).toBe(false);
+      expect(c.pollStopped()).toBe(true);
+      expect(text(fixture)).toContain('Still setting up. Come back in a few minutes.');
+      expect(button(fixture, 'Refresh')).toBeDefined();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

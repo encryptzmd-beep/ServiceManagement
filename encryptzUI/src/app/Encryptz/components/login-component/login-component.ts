@@ -64,13 +64,8 @@ export class LoginComponent {
         return;
       }
 
-      const companies = res.data.companies || [];
-
-      if (companies.length === 0) {
-        this.router.navigate(['/no-company']);
-        return;
-      }
-
+      // The company list is always shown (also with no company): it is where a
+      // user creates or joins a company.
       this.router.navigate(['/select-company']);
     },
     error: () => {
@@ -135,19 +130,15 @@ export class LoginComponent {
 private handlePostLogin(data: any): void {
 
 
-  const companies = data.companies || [];
-
-  if (companies.length === 0) {
-    this.router.navigate(['/no-company']);
-  } else {
-    this.router.navigate(['/select-company']);
-  }
+  // The company list is always shown (also with no company): it is where a
+  // user creates or joins a company.
+  this.router.navigate(['/select-company']);
 }
 
   private handlePostLoginWithData(userData: any, companies: any[]): void {
     // The company list is always shown, also for a single company (it is where a
     // user creates or joins a company); the module and branch steps follow it.
-    this.router.navigate([companies.length === 0 ? '/no-company' : '/select-company']);
+    this.router.navigate(['/select-company']);
   }
 
   // ============================================
