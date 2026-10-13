@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using EncryptzBL.Common.Tenant;
 using Microsoft.Data.SqlClient;
 
@@ -126,8 +127,7 @@ namespace EncryptzBL.Common.Provisioning
 
                     try
                     {
-                        await using var cmd = new SqlCommand(batch, conn) { CommandTimeout = BatchTimeoutSeconds };
-                        await cmd.ExecuteNonQueryAsync(ct);
+                        await RunBatchAsync(conn, batch, ct);
                     }
                     catch (SqlException ex)
                     {
@@ -149,8 +149,7 @@ namespace EncryptzBL.Common.Provisioning
 
                         try
                         {
-                            await using var cmd = new SqlCommand(batch, conn) { CommandTimeout = BatchTimeoutSeconds };
-                            await cmd.ExecuteNonQueryAsync(ct);
+                            await RunBatchAsync(conn, batch, ct);
                         }
                         catch (SqlException ex)
                         {
@@ -167,6 +166,47 @@ namespace EncryptzBL.Common.Provisioning
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 throw Wrapped(ex, connectionString, job, ct);
+            }
+        }
+
+        /// <summary>SQL Server error "Invalid object name".</summary>
+        private const int InvalidObjectName = 208;
+
+        // the statement must be the first one of the batch (comments may come before it)
+        private static readonly Regex CreateOrAlterSpProcedure = new(
+            @"\A(?<lead>(?:\s+|/\*.*?\*/|--[^\n]*)*)CREATE\s+OR\s+ALTER(?<rest>\s+PROC(?:EDURE)?\s+(?:\[?dbo\]?\s*\.\s*)?\[?sp_)",
+            RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.CultureInvariant);
+
+        /// <summary>
+        /// The batch as a plain CREATE, or null when the error is not the one this is for.
+        /// A procedure named sp_... is looked up in the server's master database first. When
+        /// one of that name lies there (a script once run in master by mistake), CREATE OR
+        /// ALTER in a new database decides to ALTER and fails with "Invalid object name".
+        /// A plain CREATE does what was meant. When the procedure does exist in the tenant
+        /// database, CREATE OR ALTER works and this is never reached.
+        /// </summary>
+        internal static string? AsPlainCreate(string batch, int sqlErrorNumber)
+        {
+            if (sqlErrorNumber != InvalidObjectName || string.IsNullOrEmpty(batch))
+                return null;
+
+            var match = CreateOrAlterSpProcedure.Match(batch);
+            return match.Success
+                ? match.Groups["lead"].Value + "CREATE" + match.Groups["rest"].Value + batch.Substring(match.Length)
+                : null;
+        }
+
+        private static async Task RunBatchAsync(SqlConnection conn, string batch, CancellationToken ct)
+        {
+            try
+            {
+                await using var cmd = new SqlCommand(batch, conn) { CommandTimeout = BatchTimeoutSeconds };
+                await cmd.ExecuteNonQueryAsync(ct);
+            }
+            catch (SqlException ex) when (!ct.IsCancellationRequested && AsPlainCreate(batch, ex.Number) is { } plain)
+            {
+                await using var cmd = new SqlCommand(plain, conn) { CommandTimeout = BatchTimeoutSeconds };
+                await cmd.ExecuteNonQueryAsync(ct);
             }
         }
 
