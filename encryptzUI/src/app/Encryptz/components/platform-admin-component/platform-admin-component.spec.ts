@@ -250,6 +250,26 @@ describe('PlatformAdminComponent modules', () => {
 
     expect(fixture.componentInstance.modulesCompany()).toBeNull();
   });
+
+  it('marks a module that is not released and does not let it be switched on', () => {
+    api.getCompanyModules = () => of({ success: true, message: '', data: [serviceModule, { ...salesModule, isReleased: false }] });
+    const fixture = create(true);
+    openDialog(fixture);
+
+    const rows = fixture.nativeElement.querySelectorAll('.pa-module-row');
+    expect(rows[0].querySelector('.soon-badge')).toBeNull();
+    expect(rows[1].querySelector('.soon-badge')?.textContent?.trim()).toBe('Coming soon');
+    expect((rows[1].querySelector('input') as HTMLInputElement).disabled).toBe(true);
+  });
+
+  it('still lets a module that is not released be switched off when it is on', () => {
+    api.getCompanyModules = () => of({ success: true, message: '', data: [{ ...serviceModule, isReleased: false }] });
+    const fixture = create(true);
+    openDialog(fixture);
+
+    const row = fixture.nativeElement.querySelector('.pa-module-row');
+    expect((row.querySelector('input') as HTMLInputElement).disabled).toBe(false);
+  });
 });
 
 describe('PlatformAdminComponent module access', () => {

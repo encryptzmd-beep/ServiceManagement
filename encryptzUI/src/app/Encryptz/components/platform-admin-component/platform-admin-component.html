@@ -73,6 +73,7 @@
     <button [class.active]="tab() === 'branchAccess'" (click)="setTab('branchAccess')">Branch Access</button>
     <button [class.active]="tab() === 'access'" (click)="setTab('access')">Module Access</button>
     @if (isPlatformAdmin()) {
+      <button [class.active]="tab() === 'applications'" (click)="setTab('applications')">Applications</button>
       <button [class.active]="tab() === 'servers'" (click)="setTab('servers')">Database Servers</button>
       <button [class.active]="tab() === 'settings'" (click)="setTab('settings')">Settings</button>
       <button [class.active]="tab() === 'menus'" (click)="setTab('menus')">Menus</button>
@@ -401,6 +402,60 @@
     </div>
   }
 
+  <!-- ═══════════ APPLICATIONS ═══════════ -->
+  @if (tab() === 'applications' && isPlatformAdmin()) {
+    <div class="fx-table-wrap">
+      <div class="fx-table-toolbar">
+        <div class="fx-toolbar-left">
+          <span class="fx-table-title">Applications</span>
+          <span class="fx-table-count">{{ applications().length }}</span>
+        </div>
+        <div class="fx-toolbar-right">
+          <button class="fx-btn-new" (click)="newApplication()">+ New Application</button>
+        </div>
+      </div>
+
+      <table class="fx-table">
+        <thead>
+          <tr>
+            <th>Application</th><th>Key</th><th>Family</th><th>Type</th><th>Status</th>
+            <th class="fx-num">Companies</th><th>Active</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of applications(); track a.moduleId) {
+            <tr class="pa-app-row">
+              <td>
+                <strong>{{ a.moduleName }}</strong>
+                @if (a.description) { <div class="pa-sub">{{ a.description }}</div> }
+              </td>
+              <td><code>{{ a.moduleKey }}</code></td>
+              <td>{{ a.family || '—' }}</td>
+              <td>{{ a.appType }}</td>
+              <td>
+                @if (a.isReleased) { <span class="released-badge">Released</span> }
+                @else { <span class="soon-badge">Coming soon</span> }
+              </td>
+              <td class="fx-num">{{ a.appType === 'Commercial' ? a.companyCount : '—' }}</td>
+              <td><span class="pa-status" [class.off]="!a.isActive">{{ a.isActive ? 'Active' : 'Inactive' }}</span></td>
+              <td class="pa-actions">
+                <button class="fx-action-btn" (click)="editApplication(a)" [attr.aria-label]="'Edit ' + a.moduleName">Edit</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr class="fx-empty-row"><td colspan="8">No applications</td></tr>
+          }
+        </tbody>
+      </table>
+      <div class="pa-hint">
+        Personal applications are free and open to every user on the company page. A company is
+        subscribed to a commercial application under Companies, Modules. "Coming soon" applications
+        are listed, but nobody can open or subscribe to them.
+      </div>
+    </div>
+  }
+
+
   <!-- ═══════════ MENUS ═══════════ -->
   @if (tab() === 'menus' && isPlatformAdmin()) {
     <div class="fx-table-wrap">
@@ -455,9 +510,11 @@
         }
         @for (m of companyModules(); track m.moduleKey) {
           <label class="pa-module-row">
-            <input type="checkbox" [checked]="m.isEnabled" [disabled]="!isPlatformAdmin() || switching().has(m.moduleKey)" (change)="toggleCompanyModule(m, $event)" />
+            <input type="checkbox" [checked]="m.isEnabled"
+                   [disabled]="!isPlatformAdmin() || switching().has(m.moduleKey) || (m.isReleased === false && !m.isEnabled)"
+                   (change)="toggleCompanyModule(m, $event)" />
             <span class="pa-module-text">
-              <strong>{{ m.moduleName }}</strong>
+              <strong>{{ m.moduleName }} @if (m.isReleased === false) { <span class="soon-badge">Coming soon</span> }</strong>
               <small>{{ m.description }}</small>
             </span>
             <span class="pa-status" [class.off]="!m.isEnabled">{{ m.isEnabled ? 'On · ' + m.userCount + ' users' : 'Off' }}</span>
@@ -473,6 +530,78 @@
     </div>
   </div>
 }
+
+<!-- ═══════════ APPLICATION DIALOG ═══════════ -->
+@if (applicationForm; as f) {
+  <div class="modal-overlay" (click)="closeForms()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ f.moduleId ? 'Edit Application' : 'New Application' }}</h2>
+        <button class="modal-close" (click)="closeForms()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Name *</label>
+            <input class="form-input" name="applicationName" [(ngModel)]="f.moduleName" maxlength="150" placeholder="Payroll" />
+          </div>
+          <div class="form-group">
+            <label>Key *</label>
+            <input class="form-input" name="applicationKey" [(ngModel)]="f.moduleKey" maxlength="50" placeholder="PAYROLL" [readOnly]="!!f.moduleId" />
+            @if (f.moduleId) { <small>The key cannot be changed.</small> }
+          </div>
+          <div class="form-group">
+            <label>Type *</label>
+            <select class="form-input" name="applicationType" [(ngModel)]="f.appType">
+              <option value="Commercial">Commercial (companies subscribe)</option>
+              <option value="Personal">Personal (free, every user)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Family</label>
+            <input class="form-input" name="applicationFamily" [(ngModel)]="f.family" maxlength="100" list="pa-families" placeholder="HR" />
+            <datalist id="pa-families">
+              @for (family of families(); track family) { <option [value]="family"></option> }
+            </datalist>
+          </div>
+          <div class="form-group">
+            <label>Icon</label>
+            <input class="form-input" name="applicationIcon" [(ngModel)]="f.icon" maxlength="100" placeholder="payments" />
+          </div>
+          <div class="form-group">
+            <label>Sort order</label>
+            <input class="form-input" name="applicationSort" type="number" [(ngModel)]="f.sortOrder" />
+          </div>
+          <div class="form-group">
+            <label>Route</label>
+            <input class="form-input" name="applicationRoute" [(ngModel)]="f.routePath" maxlength="200" placeholder="/apps/jobs" />
+            <small>Where a personal application opens. Needed before it is released.</small>
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <input class="form-input" name="applicationDescription" [(ngModel)]="f.description" maxlength="400" />
+          </div>
+        </div>
+
+        <label class="pa-check">
+          <input type="checkbox" name="applicationReleased" [(ngModel)]="f.isReleased" />
+          Released (clear it to show "Coming soon")
+        </label>
+        <label class="pa-check">
+          <input type="checkbox" name="applicationActive" [(ngModel)]="f.isActive" />
+          Active (clear it to hide the application from everyone)
+        </label>
+
+        @if (formError()) { <div class="pa-error">{{ formError() }}</div> }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeForms()">Cancel</button>
+        <button class="fx-btn-navy" (click)="saveApplication()" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
+      </div>
+    </div>
+  </div>
+}
+
 
 <!-- ═══════════ COMPANY DIALOG ═══════════ -->
 @if (companyForm; as f) {

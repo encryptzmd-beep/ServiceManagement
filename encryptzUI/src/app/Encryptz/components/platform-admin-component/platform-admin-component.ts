@@ -11,6 +11,7 @@ import {
   ConnectionTestResult,
   DbServer,
   DbServerForm,
+  PlatformApplication,
   PlatformCompany,
   PlatformLocation,
   PlatformMenu,
@@ -59,6 +60,13 @@ export class PlatformAdminComponent implements OnInit {
   menus = signal<PlatformMenu[]>([]);
   servers = signal<DbServer[]>([]);
   settings = signal<PlatformSetting[]>([]);
+  applications = signal<PlatformApplication[]>([]);
+  /** Application dialog (null = closed). */
+  applicationForm: PlatformApplication | null = null;
+  /** Families already in use, each once: suggested in the dialog so one family has one spelling. */
+  families = computed(() => [...new Set(this.applications().map(a => (a.family || '').trim()).filter(f => f))]
+    .sort((a, b) => a.localeCompare(b)));
+  private applicationsSub = new Subscription();
   /** Server dialog (null = closed). Dropped on close so a typed password does not stay in memory. */
   serverForm: DbServerForm | null = null;
   /** What is typed per setting key. */
@@ -222,6 +230,7 @@ export class PlatformAdminComponent implements OnInit {
     this.access.set([]); this.menus.set([]);
     this.cancelServersLoad(); this.cancelSettingsLoad();
     this.servers.set([]); this.settings.set([]); this.settingDraft = {}; this.editedSettings.clear();
+    this.cancelApplicationsLoad(); this.applications.set([]);
     this.accessModules.set([]);
     this.modulesFailed.set(false);
     this.branchAccess.set(null);
@@ -248,12 +257,13 @@ export class PlatformAdminComponent implements OnInit {
   }
 
   setTab(tab: Tab): void {
-    if ((tab === 'servers' || tab === 'settings') && !this.isPlatformAdmin()) return;
-    if (tab !== this.tab()) { this.closeForms(); this.cancelServersLoad(); this.cancelSettingsLoad(); }
+    if ((tab === 'servers' || tab === 'settings' || tab === 'applications') && !this.isPlatformAdmin()) return;
+    if (tab !== this.tab()) { this.closeForms(); this.cancelServersLoad(); this.cancelSettingsLoad(); this.cancelApplicationsLoad(); }
     this.tab.set(tab);
     this.nav.tab.set(tab);
     if (tab === 'servers') this.loadServers();
     if (tab === 'settings') this.loadSettings();
+    if (tab === 'applications') this.loadApplications();
 
     this.resetTabLoad();
 
@@ -844,6 +854,70 @@ export class PlatformAdminComponent implements OnInit {
 
   // ── platform settings ─────────────────────────────────────────────────────
 
+  // ── applications (the catalogue) ──────────────────────────────────────────
+
+  loadApplications(): void {
+    this.cancelApplicationsLoad();
+    this.applicationsSub.add(this.api.getApplications().subscribe({
+      next: res => { if (res.success) this.applications.set(res.data ?? []); else this.notify(res.message, false); },
+      error: err => this.fail(err, 'Could not load the applications'),
+    }));
+  }
+
+  private cancelApplicationsLoad(): void {
+    this.applicationsSub.unsubscribe();
+    this.applicationsSub = new Subscription();
+  }
+
+  newApplication(): void {
+    this.formError.set('');
+    this.saveToken++;
+    this.applicationForm = {
+      moduleId: 0, moduleKey: '', moduleName: '', description: '', icon: '', family: '',
+      appType: 'Commercial', routePath: '', sortOrder: 0, isReleased: false, isActive: true, companyCount: 0,
+    };
+  }
+
+  editApplication(app: PlatformApplication): void {
+    this.formError.set('');
+    this.saveToken++;
+    this.applicationForm = { ...app };
+  }
+
+  /** The same checks the API makes, so the common mistakes are answered at once. */
+  private applicationProblem(form: PlatformApplication): string {
+    if (!form.moduleKey.trim() || !form.moduleName.trim()) return 'Key and name are required';
+    if (!/^[A-Za-z0-9_]+$/.test(form.moduleKey.trim())) return 'The key may hold letters, digits and _ only';
+    const route = (form.routePath || '').trim();
+    if (route && !/^\/(?!\/)[A-Za-z0-9\-_\/]*$/.test(route)) return 'The route must start with / and hold letters, digits, - _ and / only';
+    if (form.appType === 'Personal' && form.isReleased && !route) return 'A personal application needs a route before it is released';
+    return '';
+  }
+
+  saveApplication(): void {
+    const form = this.applicationForm;
+    if (!form || this.saving()) return;
+
+    const problem = this.applicationProblem(form);
+    if (problem) { this.formError.set(problem); return; }
+
+    this.formError.set('');
+    this.saving.set(true);
+    const token = this.saveToken;
+    this.api.saveApplication({ ...form, sortOrder: +form.sortOrder || 0 }).subscribe({
+      next: res => {
+        const current = token === this.saveToken;
+        if (current) this.saving.set(false);
+        if (!res.success) { if (current) this.formError.set(res.message); return; }
+        if (current) this.applicationForm = null;
+        this.notify(res.message, true);
+        this.loadApplications();
+      },
+      error: err => this.failForm(err, token),
+    });
+  }
+
+
   loadSettings(): void {
     this.cancelSettingsLoad();
     this.settingsSub.add(this.api.getSettings().subscribe({
@@ -979,6 +1053,7 @@ export class PlatformAdminComponent implements OnInit {
     this.closeModules();
     this.companyForm = this.projectForm = this.locationForm = this.menuForm = null;
     this.serverForm = null;
+    this.applicationForm = null;
     this.formError.set('');
     this.saveToken++;
     this.saving.set(false);

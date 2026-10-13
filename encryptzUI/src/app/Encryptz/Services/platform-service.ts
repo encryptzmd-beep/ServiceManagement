@@ -79,6 +79,28 @@ export interface CompanyModule {
   isEnabled: boolean;
   /** Members who can open it now. */
   userCount: number;
+  /** false = "Coming soon": cannot be switched on. Missing on an API without the flag. */
+  isReleased?: boolean;
+  family?: string;
+}
+
+/** An application of the catalogue, as the platform administrator sees it. */
+export interface PlatformApplication {
+  moduleId: number;
+  moduleKey: string;
+  moduleName: string;
+  description: string;
+  icon: string;
+  family: string;
+  appType: 'Personal' | 'Commercial';
+  /** Where the UI opens a personal application, for example /apps/jobs. */
+  routePath: string;
+  sortOrder: number;
+  /** false = "Coming soon". */
+  isReleased: boolean;
+  isActive: boolean;
+  /** Companies that have it switched on. */
+  companyCount: number;
 }
 
 /** A SQL Server that holds new company databases. The password is never returned. */
@@ -258,6 +280,15 @@ export class PlatformService {
   testDbServer(form: DbServerForm): Observable<ApiResponse<ConnectionTestResult>> {
     return this.http.post<ApiResponse<ConnectionTestResult>>(`${this.api}/db-servers/test`, form, { headers: this.headers });
   }
+
+  getApplications(): Observable<ApiResponse<PlatformApplication[]>> {
+    return this.http.get<ApiResponse<PlatformApplication[]>>(`${this.api}/applications`, { headers: this.headers });
+  }
+
+  saveApplication(app: PlatformApplication): Observable<ApiResponse<number>> {
+    return this.http.post<ApiResponse<number>>(`${this.api}/applications/save`, app, { headers: this.headers });
+  }
+
 
   getSettings(): Observable<ApiResponse<PlatformSetting[]>> {
     return this.http.get<ApiResponse<PlatformSetting[]>>(`${this.api}/settings`, { headers: this.headers });
