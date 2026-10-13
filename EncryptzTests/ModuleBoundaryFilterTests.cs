@@ -88,7 +88,9 @@ namespace EncryptzTests
         [Fact]
         public void Every_business_controller_declares_its_module()
         {
-            var controlPlane = new[] { "AuthController", "CompanyController", "PlatformController", "WeatherForecastController" };
+            // JobsController is a personal application: it works without a company, on the
+            // Personal DB, so it has no module of a company to declare (see MainIdentity)
+            var controlPlane = new[] { "AuthController", "CompanyController", "PlatformController", "WeatherForecastController", "JobsController" };
 
             var untagged = typeof(AuthController).Assembly.GetTypes()
                 .Where(t => typeof(ControllerBase).IsAssignableFrom(t) && !t.IsAbstract)

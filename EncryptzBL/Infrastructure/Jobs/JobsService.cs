@@ -1,0 +1,383 @@
+using System.Data;
+using EncryptzBL.Common;
+using EncryptzBL.Common.Jobs;
+using EncryptzBL.DTO_s;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
+
+namespace EncryptzBL.Infrastructure.Jobs
+{
+    /// <summary>
+    /// Job Portal on the Personal DB (schema jobs, script PersonalDB/02). The procedures
+    /// keep one person's rows from another (every statement names @UserId); this class
+    /// checks what is typed (JobsRules) and never lets a database error reach the caller.
+    /// </summary>
+    public sealed class JobsService : BaseRepository, IJobsService
+    {
+        private const string NotFound = "Not found";
+
+        private readonly PersonalDbHelper _personal;
+        private readonly ILogger<JobsService> _logger;
+
+        public JobsService(PersonalDbHelper db, ILogger<JobsService> logger) : base(db)
+        {
+            _personal = db;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// The one way into the database: no user = refused; no Personal DB = "not available";
+        /// a database error = the same sentence for the caller and the cause in the log.
+        /// </summary>
+        private async Task<ApiResponse<T>> Guarded<T>(int userId, string what, Func<Task<ApiResponse<T>>> work)
+        {
+            if (userId <= 0)
+                return ApiResponse<T>.Fail("Please log in again");
+
+            if (!_personal.IsConfigured)
+                return ApiResponse<T>.Fail(PersonalDbHelper.NotAvailable);
+
+            try
+            {
+                return await work();
+            }
+            catch (SqlException ex)
+            {
+                // the text of a database error can name the server: it goes to the log only
+                _logger.LogError("Job Portal: {What} failed for user {UserId} (SQL error {Number}: {Message})",
+                    what, userId, ex.Number, ex.Message);
+                return ApiResponse<T>.Fail(PersonalDbHelper.NotAvailable);
+            }
+        }
+
+        private static SqlParameter In(string name, object? value)
+            => SqlParameterHelper.Input(name, value ?? DBNull.Value);
+
+        private static SqlParameter Binary(string name, byte[]? value)
+            // typed: an untyped NULL would be nvarchar, which SQL Server does not convert to varbinary
+            => new(name, SqlDbType.VarBinary, -1) { Value = (object?)value ?? DBNull.Value };
+
+        private static SqlParameter Date(string name, DateTime? value)
+            => new(name, SqlDbType.Date) { Value = (object?)value?.Date ?? DBNull.Value };
+
+        /// <summary>The row of a "Success, Message[, Id]" answer.</summary>
+        private static (bool Success, string Message, int Id) Answer(DataTable? dt)
+        {
+            if (dt == null || dt.Rows.Count == 0)
+                return (false, "Could not save. Please try again", 0);
+
+            var row = dt.Rows[0];
+            var id = dt.Columns.Contains("Id") && row["Id"] != DBNull.Value ? Convert.ToInt32(row["Id"]) : 0;
+            return (Convert.ToInt32(row["Success"]) == 1, row["Message"]?.ToString() ?? "", id);
+        }
+
+        private static ApiResponse<bool> AsFlag((bool Success, string Message, int Id) answer)
+            => answer.Success ? ApiResponse<bool>.Ok(true, answer.Message) : ApiResponse<bool>.Fail(answer.Message);
+
+        private static ApiResponse<int> AsId((bool Success, string Message, int Id) answer)
+            => answer.Success ? ApiResponse<int>.Ok(answer.Id, answer.Message) : ApiResponse<int>.Fail(answer.Message);
+
+        // ── the page ──────────────────────────────────────────────────────────
+
+        public Task<ApiResponse<JobProfilePageDto>> GetPage(int userId)
+            => Guarded(userId, "reading the profile", async () =>
+            {
+                var ds = await GetDataSetAsync("jobs.sp_Profile_Get", new[] { In("@UserId", userId) });
+                var page = new JobProfilePageDto();
+
+                if (ds == null || ds.Tables.Count < 6)
+                    return ApiResponse<JobProfilePageDto>.Fail(PersonalDbHelper.NotAvailable);
+
+                if (ds.Tables[0].Rows.Count > 0)
+                {
+                    var r = ds.Tables[0].Rows[0];
+                    page.Profile = new JobProfileDto
+                    {
+                        FullName = r["FullName"]?.ToString() ?? "",
+                        Headline = r["Headline"]?.ToString() ?? "",
+                        Summary = r["Summary"]?.ToString() ?? "",
+                        City = r["City"]?.ToString() ?? "",
+                        ContactEmail = r["ContactEmail"]?.ToString() ?? "",
+                        ContactPhone = r["ContactPhone"]?.ToString() ?? "",
+                        DateOfBirth = r["DateOfBirth"] == DBNull.Value ? null : Convert.ToDateTime(r["DateOfBirth"]),
+                        IsVisible = Convert.ToBoolean(r["IsVisible"])
+                    };
+                }
+
+                page.Experience = ds.Tables[1].Rows.Cast<DataRow>().Select(r => new JobExperienceDto
+                {
+                    ExperienceId = Convert.ToInt32(r["ExperienceId"]),
+                    Organisation = r["Organisation"]?.ToString() ?? "",
+                    Title = r["Title"]?.ToString() ?? "",
+                    StartMonth = Convert.ToDateTime(r["StartMonth"]),
+                    EndMonth = r["EndMonth"] == DBNull.Value ? null : Convert.ToDateTime(r["EndMonth"]),
+                    Description = r["Description"]?.ToString() ?? ""
+                }).ToList();
+
+                page.Education = ds.Tables[2].Rows.Cast<DataRow>().Select(r => new JobEducationDto
+                {
+                    EducationId = Convert.ToInt32(r["EducationId"]),
+                    Institution = r["Institution"]?.ToString() ?? "",
+                    Course = r["Course"]?.ToString() ?? "",
+                    FieldOfStudy = r["FieldOfStudy"]?.ToString() ?? "",
+                    StartYear = r["StartYear"] == DBNull.Value ? null : Convert.ToInt32(r["StartYear"]),
+                    EndYear = r["EndYear"] == DBNull.Value ? null : Convert.ToInt32(r["EndYear"])
+                }).ToList();
+
+                page.Skills = ds.Tables[3].Rows.Cast<DataRow>().Select(r => new JobSkillDto
+                {
+                    SkillId = Convert.ToInt32(r["SkillId"]),
+                    SkillName = r["SkillName"]?.ToString() ?? "",
+                    Level = r["Level"]?.ToString() ?? "",
+                    // a stored link that is not a plain https address is not handed out
+                    EvidenceUrl = JobsRules.IsHttpsLink(r["EvidenceUrl"]?.ToString()) ? r["EvidenceUrl"]!.ToString() : ""
+                }).ToList();
+
+                page.Certificates = ds.Tables[4].Rows.Cast<DataRow>().Select(r => new JobCertificateDto
+                {
+                    CertificateId = Convert.ToInt32(r["CertificateId"]),
+                    Title = r["Title"]?.ToString() ?? "",
+                    Issuer = r["Issuer"]?.ToString() ?? "",
+                    IssuedOn = r["IssuedOn"] == DBNull.Value ? null : Convert.ToDateTime(r["IssuedOn"]),
+                    Status = r["Status"]?.ToString() ?? "",
+                    FileId = Convert.ToInt32(r["FileId"]),
+                    FileName = r["FileName"]?.ToString() ?? "",
+                    SizeBytes = Convert.ToInt32(r["SizeBytes"])
+                }).ToList();
+
+                if (ds.Tables[5].Rows.Count > 0)
+                {
+                    var r = ds.Tables[5].Rows[0];
+                    page.Resume = new JobFileInfoDto
+                    {
+                        FileId = Convert.ToInt32(r["FileId"]),
+                        FileName = r["FileName"]?.ToString() ?? "",
+                        SizeBytes = Convert.ToInt32(r["SizeBytes"]),
+                        UploadedAt = Convert.ToDateTime(r["UploadedAt"])
+                    };
+                }
+
+                page.Completeness = JobsRules.Completeness(page);
+                return ApiResponse<JobProfilePageDto>.Ok(page);
+            });
+
+        // ── profile ───────────────────────────────────────────────────────────
+
+        public Task<ApiResponse<bool>> SaveProfile(int userId, JobProfileDto dto)
+            => Guarded(userId, "saving the profile", async () =>
+            {
+                var problem = JobsRules.ProfileProblem(dto, DateTime.Today);
+                if (problem != null)
+                    return ApiResponse<bool>.Fail(problem);
+
+                return AsFlag(Answer(await GetDataTableAsync("jobs.sp_Profile_Save", new[]
+                {
+                    In("@UserId", userId),
+                    In("@FullName", dto.FullName),
+                    In("@Headline", dto.Headline),
+                    In("@Summary", dto.Summary),
+                    In("@City", dto.City),
+                    In("@ContactEmail", dto.ContactEmail),
+                    In("@ContactPhone", dto.ContactPhone),
+                    Date("@DateOfBirth", dto.DateOfBirth)
+                })));
+            });
+
+        public Task<ApiResponse<bool>> SetVisible(int userId, bool isVisible)
+            => Guarded(userId, "switching visibility", async () =>
+                AsFlag(Answer(await GetDataTableAsync("jobs.sp_Profile_SetVisible", new[]
+                {
+                    In("@UserId", userId),
+                    In("@IsVisible", isVisible)
+                }))));
+
+        // ── experience ────────────────────────────────────────────────────────
+
+        public Task<ApiResponse<int>> SaveExperience(int userId, JobExperienceDto dto)
+            => Guarded(userId, "saving an experience entry", async () =>
+            {
+                var problem = JobsRules.ExperienceProblem(dto, DateTime.Today);
+                if (problem != null)
+                    return ApiResponse<int>.Fail(problem);
+
+                return AsId(Answer(await GetDataTableAsync("jobs.sp_Experience_Save", new[]
+                {
+                    In("@UserId", userId),
+                    In("@ExperienceId", dto.ExperienceId),
+                    In("@Organisation", dto.Organisation),
+                    In("@Title", dto.Title),
+                    Date("@StartMonth", dto.StartMonth),
+                    Date("@EndMonth", dto.EndMonth),
+                    In("@Description", dto.Description)
+                })));
+            });
+
+        public Task<ApiResponse<bool>> DeleteExperience(int userId, int experienceId)
+            => Guarded(userId, "removing an experience entry", async () =>
+                AsFlag(Answer(await GetDataTableAsync("jobs.sp_Experience_Delete", new[]
+                {
+                    In("@UserId", userId),
+                    In("@ExperienceId", experienceId)
+                }))));
+
+        // ── education ─────────────────────────────────────────────────────────
+
+        public Task<ApiResponse<int>> SaveEducation(int userId, JobEducationDto dto)
+            => Guarded(userId, "saving an education entry", async () =>
+            {
+                var problem = JobsRules.EducationProblem(dto, DateTime.Today.Year);
+                if (problem != null)
+                    return ApiResponse<int>.Fail(problem);
+
+                return AsId(Answer(await GetDataTableAsync("jobs.sp_Education_Save", new[]
+                {
+                    In("@UserId", userId),
+                    In("@EducationId", dto.EducationId),
+                    In("@Institution", dto.Institution),
+                    In("@Course", dto.Course),
+                    In("@FieldOfStudy", dto.FieldOfStudy),
+                    In("@StartYear", dto.StartYear),
+                    In("@EndYear", dto.EndYear)
+                })));
+            });
+
+        public Task<ApiResponse<bool>> DeleteEducation(int userId, int educationId)
+            => Guarded(userId, "removing an education entry", async () =>
+                AsFlag(Answer(await GetDataTableAsync("jobs.sp_Education_Delete", new[]
+                {
+                    In("@UserId", userId),
+                    In("@EducationId", educationId)
+                }))));
+
+        // ── skills ────────────────────────────────────────────────────────────
+
+        public Task<ApiResponse<int>> SaveSkill(int userId, JobSkillDto dto)
+            => Guarded(userId, "saving a skill", async () =>
+            {
+                var problem = JobsRules.SkillProblem(dto);
+                if (problem != null)
+                    return ApiResponse<int>.Fail(problem);
+
+                return AsId(Answer(await GetDataTableAsync("jobs.sp_Skill_Save", new[]
+                {
+                    In("@UserId", userId),
+                    In("@SkillId", dto.SkillId),
+                    In("@SkillName", dto.SkillName),
+                    In("@Level", dto.Level),
+                    In("@EvidenceUrl", string.IsNullOrEmpty(dto.EvidenceUrl) ? null : dto.EvidenceUrl)
+                })));
+            });
+
+        public Task<ApiResponse<bool>> DeleteSkill(int userId, int skillId)
+            => Guarded(userId, "removing a skill", async () =>
+                AsFlag(Answer(await GetDataTableAsync("jobs.sp_Skill_Delete", new[]
+                {
+                    In("@UserId", userId),
+                    In("@SkillId", skillId)
+                }))));
+
+        public Task<ApiResponse<List<string>>> SuggestSkills(int userId, string? query)
+            => Guarded(userId, "suggesting skills", async () =>
+            {
+                var text = (query ?? "").Trim();
+                if (text.Length < 2 || text.Length > 100)
+                    return ApiResponse<List<string>>.Ok(new List<string>());
+
+                var dt = await GetDataTableAsync("jobs.sp_Skill_Suggest", new[]
+                {
+                    In("@UserId", userId),
+                    In("@Query", text)
+                });
+
+                var names = dt == null
+                    ? new List<string>()
+                    : dt.Rows.Cast<DataRow>().Select(r => r["SkillName"]?.ToString() ?? "").Where(n => n.Length > 0).ToList();
+
+                return ApiResponse<List<string>>.Ok(names);
+            });
+
+        // ── certificates ──────────────────────────────────────────────────────
+
+        public Task<ApiResponse<int>> SaveCertificate(int userId, JobCertificateDto dto, JobUpload? file)
+            => Guarded(userId, "saving a certificate", async () =>
+            {
+                var problem = JobsRules.CertificateProblem(dto, DateTime.Today);
+                if (problem == null && file != null)
+                    problem = JobsRules.FileProblem(JobsRules.CertificateKind, file.FileName, file.Content.LongLength, file.Content);
+                if (problem != null)
+                    return ApiResponse<int>.Fail(problem);
+
+                var name = file == null ? null : JobsRules.SafeFileName(file.FileName);
+
+                return AsId(Answer(await GetDataTableAsync("jobs.sp_Certificate_Save", new[]
+                {
+                    In("@UserId", userId),
+                    In("@CertificateId", dto.CertificateId),
+                    In("@Title", dto.Title),
+                    In("@Issuer", dto.Issuer),
+                    Date("@IssuedOn", dto.IssuedOn),
+                    In("@FileName", name),
+                    In("@ContentType", name == null ? null : JobsRules.ContentTypeFor(name)),
+                    In("@SizeBytes", file?.Content.Length),
+                    Binary("@Content", file?.Content)
+                })));
+            });
+
+        public Task<ApiResponse<bool>> DeleteCertificate(int userId, int certificateId)
+            => Guarded(userId, "removing a certificate", async () =>
+                AsFlag(Answer(await GetDataTableAsync("jobs.sp_Certificate_Delete", new[]
+                {
+                    In("@UserId", userId),
+                    In("@CertificateId", certificateId)
+                }))));
+
+        // ── resume ────────────────────────────────────────────────────────────
+
+        public Task<ApiResponse<int>> SaveResume(int userId, JobUpload? file)
+            => Guarded(userId, "saving the resume", async () =>
+            {
+                var problem = file == null
+                    ? "Choose a file"
+                    : JobsRules.FileProblem(JobsRules.ResumeKind, file.FileName, file.Content.LongLength, file.Content);
+                if (problem != null)
+                    return ApiResponse<int>.Fail(problem);
+
+                var name = JobsRules.SafeFileName(file!.FileName);
+
+                return AsId(Answer(await GetDataTableAsync("jobs.sp_Resume_Save", new[]
+                {
+                    In("@UserId", userId),
+                    In("@FileName", name),
+                    In("@ContentType", JobsRules.ContentTypeFor(name)),
+                    In("@SizeBytes", file.Content.Length),
+                    Binary("@Content", file.Content)
+                })));
+            });
+
+        public Task<ApiResponse<bool>> DeleteResume(int userId)
+            => Guarded(userId, "removing the resume", async () =>
+                AsFlag(Answer(await GetDataTableAsync("jobs.sp_Resume_Delete", new[]
+                {
+                    In("@UserId", userId)
+                }))));
+
+        // ── files ─────────────────────────────────────────────────────────────
+
+        public Task<ApiResponse<JobFileContent>> GetFile(int userId, int fileId)
+            => Guarded(userId, "reading a file", async () =>
+            {
+                var dt = await GetDataTableAsync("jobs.sp_File_Get", new[]
+                {
+                    In("@UserId", userId),
+                    In("@FileId", fileId)
+                });
+
+                // no row: there is no such file, or it is somebody else's - the caller is told the same
+                if (dt == null || dt.Rows.Count == 0 || dt.Rows[0]["Content"] is not byte[] content)
+                    return ApiResponse<JobFileContent>.Fail(NotFound);
+
+                var name = JobsRules.SafeFileName(dt.Rows[0]["FileName"]?.ToString());
+                return ApiResponse<JobFileContent>.Ok(new JobFileContent(name, JobsRules.ContentTypeFor(name), content));
+            });
+    }
+}
