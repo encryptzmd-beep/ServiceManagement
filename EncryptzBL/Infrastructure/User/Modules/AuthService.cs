@@ -751,7 +751,8 @@ namespace EncryptzBL.Infrastructure.User.Modules
             var tenantKey = row["TenantKey"]?.ToString() ?? "";
             var refusal = ModuleAccess.Refusal(
                 row["ProvisionStatus"]?.ToString(), tenantKey,
-                Convert.ToBoolean(row["CompanyEnabled"]), Convert.ToBoolean(row["UserGranted"]), role);
+                Convert.ToBoolean(row["CompanyEnabled"]), Convert.ToBoolean(row["UserGranted"]), role,
+                ModuleAccess.IsReleasedOf(row));
             if (refusal != null)
                 return (null, refusal);
 
@@ -783,7 +784,9 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 Convert.ToInt32(r["SortOrder"]),
                 Convert.ToBoolean(r["CompanyEnabled"]),
                 Convert.ToBoolean(r["UserGranted"]),
-                r["RoleInCompany"]?.ToString())).ToList();
+                r["RoleInCompany"]?.ToString(),
+                ModuleAccess.IsReleasedOf(r),
+                r.Table.Columns.Contains("Family") ? r["Family"]?.ToString() ?? "" : "")).ToList();
 
             return ApiResponse<List<ModuleDto>>.Ok(modules, "Success");
         }

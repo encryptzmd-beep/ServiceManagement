@@ -1,3 +1,4 @@
+using System.Data;
 using EncryptzBL.Common.Tenant;
 using Xunit;
 
@@ -83,6 +84,65 @@ namespace EncryptzTests
         public void Refusal_allows_admins_and_granted_members(string role, bool granted)
         {
             Assert.Null(ModuleAccess.Refusal("Ready", "K", true, granted, role));
+        }
+
+        private const string NotAvailableYet = "This application is not available yet";
+
+        [Fact]
+        public void An_application_that_is_not_released_is_coming_soon_for_everyone()
+        {
+            Assert.Equal(ModuleState.ComingSoon, ModuleAccess.Evaluate(true, true, "Admin", isReleased: false));
+            Assert.Equal(ModuleState.ComingSoon, ModuleAccess.Evaluate(false, false, "Technician", isReleased: false));
+        }
+
+        [Fact]
+        public void Released_is_the_default()
+        {
+            Assert.Equal(ModuleState.Available, ModuleAccess.Evaluate(true, true, "Technician"));
+        }
+
+        [Fact]
+        public void Refusal_a_subscribed_company_cannot_enter_an_application_that_is_not_released()
+        {
+            Assert.Equal(NotAvailableYet, ModuleAccess.Refusal("Ready", "K", true, true, "Admin", isReleased: false));
+        }
+
+        [Fact]
+        public void Refusal_not_ready_still_wins_over_coming_soon()
+        {
+            Assert.Equal(NotReady, ModuleAccess.Refusal("Failed", "K", true, true, "Admin", isReleased: false));
+        }
+
+        [Fact]
+        public void A_row_without_the_column_is_released()
+        {
+            var table = new DataTable();
+            table.Columns.Add("ModuleKey", typeof(string));
+            var row = table.Rows.Add("SERVICE");
+
+            Assert.True(ModuleAccess.IsReleasedOf(row));
+        }
+
+        [Theory]
+        [InlineData(true, true)]
+        [InlineData(false, false)]
+        public void A_row_with_the_column_says_what_the_column_says(bool stored, bool expected)
+        {
+            var table = new DataTable();
+            table.Columns.Add("IsReleased", typeof(bool));
+            var row = table.Rows.Add(stored);
+
+            Assert.Equal(expected, ModuleAccess.IsReleasedOf(row));
+        }
+
+        [Fact]
+        public void A_row_with_an_empty_column_is_released()
+        {
+            var table = new DataTable();
+            table.Columns.Add("IsReleased", typeof(bool));
+            var row = table.Rows.Add(DBNull.Value);
+
+            Assert.True(ModuleAccess.IsReleasedOf(row));
         }
     }
 }

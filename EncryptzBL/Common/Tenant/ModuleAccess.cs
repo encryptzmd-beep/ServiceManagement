@@ -1,3 +1,5 @@
+using System.Data;
+
 namespace EncryptzBL.Common.Tenant
 {
     /// <summary>What a user sees for one module of the catalogue inside a company.</summary>
@@ -8,7 +10,9 @@ namespace EncryptzBL.Common.Tenant
         /// <summary>The company does not have the module.</summary>
         NotSubscribed,
         /// <summary>The company has it, the user was not given it.</summary>
-        NoAccess
+        NoAccess,
+        /// <summary>Listed, not built yet: nobody can open it.</summary>
+        ComingSoon
     }
 
     /// <summary>
@@ -27,16 +31,18 @@ namespace EncryptzBL.Common.Tenant
 
         /// <summary>
         /// Why a user may not open a module in a company, or null when they may. The order is
-        /// part of the rule: database not ready, then not subscribed, then not granted.
+        /// part of the rule: database not ready, then not released, then not subscribed, then not granted.
         /// </summary>
         public static string? Refusal(string? provisionStatus, string? tenantKey,
-            bool companyEnabled, bool userGranted, string? roleInCompany)
+            bool companyEnabled, bool userGranted, string? roleInCompany, bool isReleased = true)
         {
             if (provisionStatus != "Ready" || string.IsNullOrEmpty(tenantKey))
                 return "Your company is still being set up. Please try again shortly";
 
-            switch (Evaluate(companyEnabled, userGranted, roleInCompany))
+            switch (Evaluate(companyEnabled, userGranted, roleInCompany, isReleased))
             {
+                case ModuleState.ComingSoon:
+                    return "This application is not available yet";
                 case ModuleState.NotSubscribed:
                     return "This module is not part of your company's subscription";
                 case ModuleState.NoAccess:
@@ -46,8 +52,11 @@ namespace EncryptzBL.Common.Tenant
             }
         }
 
-        public static ModuleState Evaluate(bool companyEnabled, bool userGranted, string? roleInCompany)
+        public static ModuleState Evaluate(bool companyEnabled, bool userGranted, string? roleInCompany, bool isReleased = true)
         {
+            if (!isReleased)
+                return ModuleState.ComingSoon;
+
             if (!companyEnabled)
                 return ModuleState.NotSubscribed;
 
@@ -55,5 +64,14 @@ namespace EncryptzBL.Common.Tenant
                 ? ModuleState.Available
                 : ModuleState.NoAccess;
         }
+
+        /// <summary>
+        /// The released flag of a module row. A main database without script 21 has no
+        /// such column: every module there is built.
+        /// </summary>
+        public static bool IsReleasedOf(DataRow row)
+            => !row.Table.Columns.Contains("IsReleased")
+               || row["IsReleased"] == DBNull.Value
+               || Convert.ToBoolean(row["IsReleased"]);
     }
 }

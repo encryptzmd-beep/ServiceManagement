@@ -85,11 +85,14 @@ namespace EncryptzBL.DTO_s
         public string Description { get; set; } = string.Empty;
         public string Icon { get; set; } = string.Empty;
         public int SortOrder { get; set; }
-        /// <summary>Available | NotSubscribed | NoAccess</summary>
+        /// <summary>Available | NotSubscribed | NoAccess | ComingSoon</summary>
         public string State { get; set; } = string.Empty;
+        /// <summary>Category of the application ('' when none).</summary>
+        public string Family { get; set; } = string.Empty;
 
         public static ModuleDto From(int moduleId, string moduleKey, string moduleName, string description,
-            string icon, int sortOrder, bool companyEnabled, bool userGranted, string? roleInCompany)
+            string icon, int sortOrder, bool companyEnabled, bool userGranted, string? roleInCompany,
+            bool isReleased = true, string family = "")
         {
             return new ModuleDto
             {
@@ -99,7 +102,8 @@ namespace EncryptzBL.DTO_s
                 Description = description,
                 Icon = icon,
                 SortOrder = sortOrder,
-                State = ModuleAccess.Evaluate(companyEnabled, userGranted, roleInCompany).ToString()
+                Family = family,
+                State = ModuleAccess.Evaluate(companyEnabled, userGranted, roleInCompany, isReleased).ToString()
             };
         }
     }
