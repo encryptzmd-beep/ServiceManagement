@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
 import { DashboardStateService } from '../../Services/dashboard-state-service';
+import { PLATFORM_SECTIONS, PlatformNavService, PlatformTab } from '../../Services/platform-nav-service';
 
 @Component({
   selector: 'app-sidebar',
@@ -15,6 +16,8 @@ export class SidebarComponent {
   auth = inject(AuthService);
   router = inject(Router);
   readonly dashState = inject(DashboardStateService);
+  readonly platformNav = inject(PlatformNavService);
+  readonly platformSections = PLATFORM_SECTIONS;
 
   closeSidebar = output<void>();
 
@@ -83,6 +86,16 @@ export class SidebarComponent {
     if (menu.menuPath) {
       this.router.navigate([menu.menuPath]);
     }
+  }
+
+  openPlatformSection(tab: PlatformTab): void {
+    this.platformNav.tab.set(tab);
+    this.router.navigate(['/settings/platform']);
+    this.onNavClick();
+  }
+
+  isPlatformSectionActive(tab: PlatformTab): boolean {
+    return this.platformNav.tab() === tab && this.router.url.split(/[?#]/, 1)[0] === '/settings/platform';
   }
 
   onNavClick(): void {

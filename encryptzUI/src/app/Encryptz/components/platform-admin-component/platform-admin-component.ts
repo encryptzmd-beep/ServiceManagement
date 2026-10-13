@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription, finalize } from 'rxjs';
 import { FormsModule } from '@angular/forms';
@@ -20,8 +20,9 @@ import {
   ProjectAccess,
 } from '../../Services/platform-service';
 import { provisionLabel, requestErrorMessage } from '../../Auth/company-creation';
+import { PlatformNavService, PlatformTab } from '../../Services/platform-nav-service';
 
-type Tab = 'companies' | 'projects' | 'locations' | 'branchAccess' | 'access' | 'menus' | 'servers' | 'settings';
+type Tab = PlatformTab;
 
 /**
  * Administration of the main database: companies and their modules, the database each
@@ -40,7 +41,11 @@ export class PlatformAdminComponent implements OnInit {
   private api = inject(PlatformService);
   private auth = inject(AuthService);
 
+  private nav = inject(PlatformNavService);
+
   isPlatformAdmin = computed(() => !!this.auth.currentUser()?.isPlatformAdmin);
+  /** The sidebar lists the sections: the tabs of this screen are hidden. */
+  sectionsInSidebar = this.nav.inSidebar;
 
   tab = signal<Tab>('companies');
   loading = signal(false);
@@ -141,6 +146,14 @@ export class PlatformAdminComponent implements OnInit {
   otpError = signal('');
   otpCode = '';
 
+  constructor() {
+    // a section picked in the sidebar
+    effect(() => {
+      const wanted = this.nav.tab();
+      untracked(() => { if (this.unlocked() && wanted !== this.tab()) this.setTab(wanted); });
+    });
+  }
+
   ngOnInit(): void {
     this.api.isUnlocked().subscribe({
       next: res => res.unlocked ? this.open() : this.unlocked.set(false),
@@ -152,6 +165,7 @@ export class PlatformAdminComponent implements OnInit {
     this.unlocked.set(true);
     this.loadCompanies();
     this.loadProjects();
+    if (this.nav.tab() !== this.tab()) this.setTab(this.nav.tab());
   }
 
   sendOtp(): void {
@@ -237,6 +251,7 @@ export class PlatformAdminComponent implements OnInit {
     if ((tab === 'servers' || tab === 'settings') && !this.isPlatformAdmin()) return;
     if (tab !== this.tab()) { this.closeForms(); this.cancelServersLoad(); this.cancelSettingsLoad(); }
     this.tab.set(tab);
+    this.nav.tab.set(tab);
     if (tab === 'servers') this.loadServers();
     if (tab === 'settings') this.loadSettings();
 

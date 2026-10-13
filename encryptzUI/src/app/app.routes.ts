@@ -313,8 +313,8 @@ export const routes: Routes = [
   path: 'settings/platform',
   loadComponent: () => import('./Encryptz/components/platform-admin-component/platform-admin-component')
     .then(m => m.PlatformAdminComponent),
-  canActivate: [roleGuard(['Admin', 'CompanyAdmin'])],
-  data: { title: 'Platform Admin', icon: 'admin_panel_settings', menu: 'settings', scope: 'company' }
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin'], { platformAdmin: true })],
+  data: { title: 'Platform Admin', icon: 'admin_panel_settings', menu: 'settings', scope: 'company', platformAdmin: true }
 },
    {
   path: 'settings/roles',

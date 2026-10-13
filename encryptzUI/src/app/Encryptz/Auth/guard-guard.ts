@@ -21,7 +21,11 @@ export const authGuard: CanActivateFn = (route, state) => {
 };
 
 
-export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
+/**
+ * `platformAdmin: true` also lets a platform administrator in, whatever their role
+ * in the selected company is (same rule as the Administration link on the module screen).
+ */
+export const roleGuard = (allowedRoles: string[], options: { platformAdmin?: boolean } = {}): CanActivateFn => {
   return (_, state) => {
     const auth = inject(AuthService);
     const router = inject(Router);
@@ -31,6 +35,7 @@ export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
     if (auth.hasAccess(routePath)) return true;
 
     if (allowedRoles.includes(auth.userRole())) return true;
+    if (options.platformAdmin && auth.currentUser()?.isPlatformAdmin) return true;
     return router.createUrlTree(['/select-company']);
   };
 };
@@ -52,10 +57,13 @@ export const dashboardRedirectGuard: CanActivateFn = () => {
  * Pages inside the application need a company, a module and a branch; pages marked
  * `data: { scope: 'company' }` (administration, profile) need only a company.
  * A session that is not there yet is sent to the step it is missing.
+ * A platform administrator opens pages marked `data: { platformAdmin: true }` without a company.
  */
 export const scopeGuard: CanActivateChildFn = (childRoute) => {
   const auth = inject(AuthService);
   const router = inject(Router);
+
+  if (childRoute.data?.['platformAdmin'] && auth.isLoggedIn() && auth.currentUser()?.isPlatformAdmin) return true;
 
   const need: ScopeNeed = childRoute.data?.['scope'] === 'company' ? 'company' : 'full';
   const step = nextScopeStep(auth.scopeState(), need);

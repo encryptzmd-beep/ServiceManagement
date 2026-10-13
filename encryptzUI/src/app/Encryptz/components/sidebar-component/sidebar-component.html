@@ -25,6 +25,22 @@
   <nav class="sidebar-nav">
     <div class="nav-section">
 
+     <!-- Platform administrator without a company: the sections of Platform Admin -->
+     @if (platformNav.inSidebar()) {
+       @for (section of platformSections; track section.tab) {
+         <button
+           type="button"
+           class="nav-item nav-group-header"
+           [class.active]="isPlatformSectionActive(section.tab)"
+           [title]="section.label"
+           (click)="openPlatformSection(section.tab)">
+
+           <span class="material-icons nav-icon">{{ section.icon }}</span>
+           <span class="nav-label">{{ section.label }}</span>
+         </button>
+       }
+     }
+
      @for (menu of buildMenuTree(); track menu.menuId) {
 
   <!-- Parent without children -> direct route -->

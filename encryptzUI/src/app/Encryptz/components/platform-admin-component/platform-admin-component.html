@@ -64,7 +64,8 @@
     </div>
   </div>
 
-  <!-- TABS -->
+  <!-- TABS (in the sidebar for a platform administrator without a company) -->
+  @if (!sectionsInSidebar()) {
   <div class="pa-tabs">
     <button [class.active]="tab() === 'companies'" (click)="setTab('companies')">Companies</button>
     <button [class.active]="tab() === 'projects'" (click)="setTab('projects')">Company Databases</button>
@@ -77,6 +78,7 @@
       <button [class.active]="tab() === 'menus'" (click)="setTab('menus')">Menus</button>
     }
   </div>
+  }
 
   <!-- ═══════════ COMPANIES ═══════════ -->
   @if (tab() === 'companies') {

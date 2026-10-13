@@ -606,6 +606,8 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 technicianId = loginResult.Data.technicianId,
                 mobileNumber = loginResult.Data.mobileNumber,
                 Email = email,
+                // the role of a login token is the global role
+                IsPlatformAdmin = loginResult.Data.Role == PlatformAdminRole,
 
                 // keep empty until company selected
                 Menus = new List<MenuDto>(),

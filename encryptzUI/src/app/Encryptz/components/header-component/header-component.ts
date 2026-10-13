@@ -40,7 +40,7 @@ export class HeaderComponent {
 
   get companySuffix(): string {
     const name = this.selectedCompanyName;
-    if (!name) return 'Service';
+    if (!name) return 'ERP';
 
     return name.split(' ').slice(1).join(' ');
   }

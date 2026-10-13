@@ -64,6 +64,12 @@ export class LoginComponent {
         return;
       }
 
+      // A platform administrator manages the platform: no company to pick.
+      if (res.data.isPlatformAdmin) {
+        this.router.navigate(['/settings/platform']);
+        return;
+      }
+
       // The company list is always shown (also with no company): it is where a
       // user creates or joins a company.
       this.router.navigate(['/select-company']);
