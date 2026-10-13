@@ -68,6 +68,18 @@ export class JobBoardComponent implements OnInit {
     this.load();
   }
 
+  get subtitle(): string {
+    return this.mode() === 'search' ? 'Jobs that companies have published. Apply with your profile.'
+      : this.mode() === 'applications' ? 'Every job you applied to, and where it stands.'
+      : 'Jobs you kept to look at again.';
+  }
+
+  /** The first letter of the company, for the tile where a logo would be. */
+  initial(name: string | null | undefined): string {
+    const first = Array.from((name ?? '').trim())[0];
+    return first ? first.toUpperCase() : '?';
+  }
+
   get title(): string {
     return this.mode() === 'search' ? 'Search jobs' : this.mode() === 'applications' ? 'My applications' : 'Saved jobs';
   }

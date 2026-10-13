@@ -8,6 +8,9 @@ $hair: #f0f1f3;
 
 .jb-head { align-items: center; flex-wrap: wrap; }
 
+/* a job of the company is not a link: its title stays plain */
+.jb-card:hover { transform: none; }
+
 .hr-counts {
   display: flex;
   flex-wrap: wrap;
@@ -23,23 +26,26 @@ $hair: #f0f1f3;
 .hr-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 
 .hr-avatar {
-  width: 44px;
-  height: 44px;
-  flex: 0 0 44px;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: $navy;
+  background: linear-gradient(135deg, #215789 0%, $navy 60%, #153a60 100%);
   color: #fff;
   font-size: 15px;
   font-weight: 600;
+  box-shadow: 0 2px 6px rgba(27, 74, 122, 0.22);
 }
 
 .hr-note {
   margin: 10px 0 0;
-  padding-left: 10px;
-  border-left: 3px solid #d1d5db;
+  padding: 8px 12px;
+  border-left: 3px solid #cfe0f1;
+  border-radius: 0 8px 8px 0;
+  background: #f7fafd;
   font-size: 13.5px;
   line-height: 1.55;
   color: $text;
@@ -53,7 +59,7 @@ $hair: #f0f1f3;
 
   section { padding-top: 14px; border-top: 1px solid $hair; }
 
-  h4 { margin: 0 0 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: $muted; }
+  h4 { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: $navy; }
   .hr-note { margin-top: 0; }
   .jp-file { margin-top: 0; }
   .jp-evidence { margin-left: 4px; }

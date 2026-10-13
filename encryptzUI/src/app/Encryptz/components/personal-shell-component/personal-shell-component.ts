@@ -26,7 +26,7 @@ export interface PersonalMenuItem {
     <header class="ps-bar">
       <div class="ps-bar-in">
         <a class="ps-back" [routerLink]="backRoute()">
-          <span class="material-icons">chevron_left</span> {{ backLabel() }}
+          <span class="material-icons">chevron_left</span><span class="ps-back-label">{{ backLabel() }}</span>
         </a>
         <div class="ps-app">
           <span class="ps-app-icon"><span class="material-icons">{{ icon() }}</span></span>
@@ -36,10 +36,13 @@ export interface PersonalMenuItem {
           </span>
         </div>
         <div class="ps-user">
-          <span class="ps-user-name">{{ auth.userName() }}</span>
-          @if (auth.currentUser()?.individualId; as id) {
-            <span class="ps-user-id" title="Your lifelong ID on this platform">{{ id }}</span>
-          }
+          <span class="ps-user-text">
+            <span class="ps-user-name">{{ auth.userName() }}</span>
+            @if (auth.currentUser()?.individualId; as id) {
+              <span class="ps-user-id" title="Your lifelong ID on this platform">{{ id }}</span>
+            }
+          </span>
+          @if (initials(); as letters) { <span class="ps-user-pic" aria-hidden="true">{{ letters }}</span> }
         </div>
       </div>
     </header>
@@ -79,4 +82,10 @@ export class PersonalShellComponent {
   subtitle = input<string>('Personal application');
   backLabel = input<string>('Back to companies');
   backRoute = input<string>('/select-company');
+
+  /** The first letters of the first two words of the name, for the picture place. */
+  initials(): string {
+    return (this.auth.userName() ?? '').trim().split(/s+/).filter(Boolean).slice(0, 2)
+      .map(word => Array.from(word)[0].toUpperCase()).join('');
+  }
 }

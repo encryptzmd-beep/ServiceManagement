@@ -56,14 +56,17 @@
 
     <!-- ═══════════ JOBS OF THE COMPANY ═══════════ -->
     <div class="jb-head">
-      <h1>Job postings</h1>
-      <span class="jp-count">{{ postings().length }}</span>
+      <div class="jb-head-text">
+        <h1>Job postings <span class="jp-count">{{ postings().length }}</span></h1>
+        <p>Jobs your company offers on Job Portal. People find a job once you publish it.</p>
+      </div>
       <span class="jb-grow"></span>
       <button class="jp-btn primary" (click)="openNew()"><span class="material-icons">add</span>New job</button>
     </div>
 
     @for (p of postings(); track p.postingId) {
       <article class="jp-card jb-card">
+        <div class="jb-logo" aria-hidden="true"><span class="material-icons">work_outline</span></div>
         <div class="jb-card-main">
           <h2>{{ p.title }}</h2>
           <div class="jb-meta">
