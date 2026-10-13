@@ -122,5 +122,40 @@ namespace EncryptzTests
             Assert.Contains("19_Module_Management.sql", readme);
             Assert.Contains("run `21_Applications.sql` again", readme);
         }
+
+        /// <summary>
+        /// A column that exists with every row at 0 would lock every company out of the
+        /// Service application, and a second run would not repair it (the guard skips it).
+        /// </summary>
+        [Fact]
+        public void The_released_flag_is_added_and_filled_in_one_transaction()
+        {
+            var script = Script();
+            var start = script.IndexOf("IF COL_LENGTH('dbo.Modules', 'IsReleased') IS NULL", StringComparison.Ordinal);
+            var block = script.Substring(start, script.IndexOf("\nGO", start, StringComparison.Ordinal) - start);
+
+            var begin = block.IndexOf("BEGIN TRANSACTION", StringComparison.Ordinal);
+            var add = block.IndexOf("ALTER TABLE dbo.Modules ADD IsReleased", StringComparison.Ordinal);
+            var fill = block.IndexOf("EXEC('UPDATE dbo.Modules SET IsReleased = 1')", StringComparison.Ordinal);
+            var commit = block.IndexOf("COMMIT TRANSACTION", StringComparison.Ordinal);
+
+            Assert.True(begin >= 0 && begin < add && add < fill && fill < commit,
+                "expected BEGIN TRANSACTION, the ALTER, the UPDATE and COMMIT TRANSACTION in this order");
+        }
+
+        [Fact]
+        public void The_service_application_cannot_be_made_personal()
+        {
+            var body = Procedure("sp_Platform_SaveModule");
+
+            Assert.Contains("@ModuleKey = 'SERVICE' AND @AppType <> 'Commercial'", body);
+            Assert.Contains("The Service application is commercial", body);
+        }
+
+        [Fact]
+        public void A_missing_type_is_refused_and_not_passed_to_the_table()
+        {
+            Assert.Contains("ISNULL(@AppType, '') NOT IN ('Personal', 'Commercial')", Procedure("sp_Platform_SaveModule"));
+        }
     }
 }

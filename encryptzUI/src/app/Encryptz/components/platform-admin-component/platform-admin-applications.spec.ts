@@ -176,4 +176,68 @@ describe('PlatformAdminComponent applications', () => {
     expect(key.readOnly).toBe(true);
     expect(text(fixture)).toContain('Edit Application');
   });
+
+  it('reads the applications again when the screen is unlocked on the Applications section', () => {
+    let reads = 0;
+    api.getApplications = () => { reads++; return of({ success: true, message: '', data: [service, payroll, jobs] }); };
+    api.verifyOtp = () => of({ success: true, message: '', data: { unlockToken: 't', validMinutes: 30 } });
+    api.setUnlockToken = () => {};
+    const fixture = create(true);
+    open(fixture);
+    const c = fixture.componentInstance;
+
+    c.lockNow();
+    expect(c.applications()).toEqual([]);
+
+    c.otpCode = '1234';
+    c.verifyOtp();
+
+    expect(reads).toBe(2);
+    expect(c.applications().length).toBe(3);
+  });
+
+  it('asks before an application that companies use is set to Coming soon or inactive', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const fixture = create(true);
+    open(fixture);
+    const c = fixture.componentInstance;
+
+    c.editApplication(service as any);
+    c.applicationForm!.isReleased = false;
+    c.saveApplication();
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(saved.length).toBe(0);
+
+    c.applicationForm!.isReleased = true;
+    c.applicationForm!.isActive = false;
+    c.saveApplication();
+    expect(confirmSpy).toHaveBeenCalledTimes(2);
+    expect(saved.length).toBe(0);
+
+    confirmSpy.mockReturnValue(true);
+    c.saveApplication();
+    expect(saved.length).toBe(1);
+
+    confirmSpy.mockRestore();
+  });
+
+  it('does not ask when no company uses the application or nothing is switched off', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const fixture = create(true);
+    open(fixture);
+    const c = fixture.componentInstance;
+
+    c.editApplication(payroll as any);      // no company, already coming soon
+    c.applicationForm!.isActive = false;
+    c.saveApplication();
+
+    c.editApplication(service as any);      // 2 companies, only the family changes
+    c.applicationForm!.family = 'Field service';
+    c.saveApplication();
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(saved.length).toBe(2);
+
+    confirmSpy.mockRestore();
+  });
 });

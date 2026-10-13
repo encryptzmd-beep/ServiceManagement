@@ -66,11 +66,17 @@ IF COL_LENGTH('dbo.Modules', 'Family') IS NULL
     ALTER TABLE dbo.Modules ADD Family NVARCHAR(100) NULL;
 IF COL_LENGTH('dbo.Modules', 'IsReleased') IS NULL
 BEGIN
+    /* One transaction: a column that exists with every row at 0 would lock every
+       company out of the Service application, and the next run would skip this block. */
+    BEGIN TRANSACTION;
+
     ALTER TABLE dbo.Modules ADD IsReleased BIT NOT NULL
         CONSTRAINT DF_Modules_IsReleased DEFAULT (0);
     /* what exists before the first run is built (the Service application).
        Dynamic: the column does not exist when this batch is compiled. */
     EXEC('UPDATE dbo.Modules SET IsReleased = 1');
+
+    COMMIT TRANSACTION;
 END
 GO
 
@@ -152,9 +158,14 @@ BEGIN
     BEGIN
         SELECT CAST(0 AS INT) AS Success, 'Key and name are required' AS Message, CAST(0 AS INT) AS ModuleId; RETURN;
     END
-    IF @AppType NOT IN ('Personal', 'Commercial')
+    IF ISNULL(@AppType, '') NOT IN ('Personal', 'Commercial')
     BEGIN
         SELECT CAST(0 AS INT) AS Success, 'Choose Personal or Commercial' AS Message, CAST(0 AS INT) AS ModuleId; RETURN;
+    END
+    /* every new company is subscribed to SERVICE (sp_Company_Create): it must stay subscribable */
+    IF @ModuleKey = 'SERVICE' AND @AppType <> 'Commercial'
+    BEGIN
+        SELECT CAST(0 AS INT) AS Success, 'The Service application is commercial' AS Message, CAST(0 AS INT) AS ModuleId; RETURN;
     END
     IF @AppType = 'Personal' AND @IsReleased = 1 AND @RoutePath IS NULL
     BEGIN

@@ -174,6 +174,8 @@ export class PlatformAdminComponent implements OnInit {
     this.loadCompanies();
     this.loadProjects();
     if (this.nav.tab() !== this.tab()) this.setTab(this.nav.tab());
+    // the list was cleared when the screen locked: read it again
+    else if (this.tab() === 'applications') this.loadApplications();
   }
 
   sendOtp(): void {
@@ -900,6 +902,15 @@ export class PlatformAdminComponent implements OnInit {
 
     const problem = this.applicationProblem(form);
     if (problem) { this.formError.set(problem); return; }
+
+    // "Coming soon" or inactive closes the application for every company that uses it
+    const before = this.applications().find(a => a.moduleId === form.moduleId);
+    const closes = !!before && before.companyCount > 0
+      && ((before.isReleased && !form.isReleased) || (before.isActive && !form.isActive));
+    if (closes && !window.confirm(
+      `${before!.companyCount} ${before!.companyCount === 1 ? 'company uses' : 'companies use'} ${before!.moduleName}. Their people will not be able to open it until it is released and active again. Continue?`)) {
+      return;
+    }
 
     this.formError.set('');
     this.saving.set(true);

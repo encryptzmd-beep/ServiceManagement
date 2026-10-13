@@ -8,8 +8,11 @@ import { ModuleState } from '../Models/ApiModels';
  */
 export type ScopeStep = 'login' | 'company' | 'module' | 'branch' | 'ready';
 
-/** What a page needs: only a company (administration, profile) or the full scope (business pages). */
-export type ScopeNeed = 'company' | 'full';
+/**
+ * What a page needs: nothing but a login (a personal application), only a company
+ * (administration, profile) or the full scope (business pages).
+ */
+export type ScopeNeed = 'none' | 'company' | 'full';
 
 export interface ScopeState {
   loggedIn: boolean;
@@ -20,6 +23,7 @@ export interface ScopeState {
 
 export function nextScopeStep(state: ScopeState, need: ScopeNeed = 'full'): ScopeStep {
   if (!state.loggedIn) return 'login';
+  if (need === 'none') return 'ready';
   if (!state.companyId) return 'company';
   if (need === 'company') return 'ready';
   if (!state.moduleKey) return 'module';

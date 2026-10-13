@@ -36,6 +36,11 @@ describe('nextScopeStep', () => {
     expect(nextScopeStep(state({ moduleKey: null, locationId: null }), 'company')).toBe('ready');
     expect(nextScopeStep(state({ companyId: null }), 'company')).toBe('company');
   });
+
+  it('a page that needs no scope is ready for anyone who is logged in', () => {
+    expect(nextScopeStep(state({ companyId: null, moduleKey: null, locationId: null }), 'none')).toBe('ready');
+    expect(nextScopeStep(state({ loggedIn: false }), 'none')).toBe('login');
+  });
 });
 
 describe('routeForStep', () => {
