@@ -357,6 +357,105 @@ namespace EncryptzBL.Infrastructure.User.Modules
             return ModuleAdminRules.HasModule(modules, moduleKey);
         }
 
+        // ============================================
+        // MEMBERS AND ADMINISTRATORS OF A COMPANY
+        // Who administers a company is decided here, by the platform. (Inside the
+        // company its own administrator manages the members.) The person who creates
+        // a company is its administrator from the start: sp_Company_Create.
+        // ============================================
+
+        public async Task<ApiResponse<CompanyMembersDto>> GetCompanyMembers(int companyId, PlatformActor actor)
+        {
+            if (!actor.IsPlatformAdmin)
+                return ApiResponse<CompanyMembersDto>.Fail(NotAllowed);
+            if (companyId <= 0)
+                return ApiResponse<CompanyMembersDto>.Fail("Company not found");
+
+            var members = await GetListAsync<CompanyMemberDto>("sp_Platform_GetCompanyMembers", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId)
+            });
+
+            foreach (var member in members)
+                member.IndividualId = IndividualId.Format(member.IndividualId);
+
+            return ApiResponse<CompanyMembersDto>.Ok(new CompanyMembersDto
+            {
+                Members = members,
+                Roles = CompanyMemberRules.Roles.ToList()
+            });
+        }
+
+        public async Task<ApiResponse<bool>> SetCompanyMemberRole(int companyId, int memberId, SetCompanyMemberRoleRequest req, PlatformActor actor)
+        {
+            if (!actor.IsPlatformAdmin)
+                return ApiResponse<bool>.Fail(NotAllowed);
+            if (companyId <= 0 || memberId <= 0)
+                return ApiResponse<bool>.Fail("This person is not an active member of the company");
+
+            var role = CompanyMemberRules.NormalizeRole(req?.RoleName);
+            if (role == null)
+                return ApiResponse<bool>.Fail("Choose a role");
+
+            var dt = await GetDataTableAsync("sp_Platform_SetCompanyMemberRole", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId),
+                SqlParameterHelper.Input("@UserId", memberId),
+                SqlParameterHelper.Input("@RoleName", role),
+                SqlParameterHelper.Input("@ChangedBy", actor.UserId)
+            });
+
+            var result = ToFlag(dt);
+            if (!result.Success)
+                return result;
+
+            _logger.LogInformation("Role of user {MemberId} in company {CompanyId} set to {Role} by platform administrator {UserId}",
+                memberId, companyId, role, actor.UserId);
+
+            // the company database mirrors its users and their roles
+            await _userSync.TrySyncCompanyUsersAsync(companyId);
+            return result;
+        }
+
+        public async Task<ApiResponse<int>> AddCompanyMember(int companyId, AddCompanyMemberRequest req, PlatformActor actor)
+        {
+            if (!actor.IsPlatformAdmin)
+                return ApiResponse<int>.Fail(NotAllowed);
+            if (companyId <= 0)
+                return ApiResponse<int>.Fail("Company not found");
+
+            var role = CompanyMemberRules.NormalizeRole(req?.RoleName);
+            if (role == null)
+                return ApiResponse<int>.Fail("Choose a role");
+
+            var (email, individualId, problem) = CompanyMemberRules.Lookup(req?.Lookup);
+            if (problem != null)
+                return ApiResponse<int>.Fail(problem);
+
+            var dt = await GetDataTableAsync("sp_Platform_AddCompanyMember", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId),
+                SqlParameterHelper.Input("@Email", (object?)email ?? DBNull.Value),
+                SqlParameterHelper.Input("@IndividualId", (object?)individualId ?? DBNull.Value),
+                SqlParameterHelper.Input("@RoleName", role),
+                SqlParameterHelper.Input("@AddedBy", actor.UserId)
+            });
+
+            if (dt == null || dt.Rows.Count == 0)
+                return ApiResponse<int>.Fail("Could not add the person. Please try again");
+
+            var message = dt.Rows[0]["Message"]?.ToString() ?? "";
+            if (Convert.ToInt32(dt.Rows[0]["Success"]) != 1)
+                return ApiResponse<int>.Fail(message);
+
+            var memberId = Convert.ToInt32(dt.Rows[0]["UserId"]);
+            _logger.LogInformation("User {MemberId} added to company {CompanyId} as {Role} by platform administrator {UserId}",
+                memberId, companyId, role, actor.UserId);
+
+            await _userSync.TrySyncCompanyUsersAsync(companyId);
+            return ApiResponse<int>.Ok(memberId, message);
+        }
+
         // the catalogue is shared by every company: platform only
         public async Task<ApiResponse<List<ApplicationDto>>> GetApplications(PlatformActor actor)
         {

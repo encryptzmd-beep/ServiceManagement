@@ -1215,7 +1215,8 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
         public async Task<ApiResponse<List<string>>> GetAvailableRoles()
         {
-            var roles = new List<string> { "Admin", "Technician", "Storekeeper", "Manager" };
+            // one list for the company's own administrator and for the platform (Platform Admin, Administrators)
+            var roles = CompanyMemberRules.Roles.ToList();
             return await Task.FromResult(ApiResponse<List<string>>.Ok(roles, "Success"));
         }
 

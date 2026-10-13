@@ -96,6 +96,23 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SetProjectAccess(int projectId, [FromBody] SetProjectAccessRequest req)
             => Ok(await _service.SetProjectAccess(projectId, req, Actor()));
 
+        // ── MEMBERS AND ADMINISTRATORS OF A COMPANY ──
+
+        [PlatformUnlocked]
+        [HttpGet("companies/{companyId}/members")]
+        public async Task<IActionResult> GetCompanyMembers(int companyId)
+            => Ok(await _service.GetCompanyMembers(companyId, Actor()));
+
+        [PlatformUnlocked]
+        [HttpPost("companies/{companyId}/members")]
+        public async Task<IActionResult> AddCompanyMember(int companyId, [FromBody] AddCompanyMemberRequest req)
+            => Ok(await _service.AddCompanyMember(companyId, req, Actor()));
+
+        [PlatformUnlocked]
+        [HttpPost("companies/{companyId}/members/{memberId}/role")]
+        public async Task<IActionResult> SetCompanyMemberRole(int companyId, int memberId, [FromBody] SetCompanyMemberRoleRequest req)
+            => Ok(await _service.SetCompanyMemberRole(companyId, memberId, req, Actor()));
+
         // ── APPLICATIONS (the catalogue) ──────────
 
         [PlatformUnlocked]

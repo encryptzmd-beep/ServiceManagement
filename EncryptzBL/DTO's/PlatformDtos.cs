@@ -152,6 +152,39 @@ namespace EncryptzBL.DTO_s
         public bool IsEnabled { get; set; }
     }
 
+    /// <summary>An active member of a company, as the platform administrator sees them.</summary>
+    public class CompanyMemberDto
+    {
+        public int UserId { get; set; }
+        public string FullName { get; set; } = "";
+        public string Email { get; set; } = "";
+        /// <summary>As it is shown: EZ-XXXX-XXXX-XXXX ('' when the person has none).</summary>
+        public string IndividualId { get; set; } = "";
+        public string RoleInCompany { get; set; } = "";
+        /// <summary>The person who created the company.</summary>
+        public bool IsCreator { get; set; }
+        public DateTime AssignedAt { get; set; }
+    }
+
+    /// <summary>The members of a company and the roles one of them can be given.</summary>
+    public class CompanyMembersDto
+    {
+        public List<CompanyMemberDto> Members { get; set; } = new();
+        public List<string> Roles { get; set; } = new();
+    }
+
+    public class SetCompanyMemberRoleRequest
+    {
+        public string RoleName { get; set; } = "";
+    }
+
+    public class AddCompanyMemberRequest
+    {
+        /// <summary>The e-mail address or the Individual ID of a registered person.</summary>
+        public string Lookup { get; set; } = "";
+        public string RoleName { get; set; } = "";
+    }
+
     /// <summary>An application of the catalogue (a row of Modules), as the platform administrator sees it.</summary>
     public class ApplicationDto
     {
