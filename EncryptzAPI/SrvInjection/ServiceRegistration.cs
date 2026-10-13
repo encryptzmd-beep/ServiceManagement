@@ -35,6 +35,7 @@ namespace EncryptzAPI.SrvInjection
             services.AddSingleton<ITenantSecretProtector, AesTenantSecretProtector>();
             services.AddSingleton<IConnectionResolver, ConnectionResolver>();      // ClientKey -> ServiceDB conn (cached)
             services.AddScoped<MainDbHelper>();                                     // fixed MainDB executor (control-plane)
+            services.AddScoped<PersonalDbHelper>();                                 // Personal DB executor (personal applications)
             services.AddScoped<ITenantUserSyncService, TenantUserSyncService>();    // MainDB users -> project DB mirror
 
             // company creation: the database of a new company is built in the background
