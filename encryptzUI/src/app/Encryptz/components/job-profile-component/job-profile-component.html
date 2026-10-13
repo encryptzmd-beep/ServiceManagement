@@ -1,0 +1,319 @@
+<app-personal-shell appName="Job Portal" icon="badge">
+
+  @if (loading()) {
+    <div class="jp-state">Loading your profile…</div>
+  } @else if (unavailable()) {
+    <div class="jp-state">
+      <span class="material-icons">cloud_off</span>
+      <p>{{ unavailable() }}</p>
+      <button class="jp-btn" (click)="load()">Try again</button>
+      <a class="jp-link" routerLink="/select-company">Back to companies</a>
+    </div>
+  } @else if (page(); as pg) {
+
+    <!-- ═══════════ VISIBILITY + COMPLETENESS ═══════════ -->
+    <div class="jp-top">
+      <div class="jp-card jp-visibility">
+        <label class="jp-switch">
+          <input type="checkbox" [checked]="pg.profile.isVisible" [disabled]="visibleBusy()" (change)="onVisibleChange($event)" />
+          <span class="jp-switch-text">
+            <strong>Employers can find me</strong>
+            <small>
+              @if (pg.profile.isVisible) {
+                On: companies that search for candidates can see this profile.
+              } @else {
+                Off: only you can see this profile.
+              }
+            </small>
+          </span>
+        </label>
+        @if (visibleError()) { <div class="jp-error">{{ visibleError() }}</div> }
+      </div>
+
+      <div class="jp-card jp-complete">
+        <div class="jp-complete-head"><span>Profile completeness</span><strong>{{ pg.completeness }}%</strong></div>
+        <div class="jp-bar" role="progressbar" [attr.aria-valuenow]="pg.completeness" aria-valuemin="0" aria-valuemax="100">
+          <div class="jp-bar-fill" [style.width.%]="pg.completeness"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ PROFILE ═══════════ -->
+    <section class="jp-card jp-section">
+      <div class="jp-section-head">
+        <h2>Profile</h2>
+        <button class="jp-btn" (click)="openProfile()">Edit</button>
+      </div>
+      @if (pg.profile.fullName || pg.profile.headline) {
+        <div class="jp-name">{{ pg.profile.fullName || '—' }}</div>
+        <div class="jp-headline">{{ pg.profile.headline }}</div>
+        @if (pg.profile.summary) { <p class="jp-summary">{{ pg.profile.summary }}</p> }
+        <dl class="jp-facts">
+          @if (pg.profile.city) { <div><dt>City</dt><dd>{{ pg.profile.city }}</dd></div> }
+          @if (pg.profile.contactEmail) { <div><dt>Contact email</dt><dd>{{ pg.profile.contactEmail }}</dd></div> }
+          @if (pg.profile.contactPhone) { <div><dt>Contact phone</dt><dd>{{ pg.profile.contactPhone }}</dd></div> }
+          @if (pg.profile.dateOfBirth) { <div><dt>Date of birth</dt><dd>{{ dayLabel(pg.profile.dateOfBirth) }}</dd></div> }
+        </dl>
+      } @else {
+        <p class="jp-empty">Add your name and a headline. A headline says in a few words what you do, for example "Accountant, 5 years".</p>
+      }
+    </section>
+
+    <!-- ═══════════ EXPERIENCE ═══════════ -->
+    <section class="jp-card jp-section">
+      <div class="jp-section-head">
+        <h2>Experience</h2>
+        <button class="jp-btn" (click)="openExperience()">+ Add</button>
+      </div>
+      @for (e of pg.experience; track e.experienceId) {
+        <div class="jp-row">
+          <div class="jp-row-main">
+            <strong>{{ e.title }}</strong> <span class="jp-at">{{ e.organisation }}</span>
+            <div class="jp-row-sub">{{ monthLabel(e.startMonth) }} – {{ e.endMonth ? monthLabel(e.endMonth) : 'Present' }}</div>
+            @if (e.description) { <p class="jp-row-text">{{ e.description }}</p> }
+          </div>
+          <div class="jp-row-actions">
+            <button class="jp-icon-btn" (click)="openExperience(e)" [attr.aria-label]="'Edit ' + e.title">Edit</button>
+            <button class="jp-icon-btn danger" (click)="remove('experience', e.experienceId, e.title)" [attr.aria-label]="'Remove ' + e.title">Remove</button>
+          </div>
+        </div>
+      } @empty {
+        <p class="jp-empty">No experience added yet.</p>
+      }
+    </section>
+
+    <!-- ═══════════ EDUCATION ═══════════ -->
+    <section class="jp-card jp-section">
+      <div class="jp-section-head">
+        <h2>Education</h2>
+        <button class="jp-btn" (click)="openEducation()">+ Add</button>
+      </div>
+      @for (d of pg.education; track d.educationId) {
+        <div class="jp-row">
+          <div class="jp-row-main">
+            <strong>{{ d.course }}</strong> @if (d.fieldOfStudy) { <span class="jp-at">{{ d.fieldOfStudy }}</span> }
+            <div class="jp-row-sub">{{ d.institution }} @if (years(d)) { · {{ years(d) }} }</div>
+          </div>
+          <div class="jp-row-actions">
+            <button class="jp-icon-btn" (click)="openEducation(d)" [attr.aria-label]="'Edit ' + d.course">Edit</button>
+            <button class="jp-icon-btn danger" (click)="remove('education', d.educationId, d.course)" [attr.aria-label]="'Remove ' + d.course">Remove</button>
+          </div>
+        </div>
+      } @empty {
+        <p class="jp-empty">No education added yet.</p>
+      }
+    </section>
+
+    <!-- ═══════════ SKILLS ═══════════ -->
+    <section class="jp-card jp-section">
+      <div class="jp-section-head">
+        <h2>Skills</h2>
+        <button class="jp-btn" (click)="openSkill()">+ Add</button>
+      </div>
+      @for (s of pg.skills; track s.skillId) {
+        <div class="jp-row">
+          <div class="jp-row-main">
+            <strong>{{ s.skillName }}</strong> <span class="jp-pill">{{ s.level }}</span>
+            @if (safeLink(s.evidenceUrl); as link) {
+              <a class="jp-evidence" [href]="link" target="_blank" rel="noopener noreferrer">See evidence</a>
+            }
+          </div>
+          <div class="jp-row-actions">
+            <button class="jp-icon-btn" (click)="openSkill(s)" [attr.aria-label]="'Edit ' + s.skillName">Edit</button>
+            <button class="jp-icon-btn danger" (click)="remove('skill', s.skillId, s.skillName)" [attr.aria-label]="'Remove ' + s.skillName">Remove</button>
+          </div>
+        </div>
+      } @empty {
+        <p class="jp-empty">No skills added yet. Add what you can do, and a link that shows it if you have one.</p>
+      }
+    </section>
+
+    <!-- ═══════════ CERTIFICATES ═══════════ -->
+    <section class="jp-card jp-section">
+      <div class="jp-section-head">
+        <h2>Certificates</h2>
+        <button class="jp-btn" (click)="openCertificate()">+ Add</button>
+      </div>
+      @for (c of pg.certificates; track c.certificateId) {
+        <div class="jp-row">
+          <div class="jp-row-main">
+            <strong>{{ c.title }}</strong> <span class="jp-pill grey">{{ statusLabel(c.status) }}</span>
+            <div class="jp-row-sub">{{ c.issuer }} @if (c.issuedOn) { · {{ dayLabel(c.issuedOn) }} }</div>
+            @if (c.fileId) {
+              <button class="jp-file" (click)="download(c.fileId, c.fileName)">
+                <span class="material-icons">attach_file</span>{{ c.fileName }} <small>{{ sizeLabel(c.sizeBytes) }}</small>
+              </button>
+            }
+          </div>
+          <div class="jp-row-actions">
+            <button class="jp-icon-btn" (click)="openCertificate(c)" [attr.aria-label]="'Edit ' + c.title">Edit</button>
+            <button class="jp-icon-btn danger" (click)="remove('certificate', c.certificateId, c.title)" [attr.aria-label]="'Remove ' + c.title">Remove</button>
+          </div>
+        </div>
+      } @empty {
+        <p class="jp-empty">No certificates added yet.</p>
+      }
+      <p class="jp-note">"Uploaded by you" means you supplied the document. Nobody has checked it.</p>
+    </section>
+
+    <!-- ═══════════ RESUME ═══════════ -->
+    <section class="jp-card jp-section">
+      <div class="jp-section-head">
+        <h2>Resume</h2>
+        <label class="jp-btn" [class.disabled]="resumeBusy()">
+          {{ resumeBusy() ? 'Uploading…' : (pg.resume ? 'Replace' : 'Upload') }}
+          <input type="file" accept=".pdf,.doc,.docx" hidden [disabled]="resumeBusy()" (change)="onResumePicked($event)" />
+        </label>
+      </div>
+      @if (pg.resume; as r) {
+        <div class="jp-row">
+          <div class="jp-row-main">
+            <button class="jp-file" (click)="download(r.fileId, r.fileName)">
+              <span class="material-icons">description</span>{{ r.fileName }} <small>{{ sizeLabel(r.sizeBytes) }}</small>
+            </button>
+            <div class="jp-row-sub">Uploaded {{ dayLabel(r.uploadedAt) }}</div>
+          </div>
+          <div class="jp-row-actions">
+            <button class="jp-icon-btn danger" (click)="removeResume()">Remove</button>
+          </div>
+        </div>
+      } @else {
+        <p class="jp-empty">No resume uploaded yet. PDF, DOC or DOCX, up to 5 MB.</p>
+      }
+      @if (resumeError()) { <div class="jp-error">{{ resumeError() }}</div> }
+    </section>
+  }
+
+  @if (toast(); as t) {
+    <div class="jp-toast" [class.bad]="!t.ok" role="status">{{ t.text }}</div>
+  }
+</app-personal-shell>
+
+<!-- ═══════════ DIALOG ═══════════ -->
+@if (dialog(); as d) {
+  <div class="jp-overlay" (click)="closeDialog()">
+    <div class="jp-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <div class="jp-dialog-head">
+        <h3>{{ d.title }}</h3>
+        <button class="jp-close" (click)="closeDialog()" aria-label="Close">✕</button>
+      </div>
+
+      <div class="jp-dialog-body">
+        @switch (d.kind) {
+          @case ('profile') {
+            <label>Full name
+              <input class="jp-input" name="fullName" [(ngModel)]="d.model.fullName" maxlength="200" autocomplete="name" />
+            </label>
+            <label>Headline
+              <input class="jp-input" name="headline" [(ngModel)]="d.model.headline" maxlength="200" placeholder="Accountant, 5 years" />
+            </label>
+            <label>About you
+              <textarea class="jp-input" name="summary" rows="4" [(ngModel)]="d.model.summary" maxlength="2000"></textarea>
+            </label>
+            <div class="jp-two">
+              <label>City
+                <input class="jp-input" name="city" [(ngModel)]="d.model.city" maxlength="100" />
+              </label>
+              <label>Date of birth (optional)
+                <input class="jp-input" name="dateOfBirth" type="date" [(ngModel)]="d.model.dateOfBirth" />
+              </label>
+            </div>
+            <div class="jp-two">
+              <label>Contact email
+                <input class="jp-input" name="contactEmail" type="email" [(ngModel)]="d.model.contactEmail" maxlength="256" />
+              </label>
+              <label>Contact phone
+                <input class="jp-input" name="contactPhone" [(ngModel)]="d.model.contactPhone" maxlength="30" inputmode="tel" />
+              </label>
+            </div>
+          }
+
+          @case ('experience') {
+            <label>Organisation *
+              <input class="jp-input" name="organisation" [(ngModel)]="d.model.organisation" maxlength="200" />
+            </label>
+            <label>Your title *
+              <input class="jp-input" name="title" [(ngModel)]="d.model.title" maxlength="200" />
+            </label>
+            <div class="jp-two">
+              <label>Started *
+                <input class="jp-input" name="startMonth" type="month" [(ngModel)]="d.model.startMonth" />
+              </label>
+              <label>Ended
+                <input class="jp-input" name="endMonth" type="month" [(ngModel)]="d.model.endMonth" [disabled]="d.model.current" />
+              </label>
+            </div>
+            <label class="jp-check">
+              <input type="checkbox" name="current" [(ngModel)]="d.model.current" /> I work here now
+            </label>
+            <label>What you did
+              <textarea class="jp-input" name="description" rows="3" [(ngModel)]="d.model.description" maxlength="2000"></textarea>
+            </label>
+          }
+
+          @case ('education') {
+            <label>Institution *
+              <input class="jp-input" name="institution" [(ngModel)]="d.model.institution" maxlength="200" />
+            </label>
+            <label>Course or degree *
+              <input class="jp-input" name="course" [(ngModel)]="d.model.course" maxlength="200" placeholder="B.Com" />
+            </label>
+            <label>Field of study
+              <input class="jp-input" name="fieldOfStudy" [(ngModel)]="d.model.fieldOfStudy" maxlength="200" />
+            </label>
+            <div class="jp-two">
+              <label>Start year
+                <input class="jp-input" name="startYear" type="number" min="1950" max="2100" [(ngModel)]="d.model.startYear" />
+              </label>
+              <label>End year
+                <input class="jp-input" name="endYear" type="number" min="1950" max="2100" [(ngModel)]="d.model.endYear" />
+              </label>
+            </div>
+          }
+
+          @case ('skill') {
+            <label>Skill *
+              <input class="jp-input" name="skillName" [(ngModel)]="d.model.skillName" (ngModelChange)="suggest($event)" maxlength="100" list="jp-skill-suggestions" autocomplete="off" />
+              <datalist id="jp-skill-suggestions">
+                @for (name of suggestions(); track name) { <option [value]="name"></option> }
+              </datalist>
+            </label>
+            <label>Level *
+              <select class="jp-input" name="level" [(ngModel)]="d.model.level">
+                <option value="" disabled>Choose…</option>
+                @for (level of levels; track level) { <option [value]="level">{{ level }}</option> }
+              </select>
+            </label>
+            <label>Link that shows it (optional)
+              <input class="jp-input" name="evidenceUrl" type="url" [(ngModel)]="d.model.evidenceUrl" maxlength="400" placeholder="https://youtube.com/…" />
+              <small>A video, a post or a portfolio page. It must start with https://</small>
+            </label>
+          }
+
+          @case ('certificate') {
+            <label>Title *
+              <input class="jp-input" name="certificateTitle" [(ngModel)]="d.model.title" maxlength="200" />
+            </label>
+            <label>Issued by
+              <input class="jp-input" name="issuer" [(ngModel)]="d.model.issuer" maxlength="200" />
+            </label>
+            <label>Issued on
+              <input class="jp-input" name="issuedOn" type="date" [(ngModel)]="d.model.issuedOn" />
+            </label>
+            <label>File (PDF, JPG or PNG, up to 5 MB)
+              <input class="jp-input" name="certificateFile" type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onCertificateFile($event)" />
+              @if (d.model.currentFile) { <small>Current file: {{ d.model.currentFile }}. Choose a file only to replace it.</small> }
+            </label>
+          }
+        }
+
+        @if (formError()) { <div class="jp-error">{{ formError() }}</div> }
+      </div>
+
+      <div class="jp-dialog-foot">
+        <button class="jp-btn ghost" (click)="closeDialog()" [disabled]="saving()">Cancel</button>
+        <button class="jp-btn primary" (click)="save()" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
+      </div>
+    </div>
+  </div>
+}

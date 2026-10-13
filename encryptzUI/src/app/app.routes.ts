@@ -33,6 +33,14 @@ export const routes: Routes = [
   { path: 'select-module', component: CompanySelectorComponent, canActivate: [authGuard], data: { stage: 'module' } },
   { path: 'select-branch', component: CompanySelectorComponent, canActivate: [authGuard], data: { stage: 'branch' } },
   { path: 'no-company', component: NoCompanyComponent, canActivate: [authGuard] },
+  // Personal applications: a login is enough, no company, no layout of a company
+  {
+    path: 'apps/jobs',
+    loadComponent: () => import('./Encryptz/components/job-profile-component/job-profile-component')
+      .then(m => m.JobProfileComponent),
+    canActivate: [authGuard],
+    data: { title: 'Job Portal' },
+  },
   // Protected routes (with layout)
   {
     path: '',
