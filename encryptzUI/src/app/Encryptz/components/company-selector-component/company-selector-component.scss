@@ -605,3 +605,15 @@
   font-family: var(--font);
 }
 .create-reason { margin-top: 6px; }
+
+/* Personal applications, under the companies */
+.personal-apps { margin-top: 18px; }
+
+.personal-apps-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(207, 224, 245, 0.75);
+}

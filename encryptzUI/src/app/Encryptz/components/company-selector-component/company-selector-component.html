@@ -239,6 +239,36 @@
           </div>
         }
 
+        <!-- PERSONAL APPLICATIONS: free, open to every user, no company needed -->
+        @if (!loading() && stage() === 'company' && !showCreate() && personalApps().length > 0) {
+          <div class="personal-apps">
+            <h2 class="personal-apps-title">Personal applications</h2>
+            <div class="company-list">
+              @for (app of personalApps(); track app.moduleKey) {
+                <div class="company-item personal-app-item" [class.disabled]="!canOpenPersonalApp(app)"
+                     [attr.aria-disabled]="!canOpenPersonalApp(app)" (click)="openPersonalApp(app)"
+                     role="button" [attr.tabindex]="canOpenPersonalApp(app) ? 0 : -1"
+                     (keydown.enter)="openPersonalApp(app)" (keydown.space)="openPersonalApp(app); $event.preventDefault()">
+                  <div class="company-avatar">
+                    <span class="material-icons">{{ app.icon || 'apps' }}</span>
+                  </div>
+                  <div class="company-info">
+                    <h3>{{ app.moduleName }}</h3>
+                    <p class="company-code">{{ app.description }}</p>
+                    @if (!app.isReleased) { <span class="soon-badge">Coming soon</span> }
+                  </div>
+                  @if (canOpenPersonalApp(app)) {
+                    <span class="material-icons arrow">chevron_right</span>
+                  } @else {
+                    <span class="material-icons arrow">schedule</span>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+
         <!-- STEP 1b: CREATE A COMPANY -->
         @if (stage() === 'company' && showCreate()) {
           <form class="create-form" (ngSubmit)="submitCreate()">
@@ -286,12 +316,16 @@
                 <div class="company-info">
                   <h3>{{ module.moduleName }}</h3>
                   <p class="company-code">{{ module.description }}</p>
-                  @if (caption(module)) {
+                  @if (module.state === 'ComingSoon') {
+                    <span class="soon-badge">Coming soon</span>
+                  } @else if (caption(module)) {
                     <span class="status-badge">{{ caption(module) }}</span>
                   }
                 </div>
                 @if (module.state === 'Available') {
                   <span class="material-icons arrow">chevron_right</span>
+                } @else if (module.state === 'ComingSoon') {
+                  <span class="material-icons arrow">schedule</span>
                 } @else {
                   <span class="material-icons arrow">lock</span>
                 }

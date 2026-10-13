@@ -2,7 +2,7 @@ import { DestroyRef, Injectable, signal, computed, inject } from '@angular/core'
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, map, tap, timeout } from 'rxjs';
-import { ApiResponse, CompanyInfoDto, CompanyUserDetailDto, InvitationDetailDto, JoinRequestDto, LoginResponse, LocationDto, MenuItem, ModuleDto, RegisterRequest } from '../Models/ApiModels';
+import { ApiResponse, CompanyInfoDto, CompanyUserDetailDto, InvitationDetailDto, JoinRequestDto, LoginResponse, LocationDto, MenuItem, ModuleDto, PersonalApp, RegisterRequest } from '../Models/ApiModels';
 import {environment} from '../../../../src/environments/environment.development'
 import { MenuAccessDto, RoleDto, UserDto } from '../components/auth-management-component/auth-management-component';
 import { LocationMonitorService } from '../Services/location-monitor-service';
@@ -355,6 +355,11 @@ selectCompany(companyId: number): Observable<ApiResponse<any>> {
 /** Every module of the catalogue, with whether this user can open it in the selected company. */
 getModules(): Observable<ApiResponse<ModuleDto[]>> {
   return this.http.get<ApiResponse<ModuleDto[]>>(`${this.apiUrl}/modules`);
+}
+
+/** Personal applications: the same for everybody, no company needed. */
+getPersonalApps(): Observable<ApiResponse<PersonalApp[]>> {
+  return this.http.get<ApiResponse<PersonalApp[]>>(`${this.apiUrl}/personal-apps`);
 }
 
 /** Branches of the selected company for a module. */

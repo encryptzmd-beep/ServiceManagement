@@ -51,6 +51,7 @@ describe('CompanySelectorComponent', () => {
       retryProvision: () => of({ success: true, message: 'ok', data: true }),
       selectCompany: () => of({ success: true, message: '', data: { role: 'Admin' } }),
       getModules: () => of({ success: true, message: '', data: modules }),
+      getPersonalApps: () => of({ success: true, message: '', data: [] }),
       getBranches: () => of({ success: true, message: '', data: [branch(1, 'Main'), branch(2, 'North')] }),
       setScope: () => of({ success: true, message: '', data: { role: 'Admin' } }),
       logout: () => {},
@@ -271,6 +272,115 @@ describe('CompanySelectorComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Ask your administrator to give you a branch.');
     expect(fixture.nativeElement.textContent).not.toContain('Administration');
   });
+
+  describe('personal applications', () => {
+    const jobs = { moduleId: 8, moduleKey: 'JOBPORTAL', moduleName: 'Job Portal', description: 'Your profile', icon: 'badge', family: '', routePath: '/apps/jobs', sortOrder: 1, isReleased: true };
+    const expense = { moduleId: 9, moduleKey: 'EXPENSE', moduleName: 'Expense Manager', description: 'Your money', icon: 'savings', family: '', routePath: '', sortOrder: 2, isReleased: false };
+
+    const cards = (fixture: any) => Array.from(fixture.nativeElement.querySelectorAll('.personal-app-item')) as HTMLElement[];
+
+    it('lists them under the companies', () => {
+      auth.getPersonalApps = () => of({ success: true, message: '', data: [jobs, expense] });
+      const fixture = create('company');
+
+      expect(cards(fixture).length).toBe(2);
+      expect(fixture.nativeElement.textContent).toContain('Personal applications');
+      expect(cards(fixture)[0].textContent).toContain('Job Portal');
+    });
+
+    it('lists them also for a user without a company', () => {
+      auth.companies = () => [];
+      auth.getPersonalApps = () => of({ success: true, message: '', data: [jobs] });
+      const fixture = create('company');
+
+      expect(cards(fixture).length).toBe(1);
+    });
+
+    it('highlights an application that is not released and disables its card', () => {
+      auth.getPersonalApps = () => of({ success: true, message: '', data: [jobs, expense] });
+      const fixture = create('company');
+
+      expect(cards(fixture)[0].classList.contains('disabled')).toBe(false);
+      expect(cards(fixture)[0].querySelector('.soon-badge')).toBeNull();
+      expect(cards(fixture)[1].classList.contains('disabled')).toBe(true);
+      expect(cards(fixture)[1].querySelector('.soon-badge')?.textContent?.trim()).toBe('Coming soon');
+    });
+
+    it('opens a released application at its route and nothing else', () => {
+      auth.getPersonalApps = () => of({ success: true, message: '', data: [jobs, expense] });
+      const fixture = create('company');
+      const opened: string[] = [];
+      TestBed.inject(Router).navigateByUrl = ((url: string) => { opened.push(url); return Promise.resolve(true); }) as any;
+
+      fixture.componentInstance.openPersonalApp(expense as any);
+      expect(opened).toEqual([]);
+
+      fixture.componentInstance.openPersonalApp(jobs as any);
+      expect(opened).toEqual(['/apps/jobs']);
+    });
+
+    it('does not open a released application that has no route, or a route to another site', () => {
+      const fixture = create('company');
+      const opened: string[] = [];
+      TestBed.inject(Router).navigateByUrl = ((url: string) => { opened.push(url); return Promise.resolve(true); }) as any;
+
+      fixture.componentInstance.openPersonalApp({ ...jobs, routePath: '' } as any);
+      fixture.componentInstance.openPersonalApp({ ...jobs, routePath: 'https://example.com' } as any);
+      fixture.componentInstance.openPersonalApp({ ...jobs, routePath: '//example.com' } as any);
+
+      expect(opened).toEqual([]);
+    });
+
+    it('shows no block when there are none', () => {
+      const fixture = create('company');
+
+      expect(cards(fixture).length).toBe(0);
+      expect(fixture.nativeElement.textContent).not.toContain('Personal applications');
+    });
+
+    it('keeps the company list working when the call fails', () => {
+      auth.getPersonalApps = () => throwError(() => ({ status: 500 }));
+      const fixture = create('company');
+
+      expect(fixture.nativeElement.querySelectorAll('.company-item:not(.personal-app-item)').length).toBe(1);
+      expect(cards(fixture).length).toBe(0);
+      expect(fixture.componentInstance.error()).toBe('');
+    });
+
+    it('keeps the company list working when the answer is a refusal', () => {
+      auth.getPersonalApps = () => of({ success: false, message: 'no', data: null });
+      const fixture = create('company');
+
+      expect(cards(fixture).length).toBe(0);
+      expect(fixture.componentInstance.error()).toBe('');
+    });
+
+    it('does not ask for them on the module and branch steps', () => {
+      let asked = 0;
+      auth.getPersonalApps = () => { asked++; return of({ success: true, message: '', data: [jobs] }); };
+
+      create('module');
+      create('branch', 'SERVICE');
+
+      expect(asked).toBe(0);
+    });
+  });
+
+  it('shows a module that is not released with the Coming soon badge and does not open it', () => {
+    auth.getModules = () => of({ success: true, message: '', data: [
+      modules[0],
+      { moduleId: 5, moduleKey: 'PAYROLL', moduleName: 'Payroll', description: 'd', icon: 'payments', sortOrder: 5, state: 'ComingSoon' },
+    ] });
+    const fixture = create('module');
+    const cards = Array.from(fixture.nativeElement.querySelectorAll('.module-item')) as HTMLElement[];
+
+    expect(cards[0].querySelector('.soon-badge')).toBeNull();
+    expect(cards[1].classList.contains('disabled')).toBe(true);
+    expect(cards[1].querySelector('.soon-badge')?.textContent?.trim()).toBe('Coming soon');
+
+    fixture.componentInstance.openModule({ moduleKey: 'PAYROLL', state: 'ComingSoon' } as any);
+    expect(navigated.length).toBe(0);
+  });
 });
 
 describe('CompanySelectorComponent company creation', () => {
@@ -318,6 +428,7 @@ describe('CompanySelectorComponent company creation', () => {
       scopeState: () => ({ loggedIn: true, companyId: null, moduleKey: null, locationId: null }),
       getUserCompanies: () => { calls.push(['getUserCompanies']); return of(list); },
       getCompanyCreation: () => { calls.push(['getCompanyCreation']); return of(state(true)); },
+      getPersonalApps: () => of({ success: true, message: '', data: [] }),
       createCompany: (form: any) => { calls.push(['createCompany', form]); list = [...list, company(9, 'Provisioning', true)]; return of({ success: true, message: 'ok', data: { companyId: 9, provisionStatus: 'Provisioning' } }); },
       retryProvision: (id: number) => { calls.push(['retryProvision', id]); return of({ success: true, message: 'ok', data: true }); },
       selectCompany: (id: number) => { calls.push(['selectCompany', id]); return of({ success: true, message: '', data: { role: 'Admin' } }); },

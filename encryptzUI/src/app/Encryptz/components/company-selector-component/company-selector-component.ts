@@ -5,7 +5,7 @@ import { Subscription, finalize, interval, timeout } from 'rxjs';
 import { AuthService, Company } from '../../Auth/auth-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LocationDto, ModuleDto } from '../../Models/ApiModels';
+import { LocationDto, ModuleDto, PersonalApp } from '../../Models/ApiModels';
 import { branchDecision, landingRouteForRole, moduleCaption } from '../../Auth/scope-flow';
 import {
   anyProvisioning, canEnter, CompanyCreationState, emptyCompanyForm, NewCompanyForm, POLL_LIMIT_MS, POLL_MS,
@@ -34,6 +34,8 @@ export class CompanySelectorComponent {
 
   companies = signal<Company[]>([]);
   modules = signal<ModuleDto[]>([]);
+  /** Empty also when the list could not be read: it never blocks the companies. */
+  personalApps = signal<PersonalApp[]>([]);
   branches = signal<LocationDto[]>([]);
   /** The branch step found no branch for this user. */
   noBranch = signal(false);
@@ -138,6 +140,7 @@ export class CompanySelectorComponent {
     this.refreshCompanies(() => {
       if (kept.length === 0) this.error.set('Could not load your companies. Please try again.');
     });
+    this.loadPersonalApps();
   }
 
   /** Reads the list and the creation state again, without the spinner. */
@@ -336,6 +339,25 @@ export class CompanySelectorComponent {
     this.pollSub = undefined;
     this.expectSetUp = false;
     this.polling.set(false);
+  }
+
+  // ── PERSONAL APPLICATIONS (company step only) ─────────────────────
+
+  private loadPersonalApps(): void {
+    this.auth.getPersonalApps().pipe(timeout(20000), takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (res) => { if (!this.gone) this.personalApps.set(res.success ? res.data ?? [] : []); },
+      error: () => { if (!this.gone) this.personalApps.set([]); },
+    });
+  }
+
+  /** Released, with a path inside this application to open. */
+  canOpenPersonalApp(app: PersonalApp): boolean {
+    return app.isReleased && /^\/(?!\/)[A-Za-z0-9\-_\/]*$/.test(app.routePath || '');
+  }
+
+  openPersonalApp(app: PersonalApp): void {
+    if (!this.canOpenPersonalApp(app)) return;
+    this.router.navigateByUrl(app.routePath);
   }
 
   // ── STEP 2: MODULE ────────────────────────────────────────────────

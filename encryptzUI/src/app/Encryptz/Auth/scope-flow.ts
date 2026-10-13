@@ -37,7 +37,10 @@ export function routeForStep(step: ScopeStep): string {
   }
 }
 
-/** Why a module card is disabled ('' when it can be opened). */
+/**
+ * Why a module card is disabled ('' when it can be opened, and for a module that is not
+ * released: that one carries the "Coming soon" badge instead of a caption).
+ */
 export function moduleCaption(state: ModuleState): string {
   switch (state) {
     case 'NotSubscribed': return 'Not subscribed';

@@ -107,7 +107,7 @@ export interface LocationDto {
 }
 
 /** What a user sees for one module of the catalogue inside a company. */
-export type ModuleState = 'Available' | 'NotSubscribed' | 'NoAccess';
+export type ModuleState = 'Available' | 'NotSubscribed' | 'NoAccess' | 'ComingSoon';
 
 export interface ModuleDto {
   moduleId: number;
@@ -117,6 +117,23 @@ export interface ModuleDto {
   icon: string;
   sortOrder: number;
   state: ModuleState;
+  /** Category of the application ('' when none). Missing on an API without the field. */
+  family?: string;
+}
+
+/** A personal application: free, open to every user, without a company. */
+export interface PersonalApp {
+  moduleId: number;
+  moduleKey: string;
+  moduleName: string;
+  description: string;
+  icon: string;
+  family: string;
+  /** Where it opens ('' while it is not built). */
+  routePath: string;
+  sortOrder: number;
+  /** false = "Coming soon". */
+  isReleased: boolean;
 }
 
 export interface MenuItem {
