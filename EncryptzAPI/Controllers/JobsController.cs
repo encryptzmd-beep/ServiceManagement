@@ -128,6 +128,41 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> DeleteResume()
             => Ok(await _jobs.DeleteResume(Caller()));
 
+        // ── photo ─────────────────────────────────────────────────────────────
+
+        [HttpPost("photo")]
+        [RequestSizeLimit(UploadLimit)]
+        public async Task<IActionResult> SavePhoto(IFormFile? file)
+        {
+            var (upload, problem) = await ReadAsync(file);
+            if (problem != null)
+                return Ok(ApiResponse<int>.Fail(problem));
+
+            return Ok(await _jobs.SavePhoto(Caller(), upload));
+        }
+
+        [HttpDelete("photo")]
+        public async Task<IActionResult> DeletePhoto()
+            => Ok(await _jobs.DeletePhoto(Caller()));
+
+        /// <summary>The photo of the caller as an image; 204 when there is none.</summary>
+        [HttpGet("photo")]
+        public async Task<IActionResult> GetPhoto()
+        {
+            var result = await _jobs.GetPhoto(Caller());
+            if (!result.Success || result.Data == null)
+                return NoContent();
+
+            // only JPG and PNG are stored as a photo; the type is from our own list
+            var type = JobsRules.ContentTypeFor(result.Data.FileName);
+            if (type != "image/jpeg" && type != "image/png")
+                return NoContent();
+
+            Response.Headers["X-Content-Type-Options"] = "nosniff";
+            Response.Headers["Cache-Control"] = "private, no-store";
+            return File(result.Data.Content, type);
+        }
+
         // ── files ─────────────────────────────────────────────────────────────
 
         /// <summary>One file of the caller. A file of somebody else is "not found", like a file that does not exist.</summary>

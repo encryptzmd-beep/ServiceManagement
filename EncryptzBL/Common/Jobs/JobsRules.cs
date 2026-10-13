@@ -13,7 +13,10 @@ namespace EncryptzBL.Common.Jobs
         public const string ResumeKind = "Resume";
         public const string CertificateKind = "Certificate";
 
+        public const string PhotoKind = "Photo";
+
         public const int MaxFileBytes = 5 * 1024 * 1024;
+        public const int MaxPhotoBytes = 2 * 1024 * 1024;
 
         private const int FirstYear = 1950;
         private const int MaxFileNameLength = 120;
@@ -230,22 +233,30 @@ namespace EncryptzBL.Common.Jobs
         /// </summary>
         public static string? FileProblem(string kind, string? fileName, long size, ReadOnlySpan<byte> head)
         {
-            if (kind != ResumeKind && kind != CertificateKind)
+            if (kind != ResumeKind && kind != CertificateKind && kind != PhotoKind)
                 return "Choose a file";
             if (string.IsNullOrWhiteSpace(fileName) || size <= 0)
                 return "Choose a file";
 
             var extension = Path.GetExtension(SafeFileName(fileName)).ToLowerInvariant();
 
-            byte[]? magic = kind == ResumeKind
-                ? extension switch { ".pdf" => PdfMagic, ".doc" => Ole2Magic, ".docx" => ZipMagic, _ => null }
-                : extension switch { ".pdf" => PdfMagic, ".jpg" => JpgMagic, ".jpeg" => JpgMagic, ".png" => PngMagic, _ => null };
+            byte[]? magic = kind switch
+            {
+                ResumeKind => extension switch { ".pdf" => PdfMagic, ".doc" => Ole2Magic, ".docx" => ZipMagic, _ => null },
+                PhotoKind => extension switch { ".jpg" => JpgMagic, ".jpeg" => JpgMagic, ".png" => PngMagic, _ => null },
+                _ => extension switch { ".pdf" => PdfMagic, ".jpg" => JpgMagic, ".jpeg" => JpgMagic, ".png" => PngMagic, _ => null }
+            };
 
             if (magic == null)
-                return kind == ResumeKind
-                    ? "A resume must be a PDF, DOC or DOCX file"
-                    : "A certificate must be a PDF, JPG or PNG file";
+                return kind switch
+                {
+                    ResumeKind => "A resume must be a PDF, DOC or DOCX file",
+                    PhotoKind => "A photo must be a JPG or PNG file",
+                    _ => "A certificate must be a PDF, JPG or PNG file"
+                };
 
+            if (kind == PhotoKind && size > MaxPhotoBytes)
+                return "The photo is larger than 2 MB";
             if (size > MaxFileBytes)
                 return "The file is larger than 5 MB";
 

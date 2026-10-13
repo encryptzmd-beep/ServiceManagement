@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -27,6 +27,7 @@ interface Dialog {
 }
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 const HTTPS_LINK = /^https:\/\/[^\s"<>]+$/i;
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -41,7 +42,7 @@ const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
   templateUrl: './job-profile-component.html',
   styleUrl: './job-profile-component.scss',
 })
-export class JobProfileComponent implements OnInit {
+export class JobProfileComponent implements OnInit, OnDestroy {
   private api = inject(JobsService);
 
   loading = signal(true);
@@ -72,8 +73,18 @@ export class JobProfileComponent implements OnInit {
     { label: 'Saved jobs', icon: 'bookmark_border' },
   ];
 
+  /** The photo as an address the page can show ('' when there is none). */
+  photoUrl = signal('');
+  photoError = signal('');
+  photoBusy = signal(false);
+
   ngOnInit(): void {
     this.load();
+    this.loadPhoto();
+  }
+
+  ngOnDestroy(): void {
+    this.showPhoto(null);
   }
 
   load(): void {
@@ -336,14 +347,102 @@ export class JobProfileComponent implements OnInit {
     });
   }
 
+  // ── photo ─────────────────────────────────────────────────────────────────
+
+  private loadPhoto(): void {
+    this.api.getPhoto().subscribe({
+      next: blob => this.showPhoto(blob && blob.size > 0 ? blob : null),
+      error: () => this.showPhoto(null),
+    });
+  }
+
+  private showPhoto(blob: Blob | null): void {
+    const old = this.photoUrl();
+    this.photoUrl.set(blob ? URL.createObjectURL(blob) : '');
+    if (old) URL.revokeObjectURL(old);
+  }
+
+  onPhotoPicked(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';   // the same file can be picked again after a refusal
+    if (file) this.uploadPhoto(file);
+  }
+
+  uploadPhoto(file: File): void {
+    const problem = this.fileProblem(file, 'photo');
+    this.photoError.set(problem);
+    if (problem || this.photoBusy()) return;
+
+    this.photoBusy.set(true);
+    this.api.savePhoto(file).subscribe({
+      next: res => {
+        this.photoBusy.set(false);
+        if (!res.success) { this.photoError.set(res.message || 'Could not upload the photo'); return; }
+        this.notify(res.message, true);
+        this.loadPhoto();
+      },
+      error: err => {
+        this.photoBusy.set(false);
+        this.photoError.set(err?.status === 413 ? 'The photo is larger than 2 MB' : 'Could not upload the photo. Please try again');
+        // the answer was lost, the photo may have been stored: show what is stored now
+        this.loadPhoto();
+      },
+    });
+  }
+
+  removePhoto(): void {
+    if (!window.confirm('Remove your photo?')) return;
+    this.api.deletePhoto().subscribe({
+      next: res => {
+        this.notify(res.message, res.success);
+        if (res.success) this.showPhoto(null); else this.loadPhoto();
+      },
+      error: () => this.notify('Could not remove it. Please try again', false),
+    });
+  }
+
+  // ── resume made from the profile ──────────────────────────────────────────
+
+  /**
+   * Opens the print window of the browser with the resume view ("Save as PDF" makes the
+   * file). The page title is the name the browser proposes for the file.
+   */
+  downloadResume(): void {
+    const name = (this.page()?.profile.fullName ?? '').trim();
+    if (!name) { this.notify('Add your name to the profile first', false); return; }
+
+    const title = document.title;
+    document.title = `${name} - Resume`;
+    try {
+      window.print();
+    } finally {
+      document.title = title;
+    }
+  }
+
+  /** City, e-mail and phone on one line, as resume readers expect them. */
+  contactLine(p: JobProfilePage['profile']): string {
+    return [p.city, p.contactEmail, p.contactPhone].map(v => (v ?? '').trim()).filter(Boolean).join(' | ');
+  }
+
+  skillsLine(skills: JobSkill[]): string {
+    return skills.map(s => `${s.skillName} (${s.level})`).join(', ');
+  }
+
   /** The same checks the API makes on the name and the size; the API also looks into the file. */
-  private fileProblem(file: File, kind: 'resume' | 'certificate'): string {
+  private fileProblem(file: File, kind: 'resume' | 'certificate' | 'photo'): string {
     const extension = (file.name.match(/\.[^.\\/]+$/)?.[0] ?? '').toLowerCase();
-    const allowed = kind === 'resume' ? ['.pdf', '.doc', '.docx'] : ['.pdf', '.jpg', '.jpeg', '.png'];
+    const allowed = kind === 'resume' ? ['.pdf', '.doc', '.docx']
+      : kind === 'photo' ? ['.jpg', '.jpeg', '.png']
+      : ['.pdf', '.jpg', '.jpeg', '.png'];
 
     if (!allowed.includes(extension))
-      return kind === 'resume' ? 'A resume must be a PDF, DOC or DOCX file' : 'A certificate must be a PDF, JPG or PNG file';
+      return kind === 'resume' ? 'A resume must be a PDF, DOC or DOCX file'
+        : kind === 'photo' ? 'A photo must be a JPG or PNG file'
+        : 'A certificate must be a PDF, JPG or PNG file';
     if (file.size <= 0) return 'Choose a file';
+    if (kind === 'photo' && file.size > MAX_PHOTO_BYTES) return 'The photo is larger than 2 MB';
     if (file.size > MAX_FILE_BYTES) return 'The file is larger than 5 MB';
     return '';
   }

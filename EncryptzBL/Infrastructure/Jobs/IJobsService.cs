@@ -31,6 +31,11 @@ namespace EncryptzBL.Infrastructure.Jobs
         Task<ApiResponse<int>> SaveResume(int userId, JobUpload? file);
         Task<ApiResponse<bool>> DeleteResume(int userId);
 
+        Task<ApiResponse<int>> SavePhoto(int userId, JobUpload? file);
+        Task<ApiResponse<bool>> DeletePhoto(int userId);
+        /// <summary>The photo of the user. "Not found" when there is none.</summary>
+        Task<ApiResponse<JobFileContent>> GetPhoto(int userId);
+
         Task<ApiResponse<JobFileContent>> GetFile(int userId, int fileId);
     }
 }

@@ -416,6 +416,48 @@ namespace EncryptzBL.Infrastructure.Jobs
                     In("@UserId", userId)
                 }))));
 
+        // ── photo (script PersonalDB/04) ──────────────────────────────────────
+
+        public Task<ApiResponse<int>> SavePhoto(int userId, JobUpload? file)
+            => Guarded(userId, "saving the photo", async () =>
+            {
+                var problem = file == null
+                    ? "Choose a file"
+                    : JobsRules.FileProblem(JobsRules.PhotoKind, file.FileName, file.Content.LongLength, file.Content);
+                if (problem != null)
+                    return ApiResponse<int>.Fail(problem);
+
+                var name = JobsRules.SafeFileName(file!.FileName);
+
+                return AsId(Answer(await GetDataTableAsync("jobs.sp_Photo_Save", new[]
+                {
+                    In("@UserId", userId),
+                    In("@FileName", name),
+                    In("@ContentType", JobsRules.ContentTypeFor(name)),
+                    In("@SizeBytes", file.Content.Length),
+                    Binary("@Content", file.Content)
+                })));
+            });
+
+        public Task<ApiResponse<bool>> DeletePhoto(int userId)
+            => Guarded(userId, "removing the photo", async () =>
+                AsFlag(Answer(await GetDataTableAsync("jobs.sp_Photo_Delete", new[]
+                {
+                    In("@UserId", userId)
+                }))));
+
+        public Task<ApiResponse<JobFileContent>> GetPhoto(int userId)
+            => Guarded(userId, "reading the photo", async () =>
+            {
+                var dt = await GetDataTableAsync("jobs.sp_Photo_Get", new[] { In("@UserId", userId) });
+
+                if (dt == null || dt.Rows.Count == 0 || dt.Rows[0]["Content"] is not byte[] content)
+                    return ApiResponse<JobFileContent>.Fail(NotFound);
+
+                var name = JobsRules.SafeFileName(dt.Rows[0]["FileName"]?.ToString());
+                return ApiResponse<JobFileContent>.Ok(new JobFileContent(name, JobsRules.ContentTypeFor(name), content));
+            });
+
         // ── files ─────────────────────────────────────────────────────────────
 
         public Task<ApiResponse<JobFileContent>> GetFile(int userId, int fileId)

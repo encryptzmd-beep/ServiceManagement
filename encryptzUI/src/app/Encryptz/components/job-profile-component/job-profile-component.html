@@ -17,12 +17,21 @@
     <!-- ═══════════ PROFILE ═══════════ -->
     <section class="jp-card jp-section jp-hero">
       <div class="jp-hero-body">
-        <div class="jp-avatar" aria-hidden="true">
-          @if (initials(pg.profile.fullName); as letters) {
-            {{ letters }}
-          } @else {
-            <span class="material-icons">person</span>
-          }
+        <div class="jp-avatar-wrap">
+          <div class="jp-avatar" aria-hidden="true">
+            @if (photoUrl()) {
+              <img [src]="photoUrl()" alt="" />
+            } @else if (initials(pg.profile.fullName); as letters) {
+              {{ letters }}
+            } @else {
+              <span class="material-icons">person</span>
+            }
+          </div>
+          <label class="jp-avatar-btn" [class.disabled]="photoBusy()" [title]="photoUrl() ? 'Change photo' : 'Upload a photo'">
+            <span class="material-icons" aria-hidden="true">photo_camera</span>
+            <span class="jp-sr">{{ photoUrl() ? 'Change photo' : 'Upload a photo' }}</span>
+            <input type="file" accept=".jpg,.jpeg,.png" hidden [disabled]="photoBusy()" (change)="onPhotoPicked($event)" />
+          </label>
         </div>
 
         <div class="jp-hero-text">
@@ -35,8 +44,20 @@
           }
         </div>
 
-        <button class="jp-btn" (click)="openProfile()"><span class="material-icons">edit</span>Edit profile</button>
+        <div class="jp-hero-actions">
+          <button class="jp-btn primary" (click)="downloadResume()" title="Opens the print window: choose 'Save as PDF'">
+            <span class="material-icons">download</span>Download resume
+          </button>
+          <button class="jp-btn" (click)="openProfile()"><span class="material-icons">edit</span>Edit profile</button>
+        </div>
       </div>
+
+      @if (photoUrl() || photoError()) {
+        <div class="jp-photo-line">
+          @if (photoError()) { <span class="jp-photo-error">{{ photoError() }}</span> }
+          @if (photoUrl()) { <button class="jp-text-btn" (click)="removePhoto()">Remove photo</button> }
+        </div>
+      }
 
       @if (pg.profile.fullName || pg.profile.headline) {
         @if (pg.profile.summary) { <p class="jp-summary">{{ pg.profile.summary }}</p> }
@@ -234,6 +255,73 @@
     </div>
   }
 </app-personal-shell>
+
+<!-- ═══════════ RESUME MADE FROM THE PROFILE (print only) ═══════════
+     One column, standard headings, plain text, no picture and no table: the form
+     that resume-reading software (ATS) takes apart without loss. -->
+@if (page(); as pg) {
+  <article class="jp-cv">
+    <header>
+      <h1>{{ pg.profile.fullName }}</h1>
+      @if (pg.profile.headline) { <p class="jp-cv-headline">{{ pg.profile.headline }}</p> }
+      @if (contactLine(pg.profile); as contact) { <p class="jp-cv-contact">{{ contact }}</p> }
+    </header>
+
+    @if (pg.profile.summary) {
+      <section>
+        <h2>Professional Summary</h2>
+        <p class="jp-cv-text">{{ pg.profile.summary }}</p>
+      </section>
+    }
+
+    @if (pg.experience.length) {
+      <section>
+        <h2>Work Experience</h2>
+        @for (e of pg.experience; track e.experienceId) {
+          <div class="jp-cv-item">
+            <h3>{{ e.title }}</h3>
+            <p class="jp-cv-line">{{ e.organisation }}</p>
+            <p class="jp-cv-dates">{{ monthLabel(e.startMonth) }} – {{ e.endMonth ? monthLabel(e.endMonth) : 'Present' }}</p>
+            @if (e.description) { <p class="jp-cv-text">{{ e.description }}</p> }
+          </div>
+        }
+      </section>
+    }
+
+    @if (pg.education.length) {
+      <section>
+        <h2>Education</h2>
+        @for (d of pg.education; track d.educationId) {
+          <div class="jp-cv-item">
+            <h3>{{ d.fieldOfStudy ? d.course + ', ' + d.fieldOfStudy : d.course }}</h3>
+            <p class="jp-cv-line">{{ d.institution }}</p>
+            @if (years(d)) { <p class="jp-cv-dates">{{ years(d) }}</p> }
+          </div>
+        }
+      </section>
+    }
+
+    @if (pg.skills.length) {
+      <section>
+        <h2>Skills</h2>
+        <p class="jp-cv-text">{{ skillsLine(pg.skills) }}</p>
+      </section>
+    }
+
+    @if (pg.certificates.length) {
+      <section>
+        <h2>Certifications</h2>
+        @for (c of pg.certificates; track c.certificateId) {
+          <div class="jp-cv-item">
+            <h3>{{ c.title }}</h3>
+            @if (c.issuer) { <p class="jp-cv-line">{{ c.issuer }}</p> }
+            @if (c.issuedOn) { <p class="jp-cv-dates">{{ dayLabel(c.issuedOn) }}</p> }
+          </div>
+        }
+      </section>
+    }
+  </article>
+}
 
 <!-- ═══════════ DIALOG ═══════════ -->
 @if (dialog(); as d) {

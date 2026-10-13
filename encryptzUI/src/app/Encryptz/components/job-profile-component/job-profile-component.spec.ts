@@ -62,7 +62,137 @@ describe('JobProfileComponent', () => {
       saveResume: (file: any) => { calls.push(['saveResume', file]); return ok(8); },
       deleteResume: () => { calls.push(['deleteResume']); return ok(); },
       downloadFile: (id: number) => { calls.push(['downloadFile', id]); return of(new Blob(['x'])); },
+      getPhoto: () => { calls.push(['getPhoto']); return of(null); },
+      savePhoto: (file: any) => { calls.push(['savePhoto', file]); return ok(7, 'Photo saved'); },
+      deletePhoto: () => { calls.push(['deletePhoto']); return ok(true, 'Photo removed'); },
     };
+    // the test browser has no object URLs
+    (URL as any).createObjectURL = () => 'blob:test-photo';
+    (URL as any).revokeObjectURL = () => {};
+    if (typeof window.print !== 'function') (window as any).print = () => {};
+  });
+
+  // ── photo ─────────────────────────────────────────────────────────────────
+
+  it('shows the photo instead of the initials when there is one', () => {
+    api.getPhoto = () => of(new Blob(['x'], { type: 'image/png' }));
+    const fixture = create();
+    const img = fixture.nativeElement.querySelector('.jp-avatar img') as HTMLImageElement;
+
+    expect(img).not.toBeNull();
+    expect(img.getAttribute('src')).toBe('blob:test-photo');
+    expect(fixture.nativeElement.querySelector('.jp-avatar').textContent.trim()).toBe('');
+  });
+
+  it('uploads a photo and reads it again', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+    const file = new File([new Uint8Array(10)], 'me.jpg');
+
+    c.uploadPhoto(file);
+
+    expect(calls).toContainEqual(['savePhoto', file]);
+    expect(calls.filter(x => x[0] === 'getPhoto').length).toBe(2);
+    expect(c.photoError()).toBe('');
+  });
+
+  it('refuses a photo of another type or above 2 MB before it is sent', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    c.uploadPhoto(new File([new Uint8Array(10)], 'me.pdf'));
+    expect(c.photoError()).toBe('A photo must be a JPG or PNG file');
+
+    c.uploadPhoto(new File([new Uint8Array(2 * 1024 * 1024 + 1)], 'me.png'));
+    expect(c.photoError()).toBe('The photo is larger than 2 MB');
+
+    expect(calls.some(x => x[0] === 'savePhoto')).toBe(false);
+  });
+
+  it('shows what the API says when it refuses a photo', () => {
+    api.savePhoto = () => refused('The content of the file does not match its type');
+    const fixture = create();
+
+    fixture.componentInstance.uploadPhoto(new File([new Uint8Array(10)], 'me.jpg'));
+    fixture.detectChanges();
+
+    expect(text(fixture)).toContain('The content of the file does not match its type');
+  });
+
+  it('removes the photo only after the person confirmed, and shows the initials again', () => {
+    api.getPhoto = () => of(new Blob(['x'], { type: 'image/png' }));
+    const fixture = create();
+    const c = fixture.componentInstance;
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    c.removePhoto();
+    expect(calls.some(x => x[0] === 'deletePhoto')).toBe(false);
+
+    confirmSpy.mockReturnValue(true);
+    c.removePhoto();
+    fixture.detectChanges();
+
+    expect(calls).toContainEqual(['deletePhoto']);
+    expect(fixture.nativeElement.querySelector('.jp-avatar img')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.jp-avatar').textContent.trim()).toBe('LJ');
+    confirmSpy.mockRestore();
+  });
+
+  // ── resume from the profile ───────────────────────────────────────────────
+
+  it('has a resume of the profile for printing: one column, standard headings, plain text', () => {
+    const fixture = create();
+    const cv = fixture.nativeElement.querySelector('.jp-cv') as HTMLElement;
+    const t = cv.textContent!.replace(/\s+/g, ' ');
+
+    expect(cv.querySelector('h1')!.textContent!.trim()).toBe('Leo Joseph');
+    expect(Array.from(cv.querySelectorAll('h2')).map(h => h.textContent!.trim()))
+      .toEqual(['Professional Summary', 'Work Experience', 'Education', 'Skills', 'Certifications']);
+    expect(t).toContain('Accountant, 5 years');
+    expect(t).toContain('Kochi | leo@example.com');
+    expect(t).toContain('Clerk');
+    expect(t).toContain('Acme');
+    expect(t).toContain('Apr 2019 – Present');
+    expect(t).toContain('B.Com, Finance');
+    expect(t).toContain('Tally (Expert), Typing (Beginner)');
+    expect(t).toContain('Tally Prime');
+    // nothing a resume reader cannot parse or should not see
+    expect(cv.querySelector('img, table, a, button')).toBeNull();
+    expect(t).not.toContain('Uploaded by you');
+  });
+
+  it('leaves a section without rows out of the resume', () => {
+    api.getPage = () => of({ success: true, message: '', data: { ...page(), experience: [], certificates: [] } });
+    const fixture = create();
+    const headings = Array.from(fixture.nativeElement.querySelectorAll('.jp-cv h2')).map((h: any) => h.textContent.trim());
+
+    expect(headings).toEqual(['Professional Summary', 'Education', 'Skills']);
+  });
+
+  it('prints the resume under the name of the person, and puts the page title back', () => {
+    const fixture = create();
+    const before = document.title;
+    let titleWhilePrinting = '';
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => { titleWhilePrinting = document.title; });
+
+    fixture.componentInstance.downloadResume();
+
+    expect(printSpy).toHaveBeenCalledTimes(1);
+    expect(titleWhilePrinting).toBe('Leo Joseph - Resume');
+    expect(document.title).toBe(before);
+    printSpy.mockRestore();
+  });
+
+  it('does not print a resume without a name', () => {
+    api.getPage = () => of({ success: true, message: '', data: { ...page(), profile: { ...page().profile, fullName: '' } } });
+    const fixture = create();
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
+
+    fixture.componentInstance.downloadResume();
+
+    expect(printSpy).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.toast()!.text).toBe('Add your name to the profile first');
+    printSpy.mockRestore();
   });
 
   it('shows the application name, the person and the Individual ID in the shell', () => {
@@ -405,7 +535,7 @@ describe('JobProfileComponent', () => {
     box.dispatchEvent(new Event('change'));
     fixture.detectChanges();
 
-    expect(calls.length).toBe(1);                // only the first read: setVisible is replaced above
+    expect(calls.map(x => x[0]).sort()).toEqual(['getPage', 'getPhoto']);   // only the first reads: setVisible is replaced above
     expect(box.checked).toBe(false);
     expect(text(fixture)).toContain('Add your name and a headline before you switch this on');
   });

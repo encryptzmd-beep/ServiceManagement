@@ -159,6 +159,21 @@ export class JobsService {
     return this.http.delete<ApiResponse<boolean>>(`${this.api}/resume`);
   }
 
+  /** The photo of the person as an image; null when there is none. */
+  getPhoto(): Observable<Blob | null> {
+    return this.http.get(`${this.api}/photo`, { responseType: 'blob' });
+  }
+
+  savePhoto(file: File): Observable<ApiResponse<number>> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.http.post<ApiResponse<number>>(`${this.api}/photo`, form);
+  }
+
+  deletePhoto(): Observable<ApiResponse<boolean>> {
+    return this.http.delete<ApiResponse<boolean>>(`${this.api}/photo`);
+  }
+
   /** One file of the person, as bytes (the request carries the login, so a plain link would not work). */
   downloadFile(fileId: number): Observable<Blob> {
     return this.http.get(`${this.api}/files/${fileId}`, { responseType: 'blob' });
