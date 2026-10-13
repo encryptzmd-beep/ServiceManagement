@@ -89,8 +89,15 @@ namespace EncryptzTests
         public void Every_business_controller_declares_its_module()
         {
             // JobsController is a personal application: it works without a company, on the
-            // Personal DB, so it has no module of a company to declare (see MainIdentity)
-            var controlPlane = new[] { "AuthController", "CompanyController", "PlatformController", "WeatherForecastController", "JobsController" };
+            // Personal DB, so it has no module of a company to declare (see MainIdentity).
+            // JobPostingsController is the same application. CompanyJobsController works for a
+            // company but under no commercial application yet: HiringAccess decides who may
+            // use it, and gets the subscription check when Payroll or Job Consultancy exists.
+            var controlPlane = new[]
+            {
+                "AuthController", "CompanyController", "PlatformController", "WeatherForecastController",
+                "JobsController", "JobPostingsController", "CompanyJobsController"
+            };
 
             var untagged = typeof(AuthController).Assembly.GetTypes()
                 .Where(t => typeof(ControllerBase).IsAssignableFrom(t) && !t.IsAbstract)

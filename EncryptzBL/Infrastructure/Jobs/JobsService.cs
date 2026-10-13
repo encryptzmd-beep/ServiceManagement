@@ -14,7 +14,7 @@ namespace EncryptzBL.Infrastructure.Jobs
     /// keep one person's rows from another (every statement names @UserId); this class
     /// checks what is typed (JobsRules) and never lets a database error reach the caller.
     /// </summary>
-    public sealed class JobsService : BaseRepository, IJobsService
+    public sealed partial class JobsService : BaseRepository, IJobsService
     {
         private const string NotFound = "Not found";
 
@@ -97,89 +97,100 @@ namespace EncryptzBL.Infrastructure.Jobs
             => Guarded(userId, "reading the profile", async () =>
             {
                 var ds = await GetDataSetAsync("jobs.sp_Profile_Get", new[] { In("@UserId", userId) });
-                var page = new JobProfilePageDto();
 
                 if (ds == null || ds.Tables.Count < 6)
                     return ApiResponse<JobProfilePageDto>.Fail(PersonalDbHelper.NotAvailable);
 
-                if (ds.Tables[0].Rows.Count > 0)
-                {
-                    var r = ds.Tables[0].Rows[0];
-                    page.Profile = new JobProfileDto
-                    {
-                        FullName = r["FullName"]?.ToString() ?? "",
-                        Headline = r["Headline"]?.ToString() ?? "",
-                        Summary = r["Summary"]?.ToString() ?? "",
-                        City = r["City"]?.ToString() ?? "",
-                        ContactEmail = r["ContactEmail"]?.ToString() ?? "",
-                        ContactPhone = r["ContactPhone"]?.ToString() ?? "",
-                        DateOfBirth = r["DateOfBirth"] == DBNull.Value ? null : Convert.ToDateTime(r["DateOfBirth"]),
-                        IsVisible = Convert.ToBoolean(r["IsVisible"])
-                    };
-                }
-                else
-                {
-                    // the first visit: the profile starts with what the user master knows
+                var page = MapPage(ds, 0);
+
+                // the first visit: the profile starts with what the user master knows
+                if (ds.Tables[0].Rows.Count == 0)
                     page.Profile = await StartProfile(userId) ?? page.Profile;
-                }
-
-                page.Experience = ds.Tables[1].Rows.Cast<DataRow>().Select(r => new JobExperienceDto
-                {
-                    ExperienceId = Convert.ToInt32(r["ExperienceId"]),
-                    Organisation = r["Organisation"]?.ToString() ?? "",
-                    Title = r["Title"]?.ToString() ?? "",
-                    StartMonth = Convert.ToDateTime(r["StartMonth"]),
-                    EndMonth = r["EndMonth"] == DBNull.Value ? null : Convert.ToDateTime(r["EndMonth"]),
-                    Description = r["Description"]?.ToString() ?? ""
-                }).ToList();
-
-                page.Education = ds.Tables[2].Rows.Cast<DataRow>().Select(r => new JobEducationDto
-                {
-                    EducationId = Convert.ToInt32(r["EducationId"]),
-                    Institution = r["Institution"]?.ToString() ?? "",
-                    Course = r["Course"]?.ToString() ?? "",
-                    FieldOfStudy = r["FieldOfStudy"]?.ToString() ?? "",
-                    StartYear = r["StartYear"] == DBNull.Value ? null : Convert.ToInt32(r["StartYear"]),
-                    EndYear = r["EndYear"] == DBNull.Value ? null : Convert.ToInt32(r["EndYear"])
-                }).ToList();
-
-                page.Skills = ds.Tables[3].Rows.Cast<DataRow>().Select(r => new JobSkillDto
-                {
-                    SkillId = Convert.ToInt32(r["SkillId"]),
-                    SkillName = r["SkillName"]?.ToString() ?? "",
-                    Level = r["Level"]?.ToString() ?? "",
-                    // a stored link that is not a plain https address is not handed out
-                    EvidenceUrl = JobsRules.IsHttpsLink(r["EvidenceUrl"]?.ToString()) ? r["EvidenceUrl"]!.ToString() : ""
-                }).ToList();
-
-                page.Certificates = ds.Tables[4].Rows.Cast<DataRow>().Select(r => new JobCertificateDto
-                {
-                    CertificateId = Convert.ToInt32(r["CertificateId"]),
-                    Title = r["Title"]?.ToString() ?? "",
-                    Issuer = r["Issuer"]?.ToString() ?? "",
-                    IssuedOn = r["IssuedOn"] == DBNull.Value ? null : Convert.ToDateTime(r["IssuedOn"]),
-                    Status = r["Status"]?.ToString() ?? "",
-                    FileId = Convert.ToInt32(r["FileId"]),
-                    FileName = r["FileName"]?.ToString() ?? "",
-                    SizeBytes = Convert.ToInt32(r["SizeBytes"])
-                }).ToList();
-
-                if (ds.Tables[5].Rows.Count > 0)
-                {
-                    var r = ds.Tables[5].Rows[0];
-                    page.Resume = new JobFileInfoDto
-                    {
-                        FileId = Convert.ToInt32(r["FileId"]),
-                        FileName = r["FileName"]?.ToString() ?? "",
-                        SizeBytes = Convert.ToInt32(r["SizeBytes"]),
-                        UploadedAt = Convert.ToDateTime(r["UploadedAt"])
-                    };
-                }
 
                 page.Preferences = await ReadPreferences(userId);
                 page.Completeness = JobsRules.Completeness(page);
                 return ApiResponse<JobProfilePageDto>.Ok(page);
             });
+
+        /// <summary>
+        /// The six result sets of jobs.sp_Profile_Get as a page. <paramref name="first"/> is the
+        /// index of the first of them: another procedure may put a set of its own in front.
+        /// </summary>
+        private static JobProfilePageDto MapPage(DataSet ds, int first)
+        {
+            var page = new JobProfilePageDto();
+
+            if (ds.Tables[first].Rows.Count > 0)
+            {
+                var r = ds.Tables[first].Rows[0];
+                page.Profile = new JobProfileDto
+                {
+                    FullName = r["FullName"]?.ToString() ?? "",
+                    Headline = r["Headline"]?.ToString() ?? "",
+                    Summary = r["Summary"]?.ToString() ?? "",
+                    City = r["City"]?.ToString() ?? "",
+                    ContactEmail = r["ContactEmail"]?.ToString() ?? "",
+                    ContactPhone = r["ContactPhone"]?.ToString() ?? "",
+                    DateOfBirth = r["DateOfBirth"] == DBNull.Value ? null : Convert.ToDateTime(r["DateOfBirth"]),
+                    IsVisible = Convert.ToBoolean(r["IsVisible"])
+                };
+            }
+
+            page.Experience = ds.Tables[first + 1].Rows.Cast<DataRow>().Select(r => new JobExperienceDto
+            {
+                ExperienceId = Convert.ToInt32(r["ExperienceId"]),
+                Organisation = r["Organisation"]?.ToString() ?? "",
+                Title = r["Title"]?.ToString() ?? "",
+                StartMonth = Convert.ToDateTime(r["StartMonth"]),
+                EndMonth = r["EndMonth"] == DBNull.Value ? null : Convert.ToDateTime(r["EndMonth"]),
+                Description = r["Description"]?.ToString() ?? ""
+            }).ToList();
+
+            page.Education = ds.Tables[first + 2].Rows.Cast<DataRow>().Select(r => new JobEducationDto
+            {
+                EducationId = Convert.ToInt32(r["EducationId"]),
+                Institution = r["Institution"]?.ToString() ?? "",
+                Course = r["Course"]?.ToString() ?? "",
+                FieldOfStudy = r["FieldOfStudy"]?.ToString() ?? "",
+                StartYear = r["StartYear"] == DBNull.Value ? null : Convert.ToInt32(r["StartYear"]),
+                EndYear = r["EndYear"] == DBNull.Value ? null : Convert.ToInt32(r["EndYear"])
+            }).ToList();
+
+            page.Skills = ds.Tables[first + 3].Rows.Cast<DataRow>().Select(r => new JobSkillDto
+            {
+                SkillId = Convert.ToInt32(r["SkillId"]),
+                SkillName = r["SkillName"]?.ToString() ?? "",
+                Level = r["Level"]?.ToString() ?? "",
+                // a stored link that is not a plain https address is not handed out
+                EvidenceUrl = JobsRules.IsHttpsLink(r["EvidenceUrl"]?.ToString()) ? r["EvidenceUrl"]!.ToString() : ""
+            }).ToList();
+
+            page.Certificates = ds.Tables[first + 4].Rows.Cast<DataRow>().Select(r => new JobCertificateDto
+            {
+                CertificateId = Convert.ToInt32(r["CertificateId"]),
+                Title = r["Title"]?.ToString() ?? "",
+                Issuer = r["Issuer"]?.ToString() ?? "",
+                IssuedOn = r["IssuedOn"] == DBNull.Value ? null : Convert.ToDateTime(r["IssuedOn"]),
+                Status = r["Status"]?.ToString() ?? "",
+                FileId = Convert.ToInt32(r["FileId"]),
+                FileName = r["FileName"]?.ToString() ?? "",
+                SizeBytes = Convert.ToInt32(r["SizeBytes"])
+            }).ToList();
+
+            if (ds.Tables[first + 5].Rows.Count > 0)
+            {
+                var r = ds.Tables[first + 5].Rows[0];
+                page.Resume = new JobFileInfoDto
+                {
+                    FileId = Convert.ToInt32(r["FileId"]),
+                    FileName = r["FileName"]?.ToString() ?? "",
+                    SizeBytes = Convert.ToInt32(r["SizeBytes"]),
+                    UploadedAt = Convert.ToDateTime(r["UploadedAt"])
+                };
+            }
+
+            return page;
+        }
 
         // ── preferences (script PersonalDB/05) ────────────────────────────────
 

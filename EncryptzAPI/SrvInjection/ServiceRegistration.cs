@@ -38,6 +38,8 @@ namespace EncryptzAPI.SrvInjection
             services.AddScoped<MainDbHelper>();                                     // fixed MainDB executor (control-plane)
             services.AddScoped<PersonalDbHelper>();                                 // Personal DB executor (personal applications)
             services.AddScoped<IJobsService, JobsService>();                        // Job Portal (personal application, Personal DB)
+            services.AddScoped<IJobPostingsService, JobsService>();                 // Job Portal: jobs as a person uses them
+            services.AddScoped<ICompanyJobsService, JobsService>();                 // Job Portal: the jobs and applicants of a company
             services.AddScoped<ITenantUserSyncService, TenantUserSyncService>();    // MainDB users -> project DB mirror
 
             // company creation: the database of a new company is built in the background
