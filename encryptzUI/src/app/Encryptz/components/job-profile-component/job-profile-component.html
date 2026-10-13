@@ -1,191 +1,244 @@
-<app-personal-shell appName="Job Portal" icon="badge">
+<app-personal-shell appName="Job Portal" icon="badge" [menu]="menu">
 
   @if (loading()) {
-    <div class="jp-state">Loading your profile…</div>
+    <div class="jp-state">
+      <span class="jp-spinner" aria-hidden="true"></span>
+      <p>Loading your profile…</p>
+    </div>
   } @else if (unavailable()) {
     <div class="jp-state">
       <span class="material-icons">cloud_off</span>
       <p>{{ unavailable() }}</p>
-      <button class="jp-btn" (click)="load()">Try again</button>
+      <button class="jp-btn primary" (click)="load()">Try again</button>
       <a class="jp-link" routerLink="/select-company">Back to companies</a>
     </div>
   } @else if (page(); as pg) {
 
-    <!-- ═══════════ VISIBILITY + COMPLETENESS ═══════════ -->
-    <div class="jp-top">
-      <div class="jp-card jp-visibility">
-        <label class="jp-switch">
-          <input type="checkbox" [checked]="pg.profile.isVisible" [disabled]="visibleBusy()" (change)="onVisibleChange($event)" />
-          <span class="jp-switch-text">
-            <strong>Employers can find me</strong>
-            <small>
-              @if (pg.profile.isVisible) {
-                On: companies that search for candidates can see this profile.
-              } @else {
-                Off: only you can see this profile.
-              }
-            </small>
-          </span>
-        </label>
-        @if (visibleError()) { <div class="jp-error">{{ visibleError() }}</div> }
-      </div>
-
-      <div class="jp-card jp-complete">
-        <div class="jp-complete-head"><span>Profile completeness</span><strong>{{ pg.completeness }}%</strong></div>
-        <div class="jp-bar" role="progressbar" [attr.aria-valuenow]="pg.completeness" aria-valuemin="0" aria-valuemax="100">
-          <div class="jp-bar-fill" [style.width.%]="pg.completeness"></div>
-        </div>
-      </div>
-    </div>
-
     <!-- ═══════════ PROFILE ═══════════ -->
-    <section class="jp-card jp-section">
-      <div class="jp-section-head">
-        <h2>Profile</h2>
-        <button class="jp-btn" (click)="openProfile()">Edit</button>
+    <section class="jp-card jp-section jp-hero">
+      <div class="jp-hero-band"></div>
+      <div class="jp-hero-body">
+        <div class="jp-avatar" aria-hidden="true">
+          @if (initials(pg.profile.fullName); as letters) {
+            {{ letters }}
+          } @else {
+            <span class="material-icons">person</span>
+          }
+        </div>
+
+        <div class="jp-hero-text">
+          @if (pg.profile.fullName || pg.profile.headline) {
+            <div class="jp-name">{{ pg.profile.fullName || '—' }}</div>
+            <div class="jp-headline">{{ pg.profile.headline }}</div>
+          } @else {
+            <div class="jp-name muted">Your profile</div>
+            <p class="jp-empty">Add your name and a headline. A headline says in a few words what you do, for example "Accountant, 5 years".</p>
+          }
+        </div>
+
+        <button class="jp-btn" (click)="openProfile()"><span class="material-icons">edit</span>Edit profile</button>
       </div>
+
       @if (pg.profile.fullName || pg.profile.headline) {
-        <div class="jp-name">{{ pg.profile.fullName || '—' }}</div>
-        <div class="jp-headline">{{ pg.profile.headline }}</div>
         @if (pg.profile.summary) { <p class="jp-summary">{{ pg.profile.summary }}</p> }
         <dl class="jp-facts">
-          @if (pg.profile.city) { <div><dt>City</dt><dd>{{ pg.profile.city }}</dd></div> }
-          @if (pg.profile.contactEmail) { <div><dt>Contact email</dt><dd>{{ pg.profile.contactEmail }}</dd></div> }
-          @if (pg.profile.contactPhone) { <div><dt>Contact phone</dt><dd>{{ pg.profile.contactPhone }}</dd></div> }
-          @if (pg.profile.dateOfBirth) { <div><dt>Date of birth</dt><dd>{{ dayLabel(pg.profile.dateOfBirth) }}</dd></div> }
+          @if (pg.profile.city) { <div><span class="material-icons">place</span><dt>City</dt><dd>{{ pg.profile.city }}</dd></div> }
+          @if (pg.profile.contactEmail) { <div><span class="material-icons">mail_outline</span><dt>Contact email</dt><dd>{{ pg.profile.contactEmail }}</dd></div> }
+          @if (pg.profile.contactPhone) { <div><span class="material-icons">call</span><dt>Contact phone</dt><dd>{{ pg.profile.contactPhone }}</dd></div> }
+          @if (pg.profile.dateOfBirth) { <div><span class="material-icons">cake</span><dt>Date of birth</dt><dd>{{ dayLabel(pg.profile.dateOfBirth) }}</dd></div> }
         </dl>
-      } @else {
-        <p class="jp-empty">Add your name and a headline. A headline says in a few words what you do, for example "Accountant, 5 years".</p>
       }
     </section>
 
-    <!-- ═══════════ EXPERIENCE ═══════════ -->
-    <section class="jp-card jp-section">
-      <div class="jp-section-head">
-        <h2>Experience</h2>
-        <button class="jp-btn" (click)="openExperience()">+ Add</button>
-      </div>
-      @for (e of pg.experience; track e.experienceId) {
-        <div class="jp-row">
-          <div class="jp-row-main">
-            <strong>{{ e.title }}</strong> <span class="jp-at">{{ e.organisation }}</span>
-            <div class="jp-row-sub">{{ monthLabel(e.startMonth) }} – {{ e.endMonth ? monthLabel(e.endMonth) : 'Present' }}</div>
-            @if (e.description) { <p class="jp-row-text">{{ e.description }}</p> }
-          </div>
-          <div class="jp-row-actions">
-            <button class="jp-icon-btn" (click)="openExperience(e)" [attr.aria-label]="'Edit ' + e.title">Edit</button>
-            <button class="jp-icon-btn danger" (click)="remove('experience', e.experienceId, e.title)" [attr.aria-label]="'Remove ' + e.title">Remove</button>
-          </div>
-        </div>
-      } @empty {
-        <p class="jp-empty">No experience added yet.</p>
-      }
-    </section>
+    <div class="jp-layout">
+      <div class="jp-main">
 
-    <!-- ═══════════ EDUCATION ═══════════ -->
-    <section class="jp-card jp-section">
-      <div class="jp-section-head">
-        <h2>Education</h2>
-        <button class="jp-btn" (click)="openEducation()">+ Add</button>
-      </div>
-      @for (d of pg.education; track d.educationId) {
-        <div class="jp-row">
-          <div class="jp-row-main">
-            <strong>{{ d.course }}</strong> @if (d.fieldOfStudy) { <span class="jp-at">{{ d.fieldOfStudy }}</span> }
-            <div class="jp-row-sub">{{ d.institution }} @if (years(d)) { · {{ years(d) }} }</div>
+        <!-- ═══════════ EXPERIENCE ═══════════ -->
+        <section class="jp-card jp-section">
+          <div class="jp-section-head">
+            <span class="jp-section-icon"><span class="material-icons">work_outline</span></span>
+            <h2>Experience</h2>
+            @if (pg.experience.length) { <span class="jp-count">{{ pg.experience.length }}</span> }
+            <button class="jp-btn" (click)="openExperience()"><span class="material-icons">add</span>Add</button>
           </div>
-          <div class="jp-row-actions">
-            <button class="jp-icon-btn" (click)="openEducation(d)" [attr.aria-label]="'Edit ' + d.course">Edit</button>
-            <button class="jp-icon-btn danger" (click)="remove('education', d.educationId, d.course)" [attr.aria-label]="'Remove ' + d.course">Remove</button>
-          </div>
-        </div>
-      } @empty {
-        <p class="jp-empty">No education added yet.</p>
-      }
-    </section>
+          @for (e of pg.experience; track e.experienceId) {
+            <div class="jp-row">
+              <span class="jp-row-dot" aria-hidden="true"></span>
+              <div class="jp-row-main">
+                <strong>{{ e.title }}</strong> <span class="jp-at">{{ e.organisation }}</span>
+                <div class="jp-row-sub">{{ monthLabel(e.startMonth) }} – {{ e.endMonth ? monthLabel(e.endMonth) : 'Present' }}</div>
+                @if (e.description) { <p class="jp-row-text">{{ e.description }}</p> }
+              </div>
+              <div class="jp-row-actions">
+                <button class="jp-icon-btn" (click)="openExperience(e)" [attr.aria-label]="'Edit ' + e.title" title="Edit"><span class="material-icons">edit</span></button>
+                <button class="jp-icon-btn danger" (click)="remove('experience', e.experienceId, e.title)" [attr.aria-label]="'Remove ' + e.title" title="Remove"><span class="material-icons">delete_outline</span></button>
+              </div>
+            </div>
+          } @empty {
+            <p class="jp-empty boxed">No experience added yet.</p>
+          }
+        </section>
 
-    <!-- ═══════════ SKILLS ═══════════ -->
-    <section class="jp-card jp-section">
-      <div class="jp-section-head">
-        <h2>Skills</h2>
-        <button class="jp-btn" (click)="openSkill()">+ Add</button>
-      </div>
-      @for (s of pg.skills; track s.skillId) {
-        <div class="jp-row">
-          <div class="jp-row-main">
-            <strong>{{ s.skillName }}</strong> <span class="jp-pill">{{ s.level }}</span>
-            @if (safeLink(s.evidenceUrl); as link) {
-              <a class="jp-evidence" [href]="link" target="_blank" rel="noopener noreferrer">See evidence</a>
-            }
+        <!-- ═══════════ EDUCATION ═══════════ -->
+        <section class="jp-card jp-section">
+          <div class="jp-section-head">
+            <span class="jp-section-icon"><span class="material-icons">school</span></span>
+            <h2>Education</h2>
+            @if (pg.education.length) { <span class="jp-count">{{ pg.education.length }}</span> }
+            <button class="jp-btn" (click)="openEducation()"><span class="material-icons">add</span>Add</button>
           </div>
-          <div class="jp-row-actions">
-            <button class="jp-icon-btn" (click)="openSkill(s)" [attr.aria-label]="'Edit ' + s.skillName">Edit</button>
-            <button class="jp-icon-btn danger" (click)="remove('skill', s.skillId, s.skillName)" [attr.aria-label]="'Remove ' + s.skillName">Remove</button>
-          </div>
-        </div>
-      } @empty {
-        <p class="jp-empty">No skills added yet. Add what you can do, and a link that shows it if you have one.</p>
-      }
-    </section>
+          @for (d of pg.education; track d.educationId) {
+            <div class="jp-row">
+              <span class="jp-row-dot" aria-hidden="true"></span>
+              <div class="jp-row-main">
+                <strong>{{ d.course }}</strong> @if (d.fieldOfStudy) { <span class="jp-at">{{ d.fieldOfStudy }}</span> }
+                <div class="jp-row-sub">{{ d.institution }} @if (years(d)) { · {{ years(d) }} }</div>
+              </div>
+              <div class="jp-row-actions">
+                <button class="jp-icon-btn" (click)="openEducation(d)" [attr.aria-label]="'Edit ' + d.course" title="Edit"><span class="material-icons">edit</span></button>
+                <button class="jp-icon-btn danger" (click)="remove('education', d.educationId, d.course)" [attr.aria-label]="'Remove ' + d.course" title="Remove"><span class="material-icons">delete_outline</span></button>
+              </div>
+            </div>
+          } @empty {
+            <p class="jp-empty boxed">No education added yet.</p>
+          }
+        </section>
 
-    <!-- ═══════════ CERTIFICATES ═══════════ -->
-    <section class="jp-card jp-section">
-      <div class="jp-section-head">
-        <h2>Certificates</h2>
-        <button class="jp-btn" (click)="openCertificate()">+ Add</button>
-      </div>
-      @for (c of pg.certificates; track c.certificateId) {
-        <div class="jp-row">
-          <div class="jp-row-main">
-            <strong>{{ c.title }}</strong> <span class="jp-pill grey">{{ statusLabel(c.status) }}</span>
-            <div class="jp-row-sub">{{ c.issuer }} @if (c.issuedOn) { · {{ dayLabel(c.issuedOn) }} }</div>
-            @if (c.fileId) {
-              <button class="jp-file" (click)="download(c.fileId, c.fileName)">
-                <span class="material-icons">attach_file</span>{{ c.fileName }} <small>{{ sizeLabel(c.sizeBytes) }}</small>
-              </button>
-            }
+        <!-- ═══════════ SKILLS ═══════════ -->
+        <section class="jp-card jp-section">
+          <div class="jp-section-head">
+            <span class="jp-section-icon"><span class="material-icons">bolt</span></span>
+            <h2>Skills</h2>
+            @if (pg.skills.length) { <span class="jp-count">{{ pg.skills.length }}</span> }
+            <button class="jp-btn" (click)="openSkill()"><span class="material-icons">add</span>Add</button>
           </div>
-          <div class="jp-row-actions">
-            <button class="jp-icon-btn" (click)="openCertificate(c)" [attr.aria-label]="'Edit ' + c.title">Edit</button>
-            <button class="jp-icon-btn danger" (click)="remove('certificate', c.certificateId, c.title)" [attr.aria-label]="'Remove ' + c.title">Remove</button>
-          </div>
-        </div>
-      } @empty {
-        <p class="jp-empty">No certificates added yet.</p>
-      }
-      <p class="jp-note">"Uploaded by you" means you supplied the document. Nobody has checked it.</p>
-    </section>
+          @if (pg.skills.length) {
+            <div class="jp-skills">
+              @for (s of pg.skills; track s.skillId) {
+                <div class="jp-skill">
+                  <div class="jp-skill-main">
+                    <strong>{{ s.skillName }}</strong>
+                    <span class="jp-pill" [attr.data-level]="s.level">{{ s.level }}</span>
+                    @if (safeLink(s.evidenceUrl); as link) {
+                      <a class="jp-evidence" [href]="link" target="_blank" rel="noopener noreferrer">See evidence</a>
+                    }
+                  </div>
+                  <div class="jp-row-actions">
+                    <button class="jp-icon-btn" (click)="openSkill(s)" [attr.aria-label]="'Edit ' + s.skillName" title="Edit"><span class="material-icons">edit</span></button>
+                    <button class="jp-icon-btn danger" (click)="remove('skill', s.skillId, s.skillName)" [attr.aria-label]="'Remove ' + s.skillName" title="Remove"><span class="material-icons">delete_outline</span></button>
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="jp-empty boxed">No skills added yet. Add what you can do, and a link that shows it if you have one.</p>
+          }
+        </section>
 
-    <!-- ═══════════ RESUME ═══════════ -->
-    <section class="jp-card jp-section">
-      <div class="jp-section-head">
-        <h2>Resume</h2>
-        <label class="jp-btn" [class.disabled]="resumeBusy()">
-          {{ resumeBusy() ? 'Uploading…' : (pg.resume ? 'Replace' : 'Upload') }}
-          <input type="file" accept=".pdf,.doc,.docx" hidden [disabled]="resumeBusy()" (change)="onResumePicked($event)" />
-        </label>
-      </div>
-      @if (pg.resume; as r) {
-        <div class="jp-row">
-          <div class="jp-row-main">
-            <button class="jp-file" (click)="download(r.fileId, r.fileName)">
-              <span class="material-icons">description</span>{{ r.fileName }} <small>{{ sizeLabel(r.sizeBytes) }}</small>
-            </button>
-            <div class="jp-row-sub">Uploaded {{ dayLabel(r.uploadedAt) }}</div>
+        <!-- ═══════════ CERTIFICATES ═══════════ -->
+        <section class="jp-card jp-section">
+          <div class="jp-section-head">
+            <span class="jp-section-icon"><span class="material-icons">workspace_premium</span></span>
+            <h2>Certificates</h2>
+            @if (pg.certificates.length) { <span class="jp-count">{{ pg.certificates.length }}</span> }
+            <button class="jp-btn" (click)="openCertificate()"><span class="material-icons">add</span>Add</button>
           </div>
-          <div class="jp-row-actions">
-            <button class="jp-icon-btn danger" (click)="removeResume()">Remove</button>
+          @for (c of pg.certificates; track c.certificateId) {
+            <div class="jp-row">
+              <span class="jp-row-dot" aria-hidden="true"></span>
+              <div class="jp-row-main">
+                <strong>{{ c.title }}</strong> <span class="jp-pill grey">{{ statusLabel(c.status) }}</span>
+                <div class="jp-row-sub">{{ c.issuer }} @if (c.issuedOn) { · {{ dayLabel(c.issuedOn) }} }</div>
+                @if (c.fileId) {
+                  <button class="jp-file" (click)="download(c.fileId, c.fileName)">
+                    <span class="material-icons">attach_file</span>{{ c.fileName }} <small>{{ sizeLabel(c.sizeBytes) }}</small>
+                  </button>
+                }
+              </div>
+              <div class="jp-row-actions">
+                <button class="jp-icon-btn" (click)="openCertificate(c)" [attr.aria-label]="'Edit ' + c.title" title="Edit"><span class="material-icons">edit</span></button>
+                <button class="jp-icon-btn danger" (click)="remove('certificate', c.certificateId, c.title)" [attr.aria-label]="'Remove ' + c.title" title="Remove"><span class="material-icons">delete_outline</span></button>
+              </div>
+            </div>
+          } @empty {
+            <p class="jp-empty boxed">No certificates added yet.</p>
+          }
+          <p class="jp-note">"Uploaded by you" means you supplied the document. Nobody has checked it.</p>
+        </section>
+
+        <!-- ═══════════ RESUME ═══════════ -->
+        <section class="jp-card jp-section">
+          <div class="jp-section-head">
+            <span class="jp-section-icon"><span class="material-icons">description</span></span>
+            <h2>Resume</h2>
+            <label class="jp-btn" [class.disabled]="resumeBusy()">
+              <span class="material-icons">upload</span>
+              {{ resumeBusy() ? 'Uploading…' : (pg.resume ? 'Replace' : 'Upload') }}
+              <input type="file" accept=".pdf,.doc,.docx" hidden [disabled]="resumeBusy()" (change)="onResumePicked($event)" />
+            </label>
+          </div>
+          @if (pg.resume; as r) {
+            <div class="jp-row">
+              <div class="jp-row-main">
+                <button class="jp-file" (click)="download(r.fileId, r.fileName)">
+                  <span class="material-icons">description</span>{{ r.fileName }} <small>{{ sizeLabel(r.sizeBytes) }}</small>
+                </button>
+                <div class="jp-row-sub">Uploaded {{ dayLabel(r.uploadedAt) }}</div>
+              </div>
+              <div class="jp-row-actions">
+                <button class="jp-icon-btn danger" (click)="removeResume()" aria-label="Remove resume" title="Remove"><span class="material-icons">delete_outline</span></button>
+              </div>
+            </div>
+          } @else {
+            <p class="jp-empty boxed">No resume uploaded yet. PDF, DOC or DOCX, up to 5 MB.</p>
+          }
+          @if (resumeError()) { <div class="jp-error">{{ resumeError() }}</div> }
+        </section>
+      </div>
+
+      <!-- ═══════════ COMPLETENESS + VISIBILITY ═══════════ -->
+      <aside class="jp-aside">
+        <div class="jp-card jp-complete">
+          <div class="jp-ring" [style.--p]="pg.completeness"
+               role="progressbar" [attr.aria-valuenow]="pg.completeness" aria-valuemin="0" aria-valuemax="100">
+            <strong>{{ pg.completeness }}%</strong>
+          </div>
+          <div class="jp-complete-text">
+            <span>Profile completeness</span>
+            <small>
+              @if (pg.completeness >= 100) {
+                Your profile is complete.
+              } @else {
+                A complete profile is found more often.
+              }
+            </small>
           </div>
         </div>
-      } @else {
-        <p class="jp-empty">No resume uploaded yet. PDF, DOC or DOCX, up to 5 MB.</p>
-      }
-      @if (resumeError()) { <div class="jp-error">{{ resumeError() }}</div> }
-    </section>
+
+        <div class="jp-card jp-visibility" [class.on]="pg.profile.isVisible">
+          <label class="jp-switch">
+            <span class="jp-switch-text">
+              <strong>Employers can find me</strong>
+              <small>
+                @if (pg.profile.isVisible) {
+                  On: companies that search for candidates can see this profile.
+                } @else {
+                  Off: only you can see this profile.
+                }
+              </small>
+            </span>
+            <input type="checkbox" [checked]="pg.profile.isVisible" [disabled]="visibleBusy()" (change)="onVisibleChange($event)" />
+          </label>
+          @if (visibleError()) { <div class="jp-error">{{ visibleError() }}</div> }
+        </div>
+      </aside>
+    </div>
   }
 
   @if (toast(); as t) {
-    <div class="jp-toast" [class.bad]="!t.ok" role="status">{{ t.text }}</div>
+    <div class="jp-toast" [class.bad]="!t.ok" role="status">
+      <span class="material-icons">{{ t.ok ? 'check_circle' : 'error_outline' }}</span>{{ t.text }}
+    </div>
   }
 </app-personal-shell>
 
@@ -195,7 +248,7 @@
     <div class="jp-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
       <div class="jp-dialog-head">
         <h3>{{ d.title }}</h3>
-        <button class="jp-close" (click)="closeDialog()" aria-label="Close">✕</button>
+        <button class="jp-close" (click)="closeDialog()" aria-label="Close"><span class="material-icons">close</span></button>
       </div>
 
       <div class="jp-dialog-body">

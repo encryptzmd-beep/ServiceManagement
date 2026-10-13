@@ -95,6 +95,28 @@ describe('JobProfileComponent', () => {
     expect(t).toContain('90%');
   });
 
+  it('has a side menu: the profile opens, the pages not built yet are marked Soon', () => {
+    const fixture = create();
+    const items = Array.from(fixture.nativeElement.querySelectorAll('.ps-nav-item')) as HTMLElement[];
+    const label = (e: HTMLElement) => e.querySelector('.ps-nav-label')!.textContent!.trim();
+
+    expect(items.map(label)).toEqual(['My profile', 'Search jobs', 'My applications', 'Saved jobs']);
+    expect(items[0].tagName).toBe('A');
+    expect(items[0].getAttribute('href')).toBe('/apps/jobs');
+    for (const soon of items.slice(1)) {
+      expect(soon.tagName).not.toBe('A');
+      expect(soon.textContent).toContain('Soon');
+    }
+  });
+
+  it('shows the initials of the name where a picture would be', () => {
+    const fixture = create();
+
+    expect(fixture.nativeElement.querySelector('.jp-avatar').textContent.trim()).toBe('LJ');
+    expect(fixture.componentInstance.initials('  anu  ')).toBe('A');
+    expect(fixture.componentInstance.initials('')).toBe('');
+  });
+
   it('turns only an https evidence link into a link', () => {
     const fixture = create();
     const links = Array.from(fixture.nativeElement.querySelectorAll('a.jp-evidence')) as HTMLAnchorElement[];

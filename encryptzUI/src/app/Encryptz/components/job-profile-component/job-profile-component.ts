@@ -12,7 +12,7 @@ import {
   JobSkill,
   JobsService,
 } from '../../Services/jobs-service';
-import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
+import { PersonalMenuItem, PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 
 type DialogKind = 'profile' | 'experience' | 'education' | 'skill' | 'certificate';
 type RowKind = 'experience' | 'education' | 'skill' | 'certificate';
@@ -63,6 +63,14 @@ export class JobProfileComponent implements OnInit {
   toast = signal<{ text: string; ok: boolean } | null>(null);
 
   readonly levels = ['Beginner', 'Intermediate', 'Expert'];
+
+  /** The side menu. A page without a route is not built yet and is shown as "Soon". */
+  readonly menu: PersonalMenuItem[] = [
+    { label: 'My profile', icon: 'person', route: '/apps/jobs' },
+    { label: 'Search jobs', icon: 'search' },
+    { label: 'My applications', icon: 'assignment_turned_in' },
+    { label: 'Saved jobs', icon: 'bookmark_border' },
+  ];
 
   ngOnInit(): void {
     this.load();
@@ -355,6 +363,12 @@ export class JobProfileComponent implements OnInit {
   }
 
   // ── what the template shows ───────────────────────────────────────────────
+
+  /** The first letters of the first two words of the name, for the picture place. */
+  initials(name: string | null | undefined): string {
+    return (name ?? '').trim().split(/\s+/).filter(Boolean).slice(0, 2)
+      .map(word => Array.from(word)[0].toUpperCase()).join('');
+  }
 
   /** The link when it is a plain https address, '' otherwise: nothing else is ever put into an href. */
   safeLink(url: string | null | undefined): string {
