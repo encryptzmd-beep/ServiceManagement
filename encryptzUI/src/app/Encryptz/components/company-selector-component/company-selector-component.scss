@@ -617,3 +617,23 @@
   text-transform: uppercase;
   color: rgba(207, 224, 245, 0.75);
 }
+
+/* The user's lifelong ID, under the title of the company step */
+.individual-id {
+  margin-top: 10px;
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.65);
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.14);
+
+  strong {
+    margin-left: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: #fff;
+  }
+}

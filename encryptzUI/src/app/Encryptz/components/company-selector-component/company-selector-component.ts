@@ -341,6 +341,11 @@ export class CompanySelectorComponent {
     this.polling.set(false);
   }
 
+  /** The user's lifelong ID as it is shown ('' when the account has none yet). */
+  individualId(): string {
+    return this.auth.currentUser()?.individualId || '';
+  }
+
   // ── PERSONAL APPLICATIONS (company step only) ─────────────────────
 
   private loadPersonalApps(): void {

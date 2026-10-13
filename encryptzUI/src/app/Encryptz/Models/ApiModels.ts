@@ -89,6 +89,8 @@ export interface LoginResponse {
   companyName?: string;
   // Global role Admin: may manage every company in Platform Admin
   isPlatformAdmin?: boolean;
+  // The user's lifelong ID as it is shown: EZ-XXXX-XXXX-XXXX ('' or missing when there is none)
+  individualId?: string;
 }
 
 // --- Multi-tenant scoping (Company -> Projects -> Locations) ---

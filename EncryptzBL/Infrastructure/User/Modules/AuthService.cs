@@ -319,6 +319,9 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 SqlParameterHelper.Input("@CompanyId", companyId)
             });
 
+            if (profile != null)
+                profile.IndividualId = IndividualId.Format(profile.IndividualId);
+
             return profile == null
                 ? ApiResponse<MyProfileDto>.Fail("User not found")
                 : ApiResponse<MyProfileDto>.Ok(profile);
@@ -609,6 +612,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 Email = email,
                 // the role of a login token is the global role
                 IsPlatformAdmin = loginResult.Data.Role == PlatformAdminRole,
+                IndividualId = (await GetUserById(loginResult.Data.UserId)).IndividualId,
 
                 // keep empty until company selected
                 Menus = new List<MenuDto>(),
@@ -711,6 +715,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 technicianId = technicianId,
                 mobileNumber = userInfo.Mobile,
                 IsPlatformAdmin = userInfo.Role == PlatformAdminRole,
+                IndividualId = userInfo.IndividualId,
                 CompanyName = companyName,
                 Menus = menus,
                 CompanyId = companyId,
@@ -999,6 +1004,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 technicianId = me.TechnicianId,
                 mobileNumber = userInfo.Mobile,
                 IsPlatformAdmin = userInfo.Role == PlatformAdminRole,
+                IndividualId = userInfo.IndividualId,
                 CompanyName = await GetCompanyName(companyId),
                 Menus = menus,
                 CompanyId = companyId,
@@ -1451,7 +1457,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        private async Task<(int UserId, string FullName, string Email, string Mobile, string Role)> GetUserById(int userId)
+        private async Task<(int UserId, string FullName, string Email, string Mobile, string Role, string IndividualId)> GetUserById(int userId)
         {
             var parameters = new[]
             {
@@ -1462,7 +1468,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
             if (dt == null || dt.Rows.Count == 0)
             {
-                return (0, "", "", "", "");
+                return (0, "", "", "", "", "");
             }
 
             var row = dt.Rows[0];
@@ -1471,7 +1477,9 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 row["FullName"]?.ToString() ?? "",
                 row["Email"]?.ToString() ?? "",
                 row["MobileNumber"]?.ToString() ?? "",
-                row["RoleName"]?.ToString() ?? ""
+                row["RoleName"]?.ToString() ?? "",
+                // shown form (EZ-XXXX-XXXX-XXXX); "" on a main database without script 22
+                row.Table.Columns.Contains("IndividualId") ? IndividualId.Format(row["IndividualId"]?.ToString()) : ""
             );
         }
 

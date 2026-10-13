@@ -30,6 +30,8 @@ export interface MyProfile {
   email: string;
   mobileNumber: string;
   aadhaarNumber: string;
+  /** The lifelong ID as it is shown: EZ-XXXX-XXXX-XXXX ('' when there is none). */
+  individualId?: string;
   globalRole: string;
   roleInCompany: string;
   companyId: number;

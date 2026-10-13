@@ -381,6 +381,21 @@ describe('CompanySelectorComponent', () => {
     fixture.componentInstance.openModule({ moduleKey: 'PAYROLL', state: 'ComingSoon' } as any);
     expect(navigated.length).toBe(0);
   });
+
+  it('shows the Individual ID of the user on the company step', () => {
+    auth.currentUser = () => ({ userId: 5, fullName: 'A', role: 'Admin', isPlatformAdmin: false, individualId: 'EZ-7K4M-2P9Q-XD3Q' });
+    const fixture = create('company');
+
+    const line = fixture.nativeElement.querySelector('.individual-id') as HTMLElement;
+    expect(line.textContent).toContain('Individual ID');
+    expect(line.textContent).toContain('EZ-7K4M-2P9Q-XD3Q');
+  });
+
+  it('shows no Individual ID line when the user has none yet', () => {
+    const fixture = create('company');
+
+    expect(fixture.nativeElement.querySelector('.individual-id')).toBeNull();
+  });
 });
 
 describe('CompanySelectorComponent company creation', () => {

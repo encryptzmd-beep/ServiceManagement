@@ -272,6 +272,8 @@ namespace EncryptzBL.DTO_s
         public string Email { get; set; } = "";
         public string MobileNumber { get; set; } = "";
         public string AadhaarNumber { get; set; } = "";
+        /// <summary>The user's lifelong ID as it is shown: EZ-XXXX-XXXX-XXXX ('' when the database has none).</summary>
+        public string IndividualId { get; set; } = "";
         public string GlobalRole { get; set; } = "";
         public string RoleInCompany { get; set; } = "";
         public int CompanyId { get; set; }

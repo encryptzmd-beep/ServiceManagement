@@ -143,6 +143,11 @@
           @if (stage() === 'company') {
             <div class="brand-name">Select Company</div>
             <div class="brand-sub">Please choose a company to continue</div>
+            @if (individualId(); as id) {
+              <div class="individual-id" title="Your lifelong ID on this platform. It never changes.">
+                Individual ID <strong>{{ id }}</strong>
+              </div>
+            }
           } @else if (stage() === 'module') {
             <div class="brand-name">Modules</div>
             <div class="brand-sub">Choose what you want to work with</div>

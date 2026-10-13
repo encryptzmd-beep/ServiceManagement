@@ -50,6 +50,8 @@ namespace EncryptzBL.DTO_s
 
         /// <summary>Global role Admin: may open Platform Admin for every company.</summary>
         public bool IsPlatformAdmin { get; set; }
+        /// <summary>The user's lifelong ID as it is shown: EZ-XXXX-XXXX-XXXX ('' when the database has none).</summary>
+        public string IndividualId { get; set; } = "";
         public int LocationId { get; set; }
     }
 
