@@ -365,8 +365,9 @@
 
 <!-- ═══════════ DIALOG ═══════════ -->
 @if (dialog(); as d) {
-  <div class="jp-overlay" (click)="closeDialog()">
-    <div class="jp-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+  <!-- a click beside the dialog does not close it: what is typed would be lost -->
+  <div class="jp-overlay">
+    <div class="jp-dialog" role="dialog" aria-modal="true">
       <div class="jp-dialog-head">
         <h3>{{ d.title }}</h3>
         <button class="jp-close" (click)="closeDialog()" aria-label="Close"><span class="material-icons">close</span></button>

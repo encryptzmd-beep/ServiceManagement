@@ -146,6 +146,21 @@ describe('JobProfileComponent', () => {
     expect(c.formError()).toBe('Choose at most 10 preferred jobs');
   });
 
+  it('keeps a dialog open when the person clicks beside it: what is typed is not lost', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    c.openProfile();
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('.jp-overlay') as HTMLElement).click();
+    fixture.detectChanges();
+
+    expect(c.dialog()).not.toBeNull();
+
+    (fixture.nativeElement.querySelector('.jp-close') as HTMLElement).click();
+    expect(c.dialog()).toBeNull();
+  });
+
   // ── photo ─────────────────────────────────────────────────────────────────
 
   it('shows the photo instead of the initials when there is one', () => {
