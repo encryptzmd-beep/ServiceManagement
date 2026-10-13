@@ -391,6 +391,70 @@ describe('CompanySelectorComponent', () => {
     expect(line.textContent).toContain('EZ-7K4M-2P9Q-XD3Q');
   });
 
+  describe('finding a company', () => {
+    const many = (count: number) => Array.from({ length: count }, (_, i) =>
+      ({ companyId: i + 1, companyName: 'Company ' + (i + 1), companyCode: 'C' + (i + 1), roleInCompany: 'Admin', isLinked: false, provisionStatus: 'Ready' }));
+    const names = (fixture: any) => (Array.from(fixture.nativeElement.querySelectorAll('.company-item h3')) as HTMLElement[]).map(h => h.textContent);
+
+    it('shows no search box for six companies or fewer', () => {
+      auth.companies = () => many(6);
+      const fixture = create('company');
+
+      expect(fixture.nativeElement.querySelector('.search')).toBeNull();
+      expect(names(fixture).length).toBe(6);
+    });
+
+    it('finds a company by its name or its code, whatever the case', () => {
+      auth.companies = () => [...many(7), { ...many(1)[0], companyId: 99, companyName: 'Hamster A/C', companyCode: 'HAM' }];
+      const fixture = create('company');
+      const c = fixture.componentInstance;
+      expect(fixture.nativeElement.querySelector('.search')).not.toBeNull();
+
+      c.search.set(' hamster ');
+      fixture.detectChanges();
+      expect(names(fixture)).toEqual(['Hamster A/C']);
+
+      c.search.set('c7');
+      fixture.detectChanges();
+      expect(names(fixture)).toEqual(['Company 7']);
+
+      c.search.set('');
+      fixture.detectChanges();
+      expect(names(fixture).length).toBe(8);
+    });
+
+    it('says so when no company matches', () => {
+      auth.companies = () => many(7);
+      const fixture = create('company');
+      fixture.componentInstance.search.set('zzz');
+      fixture.detectChanges();
+
+      expect(names(fixture).length).toBe(0);
+      expect(fixture.nativeElement.querySelector('.no-match').textContent).toContain('No company matches');
+    });
+  });
+
+  it('puts the personal applications before the companies, each in its own frame', () => {
+    auth.getPersonalApps = () => of({ success: true, message: '', data: [
+      { moduleId: 8, moduleKey: 'JOBPORTAL', moduleName: 'Job Portal', description: 'd', icon: 'badge', family: '', routePath: '/apps/jobs', sortOrder: 1, isReleased: true },
+    ] });
+    const fixture = create('company');
+    const frames = Array.from(fixture.nativeElement.querySelectorAll('.frame')) as HTMLElement[];
+
+    expect(frames.length).toBe(2);
+    expect(frames[0].querySelectorAll('.personal-app-item').length).toBe(1);
+    expect(frames[1].querySelectorAll('.company-item').length).toBe(1);
+  });
+
+  it('stands a company on its card with up to two letters of its name', () => {
+    const c = create('company').componentInstance;
+
+    expect(c.initials('Encryptz ERP Solutions Private Limited')).toBe('EE');
+    expect(c.initials('Hamster A/C')).toBe('HA');
+    expect(c.initials('denzmart')).toBe('DE');
+    expect(c.initials('')).toBe('?');
+  });
+
   it('shows no Individual ID line when the user has none yet', () => {
     const fixture = create('company');
 

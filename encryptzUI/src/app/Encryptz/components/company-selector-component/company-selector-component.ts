@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription, finalize, interval, timeout } from 'rxjs';
@@ -13,6 +13,9 @@ import {
 } from '../../Auth/company-creation';
 
 type Stage = 'company' | 'module' | 'branch';
+
+/** The search box shows only when there are more companies than this. */
+const SEARCH_ABOVE = 6;
 
 @Component({
   selector: 'app-company-selector-component',
@@ -33,6 +36,15 @@ export class CompanySelectorComponent {
   stage = signal<Stage>('company');
 
   companies = signal<Company[]>([]);
+  /** What the user typed to find a company (name or code). */
+  search = signal('');
+  showSearch = computed(() => this.companies().length > SEARCH_ABOVE);
+  filteredCompanies = computed(() => {
+    const term = this.showSearch() ? this.search().trim().toLowerCase() : '';
+    if (!term) return this.companies();
+    return this.companies().filter(c =>
+      (c.companyName || '').toLowerCase().includes(term) || (c.companyCode || '').toLowerCase().includes(term));
+  });
   modules = signal<ModuleDto[]>([]);
   /** Empty also when the list could not be read: it never blocks the companies. */
   personalApps = signal<PersonalApp[]>([]);
@@ -215,6 +227,13 @@ export class CompanySelectorComponent {
     return provisionLabel(company.provisionStatus);
   }
 
+  /** Up to two letters that stand for a company on its card. */
+  initials(name: string): string {
+    const words = (name || '').split(/[^A-Za-z0-9]+/).filter(Boolean);
+    const letters = words.length > 1 ? words[0][0] + words[1][0] : (words[0] || '').slice(0, 2);
+    return letters.toUpperCase() || '?';
+  }
+
   enterable(company: Company): boolean {
     return canEnter(company.provisionStatus);
   }
@@ -344,6 +363,11 @@ export class CompanySelectorComponent {
   /** The user's lifelong ID as it is shown ('' when the account has none yet). */
   individualId(): string {
     return this.auth.currentUser()?.individualId || '';
+  }
+
+  /** Name of the signed-in user, for the top bar ('' when not known). */
+  userName(): string {
+    return this.auth.currentUser()?.fullName || '';
   }
 
   // ── PERSONAL APPLICATIONS (company step only) ─────────────────────

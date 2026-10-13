@@ -1,161 +1,144 @@
-<div class="auth-page">
+<div class="scope-page">
 
-  <!-- ── LEFT PANEL: CSS IMAGE SLIDER ── -->
-  <div class="left-panel">
-    <div class="progress-bar"></div>
-
-    <div class="left-top">
-      <div class="left-logo-badge"><img src="logo.png" alt="Encryptz" /></div>
-      <div class="left-brand">
-        <div class="left-brand-name">ENCRYPTZ <span>ERP</span></div>
-        <div class="left-brand-sub">Enterprise Resource Planning Platform</div>
+  <!-- ── TOP BAR ── -->
+  <header class="topbar">
+    <div class="topbar-in">
+      <div class="logo-badge"><img src="logo.png" alt="Encryptz" /></div>
+      <div class="brand">
+        <div class="brand-name">ENCRYPTZ <span>ERP</span></div>
+        <div class="brand-sub">Enterprise Resource Planning Platform</div>
       </div>
+      <span class="spacer"></span>
+      @if (stage() === 'company') {
+        @if (individualId(); as id) {
+          <div class="individual-id" title="Your lifelong ID on this platform. It never changes.">
+            Individual ID <strong>{{ id }}</strong>
+          </div>
+        }
+      }
+      @if (userName()) {
+        <div class="user">
+          <span class="user-pic">{{ userName().charAt(0).toUpperCase() }}</span>
+          <span class="user-name">{{ userName() }}</span>
+        </div>
+      }
+      <button class="top-link" type="button" (click)="openChangePassword()">
+        <span class="material-icons">lock</span><span class="top-link-text">Change Password</span>
+      </button>
+      <button class="top-link" type="button" (click)="logout()">
+        <span class="material-icons">logout</span><span class="top-link-text">Logout</span>
+      </button>
     </div>
+  </header>
 
-    <div class="slides">
+  <main class="scope-main" [class.company-step]="stage() === 'company'" [class.two-frames]="stage() === 'company' && personalApps().length > 0">
 
-      <div class="slide slide-1">
-        <svg class="slide-bg" viewBox="0 0 800 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-          <defs>
-            <linearGradient id="csbg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0a1e3c"/><stop offset="50%" stop-color="#1b3a6e"/><stop offset="100%" stop-color="#0d2244"/></linearGradient>
-            <radialGradient id="csglow1" cx="30%" cy="30%"><stop offset="0%" stop-color="#3a72b0" stop-opacity="0.5"/><stop offset="100%" stop-color="transparent"/></radialGradient>
-            <radialGradient id="csglow2" cx="70%" cy="70%"><stop offset="0%" stop-color="#D42B2B" stop-opacity="0.3"/><stop offset="100%" stop-color="transparent"/></radialGradient>
-          </defs>
-          <rect width="800" height="900" fill="url(#csbg1)"/>
-          <ellipse cx="200" cy="250" rx="400" ry="320" fill="url(#csglow1)"/>
-          <ellipse cx="620" cy="700" rx="350" ry="280" fill="url(#csglow2)"/>
-          <g transform="translate(260,360)" opacity="0.25">
-            <rect x="20" y="40" width="100" height="130" rx="6" fill="rgba(27,74,122,0.40)" stroke="rgba(58,114,176,0.55)" stroke-width="1.5"/>
-            <rect x="140" y="10" width="120" height="160" rx="6" fill="rgba(212,43,43,0.35)" stroke="rgba(212,43,43,0.55)" stroke-width="1.5"/>
-            <rect x="280" y="50" width="100" height="120" rx="6" fill="rgba(27,74,122,0.35)" stroke="rgba(58,114,176,0.50)" stroke-width="1.5"/>
-            <rect x="30" y="60" width="30" height="8" rx="2" fill="rgba(255,255,255,0.55)"/>
-            <rect x="30" y="76" width="60" height="6" rx="2" fill="rgba(255,255,255,0.3)"/>
-            <rect x="150" y="30" width="40" height="8" rx="2" fill="rgba(255,255,255,0.55)"/>
-            <rect x="150" y="46" width="80" height="6" rx="2" fill="rgba(255,255,255,0.3)"/>
-            <rect x="290" y="70" width="32" height="8" rx="2" fill="rgba(255,255,255,0.55)"/>
-            <rect x="290" y="86" width="64" height="6" rx="2" fill="rgba(255,255,255,0.3)"/>
-          </g>
-        </svg>
-        <div class="slide-content">
-          <div class="slide-badge">
-            <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="3" width="14" height="14" rx="2"/></svg>
-            Multi-Company
-          </div>
-          <div class="slide-title">Manage multiple<br>organisations seamlessly</div>
-          <div class="slide-desc">Switch between companies in one click — each with its own data, teams, and permissions.</div>
+    @if (stage() === 'company') {
+      <div class="welcome">
+        <div class="welcome-text">
+          <h1>Welcome back@if (userName()) {, {{ userName() }}}</h1>
+          <p>Open one of your own applications, or choose a company to continue.</p>
+        </div>
+        <div class="welcome-stats">
+          @if (personalApps().length > 0) {
+            <div class="stat"><strong>{{ personalApps().length }}</strong><span>Applications</span></div>
+          }
+          <div class="stat"><strong>{{ companies().length }}</strong><span>Companies</span></div>
         </div>
       </div>
+    }
 
-      <div class="slide slide-2">
-        <svg class="slide-bg" viewBox="0 0 800 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-          <defs>
-            <linearGradient id="csbg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#061525"/><stop offset="60%" stop-color="#122a50"/><stop offset="100%" stop-color="#0a1e3a"/></linearGradient>
-          </defs>
-          <rect width="800" height="900" fill="url(#csbg2)"/>
-          <rect x="60" y="180" width="680" height="480" rx="12" fill="rgba(27,74,122,0.15)" stroke="rgba(58,114,176,0.20)" stroke-width="1"/>
-          <rect x="60" y="180" width="680" height="44" rx="12" fill="rgba(27,74,122,0.25)"/>
-          <circle cx="96" cy="202" r="7" fill="rgba(212,43,43,0.7)"/>
-          <circle cx="118" cy="202" r="7" fill="rgba(255,200,50,0.6)"/>
-          <circle cx="140" cy="202" r="7" fill="rgba(50,200,100,0.6)"/>
-          <rect x="210" y="240" width="175" height="110" rx="8" fill="rgba(27,74,122,0.30)" stroke="rgba(58,114,176,0.25)" stroke-width="1"/>
-          <rect x="400" y="240" width="175" height="110" rx="8" fill="rgba(27,74,122,0.30)" stroke="rgba(58,114,176,0.25)" stroke-width="1"/>
-          <rect x="210" y="366" width="365" height="120" rx="8" fill="rgba(27,74,122,0.20)" stroke="rgba(58,114,176,0.15)" stroke-width="1"/>
-        </svg>
-        <div class="slide-content">
-          <div class="slide-badge">
-            <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="4" width="16" height="12" rx="2"/></svg>
-            Real-time Dashboard
+    <!-- PERSONAL APPLICATIONS: free, open to every user, no company needed -->
+    @if (stage() === 'company' && personalApps().length > 0) {
+      <section class="frame apps-frame">
+        <div class="frame-head">
+          <div class="frame-icon"><span class="material-icons">apps</span></div>
+          <div class="frame-titles">
+            <h2 class="frame-title">Personal applications</h2>
+            <div class="frame-sub">Yours alone, no company needed</div>
           </div>
-          <div class="slide-title">Complete visibility<br>across your operations</div>
-          <div class="slide-desc">Monitor KPIs, track performance, and make data-driven decisions from a unified command center.</div>
+          <span class="count">{{ personalApps().length }}</span>
         </div>
-      </div>
-
-      <div class="slide slide-3">
-        <svg class="slide-bg" viewBox="0 0 800 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-          <defs>
-            <linearGradient id="csbg3" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#1a0808"/><stop offset="40%" stop-color="#3a1212"/><stop offset="100%" stop-color="#0f1e38"/></linearGradient>
-          </defs>
-          <rect width="800" height="900" fill="url(#csbg3)"/>
-          <ellipse cx="300" cy="300" rx="420" ry="360" fill="rgba(212,43,43,0.07)"/>
-          <g transform="translate(330, 380)" opacity="0.15">
-            <circle cx="70" cy="70" r="55" stroke="rgba(212,43,43,0.8)" stroke-width="8" fill="none"/>
-            <circle cx="70" cy="70" r="25" stroke="rgba(212,43,43,0.8)" stroke-width="6" fill="rgba(212,43,43,0.2)"/>
-          </g>
-        </svg>
-        <div class="slide-content">
-          <div class="slide-badge">
-            <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2l2.5 5H18l-4.5 3.5 1.5 5.5L10 13l-5 3 1.5-5.5L2 7h5.5z"/></svg>
-            Smart Automation
-          </div>
-          <div class="slide-title">Automate workflows<br>and reduce manual work</div>
-          <div class="slide-desc">Streamline ticket routing, approvals, and escalations with intelligent automation.</div>
-        </div>
-      </div>
-
-      <div class="slide slide-4">
-        <svg class="slide-bg" viewBox="0 0 800 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-          <defs>
-            <linearGradient id="csbg4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#050f22"/><stop offset="55%" stop-color="#0e2345"/><stop offset="100%" stop-color="#071830"/></linearGradient>
-          </defs>
-          <rect width="800" height="900" fill="url(#csbg4)"/>
-          <g transform="translate(160,290)" opacity="0.25">
-            <circle cx="60" cy="35" r="22" fill="rgba(58,114,176,0.5)" stroke="rgba(58,114,176,0.7)" stroke-width="1.5"/>
-            <path d="M10 110 Q10 70 60 70 Q110 70 110 110" fill="rgba(58,114,176,0.35)" stroke="rgba(58,114,176,0.6)" stroke-width="1.5"/>
-          </g>
-          <g transform="translate(320,260)" opacity="0.30">
-            <circle cx="60" cy="35" r="26" fill="rgba(212,43,43,0.5)" stroke="rgba(212,43,43,0.7)" stroke-width="1.5"/>
-            <path d="M5 118 Q5 72 60 72 Q115 72 115 118" fill="rgba(212,43,43,0.35)" stroke="rgba(212,43,43,0.6)" stroke-width="1.5"/>
-          </g>
-          <g transform="translate(490,290)" opacity="0.25">
-            <circle cx="60" cy="35" r="22" fill="rgba(58,114,176,0.5)" stroke="rgba(58,114,176,0.7)" stroke-width="1.5"/>
-            <path d="M10 110 Q10 70 60 70 Q110 70 110 110" fill="rgba(58,114,176,0.35)" stroke="rgba(58,114,176,0.6)" stroke-width="1.5"/>
-          </g>
-        </svg>
-        <div class="slide-content">
-          <div class="slide-badge">
-            <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2z"/></svg>
-            Team Collaboration
-          </div>
-          <div class="slide-title">Connect teams across<br>your entire organisation</div>
-          <div class="slide-desc">Break silos with cross-department workflows, shared inboxes, and real-time collaboration tools.</div>
-        </div>
-      </div>
-
-    </div>
-
-    <div class="slide-dots">
-      <div class="dot"></div>
-      <div class="dot"></div>
-      <div class="dot"></div>
-      <div class="dot"></div>
-    </div>
-  </div>
-
-  <!-- ── RIGHT PANEL: GLASS CARD ── -->
-  <div class="right-panel">
-    <div class="card">
-      <div class="card-accent"></div>
-      <div class="card-body">
-
-        <div class="logo-section">
-          <div class="logo-icon"><img src="logo.png" alt="Encryptz" /></div>
-          @if (stage() === 'company') {
-            <div class="brand-name">Select Company</div>
-            <div class="brand-sub">Please choose a company to continue</div>
-            @if (individualId(); as id) {
-              <div class="individual-id" title="Your lifelong ID on this platform. It never changes.">
-                Individual ID <strong>{{ id }}</strong>
+        <div class="frame-body">
+          <div class="app-grid">
+            @for (app of personalApps(); track app.moduleKey) {
+              <div class="company-item personal-app-item app-card" [class.disabled]="!canOpenPersonalApp(app)"
+                   [attr.aria-disabled]="!canOpenPersonalApp(app)" (click)="openPersonalApp(app)"
+                   role="button" [attr.tabindex]="canOpenPersonalApp(app) ? 0 : -1"
+                   (keydown.enter)="openPersonalApp(app)" (keydown.space)="openPersonalApp(app); $event.preventDefault()">
+                <div class="tile-top">
+                  <div class="company-avatar">
+                    <span class="material-icons">{{ app.icon || 'apps' }}</span>
+                  </div>
+                  @if (!app.isReleased) { <span class="soon-badge">Coming soon</span> }
+                </div>
+                <div class="company-info">
+                  <h3>{{ app.moduleName }}</h3>
+                  <p class="tile-desc">{{ app.description }}</p>
+                </div>
+                <div class="tile-foot">
+                  @if (canOpenPersonalApp(app)) {
+                    <span class="open-link">Open <span class="material-icons arrow">chevron_right</span></span>
+                  } @else {
+                    <span class="material-icons arrow">schedule</span>
+                  }
+                </div>
               </div>
             }
-          } @else if (stage() === 'module') {
-            <div class="brand-name">Modules</div>
-            <div class="brand-sub">Choose what you want to work with</div>
-          } @else {
-            <div class="brand-name">Select Branch</div>
-            <div class="brand-sub">Choose where you'll work</div>
-          }
+          </div>
         </div>
+      </section>
+    }
+
+    <section class="frame main-frame" [class.companies-frame]="stage() === 'company'">
+      <div class="frame-head">
+        @if (stage() === 'company') {
+          <div class="frame-icon"><span class="material-icons">apartment</span></div>
+          <div class="frame-titles">
+            <h2 class="frame-title">{{ showCreate() ? 'New Company' : 'Select Company' }}</h2>
+            <div class="frame-sub">{{ showCreate() ? 'Set up a company of your own' : 'Please choose a company to continue' }}</div>
+          </div>
+          @if (!showCreate()) {
+            @if (companies().length > 0) { <span class="count">{{ companies().length }}</span> }
+            <span class="spacer"></span>
+            @if (showSearch()) {
+              <label class="search">
+                <span class="material-icons">search</span>
+                <input type="search" placeholder="Search name or code" aria-label="Search companies"
+                       [ngModel]="search()" (ngModelChange)="search.set($event)" />
+              </label>
+            }
+            <button class="btn-signin create-company-btn" type="button" (click)="openCreate()" [disabled]="!creation()?.canCreate">Create Company</button>
+          }
+        } @else if (stage() === 'module') {
+          <div class="frame-icon"><span class="material-icons">widgets</span></div>
+          <div class="frame-titles">
+            <h2 class="frame-title">Modules</h2>
+            <div class="frame-sub">Choose what you want to work with</div>
+          </div>
+          <span class="spacer"></span>
+          @if (canAdminister()) {
+            <button class="link-back" (click)="openAdministration()">
+              <span class="material-icons">admin_panel_settings</span> Administration
+            </button>
+          }
+          <button class="link-back" (click)="backToCompanies()">
+            <span class="material-icons">chevron_left</span> Back to companies
+          </button>
+        } @else {
+          <div class="frame-icon"><span class="material-icons">storefront</span></div>
+          <div class="frame-titles">
+            <h2 class="frame-title">Select Branch</h2>
+            <div class="frame-sub">Choose where you'll work</div>
+          </div>
+          <span class="spacer"></span>
+          <button class="link-back" (click)="backToModules()">
+            <span class="material-icons">chevron_left</span> Back to modules
+          </button>
+        }
+      </div>
+
+      <div class="frame-body">
 
         @if (loading() || entering()) {
           <div class="loading-state">
@@ -168,36 +151,49 @@
         }
 
         <!-- STEP 1: COMPANY -->
+        @if (stage() === 'company' && !showCreate()) {
+          @if (creation() && !creation()!.canCreate) {
+            <p class="notice create-reason">{{ creation()!.message }}</p>
+          }
+          @if (creationFailed() && !creation()) {
+            <p class="notice create-reason">
+              Could not check whether you can create a company.
+              <button class="link-back" (click)="reload()">Refresh</button>
+            </p>
+          }
+        }
+
         @if (!loading() && !error() && stage() === 'company' && companies().length === 0 && !showCreate()) {
           <div class="empty-state">
             <span class="material-icons">business</span>
             <p>You are not in a company yet.</p>
             <p class="small">Create your own company, or join one you were invited to.</p>
-            <button class="btn-signin create-company-btn" (click)="openCreate()" [disabled]="!creation()?.canCreate">Create Company</button>
-            @if (creation() && !creation()!.canCreate) {
-              <p class="small create-reason">{{ creation()!.message }}</p>
-            }
-            @if (creationFailed() && !creation()) {
-              <p class="small create-reason">Could not check whether you can create a company.</p>
-              <button class="link-back" (click)="reload()">Refresh</button>
-            }
             <button class="link-back" (click)="openInvitations()">Invitations and join requests</button>
           </div>
         }
 
         @if (!loading() && stage() === 'company' && companies().length > 0 && !showCreate()) {
-          <div class="company-list">
-            @for (company of companies(); track company.companyId) {
-              <div class="company-item" [class.disabled]="!enterable(company)"
+          <div class="tile-grid">
+            @for (company of filteredCompanies(); track company.companyId) {
+              <div class="company-item tile" [class.disabled]="!enterable(company)"
                    [attr.aria-disabled]="!enterable(company)" (click)="selectCompany(company)"
                    role="button" [attr.tabindex]="enterable(company) ? 0 : -1"
                    (keydown.enter)="onRowKey(company, $event)" (keydown.space)="onRowKey(company, $event, true)">
-                <div class="company-avatar">
-                  <span class="material-icons">apartment</span>
+                <div class="tile-top">
+                  <div class="company-avatar" aria-hidden="true">{{ initials(company.companyName) }}</div>
+                  @if (enterable(company)) {
+                    <span class="material-icons arrow">chevron_right</span>
+                  } @else if (company.provisionStatus === 'Provisioning') {
+                    <span class="material-icons arrow">hourglass_top</span>
+                  } @else {
+                    <span class="material-icons arrow">error_outline</span>
+                  }
                 </div>
                 <div class="company-info">
                   <h3>{{ company.companyName }}</h3>
                   <p class="company-code">{{ company.companyCode }}</p>
+                </div>
+                <div class="tile-foot">
                   <span class="role-badge" [class]="getRoleClass(company.roleInCompany)">
                     {{ company.roleInCompany }}
                   </span>
@@ -214,65 +210,22 @@
                     }
                   }
                 </div>
-                @if (enterable(company)) {
-                  <span class="material-icons arrow">chevron_right</span>
-                } @else if (company.provisionStatus === 'Provisioning') {
-                  <span class="material-icons arrow">hourglass_top</span>
-                } @else {
-                  <span class="material-icons arrow">error_outline</span>
-                }
+              </div>
+            } @empty {
+              <div class="no-match">
+                <span class="material-icons">search_off</span>
+                No company matches "{{ search() }}".
               </div>
             }
           </div>
 
           @if (pollStopped()) {
-            <div class="scope-step">
-              <p class="small">Still setting up. Come back in a few minutes.</p>
+            <p class="notice">
+              Still setting up. Come back in a few minutes.
               <button class="link-back" (click)="reload()">Refresh</button>
-            </div>
+            </p>
           }
-
-          <div class="scope-step">
-            <button class="btn-signin create-company-btn" (click)="openCreate()" [disabled]="!creation()?.canCreate">Create Company</button>
-            @if (creation() && !creation()!.canCreate) {
-              <p class="small create-reason">{{ creation()!.message }}</p>
-            }
-            @if (creationFailed() && !creation()) {
-              <p class="small create-reason">Could not check whether you can create a company.</p>
-              <button class="link-back" (click)="reload()">Refresh</button>
-            }
-          </div>
         }
-
-        <!-- PERSONAL APPLICATIONS: free, open to every user, no company needed -->
-        @if (!loading() && stage() === 'company' && !showCreate() && personalApps().length > 0) {
-          <div class="personal-apps">
-            <h2 class="personal-apps-title">Personal applications</h2>
-            <div class="company-list">
-              @for (app of personalApps(); track app.moduleKey) {
-                <div class="company-item personal-app-item" [class.disabled]="!canOpenPersonalApp(app)"
-                     [attr.aria-disabled]="!canOpenPersonalApp(app)" (click)="openPersonalApp(app)"
-                     role="button" [attr.tabindex]="canOpenPersonalApp(app) ? 0 : -1"
-                     (keydown.enter)="openPersonalApp(app)" (keydown.space)="openPersonalApp(app); $event.preventDefault()">
-                  <div class="company-avatar">
-                    <span class="material-icons">{{ app.icon || 'apps' }}</span>
-                  </div>
-                  <div class="company-info">
-                    <h3>{{ app.moduleName }}</h3>
-                    <p class="company-code">{{ app.description }}</p>
-                    @if (!app.isReleased) { <span class="soon-badge">Coming soon</span> }
-                  </div>
-                  @if (canOpenPersonalApp(app)) {
-                    <span class="material-icons arrow">chevron_right</span>
-                  } @else {
-                    <span class="material-icons arrow">schedule</span>
-                  }
-                </div>
-              }
-            </div>
-          </div>
-        }
-
 
         <!-- STEP 1b: CREATE A COMPANY -->
         @if (stage() === 'company' && showCreate()) {
@@ -309,44 +262,37 @@
 
         <!-- STEP 2: MODULE (every module is listed; the ones this user cannot open are disabled) -->
         @if (!loading() && stage() === 'module') {
-          <div class="company-list">
+          <div class="tile-grid">
             @for (module of modules(); track module.moduleKey) {
-              <div class="company-item module-item" [class.disabled]="module.state !== 'Available'"
+              <div class="company-item module-item tile" [class.disabled]="module.state !== 'Available'"
                    [attr.aria-disabled]="module.state !== 'Available'" (click)="openModule(module)"
                    role="button" [attr.tabindex]="module.state === 'Available' ? 0 : -1"
                    (keydown.enter)="openModule(module)" (keydown.space)="openModule(module); $event.preventDefault()">
-                <div class="company-avatar">
-                  <span class="material-icons">{{ module.icon || 'apps' }}</span>
+                <div class="tile-top">
+                  <div class="company-avatar">
+                    <span class="material-icons">{{ module.icon || 'apps' }}</span>
+                  </div>
+                  @if (module.state === 'Available') {
+                    <span class="material-icons arrow">chevron_right</span>
+                  } @else if (module.state === 'ComingSoon') {
+                    <span class="material-icons arrow">schedule</span>
+                  } @else {
+                    <span class="material-icons arrow">lock</span>
+                  }
                 </div>
                 <div class="company-info">
                   <h3>{{ module.moduleName }}</h3>
-                  <p class="company-code">{{ module.description }}</p>
+                  <p class="tile-desc">{{ module.description }}</p>
+                </div>
+                <div class="tile-foot">
                   @if (module.state === 'ComingSoon') {
                     <span class="soon-badge">Coming soon</span>
                   } @else if (caption(module)) {
                     <span class="status-badge">{{ caption(module) }}</span>
                   }
                 </div>
-                @if (module.state === 'Available') {
-                  <span class="material-icons arrow">chevron_right</span>
-                } @else if (module.state === 'ComingSoon') {
-                  <span class="material-icons arrow">schedule</span>
-                } @else {
-                  <span class="material-icons arrow">lock</span>
-                }
               </div>
             }
-          </div>
-
-          <div class="scope-step">
-            @if (canAdminister()) {
-              <button class="link-back" (click)="openAdministration()">
-                <span class="material-icons">admin_panel_settings</span> Administration
-              </button>
-            }
-            <button class="link-back" (click)="backToCompanies()">
-              <span class="material-icons">chevron_left</span> Back to companies
-            </button>
           </div>
         }
 
@@ -366,28 +312,24 @@
               }
             </div>
           } @else {
-            <div class="company-list">
+            <div class="tile-grid">
               @for (branch of branches(); track branch.locationId) {
-                <div class="company-item branch-item" (click)="enterBranch(branch)"
+                <div class="company-item branch-item tile" (click)="enterBranch(branch)"
                      role="button" tabindex="0" (keydown.enter)="enterBranch(branch)" (keydown.space)="enterBranch(branch); $event.preventDefault()">
-                  <div class="company-avatar">
-                    <span class="material-icons">storefront</span>
+                  <div class="tile-top">
+                    <div class="company-avatar">
+                      <span class="material-icons">storefront</span>
+                    </div>
+                    <span class="material-icons arrow">chevron_right</span>
                   </div>
                   <div class="company-info">
                     <h3>{{ branch.locationName }}</h3>
                     <p class="company-code">{{ branch.city || branch.locationCode }}</p>
                   </div>
-                  <span class="material-icons arrow">chevron_right</span>
                 </div>
               }
             </div>
           }
-
-          <div class="scope-step">
-            <button class="link-back" (click)="backToModules()">
-              <span class="material-icons">chevron_left</span> Back to modules
-            </button>
-          </div>
         }
 
         @if (error() && !showCreate()) {
@@ -397,19 +339,11 @@
             <button (click)="reload()" class="retry-btn">{{ stage() === 'company' ? 'Refresh' : 'Retry' }}</button>
           </div>
         }
-
-        <div class="register-row" style="display: flex; justify-content: center; gap: 20px;">
-          <a (click)="openChangePassword()" class="register-link" style="cursor: pointer;">Change Password</a>
-          <span style="color: rgba(255,255,255,0.2);">|</span>
-          <a (click)="logout()" class="register-link" style="cursor: pointer;">Logout</a>
-        </div>
       </div>
+    </section>
+  </main>
 
-      <div class="card-footer">
-        &copy; 2026 Encryptz ERP. All rights reserved.
-      </div>
-    </div>
-  </div>
+  <footer class="page-footer">&copy; 2026 Encryptz ERP. All rights reserved.</footer>
 </div>
 
 <!-- Change Password Modal -->
@@ -461,9 +395,9 @@
         </div>
       </div>
 
-      <button 
+      <button
         style="width: 100%; height: 44px; border-radius: 8px; border: none; background: linear-gradient(135deg, #3a72b0 0%, #1b3a6e 100%); color: white; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center;"
-        (click)="submitChangePassword()" 
+        (click)="submitChangePassword()"
         [disabled]="changePasswordLoading()">
         @if (changePasswordLoading()) { <div style="width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite;"></div> }
         @else { Update Password }
@@ -475,7 +409,7 @@
           {{ changePasswordError() }}
         </div>
       }
-      
+
       @if (changePasswordSuccess()) {
         <div style="margin-top: 15px; padding: 10px; background: rgba(50, 200, 100, 0.1); border: 1px solid rgba(50, 200, 100, 0.3); border-radius: 6px; color: #32c864; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
           <span class="material-icons">check_circle</span>
@@ -483,7 +417,7 @@
         </div>
       }
 
-      <button 
+      <button
         style="width: 100%; margin-top: 15px; background: transparent; border: none; color: #8ba3c0; cursor: pointer; padding: 8px;"
         (click)="closeChangePassword()">
         Cancel
