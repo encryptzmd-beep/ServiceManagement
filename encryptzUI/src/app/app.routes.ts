@@ -41,6 +41,22 @@ export const routes: Routes = [
     canActivate: [authGuard],
     data: { title: 'Job Portal' },
   },
+  ...(['search', 'applications', 'saved'] as const).map(mode => ({
+    path: `apps/jobs/${mode}`,
+    loadComponent: () => import('./Encryptz/components/job-board-component/job-board-component')
+      .then(m => m.JobBoardComponent),
+    canActivate: [authGuard],
+    data: { title: 'Job Portal', mode },
+  })),
+  // The jobs a company offers (Job Portal, the company's side): a login and a chosen
+  // company; the API decides on every call whether this person may manage them
+  {
+    path: 'hiring',
+    loadComponent: () => import('./Encryptz/components/hiring-component/hiring-component')
+      .then(m => m.HiringComponent),
+    canActivate: [authGuard],
+    data: { title: 'Job postings' },
+  },
   // Protected routes (with layout)
   {
     path: '',

@@ -428,6 +428,11 @@ export class CompanySelectorComponent {
     this.router.navigate(['/settings/platform']);
   }
 
+  /** The jobs this company offers on Job Portal. The API decides who may manage them. */
+  openHiring(): void {
+    this.router.navigate(['/hiring']);
+  }
+
   // ── STEP 3: BRANCH ────────────────────────────────────────────────
 
   private loadBranches(): void {

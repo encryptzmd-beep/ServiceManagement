@@ -1,0 +1,76 @@
+/* The jobs of a company. Cards, dialogs and badges come from the profile and the job pages. */
+
+$ink: #111827;
+$text: #374151;
+$muted: #6b7280;
+$navy: #1b4a7a;
+$hair: #f0f1f3;
+
+.jb-head { align-items: center; flex-wrap: wrap; }
+
+.hr-counts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: $muted;
+
+  .jb-title { font-size: 13px; font-weight: 600; }
+}
+
+.hr-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+
+.hr-avatar {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: $navy;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.hr-note {
+  margin: 10px 0 0;
+  padding-left: 10px;
+  border-left: 3px solid #d1d5db;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: $text;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* ── the profile of an applicant ── */
+.hr-profile {
+  gap: 18px;
+
+  section { padding-top: 14px; border-top: 1px solid $hair; }
+
+  h4 { margin: 0 0 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: $muted; }
+  .hr-note { margin-top: 0; }
+  .jp-file { margin-top: 0; }
+  .jp-evidence { margin-left: 4px; }
+}
+
+.hr-item {
+  padding: 8px 0;
+  font-size: 14px;
+  color: $ink;
+  overflow-wrap: anywhere;
+
+  &:first-of-type { padding-top: 0; }
+  strong { font-weight: 600; }
+}
+
+.hr-status-foot { flex-wrap: wrap; }
+
+@media (max-width: 640px) {
+  .hr-actions { justify-content: flex-start; }
+}

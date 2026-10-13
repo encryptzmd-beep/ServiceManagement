@@ -1,0 +1,9 @@
+import { PersonalMenuItem } from './personal-shell-component';
+
+/** The side menu of Job Portal, the same on each of its pages. */
+export const JOBS_MENU: PersonalMenuItem[] = [
+  { label: 'My profile', icon: 'person', route: '/apps/jobs', exact: true },
+  { label: 'Search jobs', icon: 'search', route: '/apps/jobs/search' },
+  { label: 'My applications', icon: 'assignment_turned_in', route: '/apps/jobs/applications' },
+  { label: 'Saved jobs', icon: 'bookmark_border', route: '/apps/jobs/saved' },
+];

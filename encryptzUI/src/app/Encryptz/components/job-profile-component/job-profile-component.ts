@@ -14,7 +14,8 @@ import {
   JobWorkMode,
   JobsService,
 } from '../../Services/jobs-service';
-import { PersonalMenuItem, PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
+import { JOBS_MENU } from '../personal-shell-component/jobs-menu';
+import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 
 type DialogKind = 'profile' | 'preferences' | 'experience' | 'education' | 'skill' | 'certificate';
 type RowKind = 'experience' | 'education' | 'skill' | 'certificate';
@@ -70,13 +71,7 @@ export class JobProfileComponent implements OnInit, OnDestroy {
   readonly levels = ['Beginner', 'Intermediate', 'Expert'];
   readonly workModes: JobWorkMode[] = ['On-site', 'Remote', 'Hybrid'];
 
-  /** The side menu. A page without a route is not built yet and is shown as "Soon". */
-  readonly menu: PersonalMenuItem[] = [
-    { label: 'My profile', icon: 'person', route: '/apps/jobs' },
-    { label: 'Search jobs', icon: 'search' },
-    { label: 'My applications', icon: 'assignment_turned_in' },
-    { label: 'Saved jobs', icon: 'bookmark_border' },
-  ];
+  readonly menu = JOBS_MENU;
 
   /** The photo as an address the page can show ('' when there is none). */
   photoUrl = signal('');

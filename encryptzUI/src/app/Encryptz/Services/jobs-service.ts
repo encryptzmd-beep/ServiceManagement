@@ -101,6 +101,68 @@ export interface JobCertificateFields {
   issuedOn: string | null;
 }
 
+// ── job postings as a person sees them ──
+
+export type JobEmploymentType = 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
+export type JobApplicationStatus = 'Applied' | 'Shortlisted' | 'Rejected' | 'Hired' | 'Withdrawn';
+
+export const JOB_EMPLOYMENT_TYPES: JobEmploymentType[] = ['Full-time', 'Part-time', 'Contract', 'Internship'];
+export const JOB_WORK_MODES: JobWorkMode[] = ['On-site', 'Remote', 'Hybrid'];
+
+export interface JobPostingView {
+  postingId: number;
+  title: string;
+  companyName: string;
+  city: string;
+  employmentType: JobEmploymentType;
+  workMode: JobWorkMode;
+  experienceMinYears?: number | null;
+  experienceMaxYears?: number | null;
+  /** Per month, in rupees. */
+  salaryMin?: number | null;
+  salaryMax?: number | null;
+  skills: string;
+  /** Filled only when one job is opened. */
+  description: string;
+  publishedAt?: string | null;
+  closesOn?: string | null;
+  isSaved: boolean;
+  /** The state of this person's application ('' when they did not apply). */
+  myStatus: JobApplicationStatus | '';
+  /** It still takes applications. */
+  isOpen: boolean;
+}
+
+export interface JobPostingSearchResult {
+  items: JobPostingView[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface JobSearchFilter {
+  q: string;
+  city: string;
+  type: string;
+  mode: string;
+  page: number;
+}
+
+export interface JobApplication {
+  applicationId: number;
+  postingId: number;
+  title: string;
+  companyName: string;
+  city: string;
+  employmentType: string;
+  workMode: string;
+  status: JobApplicationStatus;
+  note: string;
+  appliedAt: string;
+  statusAt: string;
+  isOpen: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class JobsService {
   private http = inject(HttpClient);
@@ -189,6 +251,43 @@ export class JobsService {
 
   deletePhoto(): Observable<ApiResponse<boolean>> {
     return this.http.delete<ApiResponse<boolean>>(`${this.api}/photo`);
+  }
+
+  // ── job postings ──
+
+  searchPostings(filter: JobSearchFilter): Observable<ApiResponse<JobPostingSearchResult>> {
+    const params: Record<string, string> = { page: String(filter.page) };
+    if (filter.q.trim()) params['q'] = filter.q.trim();
+    if (filter.city.trim()) params['city'] = filter.city.trim();
+    if (filter.type) params['type'] = filter.type;
+    if (filter.mode) params['mode'] = filter.mode;
+    return this.http.get<ApiResponse<JobPostingSearchResult>>(`${this.api}/postings`, { params });
+  }
+
+  getPosting(postingId: number): Observable<ApiResponse<JobPostingView>> {
+    return this.http.get<ApiResponse<JobPostingView>>(`${this.api}/postings/${postingId}`);
+  }
+
+  apply(postingId: number, note: string): Observable<ApiResponse<number>> {
+    return this.http.post<ApiResponse<number>>(`${this.api}/postings/${postingId}/apply`, { note });
+  }
+
+  setSaved(postingId: number, saved: boolean): Observable<ApiResponse<boolean>> {
+    return saved
+      ? this.http.post<ApiResponse<boolean>>(`${this.api}/postings/${postingId}/save`, {})
+      : this.http.delete<ApiResponse<boolean>>(`${this.api}/postings/${postingId}/save`);
+  }
+
+  getApplications(): Observable<ApiResponse<JobApplication[]>> {
+    return this.http.get<ApiResponse<JobApplication[]>>(`${this.api}/applications`);
+  }
+
+  withdraw(applicationId: number): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/applications/${applicationId}/withdraw`, {});
+  }
+
+  getSaved(): Observable<ApiResponse<JobPostingView[]>> {
+    return this.http.get<ApiResponse<JobPostingView[]>>(`${this.api}/saved`);
   }
 
   /** One file of the person, as bytes (the request carries the login, so a plain link would not work). */

@@ -1,0 +1,168 @@
+/* The pages of jobs. The cards, buttons, dialogs and chips come from the profile page. */
+
+$ink: #111827;
+$text: #374151;
+$muted: #6b7280;
+$faint: #9ca3af;
+$line: #e5e7eb;
+$navy: #1b4a7a;
+
+.jb-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 16px;
+
+  h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.015em; color: $ink; }
+}
+
+/* ── search bar ── */
+.jb-search {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+
+  label { min-width: 0; }
+}
+
+.jb-search-main {
+  position: relative;
+
+  .material-icons { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 18px; color: $faint; pointer-events: none; }
+  .jp-input { padding-left: 34px; }
+}
+
+/* ── a job in a list ── */
+.jb-card {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  transition: border-color 0.12s;
+
+  &:hover { border-color: #cbd5e1; }
+  &.closed { background: #fafafa; }
+
+  h2 { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.3; }
+}
+
+.jb-card-main { flex: 1 1 auto; min-width: 0; }
+
+.jb-card-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.jb-title {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: $navy;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+
+  &:hover { text-decoration: underline; }
+  &:focus-visible { outline: 2px solid rgba(27, 74, 122, 0.4); outline-offset: 2px; border-radius: 2px; }
+}
+
+.jb-company { margin-top: 2px; font-size: 14px; font-weight: 500; color: $text; overflow-wrap: anywhere; }
+
+.jb-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: $muted;
+
+  > span { display: inline-flex; align-items: center; gap: 5px; }
+  .material-icons { font-size: 15px; color: $faint; }
+}
+
+.jb-skills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.jb-foot { margin-top: 10px; font-size: 12.5px; color: $faint; &:empty { display: none; } }
+
+/* ── state of an application ── */
+.jb-status {
+  display: inline-block;
+  padding: 2px 9px;
+  border: 1px solid $line;
+  border-radius: 4px;
+  background: #f9fafb;
+  font-size: 12px;
+  font-weight: 500;
+  color: $muted;
+  white-space: nowrap;
+
+  &.applied { border-color: #c7d7e8; background: #f1f6fb; color: $navy; }
+  &.shortlisted { border-color: #f5d9a6; background: #fff8eb; color: #92580a; }
+  &.hired { border-color: #b7dfc4; background: #f0faf3; color: #166534; }
+  &.rejected { border-color: #f1c7c3; background: #fef3f2; color: #b42318; }
+}
+
+/* ── nothing to show ── */
+.jb-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: $muted;
+
+  > .material-icons { font-size: 36px; color: $faint; }
+  p { margin: 10px 0 16px; font-size: 14.5px; color: $text; }
+  .jp-btn { text-decoration: none; }
+}
+
+/* ── pages ── */
+.jb-pages {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 18px;
+  font-size: 13px;
+  color: $muted;
+}
+
+/* ── one job, opened ── */
+.jb-detail { max-width: 680px; }
+.jb-description { margin: 4px 0 0; font-size: 14px; line-height: 1.65; color: $text; white-space: pre-line; overflow-wrap: anywhere; }
+.jb-grow { flex: 1 1 auto; }
+.jp-dialog-foot { align-items: center; }
+
+/* the apply dialog opens above an open job */
+.jb-over { z-index: 55; }
+
+.jb-consent {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #c7d7e8;
+  border-radius: 8px;
+  background: #f4f8fc;
+
+  .material-icons { font-size: 18px; color: $navy; margin-top: 1px; }
+  p { margin: 0; font-size: 13px; line-height: 1.55; color: $text; }
+}
+
+.jb-link { margin-left: 6px; font-weight: 600; color: inherit; text-decoration: underline; }
+
+/* the profile page hides everything but its resume on paper; these pages print as they are */
+@media print {
+  app-personal-shell { display: block !important; }
+}
+
+@media (max-width: 900px) {
+  .jb-search { grid-template-columns: 1fr 1fr; }
+  .jb-search-main { grid-column: 1 / -1; }
+}
+
+@media (max-width: 640px) {
+  .jb-card { flex-direction: column; }
+  .jb-card-side { flex-direction: row; align-items: center; flex-wrap: wrap; }
+}

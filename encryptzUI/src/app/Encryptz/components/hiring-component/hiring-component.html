@@ -1,0 +1,279 @@
+<app-personal-shell appName="Job postings" icon="work" subtitle="Jobs your company offers"
+                    backLabel="Back to modules" backRoute="/select-module">
+
+  @if (loading()) {
+    <div class="jp-state">
+      <span class="jp-spinner" aria-hidden="true"></span>
+      <p>Loading…</p>
+    </div>
+  } @else if (unavailable()) {
+    <div class="jp-state">
+      <span class="material-icons">lock_outline</span>
+      <p>{{ unavailable() }}</p>
+      <button class="jp-btn primary" (click)="load()">Try again</button>
+    </div>
+  } @else if (selected(); as job) {
+
+    <!-- ═══════════ APPLICANTS OF ONE JOB ═══════════ -->
+    <div class="jb-head">
+      <button class="jp-btn" (click)="backToJobs()"><span class="material-icons">chevron_left</span>All jobs</button>
+      <h1>{{ job.title }}</h1>
+      <span [class]="postingClass(job.status)">{{ job.status }}</span>
+      <span class="jp-count">{{ applicants().length }} {{ applicants().length === 1 ? 'applicant' : 'applicants' }}</span>
+    </div>
+
+    @if (applicantsLoading()) {
+      <div class="jp-state"><span class="jp-spinner" aria-hidden="true"></span></div>
+    } @else {
+      @for (a of applicants(); track a.applicationId) {
+        <article class="jp-card jb-card">
+          <div class="hr-avatar" aria-hidden="true">{{ initials(a.fullName) || '?' }}</div>
+          <div class="jb-card-main">
+            <h2><button class="jb-title" (click)="openApplicant(a)">{{ a.fullName || 'No name' }}</button></h2>
+            <div class="jb-company">{{ a.headline }}</div>
+            <div class="jb-meta">
+              @if (a.city) { <span><span class="material-icons">place</span>{{ a.city }}</span> }
+              <span><span class="material-icons">event</span>Applied {{ dayLabel(a.appliedAt) }}</span>
+              <span><span class="material-icons">description</span>{{ a.hasResume ? 'Resume attached' : 'No resume' }}</span>
+            </div>
+            @if (a.note) { <p class="hr-note">"{{ a.note }}"</p> }
+          </div>
+          <div class="jb-card-side">
+            <span [class]="statusClass(a.status)">{{ a.status }}</span>
+            <button class="jp-btn" (click)="openApplicant(a)">View profile</button>
+          </div>
+        </article>
+      } @empty {
+        <div class="jp-card jb-empty">
+          <span class="material-icons">group</span>
+          <p>Nobody has applied to this job yet.</p>
+        </div>
+      }
+    }
+
+  } @else {
+
+    <!-- ═══════════ JOBS OF THE COMPANY ═══════════ -->
+    <div class="jb-head">
+      <h1>Job postings</h1>
+      <span class="jp-count">{{ postings().length }}</span>
+      <span class="jb-grow"></span>
+      <button class="jp-btn primary" (click)="openNew()"><span class="material-icons">add</span>New job</button>
+    </div>
+
+    @for (p of postings(); track p.postingId) {
+      <article class="jp-card jb-card">
+        <div class="jb-card-main">
+          <h2>{{ p.title }}</h2>
+          <div class="jb-meta">
+            <span><span class="material-icons">place</span>{{ p.city }}</span>
+            <span><span class="material-icons">schedule</span>{{ p.employmentType }}</span>
+            <span><span class="material-icons">apartment</span>{{ p.workMode }}</span>
+            @if (p.closesOn) { <span><span class="material-icons">event</span>Closes {{ dayLabel(p.closesOn) }}</span> }
+          </div>
+          <div class="hr-counts">
+            @if (p.status === 'Draft') {
+              <span>Not published yet. Only your company sees it.</span>
+            } @else {
+              <button class="jb-title" (click)="showApplicants(p)">
+                {{ applicantCount(p) }} {{ applicantCount(p) === 1 ? 'applicant' : 'applicants' }}
+              </button>
+              @if (applicantCount(p)) {
+                <span>· {{ p.applied }} new · {{ p.shortlisted }} shortlisted · {{ p.hired }} hired · {{ p.rejected }} rejected</span>
+              }
+            }
+          </div>
+        </div>
+        <div class="jb-card-side">
+          <span [class]="postingClass(p.status)">{{ p.status }}</span>
+          <div class="hr-actions">
+            @if (p.status === 'Draft') { <button class="jp-btn primary" (click)="publish(p)">Publish</button> }
+            @if (p.status === 'Closed') { <button class="jp-btn" (click)="publish(p)">Reopen</button> }
+            @if (p.status === 'Open') { <button class="jp-btn" (click)="close(p)">Close</button> }
+            <button class="jp-btn" (click)="openEdit(p)">Edit</button>
+            @if (applicantCount(p) === 0) { <button class="jp-btn ghost" (click)="remove(p)">Remove</button> }
+          </div>
+        </div>
+      </article>
+    } @empty {
+      <div class="jp-card jb-empty">
+        <span class="material-icons">work_outline</span>
+        <p>Your company has no job postings yet. A new job is saved as a draft; people find it once you publish it.</p>
+        <button class="jp-btn primary" (click)="openNew()">New job</button>
+      </div>
+    }
+  }
+
+  @if (toast(); as t) {
+    <div class="jp-toast" [class.bad]="!t.ok" role="status">
+      <span class="material-icons">{{ t.ok ? 'check_circle' : 'error_outline' }}</span>{{ t.text }}
+    </div>
+  }
+</app-personal-shell>
+
+<!-- ═══════════ A JOB, WRITTEN ═══════════ -->
+@if (form(); as f) {
+  <div class="jp-overlay">
+    <div class="jp-dialog jb-detail" role="dialog" aria-modal="true">
+      <div class="jp-dialog-head">
+        <h3>{{ f.postingId ? 'Edit job' : 'New job' }}</h3>
+        <button class="jp-close" (click)="closeForm()" aria-label="Close"><span class="material-icons">close</span></button>
+      </div>
+      <div class="jp-dialog-body">
+        <label>Job title *
+          <input class="jp-input" name="title" [(ngModel)]="f.title" maxlength="200" placeholder="Accountant" />
+        </label>
+        <div class="jp-two">
+          <label>City *
+            <input class="jp-input" name="city" [(ngModel)]="f.city" maxlength="100" />
+          </label>
+          <label>Closing date (optional)
+            <input class="jp-input" name="closesOn" type="date" [(ngModel)]="f.closesOn" />
+          </label>
+        </div>
+        <div class="jp-two">
+          <label>Type of employment *
+            <select class="jp-input" name="employmentType" [(ngModel)]="f.employmentType">
+              @for (type of employmentTypes; track type) { <option [value]="type">{{ type }}</option> }
+            </select>
+          </label>
+          <label>Working mode *
+            <select class="jp-input" name="workMode" [(ngModel)]="f.workMode">
+              @for (m of workModes; track m) { <option [value]="m">{{ m }}</option> }
+            </select>
+          </label>
+        </div>
+        <div class="jp-two">
+          <label>Experience from (years)
+            <input class="jp-input" name="experienceMin" type="number" min="0" max="60" [(ngModel)]="f.experienceMin" />
+          </label>
+          <label>Experience to (years)
+            <input class="jp-input" name="experienceMax" type="number" min="0" max="60" [(ngModel)]="f.experienceMax" />
+          </label>
+        </div>
+        <div class="jp-two">
+          <label>Salary from (₹ per month)
+            <input class="jp-input" name="salaryLow" type="number" min="1" step="500" [(ngModel)]="f.salaryLow" />
+          </label>
+          <label>Salary to (₹ per month)
+            <input class="jp-input" name="salaryHigh" type="number" min="1" step="500" [(ngModel)]="f.salaryHigh" />
+          </label>
+        </div>
+        <label>Skills
+          <input class="jp-input" name="skills" [(ngModel)]="f.skills" maxlength="400" placeholder="Tally, GST, Excel" />
+          <small>Separate them with a comma. Leave the salary empty if you prefer not to show it.</small>
+        </label>
+        <label>Description *
+          <textarea class="jp-input" name="description" rows="7" [(ngModel)]="f.description" maxlength="4000"
+                    placeholder="What the person will do, what you expect, what you offer."></textarea>
+        </label>
+        @if (formError()) { <div class="jp-error">{{ formError() }}</div> }
+      </div>
+      <div class="jp-dialog-foot">
+        <button class="jp-btn ghost" (click)="closeForm()" [disabled]="saving()">Cancel</button>
+        <button class="jp-btn primary" (click)="save()" [disabled]="saving()">{{ saving() ? 'Saving…' : (f.postingId ? 'Save' : 'Save as draft') }}</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══════════ ONE APPLICANT ═══════════ -->
+@if (applicant(); as a) {
+  @let pg = a.profile;
+  <div class="jp-overlay">
+    <div class="jp-dialog jb-detail" role="dialog" aria-modal="true">
+      <div class="jp-dialog-head">
+        <h3>{{ pg.profile.fullName || 'Applicant' }}</h3>
+        <button class="jp-close" (click)="closeApplicant()" aria-label="Close"><span class="material-icons">close</span></button>
+      </div>
+      <div class="jp-dialog-body hr-profile">
+        <div>
+          <div class="jb-company">{{ pg.profile.headline }}</div>
+          <div class="jb-meta">
+            @if (pg.profile.city) { <span><span class="material-icons">place</span>{{ pg.profile.city }}</span> }
+            @if (pg.profile.contactEmail) { <span><span class="material-icons">mail_outline</span>{{ pg.profile.contactEmail }}</span> }
+            @if (pg.profile.contactPhone) { <span><span class="material-icons">call</span>{{ pg.profile.contactPhone }}</span> }
+            <span><span class="material-icons">event</span>Applied {{ dayLabel(a.appliedAt) }}</span>
+          </div>
+        </div>
+
+        @if (a.note) { <p class="hr-note">"{{ a.note }}"</p> }
+        @if (pg.profile.summary) { <p class="jb-description">{{ pg.profile.summary }}</p> }
+
+        @if (pg.experience.length) {
+          <section>
+            <h4>Experience</h4>
+            @for (e of pg.experience; track e.experienceId) {
+              <div class="hr-item">
+                <strong>{{ e.title }}</strong> <span class="jp-at">{{ e.organisation }}</span>
+                <div class="jp-row-sub">{{ monthLabel(e.startMonth) }} – {{ e.endMonth ? monthLabel(e.endMonth) : 'Present' }}</div>
+                @if (e.description) { <p class="jp-row-text">{{ e.description }}</p> }
+              </div>
+            }
+          </section>
+        }
+
+        @if (pg.education.length) {
+          <section>
+            <h4>Education</h4>
+            @for (d of pg.education; track d.educationId) {
+              <div class="hr-item">
+                <strong>{{ d.course }}</strong> @if (d.fieldOfStudy) { <span class="jp-at">{{ d.fieldOfStudy }}</span> }
+                <div class="jp-row-sub">{{ d.institution }} @if (years(d)) { · {{ years(d) }} }</div>
+              </div>
+            }
+          </section>
+        }
+
+        @if (pg.skills.length) {
+          <section>
+            <h4>Skills</h4>
+            <div class="jb-skills">
+              @for (s of pg.skills; track s.skillId) {
+                <span class="jp-chip">{{ s.skillName }} · {{ s.level }}
+                  @if (safeLink(s.evidenceUrl); as link) { <a class="jp-evidence" [href]="link" target="_blank" rel="noopener noreferrer">evidence</a> }
+                </span>
+              }
+            </div>
+          </section>
+        }
+
+        @if (pg.certificates.length) {
+          <section>
+            <h4>Certificates</h4>
+            @for (c of pg.certificates; track c.certificateId) {
+              <div class="hr-item">
+                <strong>{{ c.title }}</strong> @if (c.issuer) { <span class="jp-at">{{ c.issuer }}</span> }
+                @if (c.issuedOn) { <div class="jp-row-sub">{{ dayLabel(c.issuedOn) }}</div> }
+              </div>
+            }
+            <p class="jp-note">Supplied by the applicant. Nobody has checked them.</p>
+          </section>
+        }
+
+        <section>
+          <h4>Resume</h4>
+          @if (pg.resume; as r) {
+            <button class="jp-file" (click)="downloadResume(a.applicationId, r.fileName)">
+              <span class="material-icons">description</span>{{ r.fileName }}
+            </button>
+          } @else {
+            <p class="jp-empty">No resume uploaded.</p>
+          }
+        </section>
+      </div>
+      <div class="jp-dialog-foot hr-status-foot">
+        <span [class]="statusClass(a.status)">{{ a.status }}</span>
+        <span class="jb-grow"></span>
+        @for (state of applicantStates; track state) {
+          @if (state !== a.status) {
+            <button class="jp-btn" [class.primary]="state === 'Shortlisted' || state === 'Hired'" [disabled]="statusBusy()"
+                    (click)="setApplicantStatus(a.applicationId, state)">
+              {{ state === 'Applied' ? 'Back to new' : state === 'Shortlisted' ? 'Shortlist' : state === 'Rejected' ? 'Reject' : 'Mark hired' }}
+            </button>
+          }
+        }
+      </div>
+    </div>
+  </div>
+}

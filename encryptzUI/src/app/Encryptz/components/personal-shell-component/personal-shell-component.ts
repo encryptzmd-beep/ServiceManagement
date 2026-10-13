@@ -8,6 +8,8 @@ export interface PersonalMenuItem {
   icon: string;
   /** Where it opens. Left out for a page that is not built yet: it is shown as "Soon". */
   route?: string;
+  /** Marked as the current page only on exactly this address (for the first page of an application). */
+  exact?: boolean;
 }
 
 /**
@@ -23,14 +25,14 @@ export interface PersonalMenuItem {
   template: `
     <header class="ps-bar">
       <div class="ps-bar-in">
-        <a class="ps-back" routerLink="/select-company">
-          <span class="material-icons">chevron_left</span> Back to companies
+        <a class="ps-back" [routerLink]="backRoute()">
+          <span class="material-icons">chevron_left</span> {{ backLabel() }}
         </a>
         <div class="ps-app">
           <span class="ps-app-icon"><span class="material-icons">{{ icon() }}</span></span>
           <span class="ps-app-text">
             <span class="ps-app-name">{{ appName() }}</span>
-            <span class="ps-app-sub">Personal application</span>
+            <span class="ps-app-sub">{{ subtitle() }}</span>
           </span>
         </div>
         <div class="ps-user">
@@ -46,7 +48,8 @@ export interface PersonalMenuItem {
         <nav class="ps-nav" [attr.aria-label]="appName() + ' menu'">
           @for (item of menu(); track item.label) {
             @if (item.route) {
-              <a class="ps-nav-item" [routerLink]="item.route" routerLinkActive="active">
+              <a class="ps-nav-item" [routerLink]="item.route" routerLinkActive="active"
+                 [routerLinkActiveOptions]="{ exact: !!item.exact }">
                 <span class="material-icons">{{ item.icon }}</span>
                 <span class="ps-nav-label">{{ item.label }}</span>
               </a>
@@ -73,4 +76,7 @@ export class PersonalShellComponent {
   appName = input.required<string>();
   icon = input<string>('apps');
   menu = input<PersonalMenuItem[]>([]);
+  subtitle = input<string>('Personal application');
+  backLabel = input<string>('Back to companies');
+  backRoute = input<string>('/select-company');
 }

@@ -1,0 +1,225 @@
+<app-personal-shell appName="Job Portal" icon="badge" [menu]="menu">
+
+  <div class="jb-head">
+    <h1>{{ title }}</h1>
+    @if (!loading() && !unavailable()) {
+      @if (mode() === 'applications') {
+        <span class="jp-count">{{ applications().length }}</span>
+      } @else {
+        <span class="jp-count">{{ total() }}</span>
+      }
+    }
+  </div>
+
+  <!-- ═══════════ SEARCH BAR ═══════════ -->
+  @if (mode() === 'search') {
+    <form class="jp-card jb-search" (ngSubmit)="search()">
+      <label class="jb-search-main">
+        <span class="jp-sr">Job title, skill or company</span>
+        <span class="material-icons" aria-hidden="true">search</span>
+        <input class="jp-input" name="q" [(ngModel)]="filter.q" maxlength="100" placeholder="Job title, skill or company" />
+      </label>
+      <label>
+        <span class="jp-sr">City</span>
+        <input class="jp-input" name="city" [(ngModel)]="filter.city" maxlength="100" placeholder="City" />
+      </label>
+      <label>
+        <span class="jp-sr">Type of employment</span>
+        <select class="jp-input" name="type" [(ngModel)]="filter.type">
+          <option value="">Any type</option>
+          @for (type of employmentTypes; track type) { <option [value]="type">{{ type }}</option> }
+        </select>
+      </label>
+      <label>
+        <span class="jp-sr">Working mode</span>
+        <select class="jp-input" name="mode" [(ngModel)]="filter.mode">
+          <option value="">Any mode</option>
+          @for (m of workModes; track m) { <option [value]="m">{{ m }}</option> }
+        </select>
+      </label>
+      <button class="jp-btn primary" type="submit">Search</button>
+      @if (hasFilter) { <button class="jp-btn ghost" type="button" (click)="clearSearch()">Clear</button> }
+    </form>
+  }
+
+  @if (loading()) {
+    <div class="jp-state">
+      <span class="jp-spinner" aria-hidden="true"></span>
+      <p>Loading…</p>
+    </div>
+  } @else if (unavailable()) {
+    <div class="jp-state">
+      <span class="material-icons">cloud_off</span>
+      <p>{{ unavailable() }}</p>
+      <button class="jp-btn primary" (click)="load()">Try again</button>
+    </div>
+  } @else if (mode() === 'applications') {
+
+    <!-- ═══════════ MY APPLICATIONS ═══════════ -->
+    @for (a of applications(); track a.applicationId) {
+      <article class="jp-card jb-card">
+        <div class="jb-card-main">
+          <h2><button class="jb-title" (click)="open(a.postingId)">{{ a.title }}</button></h2>
+          <div class="jb-company">{{ a.companyName }}</div>
+          <div class="jb-meta">
+            <span><span class="material-icons">place</span>{{ a.city }}</span>
+            <span><span class="material-icons">schedule</span>{{ a.employmentType }}</span>
+            <span><span class="material-icons">apartment</span>{{ a.workMode }}</span>
+          </div>
+          <div class="jb-foot">Applied {{ dayLabel(a.appliedAt) }}@if (a.status !== 'Applied') { · {{ a.status }} since {{ dayLabel(a.statusAt) }} }</div>
+        </div>
+        <div class="jb-card-side">
+          <span [class]="statusClass(a.status)">{{ a.status }}</span>
+          @if (a.status !== 'Withdrawn') {
+            <button class="jp-btn" (click)="withdraw(a)">Withdraw</button>
+          }
+        </div>
+      </article>
+    } @empty {
+      <div class="jp-card jb-empty">
+        <span class="material-icons">assignment</span>
+        <p>You have not applied to a job yet.</p>
+        <a class="jp-btn primary" routerLink="/apps/jobs/search">Search jobs</a>
+      </div>
+    }
+
+  } @else {
+
+    <!-- ═══════════ JOBS (search result or saved) ═══════════ -->
+    @for (p of postings(); track p.postingId) {
+      <article class="jp-card jb-card" [class.closed]="!p.isOpen">
+        <div class="jb-card-main">
+          <h2><button class="jb-title" (click)="open(p.postingId)">{{ p.title }}</button></h2>
+          <div class="jb-company">{{ p.companyName }}</div>
+          <div class="jb-meta">
+            <span><span class="material-icons">place</span>{{ p.city }}</span>
+            <span><span class="material-icons">schedule</span>{{ p.employmentType }}</span>
+            <span><span class="material-icons">apartment</span>{{ p.workMode }}</span>
+            @if (experienceLabel(p); as exp) { <span><span class="material-icons">work_outline</span>{{ exp }}</span> }
+            @if (salaryLabel(p); as pay) { <span><span class="material-icons">payments</span>{{ pay }}</span> }
+          </div>
+          @if (skillList(p.skills).length) {
+            <div class="jb-skills">@for (s of skillList(p.skills); track s) { <span class="jp-chip">{{ s }}</span> }</div>
+          }
+          <div class="jb-foot">
+            @if (!p.isOpen) { No longer takes applications }
+            @else if (p.closesOn) { Apply by {{ dayLabel(p.closesOn) }} }
+            @else if (p.publishedAt) { Posted {{ dayLabel(p.publishedAt) }} }
+          </div>
+        </div>
+        <div class="jb-card-side">
+          @if (p.myStatus) { <span [class]="statusClass(p.myStatus)">{{ p.myStatus }}</span> }
+          @if (canApply(p)) { <button class="jp-btn primary" (click)="startApply(p)">Apply</button> }
+          <button class="jp-btn" (click)="toggleSave(p)" [attr.aria-pressed]="p.isSaved">
+            <span class="material-icons">{{ p.isSaved ? 'bookmark' : 'bookmark_border' }}</span>{{ p.isSaved ? 'Saved' : 'Save' }}
+          </button>
+        </div>
+      </article>
+    } @empty {
+      <div class="jp-card jb-empty">
+        @if (mode() === 'saved') {
+          <span class="material-icons">bookmark_border</span>
+          <p>You have not saved a job yet.</p>
+          <a class="jp-btn primary" routerLink="/apps/jobs/search">Search jobs</a>
+        } @else if (hasFilter) {
+          <span class="material-icons">search_off</span>
+          <p>No job matches this search.</p>
+          <button class="jp-btn" (click)="clearSearch()">Show all jobs</button>
+        } @else {
+          <span class="material-icons">work_outline</span>
+          <p>No jobs have been published yet. Please look again later.</p>
+        }
+      </div>
+    }
+
+    @if (mode() === 'search' && lastPage > 1) {
+      <nav class="jb-pages" aria-label="Pages">
+        <button class="jp-btn" (click)="goToPage(filter.page - 1)" [disabled]="filter.page <= 1">Previous</button>
+        <span>Page {{ filter.page }} of {{ lastPage }}</span>
+        <button class="jp-btn" (click)="goToPage(filter.page + 1)" [disabled]="filter.page >= lastPage">Next</button>
+      </nav>
+    }
+  }
+
+  @if (toast(); as t) {
+    <div class="jp-toast" [class.bad]="!t.ok" role="status">
+      <span class="material-icons">{{ t.ok ? 'check_circle' : 'error_outline' }}</span>{{ t.text }}
+    </div>
+  }
+</app-personal-shell>
+
+<!-- ═══════════ ONE JOB ═══════════ -->
+@if (opened(); as p) {
+  <div class="jp-overlay">
+    <div class="jp-dialog jb-detail" role="dialog" aria-modal="true">
+      <div class="jp-dialog-head">
+        <h3>{{ p.title }}</h3>
+        <button class="jp-close" (click)="closeOpened()" aria-label="Close"><span class="material-icons">close</span></button>
+      </div>
+      <div class="jp-dialog-body">
+        <div class="jb-company">{{ p.companyName }}</div>
+        <div class="jb-meta">
+          <span><span class="material-icons">place</span>{{ p.city }}</span>
+          <span><span class="material-icons">schedule</span>{{ p.employmentType }}</span>
+          <span><span class="material-icons">apartment</span>{{ p.workMode }}</span>
+          @if (experienceLabel(p); as exp) { <span><span class="material-icons">work_outline</span>{{ exp }}</span> }
+          @if (salaryLabel(p); as pay) { <span><span class="material-icons">payments</span>{{ pay }}</span> }
+        </div>
+        @if (skillList(p.skills).length) {
+          <div class="jb-skills">@for (s of skillList(p.skills); track s) { <span class="jp-chip">{{ s }}</span> }</div>
+        }
+        <p class="jb-description">{{ p.description }}</p>
+        <div class="jb-foot">
+          @if (!p.isOpen) { This job no longer takes applications. }
+          @else if (p.closesOn) { Apply by {{ dayLabel(p.closesOn) }}. }
+        </div>
+      </div>
+      <div class="jp-dialog-foot">
+        @if (p.myStatus) { <span [class]="statusClass(p.myStatus)">{{ p.myStatus }}</span> }
+        <span class="jb-grow"></span>
+        @if (p.isOpen) {
+          <button class="jp-btn" (click)="toggleSave(p)">
+            <span class="material-icons">{{ p.isSaved ? 'bookmark' : 'bookmark_border' }}</span>{{ p.isSaved ? 'Saved' : 'Save' }}
+          </button>
+        }
+        @if (canApply(p)) { <button class="jp-btn primary" (click)="startApply(p)">Apply</button> }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══════════ APPLY ═══════════ -->
+@if (applyFor(); as p) {
+  <div class="jp-overlay jb-over">
+    <div class="jp-dialog" role="dialog" aria-modal="true">
+      <div class="jp-dialog-head">
+        <h3>Apply: {{ p.title }}</h3>
+        <button class="jp-close" (click)="cancelApply()" aria-label="Close"><span class="material-icons">close</span></button>
+      </div>
+      <div class="jp-dialog-body">
+        <div class="jb-consent">
+          <span class="material-icons" aria-hidden="true">visibility</span>
+          <p>
+            When you apply, <strong>{{ p.companyName }}</strong> can see your profile: your details, experience,
+            education, skills, the titles of your certificates and your resume. Other companies cannot.
+            It ends when you withdraw the application.
+          </p>
+        </div>
+        <label>A note to the company (optional)
+          <textarea class="jp-input" name="applyNote" rows="4" maxlength="1000" [(ngModel)]="applyNote"
+                    placeholder="Why this job suits you, when you can start…"></textarea>
+        </label>
+        @if (applyError()) {
+          <div class="jp-error">
+            {{ applyError() }}
+            @if (applyNeedsProfile) { <a class="jb-link" routerLink="/apps/jobs">Open my profile</a> }
+          </div>
+        }
+      </div>
+      <div class="jp-dialog-foot">
+        <button class="jp-btn ghost" (click)="cancelApply()" [disabled]="applying()">Cancel</button>
+        <button class="jp-btn primary" (click)="sendApply()" [disabled]="applying()">{{ applying() ? 'Sending…' : 'Send application' }}</button>
+      </div>
+    </div>
+  </div>
+}
