@@ -2,6 +2,7 @@ using System.Data;
 using EncryptzBL.Common;
 using EncryptzBL.Common.Jobs;
 using EncryptzBL.DTO_s;
+using EncryptzBL.Infrastructure.User.Modules;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
@@ -18,11 +19,14 @@ namespace EncryptzBL.Infrastructure.Jobs
 
         private readonly PersonalDbHelper _personal;
         private readonly ILogger<JobsService> _logger;
+        private readonly IAuthService? _users;
 
-        public JobsService(PersonalDbHelper db, ILogger<JobsService> logger) : base(db)
+        /// <param name="users">The user master (main database). Without it a profile starts empty.</param>
+        public JobsService(PersonalDbHelper db, ILogger<JobsService> logger, IAuthService? users = null) : base(db)
         {
             _personal = db;
             _logger = logger;
+            _users = users;
         }
 
         /// <summary>
@@ -112,6 +116,11 @@ namespace EncryptzBL.Infrastructure.Jobs
                         IsVisible = Convert.ToBoolean(r["IsVisible"])
                     };
                 }
+                else
+                {
+                    // the first visit: the profile starts with what the user master knows
+                    page.Profile = await StartProfile(userId) ?? page.Profile;
+                }
 
                 page.Experience = ds.Tables[1].Rows.Cast<DataRow>().Select(r => new JobExperienceDto
                 {
@@ -169,6 +178,43 @@ namespace EncryptzBL.Infrastructure.Jobs
                 page.Completeness = JobsRules.Completeness(page);
                 return ApiResponse<JobProfilePageDto>.Ok(page);
             });
+
+        /// <summary>
+        /// Creates the profile of a person who has none yet from the user master: name, e-mail
+        /// and phone. It stays private, and the person can change every value. Null when
+        /// nothing was stored; the page is then shown empty, as before.
+        /// </summary>
+        private async Task<JobProfileDto?> StartProfile(int userId)
+        {
+            if (_users == null)
+                return null;
+
+            try
+            {
+                var user = (await _users.GetMyProfile(userId, 0))?.Data;
+                var starter = user == null ? null : JobsRules.StarterProfile(user.FullName, user.Email, user.MobileNumber);
+                if (starter == null)
+                    return null;
+
+                var saved = Answer(await GetDataTableAsync("jobs.sp_Profile_Save", new[]
+                {
+                    In("@UserId", userId),
+                    In("@FullName", starter.FullName),
+                    In("@Headline", starter.Headline),
+                    In("@ContactEmail", starter.ContactEmail),
+                    In("@ContactPhone", starter.ContactPhone)
+                }));
+
+                return saved.Success ? starter : null;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // the page must open also when the user master cannot be read
+                _logger.LogWarning(ex, "Job Portal: the profile of user {UserId} could not be started from the user master ({ErrorType})",
+                    userId, ex.GetType().Name);
+                return null;
+            }
+        }
 
         // ── profile ───────────────────────────────────────────────────────────
 

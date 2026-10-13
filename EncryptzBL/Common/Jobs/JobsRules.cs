@@ -62,6 +62,29 @@ namespace EncryptzBL.Common.Jobs
             return null;
         }
 
+        /// <summary>
+        /// The profile a person starts with: what the user master already knows. A value the
+        /// profile would refuse is left out, so the person is never handed a profile they
+        /// cannot save. Null when nothing usable is known.
+        /// </summary>
+        public static JobProfileDto? StarterProfile(string? fullName, string? email, string? phone)
+        {
+            static string Accepted(string? value, Func<string, JobProfileDto> asProfile)
+            {
+                var text = (value ?? "").Trim();
+                return text.Length > 0 && ProfileProblem(asProfile(text), DateTime.MaxValue) == null ? text : "";
+            }
+
+            var starter = new JobProfileDto
+            {
+                FullName = Accepted(fullName, v => new JobProfileDto { FullName = v }),
+                ContactEmail = Accepted(email, v => new JobProfileDto { ContactEmail = v }),
+                ContactPhone = Accepted(phone, v => new JobProfileDto { ContactPhone = v })
+            };
+
+            return starter.FullName.Length + starter.ContactEmail.Length + starter.ContactPhone.Length == 0 ? null : starter;
+        }
+
         // ── experience ────────────────────────────────────────────────────────
 
         public static string? ExperienceProblem(JobExperienceDto? e, DateTime today)
