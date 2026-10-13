@@ -184,6 +184,12 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        /// <summary>Personal applications: listed before a company is picked.</summary>
+        [HttpGet("personal-apps")]
+        [Authorize]
+        public async Task<IActionResult> GetPersonalApps()
+            => Ok(await _authService.GetPersonalApps());
+
         // ── MODULE / BRANCH SCOPING (Company -> Modules -> Branches) ──────
 
         [HttpGet("modules")]

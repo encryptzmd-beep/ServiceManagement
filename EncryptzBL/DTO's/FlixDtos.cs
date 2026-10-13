@@ -108,6 +108,22 @@ namespace EncryptzBL.DTO_s
         }
     }
 
+    /// <summary>A personal application: open to every user, without a company.</summary>
+    public class PersonalAppDto
+    {
+        public int ModuleId { get; set; }
+        public string ModuleKey { get; set; } = string.Empty;
+        public string ModuleName { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+        public string Family { get; set; } = string.Empty;
+        /// <summary>Where the UI opens it ('' while it is not built).</summary>
+        public string RoutePath { get; set; } = string.Empty;
+        public int SortOrder { get; set; }
+        /// <summary>False = "Coming soon".</summary>
+        public bool IsReleased { get; set; }
+    }
+
     public class SetScopeRequestDto
     {
         public int UserId { get; set; }

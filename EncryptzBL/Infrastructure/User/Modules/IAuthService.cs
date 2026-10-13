@@ -35,6 +35,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
         // Company -> Module -> Branch scoping
         Task<ApiResponse<List<ModuleDto>>> GetModules(int userId, int companyId);
+        Task<ApiResponse<List<PersonalAppDto>>> GetPersonalApps();
         /// <summary>For the deployed UI: the Service module shown as the company's one "project".</summary>
         Task<ApiResponse<List<ProjectDto>>> GetProjects(int userId, int companyId);
         Task<ApiResponse<List<LocationDto>>> GetLocations(int userId, int companyId, string moduleKey);

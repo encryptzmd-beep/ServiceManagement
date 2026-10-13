@@ -1,4 +1,5 @@
 using EncryptzBL.Common;
+using EncryptzBL.Common.Provisioning;
 using EncryptzBL.Common.Tenant;
 using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
@@ -789,6 +790,24 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 r.Table.Columns.Contains("Family") ? r["Family"]?.ToString() ?? "" : "")).ToList();
 
             return ApiResponse<List<ModuleDto>>.Ok(modules, "Success");
+        }
+
+        /// <summary>
+        /// Personal applications are the same for everybody. A main database without
+        /// script 21 has no such procedure: the list is then empty, not an error.
+        /// </summary>
+        public async Task<ApiResponse<List<PersonalAppDto>>> GetPersonalApps()
+        {
+            try
+            {
+                return ApiResponse<List<PersonalAppDto>>.Ok(
+                    await GetListAsync<PersonalAppDto>("sp_User_GetPersonalApps"), "Success");
+            }
+            catch (Exception ex) when (CompanyCreateRules.IsNotInstalled(ex))
+            {
+                _logger.LogWarning("Personal applications are not listed: {Procedure} was not found in the main database. Run 21_Applications.sql.", "sp_User_GetPersonalApps");
+                return ApiResponse<List<PersonalAppDto>>.Ok(new List<PersonalAppDto>(), "Success");
+            }
         }
 
         public async Task<ApiResponse<List<ProjectDto>>> GetProjects(int userId, int companyId)
