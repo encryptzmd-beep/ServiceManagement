@@ -16,7 +16,6 @@
 
     <!-- ═══════════ PROFILE ═══════════ -->
     <section class="jp-card jp-section jp-hero">
-      <div class="jp-hero-band"></div>
       <div class="jp-hero-body">
         <div class="jp-avatar" aria-hidden="true">
           @if (initials(pg.profile.fullName); as letters) {
@@ -63,7 +62,6 @@
           </div>
           @for (e of pg.experience; track e.experienceId) {
             <div class="jp-row">
-              <span class="jp-row-dot" aria-hidden="true"></span>
               <div class="jp-row-main">
                 <strong>{{ e.title }}</strong> <span class="jp-at">{{ e.organisation }}</span>
                 <div class="jp-row-sub">{{ monthLabel(e.startMonth) }} – {{ e.endMonth ? monthLabel(e.endMonth) : 'Present' }}</div>
@@ -89,7 +87,6 @@
           </div>
           @for (d of pg.education; track d.educationId) {
             <div class="jp-row">
-              <span class="jp-row-dot" aria-hidden="true"></span>
               <div class="jp-row-main">
                 <strong>{{ d.course }}</strong> @if (d.fieldOfStudy) { <span class="jp-at">{{ d.fieldOfStudy }}</span> }
                 <div class="jp-row-sub">{{ d.institution }} @if (years(d)) { · {{ years(d) }} }</div>
@@ -145,7 +142,6 @@
           </div>
           @for (c of pg.certificates; track c.certificateId) {
             <div class="jp-row">
-              <span class="jp-row-dot" aria-hidden="true"></span>
               <div class="jp-row-main">
                 <strong>{{ c.title }}</strong> <span class="jp-pill grey">{{ statusLabel(c.status) }}</span>
                 <div class="jp-row-sub">{{ c.issuer }} @if (c.issuedOn) { · {{ dayLabel(c.issuedOn) }} }</div>
@@ -199,20 +195,17 @@
       <!-- ═══════════ COMPLETENESS + VISIBILITY ═══════════ -->
       <aside class="jp-aside">
         <div class="jp-card jp-complete">
-          <div class="jp-ring" [style.--p]="pg.completeness"
-               role="progressbar" [attr.aria-valuenow]="pg.completeness" aria-valuemin="0" aria-valuemax="100">
-            <strong>{{ pg.completeness }}%</strong>
+          <div class="jp-complete-head"><span>Profile completeness</span><strong>{{ pg.completeness }}%</strong></div>
+          <div class="jp-bar" role="progressbar" [attr.aria-valuenow]="pg.completeness" aria-valuemin="0" aria-valuemax="100">
+            <div class="jp-bar-fill" [style.width.%]="pg.completeness"></div>
           </div>
-          <div class="jp-complete-text">
-            <span>Profile completeness</span>
-            <small>
-              @if (pg.completeness >= 100) {
-                Your profile is complete.
-              } @else {
-                A complete profile is found more often.
-              }
-            </small>
-          </div>
+          <small class="jp-complete-hint">
+            @if (pg.completeness >= 100) {
+              Your profile is complete.
+            } @else {
+              A complete profile is found more often.
+            }
+          </small>
         </div>
 
         <div class="jp-card jp-visibility" [class.on]="pg.profile.isVisible">
