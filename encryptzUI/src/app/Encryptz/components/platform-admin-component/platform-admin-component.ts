@@ -7,6 +7,7 @@ import {
   Branch,
   BranchAccess,
   BranchAccessUser,
+  CompanyMember,
   CompanyModule,
   ConnectionTestResult,
   DbServer,
@@ -98,6 +99,16 @@ export class PlatformAdminComponent implements OnInit {
   };
 
   /** Company whose Modules dialog is open (null = closed). */
+  /** Company whose members are shown in the Administrators dialog (null = closed). */
+  membersCompany = signal<PlatformCompany | null>(null);
+  companyMembers = signal<CompanyMember[]>([]);
+  memberRoles = signal<string[]>([]);
+  memberError = signal('');
+  memberBusy = signal(false);
+  /** The person to add: e-mail or Individual ID, and the role (administrator unless changed). */
+  newMember = { lookup: '', roleName: 'Admin' };
+  private membersSub = new Subscription();
+
   modulesCompany = signal<PlatformCompany | null>(null);
   companyModules = signal<CompanyModule[]>([]);
   /** Module keys with a switch request in flight. */
@@ -501,6 +512,109 @@ export class PlatformAdminComponent implements OnInit {
     this.modulesSub.add(this.refreshSub);
   }
   private refreshSub?: Subscription;
+
+  // ── members and administrators of a company (platform administrator only) ──
+
+  openAdministrators(company: PlatformCompany): void {
+    if (!this.isPlatformAdmin()) return;
+    this.closeAdministrators();
+    this.membersCompany.set(company);
+    this.loadMembers();
+  }
+
+  private loadMembers(): void {
+    const company = this.membersCompany();
+    if (!company) return;
+
+    this.membersSub.unsubscribe();
+    this.membersSub = new Subscription();
+    this.membersSub.add(this.api.getCompanyMembers(company.companyId).subscribe({
+      next: res => {
+        if (!res.success) { this.memberError.set(res.message); return; }
+        this.companyMembers.set(res.data?.members ?? []);
+        this.memberRoles.set(res.data?.roles ?? []);
+      },
+      error: err => { if (this.isLocked(err)) return; this.memberError.set(this.message(err, 'Could not load the members')); },
+    }));
+  }
+
+  /** The roles to offer for a member: the list, and the member's own role when it is not on it. */
+  rolesFor(member: CompanyMember): string[] {
+    const roles = this.memberRoles();
+    return roles.includes(member.roleInCompany) ? roles : [...roles, member.roleInCompany];
+  }
+
+  onMemberRoleChange(member: CompanyMember, event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    this.changeMemberRole(member, select.value, select);
+  }
+
+  /**
+   * @param select the list that was changed. It already shows the new role, and the
+   *   binding does not move it back when the stored role stays: on a refusal it is set
+   *   back by hand.
+   */
+  changeMemberRole(member: CompanyMember, roleName: string, select?: HTMLSelectElement): void {
+    const company = this.membersCompany();
+    const back = () => { if (select) select.value = member.roleInCompany; };
+
+    if (!company || roleName === member.roleInCompany) return;
+    if (this.memberBusy()) { back(); return; }
+
+    this.memberError.set('');
+    this.memberBusy.set(true);
+    this.api.setCompanyMemberRole(company.companyId, member.userId, roleName).subscribe({
+      next: res => {
+        this.memberBusy.set(false);
+        if (!res.success) { this.memberError.set(res.message); back(); return; }
+        this.notify(res.message, true);
+        this.loadMembers();
+      },
+      error: err => {
+        this.memberBusy.set(false);
+        back();
+        if (this.isLocked(err)) return;
+        this.memberError.set(this.message(err, 'Could not change the role'));
+      },
+    });
+  }
+
+  addMember(): void {
+    const company = this.membersCompany();
+    if (!company || this.memberBusy()) return;
+
+    const lookup = (this.newMember.lookup || '').trim();
+    if (!lookup) { this.memberError.set('Enter the e-mail address or the Individual ID of the person'); return; }
+
+    this.memberError.set('');
+    this.memberBusy.set(true);
+    this.api.addCompanyMember(company.companyId, lookup, this.newMember.roleName).subscribe({
+      next: res => {
+        this.memberBusy.set(false);
+        if (!res.success) { this.memberError.set(res.message); return; }
+        this.newMember.lookup = '';
+        this.notify(res.message, true);
+        this.loadMembers();
+        this.loadCompanies();   // the number of users of the company changed
+      },
+      error: err => {
+        this.memberBusy.set(false);
+        if (this.isLocked(err)) return;
+        this.memberError.set(this.message(err, 'Could not add the person'));
+      },
+    });
+  }
+
+  closeAdministrators(): void {
+    this.membersSub.unsubscribe();
+    this.membersSub = new Subscription();
+    this.membersCompany.set(null);
+    this.companyMembers.set([]);
+    this.memberRoles.set([]);
+    this.memberError.set('');
+    this.memberBusy.set(false);
+    this.newMember = { lookup: '', roleName: 'Admin' };
+  }
 
   closeModules(): void {
     this.modulesSub.unsubscribe();
@@ -1062,6 +1176,7 @@ export class PlatformAdminComponent implements OnInit {
 
   closeForms(): void {
     this.closeModules();
+    this.closeAdministrators();
     this.companyForm = this.projectForm = this.locationForm = this.menuForm = null;
     this.serverForm = null;
     this.applicationForm = null;

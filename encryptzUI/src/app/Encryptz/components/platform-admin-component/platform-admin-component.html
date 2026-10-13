@@ -122,6 +122,9 @@
                 @if (isPlatformAdmin() && canRetry(c)) {
                   <button class="fx-action-btn" (click)="retryCompany(c)" [attr.aria-label]="'Retry set-up of ' + c.companyName" [disabled]="retryingCompany() !== null">{{ retryingCompany() === c.companyId ? 'Retrying…' : 'Retry' }}</button>
                 }
+                @if (isPlatformAdmin()) {
+                  <button class="fx-action-btn" (click)="openAdministrators(c)" [attr.aria-label]="'Administrators of ' + c.companyName">Administrators</button>
+                }
                 <button class="fx-action-btn" (click)="openModules(c)">Modules</button>
                 <button class="fx-action-btn" (click)="editCompany(c)">Edit</button>
               </td>
@@ -497,6 +500,58 @@
 }
 
 <!-- ═══════════ MODULES OF A COMPANY ═══════════ -->
+@if (membersCompany(); as ac) {
+  <div class="modal-overlay" (click)="closeAdministrators()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Administrators · {{ ac.companyName }}</h2>
+        <button class="modal-close" aria-label="Close" (click)="closeAdministrators()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-note">
+          The person who creates a company is its administrator. Here you decide who else administers it.
+          A company always keeps at least one administrator.
+        </div>
+
+        @for (m of companyMembers(); track m.userId) {
+          <div class="pa-member-row">
+            <span class="pa-module-text">
+              <strong>{{ m.fullName }} @if (m.isCreator) { <span class="pa-creator">Creator</span> }</strong>
+              <small>{{ m.email }} @if (m.individualId) { · <code>{{ m.individualId }}</code> }</small>
+            </span>
+            <select class="form-input pa-member-role" [attr.aria-label]="'Role of ' + m.fullName"
+                    [disabled]="memberBusy()" (change)="onMemberRoleChange(m, $event)">
+              @for (role of rolesFor(m); track role) {
+                <option [value]="role" [selected]="role === m.roleInCompany">{{ role === 'Admin' ? 'Admin (administrator)' : role }}</option>
+              }
+            </select>
+          </div>
+        } @empty {
+          <div class="pa-hint">No members yet.</div>
+        }
+
+        <div class="pa-member-add">
+          <label for="pa-member-lookup">Add a person</label>
+          <div class="pa-member-add-row">
+            <input id="pa-member-lookup" class="form-input" name="memberLookup" [(ngModel)]="newMember.lookup"
+                   placeholder="E-mail or Individual ID (EZ-XXXX-XXXX-XXXX)" maxlength="256" (keyup.enter)="addMember()" />
+            <select class="form-input pa-member-role" name="memberRole" [(ngModel)]="newMember.roleName" aria-label="Role of the person to add">
+              @for (role of memberRoles(); track role) { <option [value]="role">{{ role }}</option> }
+            </select>
+            <button class="fx-btn-navy" (click)="addMember()" [disabled]="memberBusy()">{{ memberBusy() ? 'Working…' : 'Add' }}</button>
+          </div>
+          <small>The person must have registered first. Inside the company its own administrator manages the other members.</small>
+        </div>
+
+        @if (memberError()) { <div class="pa-error">{{ memberError() }}</div> }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeAdministrators()">Close</button>
+      </div>
+    </div>
+  </div>
+}
+
 @if (modulesCompany(); as mc) {
   <div class="modal-overlay" (click)="closeModules()">
     <div class="modal-content" (click)="$event.stopPropagation()">

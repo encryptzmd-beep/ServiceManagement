@@ -84,6 +84,25 @@ export interface CompanyModule {
   family?: string;
 }
 
+/** An active member of a company, as the platform administrator sees them. */
+export interface CompanyMember {
+  userId: number;
+  fullName: string;
+  email: string;
+  /** As it is shown: EZ-XXXX-XXXX-XXXX ('' when the person has none). */
+  individualId: string;
+  roleInCompany: string;
+  /** The person who created the company. */
+  isCreator: boolean;
+  assignedAt?: string;
+}
+
+/** The members of a company and the roles one of them can be given. */
+export interface CompanyMembers {
+  members: CompanyMember[];
+  roles: string[];
+}
+
 /** An application of the catalogue, as the platform administrator sees it. */
 export interface PlatformApplication {
   moduleId: number;
@@ -279,6 +298,21 @@ export class PlatformService {
 
   testDbServer(form: DbServerForm): Observable<ApiResponse<ConnectionTestResult>> {
     return this.http.post<ApiResponse<ConnectionTestResult>>(`${this.api}/db-servers/test`, form, { headers: this.headers });
+  }
+
+  // ── members and administrators of a company (platform administrator only) ──
+
+  getCompanyMembers(companyId: number): Observable<ApiResponse<CompanyMembers>> {
+    return this.http.get<ApiResponse<CompanyMembers>>(`${this.api}/companies/${companyId}/members`, { headers: this.headers });
+  }
+
+  setCompanyMemberRole(companyId: number, memberId: number, roleName: string): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/companies/${companyId}/members/${memberId}/role`, { roleName }, { headers: this.headers });
+  }
+
+  /** @param lookup the e-mail address or the Individual ID of a registered person */
+  addCompanyMember(companyId: number, lookup: string, roleName: string): Observable<ApiResponse<number>> {
+    return this.http.post<ApiResponse<number>>(`${this.api}/companies/${companyId}/members`, { lookup, roleName }, { headers: this.headers });
   }
 
   getApplications(): Observable<ApiResponse<PlatformApplication[]>> {
