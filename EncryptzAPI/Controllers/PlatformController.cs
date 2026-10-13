@@ -96,6 +96,18 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SetProjectAccess(int projectId, [FromBody] SetProjectAccessRequest req)
             => Ok(await _service.SetProjectAccess(projectId, req, Actor()));
 
+        // ── APPLICATIONS (the catalogue) ──────────
+
+        [PlatformUnlocked]
+        [HttpGet("applications")]
+        public async Task<IActionResult> GetApplications()
+            => Ok(await _service.GetApplications(Actor()));
+
+        [PlatformUnlocked]
+        [HttpPost("applications/save")]
+        public async Task<IActionResult> SaveApplication([FromBody] ApplicationDto dto)
+            => Ok(await _service.SaveApplication(dto, Actor()));
+
         // ── MODULES OF A COMPANY ──────────────────
 
         [PlatformUnlocked]

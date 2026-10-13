@@ -141,12 +141,36 @@ namespace EncryptzBL.DTO_s
         public bool IsEnabled { get; set; }
         /// <summary>Members who can open it now (0 while it is switched off).</summary>
         public int UserCount { get; set; }
+        /// <summary>False = "Coming soon": cannot be switched on. True when the database has no such column.</summary>
+        public bool IsReleased { get; set; } = true;
+        public string Family { get; set; } = "";
     }
 
     public class SetCompanyModuleRequest
     {
         public string ModuleKey { get; set; } = "";
         public bool IsEnabled { get; set; }
+    }
+
+    /// <summary>An application of the catalogue (a row of Modules), as the platform administrator sees it.</summary>
+    public class ApplicationDto
+    {
+        public int ModuleId { get; set; }
+        public string ModuleKey { get; set; } = "";
+        public string ModuleName { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Icon { get; set; } = "";
+        public string Family { get; set; } = "";
+        /// <summary>Personal | Commercial</summary>
+        public string AppType { get; set; } = "Commercial";
+        /// <summary>Where the UI opens a personal application, for example /apps/jobs.</summary>
+        public string RoutePath { get; set; } = "";
+        public int SortOrder { get; set; }
+        /// <summary>False = "Coming soon".</summary>
+        public bool IsReleased { get; set; }
+        public bool IsActive { get; set; } = true;
+        /// <summary>Companies that have it switched on.</summary>
+        public int CompanyCount { get; set; }
     }
 
     /// <summary>A branch of a company (a row of the company database's Locations).</summary>

@@ -357,6 +357,52 @@ namespace EncryptzBL.Infrastructure.User.Modules
             return ModuleAdminRules.HasModule(modules, moduleKey);
         }
 
+        // the catalogue is shared by every company: platform only
+        public async Task<ApiResponse<List<ApplicationDto>>> GetApplications(PlatformActor actor)
+        {
+            if (!actor.IsPlatformAdmin)
+                return ApiResponse<List<ApplicationDto>>.Fail(NotAllowed);
+
+            return ApiResponse<List<ApplicationDto>>.Ok(await GetListAsync<ApplicationDto>("sp_Platform_GetModules"));
+        }
+
+        public async Task<ApiResponse<int>> SaveApplication(ApplicationDto dto, PlatformActor actor)
+        {
+            if (!actor.IsPlatformAdmin)
+                return ApiResponse<int>.Fail(NotAllowed);
+
+            var problem = ApplicationRules.Problem(dto);
+            if (problem != null)
+                return ApiResponse<int>.Fail(problem);
+
+            var dt = await GetDataTableAsync("sp_Platform_SaveModule", new[]
+            {
+                SqlParameterHelper.Input("@ModuleId", dto.ModuleId),
+                SqlParameterHelper.Input("@ModuleKey", dto.ModuleKey),
+                SqlParameterHelper.Input("@ModuleName", dto.ModuleName),
+                SqlParameterHelper.Input("@Description", dto.Description),
+                SqlParameterHelper.Input("@Icon", dto.Icon),
+                SqlParameterHelper.Input("@Family", dto.Family),
+                SqlParameterHelper.Input("@AppType", dto.AppType),
+                SqlParameterHelper.Input("@RoutePath", dto.RoutePath),
+                SqlParameterHelper.Input("@SortOrder", dto.SortOrder),
+                SqlParameterHelper.Input("@IsReleased", dto.IsReleased),
+                SqlParameterHelper.Input("@IsActive", dto.IsActive)
+            });
+
+            if (dt == null || dt.Rows.Count == 0)
+                return ApiResponse<int>.Fail("Save failed");
+
+            var message = dt.Rows[0]["Message"]?.ToString() ?? "";
+            if (Convert.ToInt32(dt.Rows[0]["Success"]) != 1)
+                return ApiResponse<int>.Fail(message);
+
+            _logger.LogInformation("Application {ModuleKey} saved by user {UserId} (type {AppType}, released {IsReleased}, active {IsActive})",
+                dto.ModuleKey, actor.UserId, dto.AppType, dto.IsReleased, dto.IsActive);
+
+            return ApiResponse<int>.Ok(Convert.ToInt32(dt.Rows[0]["ModuleId"]), message);
+        }
+
         public async Task<ApiResponse<List<CompanyModuleDto>>> GetCompanyModules(int companyId, PlatformActor actor)
         {
             if (!ModuleAdminRules.CanViewModules(actor, companyId))
