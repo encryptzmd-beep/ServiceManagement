@@ -48,14 +48,16 @@ export const routes: Routes = [
     canActivate: [authGuard],
     data: { title: 'Job Portal', mode },
   })),
-  // The jobs a company offers (Job Portal, the company's side): a login and a chosen
-  // company; the API decides on every call whether this person may manage them
+  // Job Consultancy (commercial application). Its pages work on the shared Personal DB with
+  // the company that was chosen, so they need no branch and no layout of a company database;
+  // the API checks on every call that the company has the application and the person may use it
+  { path: 'consultancy', redirectTo: 'consultancy/postings', pathMatch: 'full' },
   {
-    path: 'hiring',
+    path: 'consultancy/postings',
     loadComponent: () => import('./Encryptz/components/hiring-component/hiring-component')
       .then(m => m.HiringComponent),
     canActivate: [authGuard],
-    data: { title: 'Job postings' },
+    data: { title: 'Job Consultancy' },
   },
   // Protected routes (with layout)
   {

@@ -382,6 +382,16 @@ describe('CompanySelectorComponent', () => {
     expect(navigated.length).toBe(0);
   });
 
+  it('opens Job Consultancy at its first page, without a branch, and only when it is available', () => {
+    const fixture = create('module');
+
+    fixture.componentInstance.openModule({ moduleKey: 'JOBCONSULTANCY', state: 'NotSubscribed' } as any);
+    expect(navigated.length).toBe(0);
+
+    fixture.componentInstance.openModule({ moduleKey: 'JOBCONSULTANCY', state: 'Available' } as any);
+    expect(navigated.at(-1)![0]).toEqual(['/consultancy/postings']);
+  });
+
   it('shows the Individual ID of the user on the company step', () => {
     auth.currentUser = () => ({ userId: 5, fullName: 'A', role: 'Admin', isPlatformAdmin: false, individualId: 'EZ-7K4M-2P9Q-XD3Q' });
     const fixture = create('company');

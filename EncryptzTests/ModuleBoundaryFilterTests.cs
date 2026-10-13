@@ -90,9 +90,10 @@ namespace EncryptzTests
         {
             // JobsController is a personal application: it works without a company, on the
             // Personal DB, so it has no module of a company to declare (see MainIdentity).
-            // JobPostingsController is the same application. CompanyJobsController works for a
-            // company but under no commercial application yet: HiringAccess decides who may
-            // use it, and gets the subscription check when Payroll or Job Consultancy exists.
+            // JobPostingsController is the same application. CompanyJobsController is the first
+            // page of Job Consultancy; it works on the Personal DB with the company-stage token
+            // (no branch, no company database), so HiringAccess checks the subscription and the
+            // access on every call instead of the module claim of a scoped token.
             var controlPlane = new[]
             {
                 "AuthController", "CompanyController", "PlatformController", "WeatherForecastController",

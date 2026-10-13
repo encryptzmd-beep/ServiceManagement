@@ -150,34 +150,67 @@ namespace EncryptzTests
 
     public class HiringAccessTests
     {
-        private static List<CompanyResponseDto> Companies() => new()
-        {
-            new CompanyResponseDto { CompanyId = 2, CompanyName = "Hamster A/C", RoleInCompany = "Admin" },
-            new CompanyResponseDto { CompanyId = 3, CompanyName = "Felix", RoleInCompany = "Technician" },
-            new CompanyResponseDto { CompanyId = 4, CompanyName = "", RoleInCompany = "Admin" }
-        };
+        private static CompanyResponseDto Member(string role = "Technician", string name = "Hamster A/C")
+            => new() { CompanyId = 2, CompanyName = name, RoleInCompany = role };
+
+        private static List<ModuleDto> Catalogue(string state)
+            => new()
+            {
+                new ModuleDto { ModuleKey = "SERVICE", State = "Available" },
+                new ModuleDto { ModuleKey = "JOBCONSULTANCY", State = state }
+            };
 
         [Fact]
-        public void An_administrator_of_the_company_may_manage_its_jobs()
-            => Assert.True(HiringAccess.MayManage(HiringAccess.Membership(Companies(), 2)));
-
-        [Fact]
-        public void Another_member_may_not()
-            => Assert.False(HiringAccess.MayManage(HiringAccess.Membership(Companies(), 3)));
+        public void A_member_who_may_open_Job_Consultancy_may_manage_the_jobs()
+            => Assert.Null(HiringAccess.Refusal(Member(), Catalogue("Available")));
 
         [Theory]
-        [InlineData(9)]     // not a member
-        [InlineData(0)]     // no company chosen
-        [InlineData(-2)]
-        [InlineData(4)]     // a company without a name cannot publish
-        public void Nobody_else_may(int companyId)
-            => Assert.False(HiringAccess.MayManage(HiringAccess.Membership(Companies(), companyId)));
+        [InlineData("NotSubscribed", HiringAccess.NotSubscribed)]
+        [InlineData("NoAccess", HiringAccess.NoAccess)]
+        [InlineData("ComingSoon", HiringAccess.NotReleased)]
+        [InlineData("Something new", HiringAccess.NotReleased)]
+        public void Any_other_state_of_the_application_is_refused_with_its_reason(string state, string expected)
+            => Assert.Equal(expected, HiringAccess.Refusal(Member("Admin"), Catalogue(state)));
 
         [Fact]
-        public void No_list_of_companies_means_no()
+        public void Another_application_of_the_company_does_not_count()
         {
+            var onlyService = new List<ModuleDto> { new() { ModuleKey = "SERVICE", State = "Available" } };
+
+            Assert.Equal(HiringAccess.NotReleased, HiringAccess.Refusal(Member("Admin"), onlyService));
+            Assert.Equal(HiringAccess.NotReleased, HiringAccess.Refusal(Member("Admin"), null));
+        }
+
+        [Fact]
+        public void Somebody_who_is_not_a_member_is_refused_whatever_the_catalogue_says()
+        {
+            Assert.Equal(HiringAccess.NotMember, HiringAccess.Refusal(null, Catalogue("Available")));
+            // a company without a name cannot publish
+            Assert.Equal(HiringAccess.NotMember, HiringAccess.Refusal(Member(name: " "), Catalogue("Available")));
+        }
+
+        [Theory]
+        [InlineData(2, true)]
+        [InlineData(9, false)]    // not a member
+        [InlineData(0, false)]    // no company chosen
+        [InlineData(-2, false)]
+        public void The_membership_is_the_row_of_that_company(int companyId, bool found)
+        {
+            var companies = new List<CompanyResponseDto> { Member(), new() { CompanyId = 3, CompanyName = "Felix", RoleInCompany = "Admin" } };
+
+            Assert.Equal(found, HiringAccess.Membership(companies, companyId) != null);
             Assert.Null(HiringAccess.Membership(null, 2));
-            Assert.False(HiringAccess.MayManage(null));
+        }
+
+        [Fact]
+        public void Every_refusal_is_known_as_one_and_nothing_else_is()
+        {
+            foreach (var message in new[] { HiringAccess.NotMember, HiringAccess.NotReleased, HiringAccess.NotSubscribed, HiringAccess.NoAccess })
+                Assert.True(HiringAccess.IsRefusal(message));
+
+            Assert.False(HiringAccess.IsRefusal("Not found"));
+            Assert.False(HiringAccess.IsRefusal(PersonalDbHelper.NotAvailable));
+            Assert.False(HiringAccess.IsRefusal(null));
         }
     }
 
@@ -241,7 +274,8 @@ namespace EncryptzTests
                 Assert.True(body.Contains("GuardedCompany(userId, companyId,"), method.Name + " does not go through GuardedCompany");
             }
 
-            Assert.Contains("HiringAccess.MayManage(", source);
+            Assert.Contains("HiringAccess.Refusal(membership, modules)", source);
+            Assert.Contains("_users.GetModules(userId, companyId)", source);
             Assert.Contains("_users.GetUserCompanies(userId)", source);
         }
 
@@ -357,7 +391,7 @@ namespace EncryptzTests
             private Task<ApiResponse<T>> Seen<T>(int userId, int companyId, T data)
             {
                 User = userId; Company = companyId;
-                return Task.FromResult(Refuse ? ApiResponse<T>.Fail(HiringAccess.Refused) : ApiResponse<T>.Ok(data));
+                return Task.FromResult(Refuse ? ApiResponse<T>.Fail(HiringAccess.NotSubscribed) : ApiResponse<T>.Ok(data));
             }
 
             public Task<ApiResponse<List<CompanyPostingDto>>> GetCompanyPostings(int userId, int companyId) => Seen(userId, companyId, new List<CompanyPostingDto>());

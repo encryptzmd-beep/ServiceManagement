@@ -12,15 +12,16 @@ import {
   JobApplicantPage,
 } from '../../Services/company-jobs-service';
 import { JOB_EMPLOYMENT_TYPES, JOB_WORK_MODES, JobEducation } from '../../Services/jobs-service';
-import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
+import { PersonalMenuItem, PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const REFUSED = 'Only an administrator of the company can manage its jobs';
+const REFUSED = "You don't have access to Job Consultancy. Ask your administrator";
 
 /**
- * Job Portal, the company's side: the jobs the chosen company offers and the people who
- * applied to them. The API takes the company and the person from the login and decides
- * on every call whether this person may manage the jobs; this page sends neither.
+ * Job Consultancy (commercial application), its first page: the jobs the chosen company
+ * offers on Job Portal and the people who applied to them. The API takes the company and
+ * the person from the login and decides on every call whether the company has the
+ * application and this person may use it; this page sends neither.
  */
 @Component({
   selector: 'app-hiring-component',
@@ -37,6 +38,14 @@ export class HiringComponent implements OnInit {
   private api = inject(CompanyJobsService);
   private auth = inject(AuthService);
   private router = inject(Router);
+
+  /** The side menu. A page without a route is not built yet and is shown as "Soon". */
+  readonly menu: PersonalMenuItem[] = [
+    { label: 'Job postings', icon: 'work_outline', route: '/consultancy/postings' },
+    { label: 'Clients', icon: 'handshake' },
+    { label: 'Candidates', icon: 'groups' },
+    { label: 'Placements', icon: 'verified' },
+  ];
 
   readonly employmentTypes = JOB_EMPLOYMENT_TYPES;
   readonly workModes = JOB_WORK_MODES;

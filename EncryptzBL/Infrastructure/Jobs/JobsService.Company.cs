@@ -9,18 +9,21 @@ namespace EncryptzBL.Infrastructure.Jobs
     {
         /// <summary>
         /// The way in for everything a company does: the guard of a person first, then whether
-        /// this person may act for this company right now (HiringAccess, read from the main
-        /// database). The work gets the name of the company as the main database has it.
+        /// this person may use Job Consultancy for this company right now (HiringAccess, read
+        /// from the main database). The work gets the name of the company as the main database has it.
         /// </summary>
         private Task<ApiResponse<T>> GuardedCompany<T>(int userId, int companyId, string what, Func<string, Task<ApiResponse<T>>> work)
             => Guarded(userId, what, async () =>
             {
                 if (_users == null || companyId <= 0)
-                    return ApiResponse<T>.Fail(HiringAccess.Refused);
+                    return ApiResponse<T>.Fail(HiringAccess.NotMember);
 
                 var membership = HiringAccess.Membership((await _users.GetUserCompanies(userId))?.Data, companyId);
-                if (!HiringAccess.MayManage(membership))
-                    return ApiResponse<T>.Fail(HiringAccess.Refused);
+                var modules = membership == null ? null : (await _users.GetModules(userId, companyId))?.Data;
+
+                var refusal = HiringAccess.Refusal(membership, modules);
+                if (refusal != null)
+                    return ApiResponse<T>.Fail(refusal);
 
                 return await work(membership!.CompanyName.Trim());
             });

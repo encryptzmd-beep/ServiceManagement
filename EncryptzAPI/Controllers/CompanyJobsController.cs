@@ -8,10 +8,11 @@ using Microsoft.AspNetCore.Mvc;
 namespace EncryptzAPI.Controllers
 {
     /// <summary>
-    /// Job Portal, the company's side: the jobs a company offers and the people who applied.
+    /// Job Consultancy (commercial application), its first page: the jobs a company offers on
+    /// Job Portal and the people who applied.
     /// The person is the main-database user of the token and the company is the company of
     /// the token (the one chosen on the company page); neither is ever a value of the
-    /// request. Whether the person may act for the company is decided by the service on
+    /// request. Whether the company has Job Consultancy and the person may use it is decided by the service on
     /// every call (HiringAccess): a refusal is answered with 403.
     /// </summary>
     [ApiController]
@@ -31,7 +32,7 @@ namespace EncryptzAPI.Controllers
                    System.Globalization.CultureInfo.InvariantCulture, out var id) ? id : 0;
 
         private IActionResult Answer<T>(ApiResponse<T> result)
-            => !result.Success && result.Message == HiringAccess.Refused
+            => !result.Success && HiringAccess.IsRefusal(result.Message)
                 ? StatusCode(StatusCodes.Status403Forbidden, result)
                 : Ok(result);
 
@@ -73,8 +74,8 @@ namespace EncryptzAPI.Controllers
         {
             var result = await _jobs.GetApplicantResume(Caller(), Company(), id, applicationId);
             if (!result.Success || result.Data == null)
-                return result.Message == HiringAccess.Refused
-                    ? StatusCode(StatusCodes.Status403Forbidden, ApiResponse<string>.Fail(HiringAccess.Refused))
+                return HiringAccess.IsRefusal(result.Message)
+                    ? StatusCode(StatusCodes.Status403Forbidden, ApiResponse<string>.Fail(result.Message!))
                     : NotFound(ApiResponse<string>.Fail(result.Message ?? "Not found"));
 
             Response.Headers["X-Content-Type-Options"] = "nosniff";

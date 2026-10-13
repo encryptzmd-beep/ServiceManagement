@@ -82,6 +82,20 @@ describe('HiringComponent', () => {
     expect(calls.length).toBe(0);
   });
 
+  it('is the first page of Job Consultancy: its menu opens Job postings, the pages to come are marked Soon', () => {
+    const fixture = create();
+    const items = Array.from(fixture.nativeElement.querySelectorAll('.ps-nav-item')) as HTMLElement[];
+
+    expect(text(fixture)).toContain('Job Consultancy');
+    expect(items.map(e => e.querySelector('.ps-nav-label')!.textContent!.trim())).toEqual(['Job postings', 'Clients', 'Candidates', 'Placements']);
+    expect(items[0].getAttribute('href')).toBe('/consultancy/postings');
+    for (const soon of items.slice(1)) {
+      expect(soon.tagName).not.toBe('A');
+      expect(soon.textContent).toContain('Soon');
+    }
+    expect(fixture.nativeElement.querySelector('.ps-back').getAttribute('href')).toBe('/select-module');
+  });
+
   it('lists the jobs with state and applicant counts, and the actions each state allows', () => {
     const fixture = create();
     const cards = Array.from(fixture.nativeElement.querySelectorAll('.jb-card')) as HTMLElement[];
@@ -97,11 +111,12 @@ describe('HiringComponent', () => {
   });
 
   it('says why when the person may not manage the jobs of the company', () => {
-    api.getPostings = () => throwError(() => ({ status: 403, error: { message: 'Only an administrator of the company can manage its jobs' } }));
+    api.getPostings = () => throwError(() => ({ status: 403, error: { message: 'Job Consultancy is not available yet' } }));
     const fixture = create();
 
-    expect(text(fixture)).toContain('Only an administrator of the company can manage its jobs');
+    expect(text(fixture)).toContain('Job Consultancy is not available yet');
     expect(fixture.nativeElement.querySelector('.jb-card')).toBeNull();
+    expect(fixture.nativeElement.querySelector('a.jp-link').getAttribute('href')).toBe('/select-module');
   });
 
   it('saves a new job as a draft with numbers as numbers and nothing for what is left empty', () => {

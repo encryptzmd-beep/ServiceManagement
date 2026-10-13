@@ -1,4 +1,4 @@
-<app-personal-shell appName="Job postings" icon="work" subtitle="Jobs your company offers"
+<app-personal-shell appName="Job Consultancy" icon="work" subtitle="Commercial application" [menu]="menu"
                     backLabel="Back to modules" backRoute="/select-module">
 
   @if (loading()) {
@@ -11,6 +11,7 @@
       <span class="material-icons">lock_outline</span>
       <p>{{ unavailable() }}</p>
       <button class="jp-btn primary" (click)="load()">Try again</button>
+      <a class="jp-link" routerLink="/select-module">Back to modules</a>
     </div>
   } @else if (selected(); as job) {
 

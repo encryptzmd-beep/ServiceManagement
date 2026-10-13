@@ -17,6 +17,14 @@ type Stage = 'company' | 'module' | 'branch';
 /** The search box shows only when there are more companies than this. */
 const SEARCH_ABOVE = 6;
 
+/**
+ * Commercial applications whose pages need no branch (they do not work on the database
+ * of the company): opening one goes straight to its first page.
+ */
+const MODULE_HOME: Record<string, string> = {
+  JOBCONSULTANCY: '/consultancy/postings',
+};
+
 @Component({
   selector: 'app-company-selector-component',
   imports: [CommonModule, FormsModule],
@@ -415,6 +423,11 @@ export class CompanySelectorComponent {
 
   openModule(module: ModuleDto): void {
     if (module.state !== 'Available') return;
+
+    // an application whose pages need no branch opens at once
+    const home = MODULE_HOME[module.moduleKey?.toUpperCase()];
+    if (home) { this.router.navigate([home]); return; }
+
     this.router.navigate(['/select-branch'], { queryParams: { module: module.moduleKey } });
   }
 
@@ -428,10 +441,6 @@ export class CompanySelectorComponent {
     this.router.navigate(['/settings/platform']);
   }
 
-  /** The jobs this company offers on Job Portal. The API decides who may manage them. */
-  openHiring(): void {
-    this.router.navigate(['/hiring']);
-  }
 
   // ── STEP 3: BRANCH ────────────────────────────────────────────────
 

@@ -22,7 +22,7 @@ withdraw. A company sees a profile only of a person who applied to it.
 
 | # | Topic | Decision |
 |---|---|---|
-| P1 | Who posts | An **administrator of a company** (role `Admin` in that company). No subscription is needed in this phase. Reason: the commercial applications that should own hiring (Payroll, Job Consultancy) are "Coming soon" and a company cannot be subscribed to an application that is not released. When one of them is built, posting moves under it and its subscription becomes the condition (decision A7/A8 of the catalogue spec). The check lives in one place so that this is a small change. |
+| P1 | Who posts | A company that has the commercial application **Job Consultancy** (module key `JOBCONSULTANCY`), through a member who may open it: an administrator of the company always, another member when the application was given to them. Job postings is the first page of Job Consultancy (route `consultancy/postings`, opened from its card on the modules page); its other pages (clients, candidates, placements) come later. The platform administrator releases the application and switches it on for a company, as for every commercial application. The check lives in one place (`HiringAccess`) and is made on every call from the main database. (Changed on the owner's direction after the first build, which allowed every company administrator.) |
 | P2 | Who applies | Any active, logged-in user whose profile has a name and a headline. A resume is recommended, not required. |
 | P3 | What applying shares | Applying is the person's consent that **this company** sees their profile, experience, education, skills, certificates (titles, not files) and resume, for as long as the application is not withdrawn. The dialog that sends the application says so. The "Employers can find me" switch is not involved: it stays the switch for being *found by search*, which no screen offers yet. |
 | P4 | Live data, no copy | The company reads the applicant's current profile through the API. Nothing of it is copied to the posting or to a tenant database. After a withdrawal the company no longer sees the profile. |
@@ -122,8 +122,8 @@ between states of a posting and of an application.
 **Company.** A page for administrators, outside the Service layout, in the same shell
 as the personal applications:
 
-- Opened from the company's application page by a card **Job postings** that only an
-  administrator sees. Route `hiring`, needs a login and a chosen company.
+- Opened from the card **Job Consultancy** on the modules page of the company. Route
+  `consultancy/postings`, needs a login and a chosen company; no branch is chosen.
 - **Postings**: list with state and applicant counts; add and edit in a dialog;
   Publish, Close, Reopen, Delete.
 - **Applicants** of one posting: name, headline, city, applied date, status; opening
