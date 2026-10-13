@@ -116,8 +116,10 @@ password and options the server row has at the moment its set-up completes.
 
 1. Claims the job (`sp_Provision_Begin`). Only one run can hold the job of a
    company; a second run finds nothing to do.
-2. `CREATE DATABASE EncryptzTenant_NNNNNN`. The name is made from the company id
-   only.
+2. `CREATE DATABASE [EZ_TEN_<company code>]`, for example `EZ_TEN_ACME`. Only a code of
+   A-Z, 0-9, `-` and `_` (2 to 20 characters) becomes a name; any other code fails the
+   set-up before a database exists. The name stays when the code is changed later.
+   (Databases built before 2026-10-13 are named `EncryptzTenant_NNNNNN`.)
 3. Runs `New_Tenant_Database.sql` in it (about 1,470 batches; it can take
    minutes).
 4. Checks the result, then marks the company `Ready`
@@ -155,8 +157,8 @@ database is left alone.
 What remains: Company Databases does not know about a set-up that is running. If
 a platform administrator attaches the generated name to another company in the
 moment between the permission and the drop itself, that database is dropped. Do
-not attach a database named `EncryptzTenant_NNNNNN` by hand while the company
-with that number is being set up.
+not attach a database named `EZ_TEN_<company code>` by hand while the company
+with that code is being set up.
 
 To drop, the API sets the database to single user (open connections are cut off)
 and then drops it. If that fails half-way, the database can be left on the server
@@ -351,7 +353,7 @@ Do this once on a test server, or with a test login, before real use:
     exists" until the half-built database is removed on the server; remove it
     and retry again.
 12. Attaching the generated name to another company while a build runs: start a
-    set-up for company N and, while it runs, attach `EncryptzTenant_NNNNNN` to
+    set-up for company N and, while it runs, attach `EZ_TEN_<its code>` to
     another company under Company Databases. It must end with the build
     `Failed` and the database **not dropped**; the error text must say that
     another company uses it.

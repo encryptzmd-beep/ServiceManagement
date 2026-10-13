@@ -13,7 +13,7 @@ namespace EncryptzTests
         {
             public ProvisionJob? Job = new()
             {
-                CompanyId = 7, Attempt = TenantProvisionerTests.Attempt, TenantScopeId = 1, FirstBranchName = "Head Office",
+                CompanyId = 7, CompanyCode = "ACME7", Attempt = TenantProvisionerTests.Attempt, TenantScopeId = 1, FirstBranchName = "Head Office",
                 ServerName = "srv", AdminUser = "creator", AdminPassword = "secret-pw", ExtraOptions = "", LookupSourceDb = ""
             };
             public bool CompleteAnswer = true;
@@ -119,7 +119,7 @@ namespace EncryptzTests
             }
         }
 
-        private const string Db = "EncryptzTenant_000007";
+        private const string Db = "EZ_TEN_ACME7";
 
         private static (TenantProvisioner Provisioner, FakeStore Store, FakeServer Server) Make()
         {
@@ -138,6 +138,43 @@ namespace EncryptzTests
             Assert.Equal(ProvisionOutcome.Ready, outcome);
             Assert.Equal(new[] { "exists:" + Db, "create:" + Db, "build:" + Db }, server.Calls);
             Assert.Equal(new[] { "begin", "complete:" + Db }, store.Calls);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("AB]; DROP DATABASE master--")]
+        [InlineData("has space")]
+        public async Task Without_a_usable_company_code_no_database_is_touched_and_the_failure_is_recorded(string code)
+        {
+            var (provisioner, store, server) = Make();
+            store.Job = new ProvisionJob
+            {
+                CompanyId = 7, CompanyCode = code, Attempt = Attempt, TenantScopeId = 1, FirstBranchName = "Head Office",
+                ServerName = "srv", AdminUser = "creator", AdminPassword = "secret-pw"
+            };
+
+            Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
+
+            Assert.Empty(server.Calls);
+            Assert.Equal(0, server.EnsureCalls);
+            Assert.Equal(new[] { "begin", "fail" }, store.Calls);
+            Assert.Equal("The company code cannot be used in a database name. Correct the code of the company, then retry.", store.Error);
+        }
+
+        [Fact]
+        public async Task The_database_is_named_after_the_code_of_the_company()
+        {
+            var (provisioner, store, server) = Make();
+            store.Job = new ProvisionJob
+            {
+                CompanyId = 7, CompanyCode = "hamster-ac", Attempt = Attempt, TenantScopeId = 1, FirstBranchName = "Head Office",
+                ServerName = "srv", AdminUser = "creator", AdminPassword = "secret-pw"
+            };
+
+            Assert.Equal(ProvisionOutcome.Ready, await provisioner.RunAsync(7, CancellationToken.None));
+
+            Assert.Equal(new[] { "exists:EZ_TEN_HAMSTER-AC", "create:EZ_TEN_HAMSTER-AC", "build:EZ_TEN_HAMSTER-AC" }, server.Calls);
+            Assert.Contains("complete:EZ_TEN_HAMSTER-AC", store.Calls);
         }
 
         // A company that is unknown, not Provisioning (Ready, Failed, None) or already
@@ -194,7 +231,7 @@ namespace EncryptzTests
         public async Task Without_a_usable_server_the_set_up_fails_and_nothing_is_touched(string serverName, string user, string password)
         {
             var (provisioner, store, server) = Make();
-            store.Job = new ProvisionJob { CompanyId = 7, Attempt = Attempt, TenantScopeId = 1, ServerName = serverName, AdminUser = user, AdminPassword = password };
+            store.Job = new ProvisionJob { CompanyId = 7, CompanyCode = "ACME7", Attempt = Attempt, TenantScopeId = 1, ServerName = serverName, AdminUser = user, AdminPassword = password };
 
             Assert.Equal(ProvisionOutcome.Failed, await provisioner.RunAsync(7, CancellationToken.None));
             Assert.Empty(server.Calls);
@@ -311,7 +348,7 @@ namespace EncryptzTests
         [InlineData("Ready")]    // ... or attached it while this attempt was running
         public async Task When_the_company_names_this_database_it_is_not_dropped(string status)
         {
-            var store = new FakeStore { CompleteAnswer = false, Abandon = new AbandonResult(false, status, Attempt, "encryptztenant_000007", false) };
+            var store = new FakeStore { CompleteAnswer = false, Abandon = new AbandonResult(false, status, Attempt, "ez_ten_acme7", false) };
             var server = new FakeServer();
             var logger = new ListLogger();
 
@@ -385,7 +422,7 @@ namespace EncryptzTests
         [InlineData("None", "", false)]
         [InlineData("", "", false)]
         [InlineData("Ready", "CustomerDb", false)]
-        [InlineData("Ready", "EncryptzTenant_000007", false)]
+        [InlineData("Ready", "EZ_TEN_ACME7", false)]
         [InlineData("Failed", "CustomerDb", true)]
         public async Task Without_the_answer_that_it_may_nothing_is_dropped(string status, string databaseOnRow, bool usedByAnother)
         {

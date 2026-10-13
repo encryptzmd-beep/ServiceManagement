@@ -7,6 +7,8 @@ namespace EncryptzBL.Common.Provisioning
     public sealed class ProvisionJob
     {
         public int CompanyId { get; init; }
+        /// <summary>The company's code: its database is named after it (see <see cref="TenantDatabaseName"/>). Empty when it could not be read.</summary>
+        public string CompanyCode { get; init; } = "";
         /// <summary>Identity of this claim (Companies.ProvisionAttempt). A later attempt has another one.</summary>
         public Guid Attempt { get; init; }
         /// <summary>Value the tenant database stores in its ProjectId columns (1 for a new company).</summary>

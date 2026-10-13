@@ -6,22 +6,47 @@ namespace EncryptzTests
     public class TenantDatabaseNameTests
     {
         [Theory]
-        [InlineData(1, "EncryptzTenant_000001")]
-        [InlineData(123, "EncryptzTenant_000123")]
-        [InlineData(999999, "EncryptzTenant_999999")]
-        [InlineData(1234567, "EncryptzTenant_1234567")]
-        public void The_name_is_built_from_the_company_id_only(int companyId, string expected)
+        [InlineData("ENCRYPTZ", "EZ_TEN_ENCRYPTZ")]
+        [InlineData("C001", "EZ_TEN_C001")]
+        [InlineData("A-B_1", "EZ_TEN_A-B_1")]
+        [InlineData("7UP", "EZ_TEN_7UP")]
+        [InlineData("AB", "EZ_TEN_AB")]
+        [InlineData("ABCDEFGHIJ0123456789", "EZ_TEN_ABCDEFGHIJ0123456789")]
+        public void The_name_is_the_prefix_and_the_company_code(string code, string expected)
         {
-            Assert.Equal(expected, TenantDatabaseName.For(companyId));
+            Assert.Equal(expected, TenantDatabaseName.TryFor(code));
             Assert.True(TenantDatabaseName.IsGenerated(expected));
         }
 
         [Theory]
-        [InlineData(0)]
-        [InlineData(-5)]
-        public void There_is_no_name_without_a_company(int companyId)
+        [InlineData("acme", "EZ_TEN_ACME")]
+        [InlineData("  Acme-1 ", "EZ_TEN_ACME-1")]
+        public void Plain_letters_are_upper_cased_and_blanks_around_the_code_are_dropped(string code, string expected)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => TenantDatabaseName.For(companyId));
+            Assert.Equal(expected, TenantDatabaseName.TryFor(code));
+        }
+
+        // The code is what a user typed: only the alphabet of CompanyCreateRules may reach a
+        // database name, so nothing can close the brackets or the quotes it is written in.
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        [InlineData("A")]                           // too short
+        [InlineData("ABCDEFGHIJ0123456789X")]       // 21 characters
+        [InlineData("AB CD")]
+        [InlineData("-AB")]                         // starts with a sign
+        [InlineData("_AB")]
+        [InlineData("AB]")]
+        [InlineData("AB'")]
+        [InlineData("AB;DROP")]
+        [InlineData("AB.CD")]
+        [InlineData("ÄB")]                     // a letter outside A-Z
+        [InlineData("ＡＢ")]                // full-width AB
+        [InlineData("AB\n")]
+        public void A_code_that_is_not_a_plain_company_code_gives_no_name(string? code)
+        {
+            Assert.Null(TenantDatabaseName.TryFor(code));
         }
 
         [Theory]
@@ -30,26 +55,27 @@ namespace EncryptzTests
         [InlineData("master")]
         [InlineData("MainDBEncryptz")]
         [InlineData("FelixServiceDB")]
-        [InlineData("EncryptzTenant_")]
-        [InlineData("EncryptzTenant_12")]
-        [InlineData("EncryptzTenant_000001]; DROP DATABASE x--")]
-        [InlineData("EncryptzTenant_00000a")]
-        [InlineData(" EncryptzTenant_000001")]
-        [InlineData("encryptztenant_000001")]
-        [InlineData("EncryptzTenant_000000")]
+        [InlineData("HamsterserviceDB")]
+        [InlineData("EncryptzTenant_000001")]       // the earlier convention
+        [InlineData("EZ_TEN_")]
+        [InlineData("EZ_TEN_A")]
+        [InlineData("EZ_TEN_ACME]; DROP DATABASE x--")]
+        [InlineData(" EZ_TEN_ACME")]
+        [InlineData("EZ_TEN_ACME ")]
+        [InlineData("ez_ten_ACME")]
+        [InlineData("EZ_TEN_acme")]
+        [InlineData("EZ_TEN__ACME")]
         public void Anything_else_is_not_a_generated_name(string? name)
         {
             Assert.False(TenantDatabaseName.IsGenerated(name));
         }
 
         [Theory]
-        [InlineData("EncryptzTenant_000007\n")]
-        [InlineData("EncryptzTenant_000007\r\n")]
-        [InlineData("EncryptzTenant_0000007")]
-        [InlineData("EncryptzTenant_2147483648")]
-        [InlineData("EncryptzTenant_9999999999")]
-        [InlineData("EncryptzTenant_\u0660\u0660\u0660\u0660\u0660\u0667")]   // Arabic-Indic digits
-        [InlineData("EncryptzTenant_\uFF10\uFF10\uFF10\uFF10\uFF10\uFF17")]   // full-width digits
+        [InlineData("EZ_TEN_ACME\n")]
+        [InlineData("EZ_TEN_ACME\r\n")]
+        [InlineData("EZ_TEN_ABCDEFGHIJ0123456789X")]
+        [InlineData("EZ_TEN_ＡＢＣ")]   // full-width letters
+        [InlineData("EZ_TEN_АВС")]   // Cyrillic letters that look like ABC
         public void A_name_that_only_looks_generated_is_not_one(string name)
         {
             Assert.False(TenantDatabaseName.IsGenerated(name));

@@ -34,9 +34,12 @@ namespace EncryptzBL.Common.Provisioning
             try { password = encrypted.Length == 0 ? "" : _protector.Unprotect(encrypted); }
             catch { password = ""; }   // an unreadable password = no usable server
 
+            var claimedId = Convert.ToInt32(row["CompanyId"]);
+
             return new ProvisionJob
             {
-                CompanyId = Convert.ToInt32(row["CompanyId"]),
+                CompanyId = claimedId,
+                CompanyCode = await CompanyCodeAsync(row, claimedId),
                 Attempt = attempt,
                 TenantScopeId = Convert.ToInt32(row["TenantScopeId"]),
                 FirstBranchName = row["FirstBranchName"]?.ToString() ?? "",
@@ -46,6 +49,33 @@ namespace EncryptzBL.Common.Provisioning
                 ExtraOptions = row["ExtraOptions"]?.ToString() ?? "",
                 LookupSourceDb = row["LookupSourceDb"]?.ToString() ?? ""
             };
+        }
+
+        /// <summary>
+        /// The code of the claimed company. sp_Provision_Begin (script 20) does not return it,
+        /// so it is read with sp_Platform_GetCompanies. Never throws: the job is already
+        /// claimed, and a job without a code is failed and released at once by the
+        /// provisioner, where an error here would leave it claimed until the sweeper.
+        /// </summary>
+        private async Task<string> CompanyCodeAsync(DataRow claimed, int companyId)
+        {
+            if (claimed.Table.Columns.Contains("CompanyCode"))
+                return claimed["CompanyCode"]?.ToString() ?? "";
+
+            try
+            {
+                var dt = await GetDataTableAsync("sp_Platform_GetCompanies", new[]
+                {
+                    SqlParameterHelper.Input("@CompanyId", companyId)
+                });
+
+                var row = dt?.Rows.Cast<DataRow>().FirstOrDefault(r => Convert.ToInt32(r["CompanyId"]) == companyId);
+                return row?["CompanyCode"]?.ToString() ?? "";
+            }
+            catch
+            {
+                return "";
+            }
         }
 
         public async Task<bool> CompleteAsync(ProvisionJob job, string databaseName)

@@ -6,7 +6,8 @@ namespace EncryptzBL.Common.Provisioning
     /// Builds the database of one company and makes the company Ready, or cleans up
     /// and marks it Failed. Rules it guards:
     ///   - it works only on a job it claimed: two runs never build for one company;
-    ///   - the database name comes from the company id only;
+    ///   - the database name is EZ_TEN_ and the company code, and only when the code has
+    ///     the plain alphabet of a company code (see TenantDatabaseName);
     ///   - a database that already exists is never dropped and never reused;
     ///   - only a database THIS attempt created is dropped when the attempt fails,
     ///     and only after the main database answered, in one statement that also gives
@@ -64,7 +65,10 @@ namespace EncryptzBL.Common.Provisioning
                 || string.IsNullOrEmpty(job.AdminPassword))
                 return await FailAsync(job, "No usable database server is set for this company.", null);
 
-            var databaseName = TenantDatabaseName.For(job.CompanyId);
+            var databaseName = TenantDatabaseName.TryFor(job.CompanyCode);
+            if (databaseName == null)
+                return await FailAsync(job, "The company code cannot be used in a database name. Correct the code of the company, then retry.", null);
+
             var createStarted = false;
             var created = false;
 
