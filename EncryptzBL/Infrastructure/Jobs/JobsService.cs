@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text.Json;
 using EncryptzBL.Common;
 using EncryptzBL.Common.Jobs;
 using EncryptzBL.DTO_s;
@@ -175,8 +176,65 @@ namespace EncryptzBL.Infrastructure.Jobs
                     };
                 }
 
+                page.Preferences = await ReadPreferences(userId);
                 page.Completeness = JobsRules.Completeness(page);
                 return ApiResponse<JobProfilePageDto>.Ok(page);
+            });
+
+        // ── preferences (script PersonalDB/05) ────────────────────────────────
+
+        /// <summary>
+        /// What the person is looking for. A database that does not have script 05 yet gives
+        /// an empty answer: the rest of the page must still open.
+        /// </summary>
+        private async Task<JobPreferencesDto> ReadPreferences(int userId)
+        {
+            var preferences = new JobPreferencesDto();
+
+            try
+            {
+                var ds = await GetDataSetAsync("jobs.sp_Preference_List", new[] { In("@UserId", userId) });
+                if (ds == null || ds.Tables.Count == 0)
+                    return preferences;
+
+                foreach (DataRow r in ds.Tables[0].Rows)
+                {
+                    var value = r["Value"]?.ToString() ?? "";
+                    switch (r["Kind"]?.ToString())
+                    {
+                        case "Job": preferences.Jobs.Add(value); break;
+                        case "Location": preferences.Locations.Add(value); break;
+                        case "WorkMode": preferences.WorkModes.Add(value); break;
+                    }
+                }
+
+                if (ds.Tables.Count > 1 && ds.Tables[1].Rows.Count > 0 && ds.Tables[1].Rows[0]["ExpectedCtc"] != DBNull.Value)
+                    preferences.ExpectedCtc = Convert.ToInt32(ds.Tables[1].Rows[0]["ExpectedCtc"]);
+            }
+            catch (SqlException ex)
+            {
+                _logger.LogWarning(ex, "Job Portal: the preferences of user {UserId} could not be read (SQL error {Number})", userId, ex.Number);
+                return new JobPreferencesDto();
+            }
+
+            return preferences;
+        }
+
+        public Task<ApiResponse<bool>> SavePreferences(int userId, JobPreferencesDto dto)
+            => Guarded(userId, "saving the preferences", async () =>
+            {
+                var problem = JobsRules.PreferencesProblem(dto);
+                if (problem != null)
+                    return ApiResponse<bool>.Fail(problem);
+
+                return AsFlag(Answer(await GetDataTableAsync("jobs.sp_Preference_Save", new[]
+                {
+                    In("@UserId", userId),
+                    In("@Jobs", JsonSerializer.Serialize(dto.Jobs)),
+                    In("@Locations", JsonSerializer.Serialize(dto.Locations)),
+                    In("@WorkModes", JsonSerializer.Serialize(dto.WorkModes)),
+                    In("@ExpectedCtc", dto.ExpectedCtc)
+                })));
             });
 
         /// <summary>

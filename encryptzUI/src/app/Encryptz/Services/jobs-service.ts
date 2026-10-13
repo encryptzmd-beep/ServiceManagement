@@ -69,8 +69,20 @@ export interface JobFileInfo {
   uploadedAt: string;
 }
 
+export type JobWorkMode = 'On-site' | 'Remote' | 'Hybrid';
+
+/** What the person is looking for. All of it is optional. */
+export interface JobPreferences {
+  jobs: string[];
+  locations: string[];
+  workModes: JobWorkMode[];
+  /** Per year, in rupees; null = not said. */
+  expectedCtc: number | null;
+}
+
 export interface JobProfilePage {
   profile: JobProfile;
+  preferences?: JobPreferences | null;
   experience: JobExperience[];
   education: JobEducation[];
   skills: JobSkill[];
@@ -104,6 +116,11 @@ export class JobsService {
 
   setVisible(isVisible: boolean): Observable<ApiResponse<boolean>> {
     return this.http.post<ApiResponse<boolean>>(`${this.api}/profile/visible`, { isVisible });
+  }
+
+  /** Replaces everything the person prefers. */
+  savePreferences(preferences: JobPreferences): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/preferences`, preferences);
   }
 
   saveExperience(entry: JobExperience): Observable<ApiResponse<number>> {

@@ -15,6 +15,8 @@ namespace EncryptzBL.Infrastructure.Jobs
         Task<ApiResponse<bool>> SaveProfile(int userId, JobProfileDto dto);
         Task<ApiResponse<bool>> SetVisible(int userId, bool isVisible);
 
+        Task<ApiResponse<bool>> SavePreferences(int userId, JobPreferencesDto dto);
+
         Task<ApiResponse<int>> SaveExperience(int userId, JobExperienceDto dto);
         Task<ApiResponse<bool>> DeleteExperience(int userId, int experienceId);
 

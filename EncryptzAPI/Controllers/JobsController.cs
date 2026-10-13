@@ -52,6 +52,10 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SetVisible([FromBody] SetJobVisibilityRequest req)
             => Ok(await _jobs.SetVisible(Caller(), req?.IsVisible ?? false));
 
+        [HttpPost("preferences")]
+        public async Task<IActionResult> SavePreferences([FromBody] JobPreferencesDto dto)
+            => Ok(await _jobs.SavePreferences(Caller(), dto));
+
         // ── experience ────────────────────────────────────────────────────────
 
         [HttpPost("experience")]

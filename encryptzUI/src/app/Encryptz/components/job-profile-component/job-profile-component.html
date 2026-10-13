@@ -73,6 +73,46 @@
     <div class="jp-layout">
       <div class="jp-main">
 
+        <!-- ═══════════ JOB PREFERENCES ═══════════ -->
+        @let pf = prefs(pg);
+        <section class="jp-card jp-section">
+          <div class="jp-section-head">
+            <span class="jp-section-icon"><span class="material-icons">tune</span></span>
+            <h2>Job preferences</h2>
+            <button class="jp-btn" (click)="openPreferences()"><span class="material-icons">edit</span>Edit</button>
+          </div>
+          @if (hasPreferences(pf)) {
+            <dl class="jp-prefs">
+              @if (pf.jobs.length) {
+                <div>
+                  <dt>Preferred jobs</dt>
+                  <dd>@for (job of pf.jobs; track job) { <span class="jp-chip">{{ job }}</span> }</dd>
+                </div>
+              }
+              @if (pf.locations.length) {
+                <div>
+                  <dt>Preferred locations</dt>
+                  <dd>@for (place of pf.locations; track place) { <span class="jp-chip">{{ place }}</span> }</dd>
+                </div>
+              }
+              @if (pf.workModes.length) {
+                <div>
+                  <dt>Working mode</dt>
+                  <dd>@for (mode of pf.workModes; track mode) { <span class="jp-chip">{{ mode }}</span> }</dd>
+                </div>
+              }
+              @if (pf.expectedCtc != null) {
+                <div>
+                  <dt>Expected CTC</dt>
+                  <dd class="jp-prefs-text">{{ ctcLabel(pf.expectedCtc) }}</dd>
+                </div>
+              }
+            </dl>
+          } @else {
+            <p class="jp-empty boxed">Say which jobs, places and working modes you prefer, and the CTC you expect.</p>
+          }
+        </section>
+
         <!-- ═══════════ EXPERIENCE ═══════════ -->
         <section class="jp-card jp-section">
           <div class="jp-section-head">
@@ -360,6 +400,58 @@
                 <input class="jp-input" name="contactPhone" [(ngModel)]="d.model.contactPhone" maxlength="30" inputmode="tel" />
               </label>
             </div>
+          }
+
+          @case ('preferences') {
+            <div class="jp-field">
+              <label for="jp-pref-job">Preferred jobs</label>
+              <div class="jp-add">
+                <input id="jp-pref-job" class="jp-input" name="jobInput" [(ngModel)]="d.model.jobInput" maxlength="300"
+                       placeholder="Site Engineer" (keydown.enter)="addPreference('jobs'); $event.preventDefault()" />
+                <button type="button" class="jp-btn" (click)="addPreference('jobs')">Add</button>
+              </div>
+              <div class="jp-chips">
+                @for (job of d.model.jobs; track job; let i = $index) {
+                  <span class="jp-chip">{{ job }}
+                    <button type="button" (click)="removePreference('jobs', i)" [attr.aria-label]="'Remove ' + job">✕</button>
+                  </span>
+                }
+              </div>
+            </div>
+
+            <div class="jp-field">
+              <label for="jp-pref-place">Preferred locations</label>
+              <div class="jp-add">
+                <input id="jp-pref-place" class="jp-input" name="locationInput" [(ngModel)]="d.model.locationInput" maxlength="300"
+                       placeholder="Kochi" (keydown.enter)="addPreference('locations'); $event.preventDefault()" />
+                <button type="button" class="jp-btn" (click)="addPreference('locations')">Add</button>
+              </div>
+              <div class="jp-chips">
+                @for (place of d.model.locations; track place; let i = $index) {
+                  <span class="jp-chip">{{ place }}
+                    <button type="button" (click)="removePreference('locations', i)" [attr.aria-label]="'Remove ' + place">✕</button>
+                  </span>
+                }
+              </div>
+              <small>Up to 10 of each. Separate several with a comma.</small>
+            </div>
+
+            <div class="jp-field">
+              <span class="jp-field-label">Working mode</span>
+              <div class="jp-modes">
+                @for (mode of workModes; track mode) {
+                  <label class="jp-check">
+                    <input type="checkbox" [checked]="d.model.workModes.includes(mode)" (change)="toggleWorkMode(mode)" /> {{ mode }}
+                  </label>
+                }
+              </div>
+            </div>
+
+            <label>Expected CTC (₹ per year)
+              <input class="jp-input" name="expectedCtc" type="number" min="1" step="1000" inputmode="numeric"
+                     [(ngModel)]="d.model.expectedCtc" placeholder="600000" />
+              <small>The yearly amount in rupees, for example 600000 for 6 LPA. Leave it empty if you prefer not to say.</small>
+            </label>
           }
 
           @case ('experience') {

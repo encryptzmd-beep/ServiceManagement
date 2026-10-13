@@ -88,6 +88,49 @@ namespace EncryptzBL.Common.Jobs
             return starter.FullName.Length + starter.ContactEmail.Length + starter.ContactPhone.Length == 0 ? null : starter;
         }
 
+        // ── preferences ───────────────────────────────────────────────────────
+
+        public static readonly string[] WorkModes = { "On-site", "Remote", "Hybrid" };
+
+        private const int MaxPreferences = 10;
+        private const int MaxPreferenceLength = 100;
+        private const int MaxCtc = 999_999_999;
+
+        /// <summary>Tidies the lists (trimmed, no blanks, no repeats, order kept) and checks them.</summary>
+        public static string? PreferencesProblem(JobPreferencesDto? p)
+        {
+            if (p == null)
+                return "Nothing to save";
+
+            static List<string> Tidy(List<string>? values)
+                => (values ?? new List<string>())
+                    .Select(v => (v ?? "").Trim())
+                    .Where(v => v.Length > 0)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+            p.Jobs = Tidy(p.Jobs);
+            p.Locations = Tidy(p.Locations);
+            p.WorkModes = Tidy(p.WorkModes);
+
+            if (p.Jobs.Count > MaxPreferences) return "Choose at most 10 preferred jobs";
+            if (p.Locations.Count > MaxPreferences) return "Choose at most 10 preferred locations";
+            if (p.Jobs.Any(v => v.Length > MaxPreferenceLength)) return "A preferred job can have at most 100 characters";
+            if (p.Locations.Any(v => v.Length > MaxPreferenceLength)) return "A preferred location can have at most 100 characters";
+
+            // the spelling of the list is what is stored
+            var modes = p.WorkModes
+                .Select(v => WorkModes.FirstOrDefault(m => string.Equals(m, v, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+            if (modes.Any(m => m == null)) return "Choose the working mode from the list";
+            p.WorkModes = modes.Select(m => m!).ToList();
+
+            if (p.ExpectedCtc.HasValue && (p.ExpectedCtc.Value <= 0 || p.ExpectedCtc.Value > MaxCtc))
+                return "Enter the expected CTC as a yearly amount";
+
+            return null;
+        }
+
         // ── experience ────────────────────────────────────────────────────────
 
         public static string? ExperienceProblem(JobExperienceDto? e, DateTime today)

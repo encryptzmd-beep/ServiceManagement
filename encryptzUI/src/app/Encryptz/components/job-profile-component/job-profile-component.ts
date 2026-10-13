@@ -8,13 +8,15 @@ import {
   JobCertificate,
   JobEducation,
   JobExperience,
+  JobPreferences,
   JobProfilePage,
   JobSkill,
+  JobWorkMode,
   JobsService,
 } from '../../Services/jobs-service';
 import { PersonalMenuItem, PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 
-type DialogKind = 'profile' | 'experience' | 'education' | 'skill' | 'certificate';
+type DialogKind = 'profile' | 'preferences' | 'experience' | 'education' | 'skill' | 'certificate';
 type RowKind = 'experience' | 'education' | 'skill' | 'certificate';
 
 interface Dialog {
@@ -28,6 +30,8 @@ interface Dialog {
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
+const MAX_PREFERENCES = 10;
+const NO_PREFERENCES: JobPreferences = { jobs: [], locations: [], workModes: [], expectedCtc: null };
 const HTTPS_LINK = /^https:\/\/[^\s"<>]+$/i;
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -64,6 +68,7 @@ export class JobProfileComponent implements OnInit, OnDestroy {
   toast = signal<{ text: string; ok: boolean } | null>(null);
 
   readonly levels = ['Beginner', 'Intermediate', 'Expert'];
+  readonly workModes: JobWorkMode[] = ['On-site', 'Remote', 'Hybrid'];
 
   /** The side menu. A page without a route is not built yet and is shown as "Soon". */
   readonly menu: PersonalMenuItem[] = [
@@ -153,6 +158,46 @@ export class JobProfileComponent implements OnInit, OnDestroy {
       fullName: p?.fullName ?? '', headline: p?.headline ?? '', summary: p?.summary ?? '', city: p?.city ?? '',
       contactEmail: p?.contactEmail ?? '', contactPhone: p?.contactPhone ?? '', dateOfBirth: this.dayOf(p?.dateOfBirth),
     });
+  }
+
+  openPreferences(): void {
+    const p = this.prefs(this.page());
+    this.open('preferences', 'Job preferences', {
+      jobs: [...p.jobs], locations: [...p.locations], workModes: [...p.workModes],
+      expectedCtc: p.expectedCtc ?? '', jobInput: '', locationInput: '',
+    });
+  }
+
+  /** Adds what is typed in the box of that list; commas separate several entries. */
+  addPreference(kind: 'jobs' | 'locations'): void {
+    const m = this.dialog()?.model;
+    if (!m) return;
+
+    const box = kind === 'jobs' ? 'jobInput' : 'locationInput';
+    const list: string[] = m[kind];
+    this.formError.set('');
+
+    for (const entry of String(m[box] ?? '').split(',').map(v => v.trim()).filter(Boolean)) {
+      if (list.some(v => v.toLowerCase() === entry.toLowerCase())) continue;
+      if (list.length >= MAX_PREFERENCES) {
+        this.formError.set(`Choose at most 10 preferred ${kind}`);
+        break;
+      }
+      list.push(entry.slice(0, 100));
+    }
+    m[box] = '';
+  }
+
+  removePreference(kind: 'jobs' | 'locations', index: number): void {
+    this.dialog()?.model[kind].splice(index, 1);
+    this.formError.set('');
+  }
+
+  toggleWorkMode(mode: JobWorkMode): void {
+    const modes: JobWorkMode[] | undefined = this.dialog()?.model.workModes;
+    if (!modes) return;
+    const at = modes.indexOf(mode);
+    if (at >= 0) modes.splice(at, 1); else modes.push(mode);
   }
 
   openExperience(row?: JobExperience): void {
@@ -253,6 +298,21 @@ export class JobProfileComponent implements OnInit, OnDestroy {
           fullName: t(m.fullName), headline: t(m.headline), summary: t(m.summary), city: t(m.city),
           contactEmail: t(m.contactEmail), contactPhone: t(m.contactPhone), dateOfBirth: t(m.dateOfBirth) || null,
         });
+
+      case 'preferences': {
+        // what is still in a box counts as typed
+        this.addPreference('jobs');
+        if (this.formError()) return this.formError();
+        this.addPreference('locations');
+        if (this.formError()) return this.formError();
+
+        const ctc = t(m.expectedCtc);
+        if (ctc && !/^[1-9]\d{0,8}$/.test(ctc)) return 'Enter the expected CTC as a yearly amount';
+
+        return this.api.savePreferences({
+          jobs: [...m.jobs], locations: [...m.locations], workModes: [...m.workModes], expectedCtc: ctc ? Number(ctc) : null,
+        });
+      }
 
       case 'experience':
         if (!t(m.organisation) || !t(m.title)) return 'Enter the organisation and your title';
@@ -419,6 +479,20 @@ export class JobProfileComponent implements OnInit, OnDestroy {
     } finally {
       document.title = title;
     }
+  }
+
+  /** The preferences of the page; empty ones when the API sent none. */
+  prefs(page: JobProfilePage | null): JobPreferences {
+    return page?.preferences ?? NO_PREFERENCES;
+  }
+
+  hasPreferences(p: JobPreferences): boolean {
+    return p.jobs.length + p.locations.length + p.workModes.length > 0 || p.expectedCtc != null;
+  }
+
+  /** "₹6,00,000 per year": grouped the Indian way. */
+  ctcLabel(amount: number): string {
+    return `₹${amount.toLocaleString('en-IN')} per year`;
   }
 
   /** City, e-mail and phone on one line, as resume readers expect them. */

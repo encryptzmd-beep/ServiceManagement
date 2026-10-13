@@ -118,6 +118,7 @@ namespace EncryptzTests
             public Task<ApiResponse<bool>> DeleteCertificate(int userId, int certificateId) => throw new NotSupportedException();
             public Task<ApiResponse<int>> SaveResume(int userId, JobUpload? file) => throw new NotSupportedException();
             public Task<ApiResponse<bool>> DeleteResume(int userId) => throw new NotSupportedException();
+            public Task<ApiResponse<bool>> SavePreferences(int userId, JobPreferencesDto dto) => throw new NotSupportedException();
             public Task<ApiResponse<int>> SavePhoto(int userId, JobUpload? file) => throw new NotSupportedException();
             public Task<ApiResponse<bool>> DeletePhoto(int userId) => throw new NotSupportedException();
             public Task<ApiResponse<JobFileContent>> GetPhoto(int userId) => throw new NotSupportedException();

@@ -78,8 +78,20 @@ namespace EncryptzBL.DTO_s
         public List<JobSkillDto> Skills { get; set; } = new();
         public List<JobCertificateDto> Certificates { get; set; } = new();
         public JobFileInfoDto? Resume { get; set; }
+        public JobPreferencesDto Preferences { get; set; } = new();
         /// <summary>0 to 100.</summary>
         public int Completeness { get; set; }
+    }
+
+    /// <summary>What the person is looking for. All of it is optional.</summary>
+    public class JobPreferencesDto
+    {
+        public List<string> Jobs { get; set; } = new();
+        public List<string> Locations { get; set; } = new();
+        /// <summary>Any of On-site, Remote, Hybrid.</summary>
+        public List<string> WorkModes { get; set; } = new();
+        /// <summary>Per year, in rupees; null = not said.</summary>
+        public int? ExpectedCtc { get; set; }
     }
 
     public class SetJobVisibilityRequest

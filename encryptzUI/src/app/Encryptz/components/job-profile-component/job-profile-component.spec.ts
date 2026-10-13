@@ -72,6 +72,80 @@ describe('JobProfileComponent', () => {
     if (typeof window.print !== 'function') (window as any).print = () => {};
   });
 
+  // ── job preferences ───────────────────────────────────────────────────────
+
+  const withPreferences = () => of({ success: true, message: '', data: {
+    ...page(),
+    preferences: { jobs: ['Site Engineer', 'Quantity Surveyor'], locations: ['Kochi'], workModes: ['Remote', 'Hybrid'], expectedCtc: 600000 },
+  } });
+
+  it('shows what the person is looking for, the CTC as a yearly amount in rupees', () => {
+    api.getPage = withPreferences;
+    const t = text(create());
+
+    expect(t).toContain('Job preferences');
+    expect(t).toContain('Site Engineer');
+    expect(t).toContain('Quantity Surveyor');
+    expect(t).toContain('Kochi');
+    expect(t).toContain('Remote');
+    expect(t).toContain('₹6,00,000 per year');
+  });
+
+  it('asks for the preferences when there are none (also from an API that sends none)', () => {
+    expect(text(create())).toContain('Say which jobs, places and working modes you prefer');
+  });
+
+  it('saves the preferences: typed entries are added once, modes are switched, the CTC is a number', () => {
+    api.savePreferences = (p: any) => { calls.push(['savePreferences', p]); return ok(true, 'Preferences saved'); };
+    api.getPage = withPreferences;
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    c.openPreferences();
+    const m = c.dialog()!.model;
+    m.jobInput = ' Estimator, site engineer ';
+    c.addPreference('jobs');
+    c.removePreference('jobs', 1);              // Quantity Surveyor
+    m.locationInput = 'Thrissur';               // left in the box: taken on save
+    c.toggleWorkMode('Remote');                 // off
+    c.toggleWorkMode('On-site');                // on
+    m.expectedCtc = '750000';
+    c.save();
+
+    expect(calls.find(x => x[0] === 'savePreferences')![1]).toEqual({
+      jobs: ['Site Engineer', 'Estimator'], locations: ['Kochi', 'Thrissur'], workModes: ['Hybrid', 'On-site'], expectedCtc: 750000,
+    });
+    expect(c.dialog()).toBeNull();
+  });
+
+  it('sends no CTC when the box is empty, and refuses one that is not a positive whole number', () => {
+    api.savePreferences = (p: any) => { calls.push(['savePreferences', p]); return ok(); };
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    c.openPreferences();
+    c.dialog()!.model.expectedCtc = '-5';
+    c.save();
+    expect(c.formError()).toBe('Enter the expected CTC as a yearly amount');
+    expect(calls.some(x => x[0] === 'savePreferences')).toBe(false);
+
+    c.dialog()!.model.expectedCtc = '';
+    c.save();
+    expect(calls.find(x => x[0] === 'savePreferences')![1].expectedCtc).toBeNull();
+  });
+
+  it('takes at most 10 preferred jobs', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    c.openPreferences();
+    c.dialog()!.model.jobInput = Array.from({ length: 11 }, (_, i) => `Job ${i + 1}`).join(',');
+    c.addPreference('jobs');
+
+    expect(c.dialog()!.model.jobs.length).toBe(10);
+    expect(c.formError()).toBe('Choose at most 10 preferred jobs');
+  });
+
   // ── photo ─────────────────────────────────────────────────────────────────
 
   it('shows the photo instead of the initials when there is one', () => {

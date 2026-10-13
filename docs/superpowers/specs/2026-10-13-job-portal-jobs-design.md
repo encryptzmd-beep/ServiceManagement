@@ -36,8 +36,8 @@ withdraw. A company sees a profile only of a person who applied to it.
 
 ## 3. Personal DB
 
-One new script, `EncryptzAPI/Database/PersonalDB/05_Jobs_Postings.sql`. Same guards
-as scripts 02 to 04; re-runnable; changes no existing table or procedure.
+One new script, `EncryptzAPI/Database/PersonalDB/06_Jobs_Postings.sql`. Same guards
+as scripts 02 to 05; re-runnable; changes no existing table or procedure.
 
 | Table | Columns |
 |---|---|
@@ -143,7 +143,7 @@ as the personal applications:
 ## 7. Testing
 
 - Unit tests: `JobPostingRules` (every rule of section 4), `HiringAccess`.
-- Script tests in the existing style: the guards of script 05; every person procedure
+- Script tests in the existing style: the guards of script 06; every person procedure
   takes `@UserId` and every company procedure `@CompanyId` first; every statement on
   the tables names the one or the other.
 - Endpoint tests by reflection: routes, `[Authorize]`, no user id and no company id
@@ -157,7 +157,7 @@ as the personal applications:
 
 ## 8. Order of work
 
-1. Script 05 and its checks against `EZ_PERSONAL`.
+1. Script 06 and its checks against `EZ_PERSONAL`.
 2. Rules, service and endpoints, person side; then company side.
 3. Person pages (search, applications, saved) and the menu.
 4. Company pages and the card on the application page.
