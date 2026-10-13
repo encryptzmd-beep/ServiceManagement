@@ -237,10 +237,10 @@
             </label>
             <div class="jp-two">
               <label>Started *
-                <input class="jp-input" name="startMonth" type="month" [(ngModel)]="d.model.startMonth" />
+                <input class="jp-input" name="startMonth" type="month" placeholder="YYYY-MM" [(ngModel)]="d.model.startMonth" />
               </label>
               <label>Ended
-                <input class="jp-input" name="endMonth" type="month" [(ngModel)]="d.model.endMonth" [disabled]="d.model.current" />
+                <input class="jp-input" name="endMonth" type="month" placeholder="YYYY-MM" [(ngModel)]="d.model.endMonth" [disabled]="d.model.current" />
               </label>
             </div>
             <label class="jp-check">

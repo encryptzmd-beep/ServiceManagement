@@ -28,6 +28,7 @@ interface Dialog {
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const HTTPS_LINK = /^https:\/\/[^\s"<>]+$/i;
+const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 /**
  * Job Portal, phase 1: the person's own profile. Everything is read and written through
@@ -171,6 +172,8 @@ export class JobProfileComponent implements OnInit {
   }
 
   closeDialog(): void {
+    // while a save is on the way the dialog stays: its answer belongs to it
+    if (this.saving()) return;
     this.dialog.set(null);
     this.formError.set('');
     this.saving.set(false);
@@ -206,13 +209,15 @@ export class JobProfileComponent implements OnInit {
       next: res => {
         this.saving.set(false);
         if (!res.success) { this.formError.set(res.message || 'Could not save. Please try again'); return; }
-        this.dialog.set(null);
+        if (this.dialog() === d) this.dialog.set(null);
         this.notify(res.message, true);
         this.load();
       },
       error: err => {
         this.saving.set(false);
         this.formError.set(err?.status === 413 ? 'The file is larger than 5 MB' : 'Could not save. Please try again');
+        // the answer was lost, the save may have happened: show what is stored now
+        this.load();
       },
     });
   }
@@ -233,6 +238,9 @@ export class JobProfileComponent implements OnInit {
       case 'experience':
         if (!t(m.organisation) || !t(m.title)) return 'Enter the organisation and your title';
         if (!t(m.startMonth)) return 'Choose the month you started';
+        // a browser without a month picker shows a plain text box
+        if (!MONTH.test(t(m.startMonth))) return 'Enter the start month as YYYY-MM, for example 2019-04';
+        if (!m.current && t(m.endMonth) && !MONTH.test(t(m.endMonth))) return 'Enter the end month as YYYY-MM, for example 2019-04';
         return this.api.saveExperience({
           experienceId: m.experienceId, organisation: t(m.organisation), title: t(m.title),
           startMonth: `${t(m.startMonth)}-01`,
@@ -306,6 +314,8 @@ export class JobProfileComponent implements OnInit {
       error: err => {
         this.resumeBusy.set(false);
         this.resumeError.set(err?.status === 413 ? 'The file is larger than 5 MB' : 'Could not upload the file. Please try again');
+        // the answer was lost, the file may have been stored: show what is stored now
+        this.load();
       },
     });
   }

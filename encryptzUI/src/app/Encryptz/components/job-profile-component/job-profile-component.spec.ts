@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { AuthService } from '../../Auth/auth-service';
 import { JobsService } from '../../Services/jobs-service';
 import { JobProfileComponent } from './job-profile-component';
@@ -311,5 +311,80 @@ describe('JobProfileComponent', () => {
     expect(t).toContain('Add your name and a headline');
     expect(t).toContain('No experience added yet');
     expect(t).toContain('No resume uploaded yet');
+  });
+
+  // ── after the review ──────────────────────────────────────────────────────
+
+  it('reads the page again when the answer to an upload is lost: the file may have been stored', () => {
+    api.saveResume = () => throwError(() => ({ status: 0 }));
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    c.uploadResume(new File([new Uint8Array(10)], 'cv.pdf'));
+
+    expect(c.resumeError()).toBe('Could not upload the file. Please try again');
+    expect(calls.filter(x => x[0] === 'getPage').length).toBe(2);
+  });
+
+  it('reads the page again when the answer to a save is lost, and keeps the dialog', () => {
+    api.saveCertificate = () => throwError(() => ({ status: 0 }));
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    c.openCertificate();
+    c.dialog()!.model.title = 'Tally Prime';
+    c.save();
+
+    expect(c.dialog()).not.toBeNull();
+    expect(c.formError()).toBe('Could not save. Please try again');
+    expect(calls.filter(x => x[0] === 'getPage').length).toBe(2);
+  });
+
+  it('asks for the month as YYYY-MM where the browser gives a plain text box', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    c.openExperience();
+    Object.assign(c.dialog()!.model, { organisation: 'Acme', title: 'Clerk', startMonth: '04/2019' });
+    c.save();
+    expect(c.formError()).toBe('Enter the start month as YYYY-MM, for example 2019-04');
+
+    Object.assign(c.dialog()!.model, { startMonth: '2019-04', endMonth: '2020-13' });
+    c.save();
+    expect(c.formError()).toBe('Enter the end month as YYYY-MM, for example 2019-04');
+
+    expect(calls.some(x => x[0] === 'saveExperience')).toBe(false);
+  });
+
+  it('does not close the dialog while its save is on the way', () => {
+    const pending = new Subject<any>();
+    api.saveSkill = () => pending;
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    c.openSkill();
+    Object.assign(c.dialog()!.model, { skillName: 'Singing', level: 'Expert' });
+    c.save();
+    c.closeDialog();
+
+    expect(c.dialog()).not.toBeNull();
+    expect(c.saving()).toBe(true);
+
+    pending.next({ success: true, message: 'Skill added', data: 3 });
+    expect(c.dialog()).toBeNull();
+  });
+
+  it('puts the real checkbox back when switching visibility on is refused', () => {
+    api.setVisible = () => refused('Add your name and a headline before you switch this on');
+    const fixture = create();
+    const box = fixture.nativeElement.querySelector('.jp-switch input') as HTMLInputElement;
+
+    box.checked = true;                          // what a click does before the handler runs
+    box.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(calls.length).toBe(1);                // only the first read: setVisible is replaced above
+    expect(box.checked).toBe(false);
+    expect(text(fixture)).toContain('Add your name and a headline before you switch this on');
   });
 });

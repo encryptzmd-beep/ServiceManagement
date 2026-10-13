@@ -39,7 +39,7 @@ adding records to it through explicit permissions. Phase 1 must not block that:
 | J2 | Access | Any active, logged-in user. A login token without a company is enough. The user is always taken from the token. |
 | J3 | Visibility | One switch, "Employers can find me". Default off. It cannot be switched on while name or headline is empty. Phase 1 only stores it: nothing can search profiles yet. |
 | J4 | Files | Stored in the Personal DB (`VARBINARY(MAX)`), served only through the API. At most 5 MB each. Resume: PDF, DOC, DOCX. Certificate: PDF, JPG, PNG. The type is checked by extension and by the first bytes of the file. |
-| J5 | Skills | Free text, with suggestions from the skills already in use. A level (Beginner, Intermediate, Expert) and an optional evidence link per skill. |
+| J5 | Skills | Free text, with suggestions from the skill names that at least two people have (a name only one person typed is shown to nobody else). A level (Beginner, Intermediate, Expert) and an optional evidence link per skill. |
 | J6 | Evidence links | `https://` only, at most 400 characters. Shown as a link that opens in a new tab with `rel="noopener noreferrer"`. |
 | J7 | Certificates | Status is always `Uploaded` ("Uploaded by you"). The columns for a verified status, the verifier and the date exist and stay empty. |
 | J8 | Age | No age check and no rules for minors in this phase. Date of birth is optional. To be revisited before an institution application exists. |
@@ -68,7 +68,7 @@ user only: a row id that belongs to someone else is "not found".
 Procedures (all in schema `jobs`): `sp_Profile_Get` (the profile row and the lists,
 never file content), `sp_Profile_Save`, `sp_Profile_SetVisible`,
 `sp_Experience_Save` / `_Delete`, `sp_Education_Save` / `_Delete`,
-`sp_Skill_Save` / `_Delete`, `sp_Skill_Suggest` (names in use that start with a
+`sp_Skill_Save` / `_Delete`, `sp_Skill_Suggest` (names at least two people have that start with a
 text, at most 10, no user data), `sp_Certificate_Save` / `_Delete` (deleting a
 certificate deletes its file), `sp_Resume_Save` (replaces the user's resume),
 `sp_Resume_Delete`, `sp_File_Get` (content of one file of the user).

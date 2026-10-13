@@ -44,8 +44,17 @@ namespace EncryptzBL.Infrastructure.Jobs
             catch (SqlException ex)
             {
                 // the text of a database error can name the server: it goes to the log only
-                _logger.LogError("Job Portal: {What} failed for user {UserId} (SQL error {Number}: {Message})",
-                    what, userId, ex.Number, ex.Message);
+                _logger.LogError(ex, "Job Portal: {What} failed for user {UserId} (SQL error {Number})",
+                    what, userId, ex.Number);
+                return ApiResponse<T>.Fail(PersonalDbHelper.NotAvailable);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // a connection string the driver refuses, a pool that ran dry, an answer of a
+                // procedure that is older than this code: none of these is a SqlException, and
+                // none of them may reach the caller as an HTTP 500
+                _logger.LogError(ex, "Job Portal: {What} failed for user {UserId} ({ErrorType})",
+                    what, userId, ex.GetType().Name);
                 return ApiResponse<T>.Fail(PersonalDbHelper.NotAvailable);
             }
         }
@@ -166,7 +175,7 @@ namespace EncryptzBL.Infrastructure.Jobs
         public Task<ApiResponse<bool>> SaveProfile(int userId, JobProfileDto dto)
             => Guarded(userId, "saving the profile", async () =>
             {
-                var problem = JobsRules.ProfileProblem(dto, DateTime.Today);
+                var problem = JobsRules.ProfileProblem(dto, TimeHelper.IndianNow.Date);
                 if (problem != null)
                     return ApiResponse<bool>.Fail(problem);
 
@@ -196,7 +205,7 @@ namespace EncryptzBL.Infrastructure.Jobs
         public Task<ApiResponse<int>> SaveExperience(int userId, JobExperienceDto dto)
             => Guarded(userId, "saving an experience entry", async () =>
             {
-                var problem = JobsRules.ExperienceProblem(dto, DateTime.Today);
+                var problem = JobsRules.ExperienceProblem(dto, TimeHelper.IndianNow.Date);
                 if (problem != null)
                     return ApiResponse<int>.Fail(problem);
 
@@ -225,7 +234,7 @@ namespace EncryptzBL.Infrastructure.Jobs
         public Task<ApiResponse<int>> SaveEducation(int userId, JobEducationDto dto)
             => Guarded(userId, "saving an education entry", async () =>
             {
-                var problem = JobsRules.EducationProblem(dto, DateTime.Today.Year);
+                var problem = JobsRules.EducationProblem(dto, TimeHelper.IndianNow.Year);
                 if (problem != null)
                     return ApiResponse<int>.Fail(problem);
 
@@ -301,7 +310,7 @@ namespace EncryptzBL.Infrastructure.Jobs
         public Task<ApiResponse<int>> SaveCertificate(int userId, JobCertificateDto dto, JobUpload? file)
             => Guarded(userId, "saving a certificate", async () =>
             {
-                var problem = JobsRules.CertificateProblem(dto, DateTime.Today);
+                var problem = JobsRules.CertificateProblem(dto, TimeHelper.IndianNow.Date);
                 if (problem == null && file != null)
                     problem = JobsRules.FileProblem(JobsRules.CertificateKind, file.FileName, file.Content.LongLength, file.Content);
                 if (problem != null)
