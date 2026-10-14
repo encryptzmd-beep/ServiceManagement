@@ -167,6 +167,29 @@ describe('JobProfileComponent', () => {
     expect(c.dialog()).toBeNull();
   });
 
+  // ── date of birth and verification ────────────────────────────────────────
+
+  it('does not save a profile without a date of birth', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    c.openProfile();
+    c.dialog()!.model.dateOfBirth = '';
+    c.save();
+
+    expect(c.formError()).toBe('Enter your date of birth');
+    expect(calls.some(x => x[0] === 'saveProfile')).toBe(false);
+  });
+
+  it('names the state of each certificate', () => {
+    const c = create().componentInstance;
+
+    expect(c.certificateLabel({ status: 'Uploaded', fileId: 9 })).toBe('Waiting for verification');
+    expect(c.certificateLabel({ status: 'Uploaded', fileId: 0 })).toBe('Uploaded by you');
+    expect(c.certificateLabel({ status: 'Verified', fileId: 9 })).toBe('Verified');
+    expect(c.certificateLabel({ status: 'Rejected', fileId: 9 })).toBe('Not verified');
+  });
+
   // ── who viewed the profile ────────────────────────────────────────────────
 
   it('shows which company opened the profile or the resume, for which job', () => {
@@ -360,7 +383,7 @@ describe('JobProfileComponent', () => {
     expect(t).toContain('2012');
     expect(t).toContain('Tally');
     expect(t).toContain('Tally Prime');
-    expect(t).toContain('Uploaded by you');
+    expect(t).toContain('Waiting for verification');
     expect(t).toContain('cv.pdf');
     expect(t).toContain('1.0 MB');
     expect(t).toContain('90%');

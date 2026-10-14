@@ -105,9 +105,24 @@ describe('HiringComponent', () => {
     expect(cards[0].textContent).toContain('2 new');
     expect(labels(cards[0])).toEqual(expect.arrayContaining(['Close', 'Edit']));
     expect(labels(cards[0])).not.toContain('Remove');          // it has applicants
-    expect(labels(cards[1])).toEqual(expect.arrayContaining(['Publish', 'Edit', 'Remove']));
+    expect(labels(cards[1])).toEqual(expect.arrayContaining(['Send for review', 'Edit', 'Remove']));
     expect(cards[1].textContent).toContain('Not published yet');
     expect(labels(cards[2])).toEqual(expect.arrayContaining(['Reopen', 'Edit', 'Remove']));
+  });
+
+  it('shows a job in review and a job returned by Encryptz with its reason', () => {
+    api.getPostings = () => ok([
+      job({ status: 'InReview', applied: 0, shortlisted: 0 }),
+      job({ postingId: 8, title: 'Helper', status: 'Draft', reviewNote: 'Add the salary', applied: 0, shortlisted: 0 }),
+    ]);
+    const fixture = create();
+    const cards = Array.from(fixture.nativeElement.querySelectorAll('.jb-card')) as HTMLElement[];
+
+    expect(cards[0].querySelector('.jb-status')!.textContent).toContain('In review');
+    expect(cards[0].textContent).toContain('Waiting for review by Encryptz');
+    expect(labels(cards[0])).toEqual(expect.arrayContaining(['Close', 'Edit']));
+    expect(cards[1].textContent).toContain('Returned by Encryptz: Add the salary');
+    expect(labels(cards[1])).toContain('Send for review');
   });
 
   it('says why when the person may not manage the jobs of the company', () => {

@@ -186,6 +186,43 @@ export interface PlatformMenu {
   roleCount?: number;
 }
 
+/** A certificate with a file that waits for a platform administrator. */
+export interface CertificateReview {
+  certificateId: number;
+  title: string;
+  issuer: string;
+  issuedOn?: string | null;
+  fileName: string;
+  submittedAt: string;
+  personName: string;
+  personHeadline: string;
+}
+
+/** A job a company wants to publish (or changed), waiting for a platform administrator. */
+export interface PostingReview {
+  postingId: number;
+  companyName: string;
+  title: string;
+  city: string;
+  employmentType: string;
+  workMode: string;
+  experienceMinYears?: number | null;
+  experienceMaxYears?: number | null;
+  salaryMin?: number | null;
+  salaryMax?: number | null;
+  skills: string;
+  description: string;
+  closesOn?: string | null;
+  submittedAt: string;
+  /** People saw it before: this is a change. */
+  wasPublished: boolean;
+}
+
+export interface VerificationQueue {
+  certificates: CertificateReview[];
+  postings: PostingReview[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class PlatformService {
   private http = inject(HttpClient);
@@ -209,6 +246,24 @@ export class PlatformService {
 
   lock(): void {
     sessionStorage.removeItem(PlatformService.UNLOCK_KEY);
+  }
+
+  // ── verification (Job Portal: certificates and job postings) ──
+
+  getVerificationQueue(): Observable<ApiResponse<VerificationQueue>> {
+    return this.http.get<ApiResponse<VerificationQueue>>(`${this.api}/verification`, { headers: this.headers });
+  }
+
+  getCertificateFileForReview(certificateId: number): Observable<Blob> {
+    return this.http.get(`${this.api}/verification/certificates/${certificateId}/file`, { headers: this.headers, responseType: 'blob' });
+  }
+
+  decideCertificate(certificateId: number, approve: boolean, note: string): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/verification/certificates/${certificateId}`, { approve, note }, { headers: this.headers });
+  }
+
+  decidePosting(postingId: number, approve: boolean, note: string): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/verification/postings/${postingId}`, { approve, note }, { headers: this.headers });
   }
 
   isUnlocked(): Observable<{ success: boolean; unlocked: boolean }> {

@@ -8,7 +8,7 @@ import { JobProfilePage } from './jobs-service';
 // ── Job Portal, the company's side: the jobs a company offers and who applied ──
 // Nothing here carries a company or a user: the API takes both from the login.
 
-export type CompanyPostingStatus = 'Draft' | 'Open' | 'Closed';
+export type CompanyPostingStatus = 'Draft' | 'InReview' | 'Open' | 'Closed';
 export type ApplicantStatus = 'Applied' | 'Shortlisted' | 'Rejected' | 'Hired';
 
 /** A job as it is written. */
@@ -31,6 +31,8 @@ export interface CompanyPostingFields {
 
 export interface CompanyPosting extends CompanyPostingFields {
   status: CompanyPostingStatus;
+  /** Why Encryptz returned the job ('' when it was not returned). */
+  reviewNote?: string;
   publishedAt?: string | null;
   createdAt: string;
   applied: number;

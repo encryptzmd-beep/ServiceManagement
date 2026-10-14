@@ -19,7 +19,7 @@
     <div class="jb-head">
       <button class="jp-btn" (click)="backToJobs()"><span class="material-icons">chevron_left</span>All jobs</button>
       <h1>{{ job.title }}</h1>
-      <span [class]="postingClass(job.status)">{{ job.status }}</span>
+      <span [class]="postingClass(job.status)">{{ postingLabel(job.status) }}</span>
       <span class="jp-count">{{ applicants().length }} {{ applicants().length === 1 ? 'applicant' : 'applicants' }}</span>
     </div>
 
@@ -77,7 +77,16 @@
           </div>
           <div class="hr-counts">
             @if (p.status === 'Draft') {
-              <span>Not published yet. Only your company sees it.</span>
+              @if (p.reviewNote) {
+                <span class="hr-returned"><span class="material-icons">undo</span>Returned by Encryptz: {{ p.reviewNote }}</span>
+              } @else {
+                <span>Not published yet. Only your company sees it.</span>
+              }
+            } @else if (p.status === 'InReview') {
+              <span>Waiting for review by Encryptz. People find it once it is approved.</span>
+              @if (applicantCount(p)) {
+                <button class="jb-title" (click)="showApplicants(p)">· {{ applicantCount(p) }} {{ applicantCount(p) === 1 ? 'applicant' : 'applicants' }}</button>
+              }
             } @else {
               <button class="jb-title" (click)="showApplicants(p)">
                 {{ applicantCount(p) }} {{ applicantCount(p) === 1 ? 'applicant' : 'applicants' }}
@@ -89,11 +98,11 @@
           </div>
         </div>
         <div class="jb-card-side">
-          <span [class]="postingClass(p.status)">{{ p.status }}</span>
+          <span [class]="postingClass(p.status)">{{ postingLabel(p.status) }}</span>
           <div class="hr-actions">
-            @if (p.status === 'Draft') { <button class="jp-btn primary" (click)="publish(p)">Publish</button> }
+            @if (p.status === 'Draft') { <button class="jp-btn primary" (click)="publish(p)">Send for review</button> }
             @if (p.status === 'Closed') { <button class="jp-btn" (click)="publish(p)">Reopen</button> }
-            @if (p.status === 'Open') { <button class="jp-btn" (click)="close(p)">Close</button> }
+            @if (p.status === 'Open' || p.status === 'InReview') { <button class="jp-btn" (click)="close(p)">Close</button> }
             <button class="jp-btn" (click)="openEdit(p)">Edit</button>
             @if (applicantCount(p) === 0) { <button class="jp-btn ghost" (click)="remove(p)">Remove</button> }
           </div>
@@ -167,6 +176,9 @@
           <input class="jp-input" name="skills" [(ngModel)]="f.skills" maxlength="400" placeholder="Tally, GST, Excel" />
           <small>Separate them with a comma. Leave the salary empty if you prefer not to show it.</small>
         </label>
+        @if (f.postingId) {
+          <p class="hr-review-hint"><span class="material-icons">info</span>Encryptz checks every job before people see it. Saving a job that is open sends it to review again; its applications stay.</p>
+        }
         <label>Description *
           <textarea class="jp-input" name="description" rows="7" [(ngModel)]="f.description" maxlength="4000"
                     placeholder="What the person will do, what you expect, what you offer."></textarea>
@@ -248,10 +260,11 @@
             @for (c of pg.certificates; track c.certificateId) {
               <div class="hr-item">
                 <strong>{{ c.title }}</strong> @if (c.issuer) { <span class="jp-at">{{ c.issuer }}</span> }
+                <span class="jp-pill" [attr.data-state]="c.status">{{ certificateLabel(c.status) }}</span>
                 @if (c.issuedOn) { <div class="jp-row-sub">{{ dayLabel(c.issuedOn) }}</div> }
               </div>
             }
-            <p class="jp-note">Supplied by the applicant. Nobody has checked them.</p>
+            <p class="jp-note">"Verified" certificates were checked by Encryptz. The others are as the applicant supplied them.</p>
           </section>
         }
 

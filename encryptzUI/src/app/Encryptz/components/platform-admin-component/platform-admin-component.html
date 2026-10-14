@@ -74,6 +74,7 @@
     <button [class.active]="tab() === 'access'" (click)="setTab('access')">Module Access</button>
     @if (isPlatformAdmin()) {
       <button [class.active]="tab() === 'applications'" (click)="setTab('applications')">Applications</button>
+      <button [class.active]="tab() === 'verification'" (click)="setTab('verification')">Verification</button>
       <button [class.active]="tab() === 'servers'" (click)="setTab('servers')">Database Servers</button>
       <button [class.active]="tab() === 'settings'" (click)="setTab('settings')">Settings</button>
       <button [class.active]="tab() === 'menus'" (click)="setTab('menus')">Menus</button>
@@ -403,6 +404,11 @@
         </tbody>
       </table>
     </div>
+  }
+
+  <!-- ═══════════ VERIFICATION (certificates and job postings of Job Portal) ═══════════ -->
+  @if (tab() === 'verification' && isPlatformAdmin()) {
+    <app-verification-panel />
   }
 
   <!-- ═══════════ APPLICATIONS ═══════════ -->

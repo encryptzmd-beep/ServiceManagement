@@ -204,7 +204,7 @@
           @for (c of pg.certificates; track c.certificateId) {
             <div class="jp-row">
               <div class="jp-row-main">
-                <strong>{{ c.title }}</strong> <span class="jp-pill grey">{{ statusLabel(c.status) }}</span>
+                <strong>{{ c.title }}</strong> <span class="jp-pill" [attr.data-state]="certificateState(c)">{{ certificateLabel(c) }}</span>
                 <div class="jp-row-sub">{{ c.issuer }} @if (c.issuedOn) { · {{ dayLabel(c.issuedOn) }} }</div>
                 @if (c.fileId) {
                   <button class="jp-file" (click)="download(c.fileId, c.fileName)">
@@ -220,7 +220,7 @@
           } @empty {
             <p class="jp-empty boxed">No certificates added yet.</p>
           }
-          <p class="jp-note">"Uploaded by you" means you supplied the document. Nobody has checked it.</p>
+          <p class="jp-note">A certificate with a file is checked by Encryptz. "Verified" is shown to the companies you apply to; a change sends it to be checked again.</p>
         </section>
 
         <!-- ═══════════ RESUME ═══════════ -->
@@ -406,7 +406,7 @@
               <label>City
                 <input class="jp-input" name="city" [(ngModel)]="d.model.city" maxlength="100" />
               </label>
-              <label>Date of birth (optional)
+              <label>Date of birth *
                 <input class="jp-input" name="dateOfBirth" type="date" [(ngModel)]="d.model.dateOfBirth" />
               </label>
             </div>

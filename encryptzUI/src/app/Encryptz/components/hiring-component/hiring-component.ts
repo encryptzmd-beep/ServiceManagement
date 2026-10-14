@@ -289,7 +289,16 @@ export class HiringComponent implements OnInit {
   }
 
   /** The states of a job in the colours of the list: open like "hired", draft plain, closed like "rejected". */
+  postingLabel(status: string): string {
+    return status === 'InReview' ? 'In review' : status;
+  }
+
+  certificateLabel(status: string): string {
+    return status === 'Verified' ? 'Verified' : status === 'Rejected' ? 'Not verified' : 'Not checked';
+  }
+
   postingClass(status: string): string {
+    if (status === 'InReview') return 'jb-status shortlisted';
     return `jb-status ${status === 'Open' ? 'hired' : status === 'Closed' ? 'rejected' : ''}`;
   }
 

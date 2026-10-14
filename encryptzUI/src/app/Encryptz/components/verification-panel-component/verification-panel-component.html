@@ -1,0 +1,95 @@
+<div class="vp">
+  <div class="vp-head">
+    <div>
+      <h2>Verification</h2>
+      <p>Certificates people uploaded and jobs companies want to publish. Nothing here is visible to others until it is approved.</p>
+    </div>
+    <button class="vp-btn" (click)="load()" [disabled]="loading()"><span class="material-icons">refresh</span>Refresh</button>
+  </div>
+
+  <div class="vp-filters" role="group" aria-label="Show">
+    <button [class.on]="filter() === 'all'" (click)="filter.set('all')">All <span>{{ certificates().length + postings().length }}</span></button>
+    <button [class.on]="filter() === 'certificates'" (click)="filter.set('certificates')">Certificates <span>{{ certificates().length }}</span></button>
+    <button [class.on]="filter() === 'postings'" (click)="filter.set('postings')">Job postings <span>{{ postings().length }}</span></button>
+  </div>
+
+  @if (loading()) {
+    <div class="vp-state"><span class="vp-spinner" aria-hidden="true"></span> Loading…</div>
+  } @else if (error()) {
+    <div class="vp-state bad">{{ error() }} <button class="vp-btn" (click)="load()">Try again</button></div>
+  } @else {
+    @for (entry of items(); track entry.key) {
+      <article class="vp-card">
+        @if (entry.kind === 'certificate') {
+          <div class="vp-kind cert"><span class="material-icons">workspace_premium</span>Certificate</div>
+          <h3>{{ entry.item.title }}</h3>
+          <div class="vp-meta">
+            @if (entry.item.issuer) { <span>Issued by {{ entry.item.issuer }}</span> }
+            @if (entry.item.issuedOn) { <span>on {{ dayLabel(entry.item.issuedOn) }}</span> }
+          </div>
+          <div class="vp-who">
+            <span class="material-icons">person</span>
+            <strong>{{ entry.item.personName || 'No name' }}</strong>
+            @if (entry.item.personHeadline) { <span>· {{ entry.item.personHeadline }}</span> }
+          </div>
+          <button class="vp-file" (click)="viewFile(entry.item)">
+            <span class="material-icons">attach_file</span>{{ entry.item.fileName }}
+          </button>
+        } @else {
+          <div class="vp-kind job"><span class="material-icons">work_outline</span>Job posting @if (entry.item.wasPublished) { · changed after it was public }</div>
+          <h3>{{ entry.item.title }}</h3>
+          <div class="vp-meta">
+            <span><strong>{{ entry.item.companyName }}</strong></span>
+            <span>{{ entry.item.city }}</span>
+            <span>{{ entry.item.employmentType }}</span>
+            <span>{{ entry.item.workMode }}</span>
+            @if (range(entry.item.experienceMinYears, entry.item.experienceMaxYears, 'years'); as exp) { <span>{{ exp }}</span> }
+            @if (range(entry.item.salaryMin, entry.item.salaryMax, '₹ per month'); as pay) { <span>{{ pay }}</span> }
+            @if (entry.item.closesOn) { <span>closes {{ dayLabel(entry.item.closesOn) }}</span> }
+          </div>
+          @if (entry.item.skills) { <div class="vp-skills">Skills: {{ entry.item.skills }}</div> }
+          <p class="vp-desc">{{ entry.item.description }}</p>
+        }
+
+        <div class="vp-foot">
+          <span class="vp-when">Waiting since {{ dayLabel(entry.at) }}</span>
+          @if (refusing() !== entry.key) {
+            <span class="vp-grow"></span>
+            <button class="vp-btn" (click)="startRefusal(entry)" [disabled]="busy() !== null">
+              {{ entry.kind === 'certificate' ? 'Not verified' : 'Return to company' }}
+            </button>
+            <button class="vp-btn primary" (click)="approve(entry)" [disabled]="busy() !== null">
+              <span class="material-icons">check</span>{{ entry.kind === 'certificate' ? 'Verify' : 'Approve' }}
+            </button>
+          }
+        </div>
+
+        @if (refusing() === entry.key) {
+          <div class="vp-refuse">
+            <label>
+              {{ entry.kind === 'certificate' ? 'Why is it not verified? The person reads this.' : 'What should the company change? The company reads this.' }}
+              <textarea rows="3" maxlength="500" [(ngModel)]="reason" name="reason"></textarea>
+            </label>
+            <div class="vp-refuse-foot">
+              <button class="vp-btn ghost" (click)="cancelRefusal()" [disabled]="busy() !== null">Cancel</button>
+              <button class="vp-btn danger" (click)="refuse(entry)" [disabled]="busy() !== null">
+                {{ entry.kind === 'certificate' ? 'Mark not verified' : 'Return to company' }}
+              </button>
+            </div>
+          </div>
+        }
+
+        @if (itemError()?.key === entry.key) { <div class="vp-error">{{ itemError()!.text }}</div> }
+      </article>
+    } @empty {
+      <div class="vp-empty">
+        <span class="material-icons">task_alt</span>
+        <p>Nothing waits for verification.</p>
+      </div>
+    }
+  }
+
+  @if (toast(); as t) {
+    <div class="vp-toast" [class.bad]="!t.ok" role="status">{{ t.text }}</div>
+  }
+</div>

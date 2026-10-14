@@ -23,6 +23,7 @@ import {
 } from '../../Services/platform-service';
 import { provisionLabel, requestErrorMessage } from '../../Auth/company-creation';
 import { PlatformNavService, PlatformTab } from '../../Services/platform-nav-service';
+import { VerificationPanelComponent } from '../verification-panel-component/verification-panel-component';
 
 type Tab = PlatformTab;
 
@@ -35,7 +36,7 @@ type Tab = PlatformTab;
  */
 @Component({
   selector: 'app-platform-admin-component',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, VerificationPanelComponent],
   templateUrl: './platform-admin-component.html',
   styleUrl: './platform-admin-component.scss',
 })
@@ -270,7 +271,7 @@ export class PlatformAdminComponent implements OnInit {
   }
 
   setTab(tab: Tab): void {
-    if ((tab === 'servers' || tab === 'settings' || tab === 'applications') && !this.isPlatformAdmin()) return;
+    if ((tab === 'servers' || tab === 'settings' || tab === 'applications' || tab === 'verification') && !this.isPlatformAdmin()) return;
     if (tab !== this.tab()) { this.closeForms(); this.cancelServersLoad(); this.cancelSettingsLoad(); this.cancelApplicationsLoad(); }
     this.tab.set(tab);
     this.nav.tab.set(tab);

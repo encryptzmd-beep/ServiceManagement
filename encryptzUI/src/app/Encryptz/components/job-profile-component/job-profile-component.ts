@@ -326,6 +326,7 @@ export class JobProfileComponent implements OnInit, OnDestroy {
 
     switch (d.kind) {
       case 'profile':
+        if (!t(m.dateOfBirth)) return 'Enter your date of birth';
         // isVisible is not sent from here: the switch is the only way to change it
         return this.api.saveProfile({
           fullName: t(m.fullName), headline: t(m.headline), summary: t(m.summary), city: t(m.city),
@@ -607,8 +608,19 @@ export class JobProfileComponent implements OnInit, OnDestroy {
     return `${bytes} bytes`;
   }
 
-  statusLabel(status: string): string {
-    return status === 'Uploaded' ? 'Uploaded by you' : status;
+  /** Verified, Rejected, Waiting (a file to check) or Uploaded (no file: nothing to check). */
+  certificateState(c: { status: string; fileId: number }): string {
+    if (c.status === 'Verified' || c.status === 'Rejected') return c.status;
+    return c.fileId ? 'Waiting' : 'Uploaded';
+  }
+
+  certificateLabel(c: { status: string; fileId: number }): string {
+    switch (this.certificateState(c)) {
+      case 'Verified': return 'Verified';
+      case 'Rejected': return 'Not verified';
+      case 'Waiting': return 'Waiting for verification';
+      default: return 'Uploaded by you';
+    }
   }
 
   // dates are taken as text: a Date object would shift them by the time zone
