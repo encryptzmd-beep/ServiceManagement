@@ -74,6 +74,7 @@
             <span><span class="material-icons">schedule</span>{{ p.employmentType }}</span>
             <span><span class="material-icons">apartment</span>{{ p.workMode }}</span>
             @if (p.closesOn) { <span><span class="material-icons">event</span>Closes {{ dayLabel(p.closesOn) }}</span> }
+            @if (clientOf()[p.postingId]; as pc) { <span><span class="material-icons">handshake</span>For {{ pc.clientName }}</span> }
           </div>
           <div class="hr-counts">
             @if (p.status === 'Draft') {
@@ -172,6 +173,15 @@
             <input class="jp-input" name="salaryHigh" type="number" min="1" step="500" [(ngModel)]="f.salaryHigh" />
           </label>
         </div>
+        @if (clients().length) {
+          <label>For client
+            <select class="jp-input" name="clientId" [(ngModel)]="f.clientId">
+              <option [ngValue]="null">No client (your own job)</option>
+              @for (c of clients(); track c.clientId) { <option [ngValue]="c.clientId">{{ c.name }}</option> }
+            </select>
+            <small>Only your company sees the client. People see your company's name.</small>
+          </label>
+        }
         <label>Skills
           <input class="jp-input" name="skills" [(ngModel)]="f.skills" maxlength="400" placeholder="Tally, GST, Excel" />
           <small>Separate them with a comma. Leave the salary empty if you prefer not to show it.</small>
@@ -281,6 +291,9 @@
       </div>
       <div class="jp-dialog-foot hr-status-foot">
         <span [class]="statusClass(a.status)">{{ a.status }}</span>
+        @if (a.status === 'Hired') {
+          <button class="jp-btn" (click)="recordPlacement(a)"><span class="material-icons">verified</span>Record placement</button>
+        }
         <span class="jb-grow"></span>
         @for (state of applicantStates; track state) {
           @if (state !== a.status) {

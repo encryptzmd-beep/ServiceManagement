@@ -1,0 +1,148 @@
+<app-personal-shell appName="Job Consultancy" icon="work" subtitle="Commercial application" [menu]="menu"
+                    backLabel="Back to modules" backRoute="/select-module">
+
+  @if (loading()) {
+    <div class="jp-state"><span class="jp-spinner" aria-hidden="true"></span><p>Loading…</p></div>
+  } @else if (unavailable()) {
+    <div class="jp-state">
+      <span class="material-icons">lock_outline</span>
+      <p>{{ unavailable() }}</p>
+      <button class="jp-btn primary" (click)="load()">Try again</button>
+      <a class="jp-link" routerLink="/select-module">Back to modules</a>
+    </div>
+  } @else {
+    <div class="jb-head">
+      <div class="jb-head-text">
+        <h1>Placements</h1>
+        <p>Who you placed where, the fee and the replacement guarantee.</p>
+      </div>
+      <span class="jb-grow"></span>
+      <button class="jp-btn primary" (click)="openNew()"><span class="material-icons">add</span>New placement</button>
+    </div>
+
+    <div class="pl-figures">
+      <div class="jp-card pl-figure"><span>This month</span><strong>{{ data().thisMonth }}</strong></div>
+      <div class="jp-card pl-figure"><span>All placements</span><strong>{{ data().total }}</strong></div>
+      <div class="jp-card pl-figure warn"><span>Fee to collect</span><strong>{{ money(data().feeOutstanding) }}</strong></div>
+      <div class="jp-card pl-figure good"><span>Fee paid this year</span><strong>{{ money(data().feePaidThisYear) }}</strong></div>
+    </div>
+
+    @if (data().items.length) {
+      <div class="pl-filter" role="group" aria-label="Fee">
+        <button [class.on]="feeFilter() === ''" (click)="feeFilter.set('')">All</button>
+        @for (s of feeStatuses; track s) { <button [class.on]="feeFilter() === s" (click)="feeFilter.set(s)">{{ s }}</button> }
+      </div>
+    }
+
+    @for (p of shown(); track p.placementId) {
+      <article class="jp-card jb-card">
+        <div class="jb-logo" aria-hidden="true"><span class="material-icons">verified</span></div>
+        <div class="jb-card-main">
+          <h2>{{ p.candidateName }}</h2>
+          <div class="jb-company">{{ p.jobTitle }}@if (p.clientName) { · {{ p.clientName }} }</div>
+          <div class="jb-meta">
+            <span><span class="material-icons">event</span>Joins {{ dayLabel(p.joinDate) }}</span>
+            @if (p.annualCtc) { <span><span class="material-icons">payments</span>CTC {{ money(p.annualCtc) }} a year</span> }
+            @if (p.feeAmount != null) { <span><span class="material-icons">receipt_long</span>Fee {{ money(p.feeAmount) }}</span> }
+            @if (p.guaranteeUntil) {
+              <span><span class="material-icons">shield</span>Guarantee {{ guaranteeRunning(p) ? 'until' : 'ended' }} {{ dayLabel(p.guaranteeUntil) }}</span>
+            }
+            @if (p.onJobPortal) { <span><span class="material-icons">badge</span>On Job Portal</span> }
+          </div>
+          @if (p.notes) { <p class="pl-note">{{ p.notes }}</p> }
+        </div>
+        <div class="jb-card-side">
+          <span [class]="feeClass(p.feeStatus)">Fee {{ p.feeStatus.toLowerCase() }}</span>
+          <div class="pl-actions">
+            @if (p.feeStatus === 'Pending') { <button class="jp-btn" (click)="setFee(p, 'Invoiced')">Invoiced</button> }
+            @if (p.feeStatus !== 'Paid') { <button class="jp-btn" (click)="setFee(p, 'Paid')">Paid</button> }
+            <button class="jp-btn" (click)="openEdit(p)">Edit</button>
+            <button class="jp-btn ghost" (click)="remove(p)">Remove</button>
+          </div>
+        </div>
+      </article>
+    } @empty {
+      <div class="jp-card jb-empty">
+        <span class="material-icons">verified</span>
+        @if (data().items.length) {
+          <p>No placement with this fee state.</p>
+        } @else {
+          <p>No placements yet. Record one here, from a candidate of your pool, or from an applicant you hired.</p>
+          <button class="jp-btn primary" (click)="openNew()">New placement</button>
+        }
+      </div>
+    }
+  }
+
+  @if (toast(); as t) {
+    <div class="jp-toast" [class.bad]="!t.ok" role="status">
+      <span class="material-icons">{{ t.ok ? 'check_circle' : 'error_outline' }}</span>{{ t.text }}
+    </div>
+  }
+</app-personal-shell>
+
+@if (form(); as f) {
+  <div class="jp-overlay">
+    <div class="jp-dialog jb-detail" role="dialog" aria-modal="true">
+      <div class="jp-dialog-head">
+        <h3>{{ f.placementId ? 'Edit placement' : 'New placement' }}</h3>
+        <button class="jp-close" (click)="closeForm()" aria-label="Close"><span class="material-icons">close</span></button>
+      </div>
+      <div class="jp-dialog-body">
+        <label>Candidate *
+          <input class="jp-input" name="candidateName" [(ngModel)]="f.candidateName" maxlength="200"
+                 [placeholder]="f.candidateKey || f.applicationId ? 'The name from Job Portal' : 'Full name'" />
+          @if (f.candidateKey || f.applicationId) { <small>Linked to the candidate's Job Portal profile.</small> }
+        </label>
+        <div class="jp-two">
+          <label>Client
+            <select class="jp-input" name="clientId" [(ngModel)]="f.clientId">
+              <option [ngValue]="null">No client</option>
+              @for (c of clients(); track c.clientId) { <option [ngValue]="c.clientId">{{ c.name }}</option> }
+            </select>
+          </label>
+          <label>Job posting
+            <select class="jp-input" name="postingId" [(ngModel)]="f.postingId" (ngModelChange)="onPostingChosen(f)">
+              <option [ngValue]="null">None</option>
+              @for (j of postings(); track j.postingId) { <option [ngValue]="j.postingId">{{ j.title }} · {{ j.city }}</option> }
+            </select>
+          </label>
+        </div>
+        <div class="jp-two">
+          <label>Job title *
+            <input class="jp-input" name="jobTitle" [(ngModel)]="f.jobTitle" maxlength="200" />
+          </label>
+          <label>Joining date *
+            <input class="jp-input" name="joinDate" type="date" [(ngModel)]="f.joinDate" />
+          </label>
+        </div>
+        <div class="jp-two">
+          <label>CTC (₹ per year)
+            <input class="jp-input" name="ctc" inputmode="numeric" [(ngModel)]="f.ctcText" placeholder="450000" />
+          </label>
+          <label>Fee (₹)
+            <input class="jp-input" name="fee" inputmode="numeric" [(ngModel)]="f.feeText" placeholder="40000" />
+          </label>
+        </div>
+        <div class="jp-two">
+          <label>Fee
+            <select class="jp-input" name="feeStatus" [(ngModel)]="f.feeStatus">
+              @for (s of feeStatuses; track s) { <option [value]="s">{{ s }}</option> }
+            </select>
+          </label>
+          <label>Replacement guarantee until
+            <input class="jp-input" name="guaranteeUntil" type="date" [(ngModel)]="f.guaranteeUntil" />
+          </label>
+        </div>
+        <label>Notes
+          <textarea class="jp-input" name="notes" rows="3" [(ngModel)]="f.notes" maxlength="1000"></textarea>
+        </label>
+        @if (formError()) { <div class="jp-error">{{ formError() }}</div> }
+      </div>
+      <div class="jp-dialog-foot">
+        <button class="jp-btn ghost" (click)="closeForm()" [disabled]="saving()">Cancel</button>
+        <button class="jp-btn primary" (click)="save()" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
+      </div>
+    </div>
+  </div>
+}

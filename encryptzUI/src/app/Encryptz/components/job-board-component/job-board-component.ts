@@ -68,6 +68,10 @@ export class JobBoardComponent implements OnInit {
   ngOnInit(): void {
     this.mode.set((this.route.snapshot.data['mode'] as JobBoardMode) ?? 'search');
     this.load();
+
+    // an invitation links to one job: it opens at once
+    const invited = Number(this.route.snapshot.queryParamMap?.get('posting'));
+    if (invited > 0) this.open(invited);
     this.alerts.refresh();
   }
 

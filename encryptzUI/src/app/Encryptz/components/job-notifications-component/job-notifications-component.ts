@@ -76,6 +76,8 @@ export class JobNotificationsComponent implements OnInit {
 
   icon(n: JobNotification): string {
     if (n.kind === 'JobClosed') return 'event_busy';
+    if (n.kind === 'Invitation') return 'campaign';
+    if (n.kind === 'Certificate') return 'workspace_premium';
     if (n.title.startsWith('You are shortlisted')) return 'star_outline';
     if (n.title.includes('marked you as hired')) return 'celebration';
     return 'mail_outline';

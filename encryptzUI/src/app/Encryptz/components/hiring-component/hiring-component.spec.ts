@@ -3,6 +3,7 @@ import { Router, provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { AuthService } from '../../Auth/auth-service';
 import { CompanyJobsService } from '../../Services/company-jobs-service';
+import { ConsultancyService } from '../../Services/consultancy-service';
 import { HiringComponent } from './hiring-component';
 
 describe('HiringComponent', () => {
@@ -30,6 +31,7 @@ describe('HiringComponent', () => {
   });
 
   let api: any;
+  let consultancy: any;
   let calls: any[][];
   let companyId: number | null;
 
@@ -40,6 +42,7 @@ describe('HiringComponent', () => {
       providers: [
         provideRouter([]),
         { provide: CompanyJobsService, useValue: api },
+        { provide: ConsultancyService, useValue: consultancy },
         { provide: AuthService, useValue: {
           userName: () => 'Admin Person', currentUser: () => ({ userId: 5 }), scopeState: () => ({ loggedIn: true, companyId, moduleKey: null, locationId: null }),
         } },
@@ -57,6 +60,11 @@ describe('HiringComponent', () => {
 
   beforeEach(() => {
     calls = [];
+    consultancy = {
+      getClients: () => ok([]),
+      getPostingClients: () => ok([]),
+      setPostingClient: (postingId: number, clientId: number | null) => { calls.push(['setPostingClient', postingId, clientId]); return ok(true); },
+    };
     companyId = 2;
     api = {
       getPostings: () => { calls.push(['getPostings']); return ok([job(), job({ postingId: 8, title: 'Helper', status: 'Draft', applied: 0, shortlisted: 0 }), job({ postingId: 9, title: 'Old', status: 'Closed', applied: 0, shortlisted: 0 })]); },
@@ -82,18 +90,46 @@ describe('HiringComponent', () => {
     expect(calls.length).toBe(0);
   });
 
-  it('is the first page of Job Consultancy: its menu opens Job postings, the pages to come are marked Soon', () => {
+  it('is a page of Job Consultancy: its menu opens every page of it', () => {
     const fixture = create();
     const items = Array.from(fixture.nativeElement.querySelectorAll('.ps-nav-item')) as HTMLElement[];
 
     expect(text(fixture)).toContain('Job Consultancy');
-    expect(items.map(e => e.querySelector('.ps-nav-label')!.textContent!.trim())).toEqual(['Job postings', 'Clients', 'Candidates', 'Placements']);
-    expect(items[0].getAttribute('href')).toBe('/consultancy/postings');
-    for (const soon of items.slice(1)) {
-      expect(soon.tagName).not.toBe('A');
-      expect(soon.textContent).toContain('Soon');
-    }
+    expect(items.map(e => e.querySelector('.ps-nav-label')!.textContent!.trim())).toEqual(['Job postings', 'Candidates', 'Clients', 'Placements']);
+    expect(items.map(e => e.getAttribute('href'))).toEqual(['/consultancy/postings', '/consultancy/candidates', '/consultancy/clients', '/consultancy/placements']);
     expect(fixture.nativeElement.querySelector('.ps-back').getAttribute('href')).toBe('/select-module');
+  });
+
+  it('shows the client of a job, and saves a changed client apart from the job', () => {
+    consultancy.getClients = () => ok([{ clientId: 4, name: 'Acme Retail', isActive: true }]);
+    consultancy.getPostingClients = () => ok([{ postingId: 7, clientId: 4, clientName: 'Acme Retail' }]);
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    expect(text(fixture)).toContain('For Acme Retail');
+
+    c.openEdit(c.postings()[0]);
+    expect(c.form()!.clientId).toBe(4);
+    c.form()!.clientId = null;
+    c.save();
+
+    expect(calls).toContainEqual(['setPostingClient', 7, null]);
+  });
+
+  it('offers to record a placement for an applicant who was hired', () => {
+    api.getApplicant = () => ok({ ...applicantPage(), status: 'Hired' });
+    const fixture = create();
+    const c = fixture.componentInstance;
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    c.showApplicants(c.postings()[0]);
+    c.openApplicant(c.applicants()[0]);
+    fixture.detectChanges();
+    c.recordPlacement(c.applicant()!);
+
+    expect(navigate).toHaveBeenCalledWith(['/consultancy/placements'], {
+      queryParams: { application: 31, posting: 7, name: 'Leo Joseph', title: 'Accountant' },
+    });
   });
 
   it('lists the jobs with state and applicant counts, and the actions each state allows', () => {

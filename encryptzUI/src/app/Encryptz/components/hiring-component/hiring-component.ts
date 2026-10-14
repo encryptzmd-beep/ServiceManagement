@@ -12,7 +12,9 @@ import {
   JobApplicantPage,
 } from '../../Services/company-jobs-service';
 import { JOB_EMPLOYMENT_TYPES, JOB_WORK_MODES, JobEducation } from '../../Services/jobs-service';
-import { PersonalMenuItem, PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
+import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
+import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
+import { ConsultClient, ConsultancyService, PostingClient } from '../../Services/consultancy-service';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const REFUSED = "You don't have access to Job Consultancy. Ask your administrator";
@@ -38,14 +40,13 @@ export class HiringComponent implements OnInit {
   private api = inject(CompanyJobsService);
   private auth = inject(AuthService);
   private router = inject(Router);
+  private consultancy = inject(ConsultancyService);
 
-  /** The side menu. A page without a route is not built yet and is shown as "Soon". */
-  readonly menu: PersonalMenuItem[] = [
-    { label: 'Job postings', icon: 'work_outline', route: '/consultancy/postings' },
-    { label: 'Clients', icon: 'handshake' },
-    { label: 'Candidates', icon: 'groups' },
-    { label: 'Placements', icon: 'verified' },
-  ];
+  readonly menu = CONSULTANCY_MENU;
+
+  /** The clients of the consultancy, and which job is for which (known to the company only). */
+  clients = signal<ConsultClient[]>([]);
+  clientOf = signal<Record<number, PostingClient>>({});
 
   readonly employmentTypes = JOB_EMPLOYMENT_TYPES;
   readonly workModes = JOB_WORK_MODES;
@@ -57,7 +58,7 @@ export class HiringComponent implements OnInit {
   postings = signal<CompanyPosting[]>([]);
 
   /** The job that is written in the dialog (null = no dialog). */
-  form = signal<(CompanyPostingFields & { experienceMin: any; experienceMax: any; salaryLow: any; salaryHigh: any }) | null>(null);
+  form = signal<(CompanyPostingFields & { experienceMin: any; experienceMax: any; salaryLow: any; salaryHigh: any; clientId: number | null }) | null>(null);
   formError = signal('');
   saving = signal(false);
 
@@ -78,6 +79,20 @@ export class HiringComponent implements OnInit {
       return;
     }
     this.load();
+    this.loadClients();
+  }
+
+  /** The clients only add to the page: when they cannot be read, the jobs still show. */
+  private loadClients(): void {
+    this.consultancy.getClients().subscribe({ next: res => this.clients.set(res.success ? res.data ?? [] : []), error: () => {} });
+    this.consultancy.getPostingClients().subscribe({
+      next: res => {
+        const map: Record<number, PostingClient> = {};
+        for (const pc of res.success ? res.data ?? [] : []) map[pc.postingId] = pc;
+        this.clientOf.set(map);
+      },
+      error: () => {},
+    });
   }
 
   // ── jobs ──────────────────────────────────────────────────────────────────
@@ -121,6 +136,7 @@ export class HiringComponent implements OnInit {
       // what is typed in the number boxes; turned into numbers on save
       experienceMin: p.experienceMinYears ?? '', experienceMax: p.experienceMaxYears ?? '',
       salaryLow: p.salaryMin ?? '', salaryHigh: p.salaryMax ?? '',
+      clientId: this.clientOf()[p.postingId]?.clientId ?? null,
     });
   }
 
@@ -163,6 +179,15 @@ export class HiringComponent implements OnInit {
         if (!res.success) { this.formError.set(res.message || 'Could not save. Please try again'); return; }
         this.form.set(null);
         this.notify(res.message, true);
+        // the client of the job is kept apart: it is never part of what people see
+        const postingId = f.postingId || res.data;
+        const before = this.clientOf()[f.postingId]?.clientId ?? null;
+        if (postingId && (f.clientId ?? null) !== before) {
+          this.consultancy.setPostingClient(postingId, f.clientId ?? null).subscribe({
+            next: r => { if (!r.success) this.notify(r.message, false); this.loadClients(); },
+            error: () => this.notify('The client of the job could not be saved', false),
+          });
+        }
         this.load();
       },
       error: () => {
@@ -263,6 +288,15 @@ export class HiringComponent implements OnInit {
         this.loadApplicants();
       },
       error: () => { this.statusBusy.set(false); this.notify('Could not change it. Please try again', false); },
+    });
+  }
+
+  /** A placement for an applicant who was hired, on the Placements page. */
+  recordPlacement(a: JobApplicantPage): void {
+    const posting = this.selected();
+    if (!posting) return;
+    this.router.navigate(['/consultancy/placements'], {
+      queryParams: { application: a.applicationId, posting: posting.postingId, name: a.profile.profile.fullName, title: posting.title },
     });
   }
 

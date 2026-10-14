@@ -59,6 +59,16 @@ export const routes: Routes = [
   // the company that was chosen, so they need no branch and no layout of a company database;
   // the API checks on every call that the company has the application and the person may use it
   { path: 'consultancy', redirectTo: 'consultancy/postings', pathMatch: 'full' },
+  ...([
+    ['candidates', () => import('./Encryptz/components/consultancy-candidates-component/consultancy-candidates-component').then(m => m.ConsultancyCandidatesComponent)],
+    ['clients', () => import('./Encryptz/components/consultancy-clients-component/consultancy-clients-component').then(m => m.ConsultancyClientsComponent)],
+    ['placements', () => import('./Encryptz/components/consultancy-placements-component/consultancy-placements-component').then(m => m.ConsultancyPlacementsComponent)],
+  ] as const).map(([page, loadComponent]) => ({
+    path: `consultancy/${page}`,
+    loadComponent,
+    canActivate: [authGuard],
+    data: { title: 'Job Consultancy' },
+  })),
   {
     path: 'consultancy/postings',
     loadComponent: () => import('./Encryptz/components/hiring-component/hiring-component')

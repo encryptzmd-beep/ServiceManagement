@@ -1,0 +1,93 @@
+/* Job Consultancy, Candidates. Cards, search bar, chips and dialogs come from the profile and the job pages. */
+
+$ink: #111827;
+$muted: #6b7280;
+$line: #e6eaf0;
+$hair: #f0f1f3;
+$navy: #1b4a7a;
+$tint: #eef4fb;
+
+.jb-card:hover { transform: none; }
+
+.cd-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  margin-bottom: 12px;
+  border: 1px solid $line;
+  border-radius: 10px;
+  background: #fff;
+
+  button {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 7px;
+    background: none;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: $muted;
+    cursor: pointer;
+
+    &.on { background: $tint; color: $navy; font-weight: 600; }
+  }
+}
+
+.jb-search { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto; }
+
+.cd-avatar {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #215789 0%, $navy 60%, #153a60 100%);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.cd-dialog { max-width: 760px; }
+
+.cd-body {
+  gap: 16px;
+
+  section { padding-top: 14px; border-top: 1px solid $hair; }
+  h4 { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: $navy; }
+}
+
+.cd-pool, .cd-invite {
+  padding: 14px !important;
+  border: 1px solid $line !important;
+  border-radius: 10px;
+  background: #fafbfd;
+}
+
+.cd-pool-row {
+  display: flex;
+  gap: 12px;
+
+  label { flex: 0 0 auto; min-width: 160px; }
+  .cd-grow { flex: 1 1 auto; }
+}
+
+.cd-pool-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+
+.cd-item {
+  padding: 8px 0;
+  font-size: 14px;
+  color: $ink;
+  overflow-wrap: anywhere;
+
+  &:first-of-type { padding-top: 0; }
+  strong { font-weight: 600; }
+  .jp-pill { margin-left: 8px; }
+}
+
+.cd-ic { font-size: 13px !important; vertical-align: -2px; }
+
+@media (max-width: 640px) {
+  .cd-pool-row { flex-direction: column; label { min-width: 0; } }
+}
