@@ -66,6 +66,17 @@ namespace EncryptzBL.Common.Tenant
         }
 
         /// <summary>
+        /// The applications a company works with are the commercial ones. Personal applications
+        /// are listed before a company is chosen, never inside one, whatever the procedure of the
+        /// main database returns (an older form of sp_User_GetModules lists every module).
+        /// </summary>
+        public static List<T> WithoutPersonal<T>(IEnumerable<T> modules, Func<T, string> keyOf, IEnumerable<string>? personalKeys)
+        {
+            var personal = new HashSet<string>((personalKeys ?? Enumerable.Empty<string>()).Where(k => !string.IsNullOrWhiteSpace(k)), StringComparer.OrdinalIgnoreCase);
+            return modules.Where(m => !personal.Contains(keyOf(m) ?? "")).ToList();
+        }
+
+        /// <summary>
         /// The released flag of a module row. A main database without script 21 has no
         /// such column: every module there is built.
         /// </summary>

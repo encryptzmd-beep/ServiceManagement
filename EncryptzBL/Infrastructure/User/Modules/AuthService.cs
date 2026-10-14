@@ -794,6 +794,10 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 ModuleAccess.IsReleasedOf(r),
                 r.Table.Columns.Contains("Family") ? r["Family"]?.ToString() ?? "" : "")).ToList();
 
+            // personal applications belong to the page before a company is chosen
+            var personal = (await GetPersonalApps())?.Data?.Select(a => a.ModuleKey);
+            modules = ModuleAccess.WithoutPersonal(modules, m => m.ModuleKey, personal);
+
             return ApiResponse<List<ModuleDto>>.Ok(modules, "Success");
         }
 
