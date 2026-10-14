@@ -4,7 +4,9 @@ using EncryptzAPI.Provisioning;
 using EncryptzBL.Common;
 using EncryptzBL.Common.Provisioning;
 using EncryptzBL.Common.Tenant;
+using EncryptzAPI.Hubs;
 using EncryptzBL.Infrastructure.Jobs;
+using EncryptzBL.Infrastructure.Notifications;
 using EncryptzBL.Infrastructure.Complients.Modules;
 using EncryptzBL.Infrastructure.Customer.Modules;
 using EncryptzBL.Infrastructure.CustomerPortal.Modules;
@@ -37,6 +39,8 @@ namespace EncryptzAPI.SrvInjection
             services.AddSingleton<IConnectionResolver, ConnectionResolver>();      // ClientKey -> ServiceDB conn (cached)
             services.AddScoped<MainDbHelper>();                                     // fixed MainDB executor (control-plane)
             services.AddScoped<PersonalDbHelper>();                                 // Personal DB executor (personal applications)
+            services.AddScoped<INotificationService, NotificationService>();      // notifications of every application (MainDB)
+            services.AddSingleton<INotificationPush, HubNotificationPush>();        // ... sent at once to the open pages (SignalR)
             services.AddScoped<IJobsService, JobsService>();                        // Job Portal (personal application, Personal DB)
             services.AddScoped<IJobPostingsService, JobsService>();                 // Job Portal: jobs as a person uses them
             services.AddScoped<ICompanyJobsService, JobsService>();                 // Job Portal: the jobs and applicants of a company

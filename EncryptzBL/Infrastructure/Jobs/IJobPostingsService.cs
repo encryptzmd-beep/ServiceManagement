@@ -20,11 +20,6 @@ namespace EncryptzBL.Infrastructure.Jobs
 
         /// <summary>Which company looked at the person's profile or resume, for which job.</summary>
         Task<ApiResponse<List<JobProfileViewDto>>> GetProfileViews(int userId);
-
-        /// <summary>The newest notifications of the person and how many are unread.</summary>
-        Task<ApiResponse<JobNotificationsDto>> GetNotifications(int userId);
-        /// <summary>One notification as read, or all of them (null).</summary>
-        Task<ApiResponse<bool>> MarkNotificationsRead(int userId, int? notificationId);
     }
 
     /// <summary>

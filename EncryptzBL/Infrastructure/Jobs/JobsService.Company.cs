@@ -89,7 +89,7 @@ namespace EncryptzBL.Infrastructure.Jobs
                 if (problem != null)
                     return ApiResponse<int>.Fail(problem);
 
-                return AsId(Answer(await GetDataTableAsync("jobs.sp_Company_Posting_Save", new[]
+                return AsId(Answer(await Told("jobs.sp_Company_Posting_Save", new[]
                 {
                     In("@CompanyId", companyId),
                     In("@UserId", userId),
@@ -116,7 +116,7 @@ namespace EncryptzBL.Infrastructure.Jobs
                 if (move == null)
                     return ApiResponse<bool>.Fail("This change is not possible");
 
-                return AsFlag(Answer(await GetDataTableAsync("jobs.sp_Company_Posting_SetStatus", new[]
+                return AsFlag(Answer(await Told("jobs.sp_Company_Posting_SetStatus", new[]
                 {
                     In("@CompanyId", companyId),
                     In("@PostingId", postingId),
@@ -227,7 +227,7 @@ namespace EncryptzBL.Infrastructure.Jobs
                 if (state == null)
                     return ApiResponse<bool>.Fail("This change is not possible");
 
-                return AsFlag(Answer(await GetDataTableAsync("jobs.sp_Company_Applicant_SetStatus", new[]
+                return AsFlag(Answer(await Told("jobs.sp_Company_Applicant_SetStatus", new[]
                 {
                     In("@CompanyId", companyId),
                     In("@PostingId", postingId),

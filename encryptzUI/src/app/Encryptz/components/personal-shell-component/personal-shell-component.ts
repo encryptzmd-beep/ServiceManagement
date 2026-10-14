@@ -1,6 +1,7 @@
 import { Component, inject, input } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
+import { NotificationBellComponent } from '../notification-bell-component/notification-bell-component';
 
 /** One line of the side menu of a personal application. */
 export interface PersonalMenuItem {
@@ -23,7 +24,7 @@ export interface PersonalMenuItem {
 @Component({
   selector: 'app-personal-shell',
   standalone: true,
-  imports: [RouterModule],
+  imports: [RouterModule, NotificationBellComponent],
   template: `
     <header class="ps-bar">
       <div class="ps-bar-in">
@@ -37,6 +38,7 @@ export interface PersonalMenuItem {
             <span class="ps-app-sub">{{ subtitle() }}</span>
           </span>
         </div>
+        <app-notification-bell />
         <div class="ps-user">
           <span class="ps-user-text">
             <span class="ps-user-name">{{ auth.userName() }}</span>

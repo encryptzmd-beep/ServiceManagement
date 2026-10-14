@@ -2,14 +2,14 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { JobAlertsService } from '../../Services/job-alerts-service';
-import { JobNotification, JobsService } from '../../Services/jobs-service';
+import { AppNotification, NotificationService, appLabel, safeLink } from '../../Services/notification-service';
 import { jobsMenu } from '../personal-shell-component/jobs-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 
 /**
- * Job Portal: what happened to the person's applications (a company shortlisted, rejected
- * or hired them, or closed a job they applied to). Opening the page marks everything as
- * read; what was new when the page opened stays marked as new until the person leaves.
+ * The notifications of the person, of every application (Job Portal, Job Consultancy, the
+ * platform): kept in the main database, new ones arrive at once. Opening the page marks
+ * everything as read; what was new when the page opened stays marked as new until the person leaves.
  */
 @Component({
   selector: 'app-job-notifications-component',
@@ -23,7 +23,7 @@ import { PersonalShellComponent } from '../personal-shell-component/personal-she
   ],
 })
 export class JobNotificationsComponent implements OnInit {
-  private api = inject(JobsService);
+  private api = inject(NotificationService);
   private alerts = inject(JobAlertsService);
   private router = inject(Router);
 
@@ -31,18 +31,20 @@ export class JobNotificationsComponent implements OnInit {
 
   loading = signal(true);
   unavailable = signal('');
-  items = signal<JobNotification[]>([]);
+  items = signal<AppNotification[]>([]);
+
+  readonly appLabel = appLabel;
 
   ngOnInit(): void {
     this.load();
   }
 
   load(): void {
-    this.api.getNotifications().subscribe({
+    this.api.list().subscribe({
       next: res => {
         this.loading.set(false);
         if (!res.success || !res.data) {
-          this.unavailable.set(res.message || 'This application is not available right now');
+          this.unavailable.set(res.message || 'Notifications are not available right now');
           return;
         }
         this.unavailable.set('');
@@ -52,35 +54,45 @@ export class JobNotificationsComponent implements OnInit {
       },
       error: () => {
         this.loading.set(false);
-        this.unavailable.set('Job Portal could not be loaded. Please try again.');
+        this.unavailable.set('Notifications could not be loaded. Please try again.');
       },
     });
   }
 
   /** The number in the menu goes at once; the list keeps showing what was new. */
   private markAllRead(): void {
-    this.api.markNotificationsRead(null).subscribe({
+    this.api.markRead(null).subscribe({
       next: res => { if (res.success) this.alerts.unread.set(0); },
       error: () => {},
     });
   }
 
-  /** Only a page of Job Portal is ever opened from a notification. */
-  canOpen(n: JobNotification): boolean {
-    return (n.link ?? '').startsWith('/apps/jobs');
+  /** Only a page of this site is ever opened from a notification. */
+  canOpen(n: AppNotification): boolean {
+    return safeLink(n.link) !== '';
   }
 
-  openLink(n: JobNotification): void {
-    if (this.canOpen(n)) this.router.navigateByUrl(n.link);
+  openLink(n: AppNotification): void {
+    if (this.canOpen(n)) this.router.navigateByUrl(safeLink(n.link));
   }
 
-  icon(n: JobNotification): string {
-    if (n.kind === 'JobClosed') return 'event_busy';
-    if (n.kind === 'Invitation') return 'campaign';
-    if (n.kind === 'Certificate') return 'workspace_premium';
-    if (n.title.startsWith('You are shortlisted')) return 'star_outline';
-    if (n.title.includes('marked you as hired')) return 'celebration';
-    return 'mail_outline';
+  icon(n: AppNotification): string {
+    switch (n.kind) {
+      case 'NewApplicant': return 'person_add_alt';
+      case 'Withdrawn': return 'person_remove';
+      case 'Shortlisted': return 'star_outline';
+      case 'Hired': return 'celebration';
+      case 'Rejected': return 'do_not_disturb_on';
+      case 'JobClosed': return 'event_busy';
+      case 'Invitation': return 'campaign';
+      case 'JobApproved': return 'task_alt';
+      case 'JobReturned': return 'undo';
+      case 'ReviewWaiting':
+      case 'CertificateWaiting': return 'fact_check';
+      case 'CertificateVerified': return 'verified';
+      case 'CertificateRejected': return 'gpp_maybe';
+      default: return 'mail_outline';
+    }
   }
 
   /** "today", "yesterday", "5 days ago", or the date. */

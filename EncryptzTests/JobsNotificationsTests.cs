@@ -12,7 +12,7 @@ using Xunit;
 
 namespace EncryptzTests
 {
-    /// <summary>Notifications of the person (script 08), and Job Portal answering only while it is released.</summary>
+    /// <summary>Notifications of the person (script 08; since script 12 they are in the main database, see NotificationsTests), and Job Portal answering only while it is released.</summary>
     public class JobsNotificationsTests
     {
         private static readonly string Script = Load();
@@ -94,28 +94,6 @@ namespace EncryptzTests
             // before script 21 the list is empty: Job Portal was usable before releases existed
             Assert.True(JobsRules.PortalOpen(new List<PersonalAppDto>()));
             Assert.True(JobsRules.PortalOpen(null));
-        }
-
-        [Fact]
-        public async Task Without_a_personal_database_the_notifications_are_not_available()
-        {
-            var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>()).Build();
-            var jobs = new JobsService(new PersonalDbHelper(config), NullLogger<JobsService>.Instance);
-
-            Assert.Equal(PersonalDbHelper.NotAvailable, (await jobs.GetNotifications(11)).Message);
-            Assert.Equal("Please log in again", (await jobs.MarkNotificationsRead(0, null)).Message);
-        }
-
-        [Theory]
-        [InlineData("GetNotifications", "GET", "notifications")]
-        [InlineData("MarkNotificationsRead", "POST", "notifications/read")]
-        public void The_notifications_have_their_endpoints(string action, string verb, string template)
-        {
-            var http = typeof(JobPostingsController).GetMethod(action)!.GetCustomAttributes().OfType<HttpMethodAttribute>().Single();
-
-            Assert.Contains(verb, http.HttpMethods);
-            Assert.Equal(template, http.Template);
-            Assert.DoesNotContain(typeof(JobNotificationDto).GetProperties(), p => p.Name.Contains("UserId", StringComparison.OrdinalIgnoreCase));
         }
 
         [Fact]

@@ -1,0 +1,56 @@
+<button class="nb-button" type="button" (click)="toggle()" [class.active]="panelOpen()"
+        [attr.aria-expanded]="panelOpen()" aria-haspopup="true"
+        [attr.aria-label]="notices.unread() ? notices.unread() + ' unread notifications' : 'Notifications'">
+  <span class="material-icons">{{ notices.unread() ? 'notifications' : 'notifications_none' }}</span>
+  @if (notices.unread() > 0) {
+    <span class="nb-badge">{{ badge() }}</span>
+  }
+</button>
+
+@if (panelOpen()) {
+  <div class="nb-panel" role="dialog" aria-label="Notifications">
+    <div class="nb-head">
+      <span class="nb-head-title">Notifications</span>
+      <button class="nb-mark-all" type="button" (click)="markAllRead()" [disabled]="!notices.unread()">Mark all as read</button>
+    </div>
+
+    <div class="nb-list">
+      @if (loading()) {
+        <div class="nb-empty">Loading…</div>
+      } @else if (unavailable()) {
+        <div class="nb-empty">{{ unavailable() }}</div>
+      } @else if (items().length === 0) {
+        <div class="nb-empty">
+          <span class="material-icons">notifications_none</span>
+          <span>You are all caught up</span>
+        </div>
+      } @else {
+        @for (n of items(); track n.notificationId) {
+          <div class="nb-item" [class.new]="!n.isRead" [class.clickable]="!!n.link || !n.isRead" (click)="open(n)">
+            <span class="nb-icon"><span class="material-icons">{{ icon(n) }}</span></span>
+            <span class="nb-text">
+              <span class="nb-meta">{{ appLabel(n.app) }} · {{ agoLabel(n.createdAt) }}</span>
+              <span class="nb-title">{{ n.title }}</span>
+              @if (n.body) { <span class="nb-body">{{ n.body }}</span> }
+            </span>
+            @if (!n.isRead) { <span class="nb-dot" aria-label="New"></span> }
+          </div>
+        }
+      }
+    </div>
+  </div>
+}
+
+@if (notices.incoming(); as n) {
+  <div class="nb-toast" role="status" aria-live="polite">
+    <span class="nb-icon"><span class="material-icons">{{ icon(n) }}</span></span>
+    <button class="nb-toast-text" type="button" (click)="openIncoming()">
+      <span class="nb-meta">{{ appLabel(n.app) }}</span>
+      <span class="nb-title">{{ n.title }}</span>
+      @if (n.body) { <span class="nb-body">{{ n.body }}</span> }
+    </button>
+    <button class="nb-toast-close" type="button" (click)="dismiss()" aria-label="Close">
+      <span class="material-icons">close</span>
+    </button>
+  </div>
+}

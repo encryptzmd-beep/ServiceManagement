@@ -1,14 +1,15 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../Auth/auth-service';
 import { JobAlertsService } from '../../Services/job-alerts-service';
-import { JobsService } from '../../Services/jobs-service';
+import { NotificationService } from '../../Services/notification-service';
 import { JobNotificationsComponent } from './job-notifications-component';
 
 describe('JobNotificationsComponent', () => {
   const note = (over: any = {}) => ({
-    notificationId: 1, kind: 'Application', title: 'You are shortlisted for Accountant', body: 'Hamster A/C · Accountant',
+    notificationId: 1, app: 'JOBPORTAL', companyId: null, kind: 'Shortlisted', title: 'You are shortlisted for Accountant', body: 'Hamster A/C · Accountant',
     link: '/apps/jobs/applications', createdAt: '2020-01-15T10:00:00', isRead: false, ...over,
   });
 
@@ -21,7 +22,7 @@ describe('JobNotificationsComponent', () => {
       imports: [JobNotificationsComponent],
       providers: [
         provideRouter([]),
-        { provide: JobsService, useValue: api },
+        { provide: NotificationService, useValue: api },
         { provide: AuthService, useValue: { userName: () => 'Leo Joseph', currentUser: () => ({ userId: 11 }) } },
       ],
     });
@@ -35,11 +36,15 @@ describe('JobNotificationsComponent', () => {
   beforeEach(() => {
     calls = [];
     api = {
-      getNotifications: () => { calls.push(['getNotifications']); return of({ success: true, message: '', data: {
+      unread: signal(0),
+      incoming: signal(null),
+      arrived: signal(0),
+      start: () => calls.push(['start']),
+      list: () => { calls.push(['list']); return of({ success: true, message: '', data: {
         items: [note(), note({ notificationId: 2, kind: 'JobClosed', title: 'Felix closed the job Clerk', body: 'Your application stays.', isRead: true, link: 'https://evil.example' })],
         unread: 1,
       } }); },
-      markNotificationsRead: (id: number | null) => { calls.push(['markNotificationsRead', id]); return of({ success: true, message: 'Done', data: true }); },
+      markRead: (id: number | null) => { calls.push(['markRead', id]); return of({ success: true, message: 'Done', data: 0 }); },
     };
   });
 
@@ -53,18 +58,18 @@ describe('JobNotificationsComponent', () => {
     expect(items[0].textContent).toContain('New');
     expect(items[1].classList.contains('new')).toBe(false);
 
-    expect(calls).toContainEqual(['markNotificationsRead', null]);
+    expect(calls).toContainEqual(['markRead', null]);
     expect(TestBed.inject(JobAlertsService).unread()).toBe(0);
   });
 
   it('does not mark anything when nothing is new', () => {
-    api.getNotifications = () => of({ success: true, message: '', data: { items: [note({ isRead: true })], unread: 0 } });
+    api.list = () => of({ success: true, message: '', data: { items: [note({ isRead: true })], unread: 0 } });
     create();
 
-    expect(calls.some(x => x[0] === 'markNotificationsRead')).toBe(false);
+    expect(calls.some(x => x[0] === 'markRead')).toBe(false);
   });
 
-  it('opens only a page of Job Portal from a notification', () => {
+  it('opens only a page of this site from a notification', () => {
     const fixture = create();
     const c = fixture.componentInstance;
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
@@ -92,10 +97,10 @@ describe('JobNotificationsComponent', () => {
   });
 
   it('says there is nothing yet, and when the list cannot be read', () => {
-    api.getNotifications = () => of({ success: true, message: '', data: { items: [], unread: 0 } });
+    api.list = () => of({ success: true, message: '', data: { items: [], unread: 0 } });
     expect(text(create())).toContain('No notifications yet');
 
-    api.getNotifications = () => throwError(() => ({ status: 0 }));
-    expect(text(create())).toContain('Job Portal could not be loaded. Please try again.');
+    api.list = () => throwError(() => ({ status: 0 }));
+    expect(text(create())).toContain('Notifications could not be loaded. Please try again.');
   });
 });

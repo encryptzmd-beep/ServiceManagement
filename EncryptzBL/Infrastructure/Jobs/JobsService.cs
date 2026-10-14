@@ -4,6 +4,7 @@ using EncryptzBL.Common;
 using EncryptzBL.Common.Jobs;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Common.Tenant;
+using EncryptzBL.Infrastructure.Notifications;
 using EncryptzBL.Infrastructure.User.Modules;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -23,15 +24,35 @@ namespace EncryptzBL.Infrastructure.Jobs
         private readonly ILogger<JobsService> _logger;
         private readonly IAuthService? _users;
         private readonly IConnectionResolver? _tenants;
+        private readonly INotificationService? _notices;
 
         /// <param name="users">The user master (main database). Without it a profile starts empty.</param>
         /// <param name="tenants">Finds the company's own database (Job Consultancy keeps its data there).</param>
-        public JobsService(PersonalDbHelper db, ILogger<JobsService> logger, IAuthService? users = null, IConnectionResolver? tenants = null) : base(db)
+        /// <param name="notices">The notifications of every application (main database). Without it nobody is told.</param>
+        public JobsService(PersonalDbHelper db, ILogger<JobsService> logger, IAuthService? users = null, IConnectionResolver? tenants = null,
+            INotificationService? notices = null) : base(db)
         {
             _personal = db;
             _logger = logger;
             _users = users;
             _tenants = tenants;
+            _notices = notices;
+        }
+
+        /// <summary>
+        /// Runs a procedure that answers "Success, Message[, Id]" and then whom to tell
+        /// (PersonalDB script 12). When it succeeded, they are told; the answer is the first set.
+        /// </summary>
+        private async Task<DataTable?> Told(string sp, SqlParameter[] parameters)
+        {
+            var ds = await GetDataSetAsync(sp, parameters);
+            if (ds == null || ds.Tables.Count == 0)
+                return null;
+
+            if (_notices != null && ds.Tables.Count > 1 && Answer(ds.Tables[0]).Success)
+                await _notices.SendAsync(NotificationRules.Targets(ds.Tables[1]));
+
+            return ds.Tables[0];
         }
 
         /// <summary>Whether Job Portal is released, as the main database said it a moment ago.</summary>
@@ -466,7 +487,7 @@ namespace EncryptzBL.Infrastructure.Jobs
 
                 var name = file == null ? null : JobsRules.SafeFileName(file.FileName);
 
-                return AsId(Answer(await GetDataTableAsync("jobs.sp_Certificate_Save", new[]
+                return AsId(Answer(await Told("jobs.sp_Certificate_Save", new[]
                 {
                     In("@UserId", userId),
                     In("@CertificateId", dto.CertificateId),

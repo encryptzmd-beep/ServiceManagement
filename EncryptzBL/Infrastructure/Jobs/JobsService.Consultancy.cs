@@ -346,7 +346,7 @@ namespace EncryptzBL.Infrastructure.Jobs
                 if (problem != null)
                     return ApiResponse<bool>.Fail(problem);
 
-                return AsFlag(Answer(await GetDataTableAsync("jobs.sp_Candidate_Invite", new[]
+                return AsFlag(Answer(await Told("jobs.sp_Candidate_Invite", new[]
                 {
                     In("@CompanyId", companyId),
                     Key("@CandidateKey", candidateKey),

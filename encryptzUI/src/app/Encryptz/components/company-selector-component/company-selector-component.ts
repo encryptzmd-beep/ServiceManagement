@@ -1,4 +1,5 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { NotificationBellComponent } from '../notification-bell-component/notification-bell-component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription, finalize, interval, timeout } from 'rxjs';
@@ -27,7 +28,7 @@ const MODULE_HOME: Record<string, string> = {
 
 @Component({
   selector: 'app-company-selector-component',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, NotificationBellComponent],
   templateUrl: './company-selector-component.html',
   styleUrl: './company-selector-component.scss',
 })

@@ -3,7 +3,7 @@
   <div class="jb-head">
     <div class="jb-head-text">
       <h1>Notifications</h1>
-      <p>What companies did with your applications.</p>
+      <p>Everything that happened, from every application: your applications, invitations and checks.</p>
     </div>
   </div>
 
@@ -27,7 +27,7 @@
             <div class="jn-main">
               <div class="jn-title">{{ n.title }}</div>
               @if (n.body) { <div class="jn-body">{{ n.body }}</div> }
-              <div class="jn-when">{{ agoLabel(n.createdAt) }}@if (!n.isRead) { <span class="jn-new">New</span> }</div>
+              <div class="jn-when">{{ appLabel(n.app) }} · {{ agoLabel(n.createdAt) }}@if (!n.isRead) { <span class="jn-new">New</span> }</div>
             </div>
             @if (canOpen(n)) {
               <button class="jp-btn" (click)="openLink(n)">View</button>

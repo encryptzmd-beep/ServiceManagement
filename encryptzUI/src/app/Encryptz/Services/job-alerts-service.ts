@@ -1,21 +1,19 @@
-import { Injectable, inject, signal } from '@angular/core';
-import { JobsService } from './jobs-service';
+import { Injectable, inject } from '@angular/core';
+import { NotificationService } from './notification-service';
 
 /**
- * How many notifications of Job Portal the person has not read: the number next to
- * "Notifications" in the side menu. Every page of Job Portal asks for it when it opens;
- * a failure leaves the number as it was (it never hides a page).
+ * How many notifications the person has not read: the number next to "Notifications" in
+ * the side menu of Job Portal. They are the common notifications of every application
+ * (NotificationService); every page of Job Portal starts listening when it opens. A failure
+ * leaves the number as it was (it never hides a page).
  */
 @Injectable({ providedIn: 'root' })
 export class JobAlertsService {
-  private api = inject(JobsService);
+  private notices = inject(NotificationService);
 
-  readonly unread = signal(0);
+  readonly unread = this.notices.unread;
 
   refresh(): void {
-    this.api.getNotifications().subscribe({
-      next: res => { if (res.success && res.data) this.unread.set(res.data.unread); },
-      error: () => {},
-    });
+    this.notices.start();
   }
 }

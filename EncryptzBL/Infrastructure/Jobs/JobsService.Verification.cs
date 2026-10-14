@@ -73,7 +73,7 @@ namespace EncryptzBL.Infrastructure.Jobs
                 if (!verified && text.Length == 0)
                     return ApiResponse<bool>.Fail("Say why the certificate is not verified");
 
-                return AsFlag(Answer(await GetDataTableAsync("jobs.sp_Admin_Certificate_Decide", new[]
+                return AsFlag(Answer(await Told("jobs.sp_Admin_Certificate_Decide", new[]
                 {
                     In("@CertificateId", certificateId),
                     In("@Verified", verified),
@@ -91,7 +91,7 @@ namespace EncryptzBL.Infrastructure.Jobs
                 if (!approved && text.Length == 0)
                     return ApiResponse<bool>.Fail("Say why the job is returned, so that the company can correct it");
 
-                return AsFlag(Answer(await GetDataTableAsync("jobs.sp_Admin_Posting_Decide", new[]
+                return AsFlag(Answer(await Told("jobs.sp_Admin_Posting_Decide", new[]
                 {
                     In("@PostingId", postingId),
                     In("@Approved", approved),

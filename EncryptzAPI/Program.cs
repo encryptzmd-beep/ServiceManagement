@@ -1,3 +1,4 @@
+using EncryptzAPI.Hubs;
 using EncryptzAPI.Middleware;
 using EncryptzAPI.SrvInjection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -30,6 +31,9 @@ builder.Services.AddControllers(options =>
     options.Filters.Add<TenantScopeExceptionFilter>();   // no scope selected -> 403, not 500
     options.Filters.Add<ModuleBoundaryFilter>();   // a token is issued for one module
 });
+
+// 🔹 SignalR: notifications reach the open pages at once
+builder.Services.AddSignalR();
 
 // 🔹 Single Service Injection (Your Custom DI)
 builder.Services.AddApplicationServices();
@@ -111,6 +115,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey =
                 new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!))
         };
+
+        // A browser cannot set a header on a WebSocket: the hub alone takes the token from the
+        // query string. Every other endpoint still reads it from the Authorization header only.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var token = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(token) && context.HttpContext.Request.Path.StartsWithSegments(NotificationHub.Path))
+                    context.Token = token;
+                return Task.CompletedTask;
+            }
+        };
     });
 
 // 🔹 Swagger / OpenAPI
@@ -156,5 +173,6 @@ app.UseMiddleware<TenantResolutionMiddleware>();  // 2️⃣.5 Resolve tenant/Se
 app.UseAuthorization();        // 3️⃣ Authorization
 
 app.MapControllers();
+app.MapHub<NotificationHub>(NotificationHub.Path);
 
 app.Run();
