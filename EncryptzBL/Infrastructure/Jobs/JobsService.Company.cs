@@ -47,6 +47,7 @@ namespace EncryptzBL.Infrastructure.Jobs
                 Description = r.Table.Columns.Contains("Description") ? r["Description"]?.ToString() ?? "" : "",
                 ClosesOn = DateOrNull(r, "ClosesOn"),
                 Status = r["Status"]?.ToString() ?? "",
+                ReviewNote = r.Table.Columns.Contains("ReviewNote") ? r["ReviewNote"]?.ToString() ?? "" : "",
                 PublishedAt = DateOrNull(r, "PublishedAt"),
                 CreatedAt = Convert.ToDateTime(r["CreatedAt"]),
                 Applied = Count("Applied"),

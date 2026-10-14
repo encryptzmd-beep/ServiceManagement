@@ -45,7 +45,11 @@ namespace EncryptzBL.Common.Jobs
 
         // ── profile ───────────────────────────────────────────────────────────
 
-        public static string? ProfileProblem(JobProfileDto? p, DateTime today)
+        /// <param name="requireBirthDate">
+        /// A profile the person saves needs a date of birth. Only the profile that is started
+        /// for them from the user master (which has none) is taken without it.
+        /// </param>
+        public static string? ProfileProblem(JobProfileDto? p, DateTime today, bool requireBirthDate = true)
         {
             if (p == null)
                 return "Nothing to save";
@@ -72,6 +76,9 @@ namespace EncryptzBL.Common.Jobs
                     return "Enter a valid contact phone number";
             }
 
+            if (requireBirthDate && !p.DateOfBirth.HasValue)
+                return "Enter your date of birth";
+
             if (p.DateOfBirth.HasValue)
             {
                 p.DateOfBirth = p.DateOfBirth.Value.Date;
@@ -92,7 +99,7 @@ namespace EncryptzBL.Common.Jobs
             static string Accepted(string? value, Func<string, JobProfileDto> asProfile)
             {
                 var text = (value ?? "").Trim();
-                return text.Length > 0 && ProfileProblem(asProfile(text), DateTime.MaxValue) == null ? text : "";
+                return text.Length > 0 && ProfileProblem(asProfile(text), DateTime.MaxValue, requireBirthDate: false) == null ? text : "";
             }
 
             var starter = new JobProfileDto

@@ -26,8 +26,10 @@ namespace EncryptzBL.DTO_s
     /// <summary>A job of the company with its state and how many applied.</summary>
     public class CompanyPostingDto : JobPostingDto
     {
-        /// <summary>Draft, Open or Closed.</summary>
+        /// <summary>Draft, InReview (the platform administrator checks it), Open or Closed.</summary>
         public string Status { get; set; } = "";
+        /// <summary>Why the platform administrator returned the job ('' when not returned).</summary>
+        public string ReviewNote { get; set; } = "";
         public DateTime? PublishedAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public int Applied { get; set; }
@@ -152,6 +154,43 @@ namespace EncryptzBL.DTO_s
         public string Note { get; set; } = "";
         public DateTime AppliedAt { get; set; }
         public JobProfilePageDto Profile { get; set; } = new();
+    }
+
+    // ── verification by the platform administrator ──
+
+    /// <summary>A certificate with a file that waits to be checked.</summary>
+    public class CertificateReviewDto
+    {
+        public int CertificateId { get; set; }
+        public string Title { get; set; } = "";
+        public string Issuer { get; set; } = "";
+        public DateTime? IssuedOn { get; set; }
+        public string FileName { get; set; } = "";
+        public DateTime SubmittedAt { get; set; }
+        public string PersonName { get; set; } = "";
+        public string PersonHeadline { get; set; } = "";
+    }
+
+    /// <summary>A job a company wants to publish (or changed), waiting to be checked.</summary>
+    public class PostingReviewDto : JobPostingDto
+    {
+        public string CompanyName { get; set; } = "";
+        public DateTime SubmittedAt { get; set; }
+        /// <summary>It was public before: this is a change of a job people already saw.</summary>
+        public bool WasPublished { get; set; }
+    }
+
+    public class VerificationQueueDto
+    {
+        public List<CertificateReviewDto> Certificates { get; set; } = new();
+        public List<PostingReviewDto> Postings { get; set; } = new();
+    }
+
+    public class VerificationDecisionRequest
+    {
+        public bool Approve { get; set; }
+        /// <summary>Needed when it is not approved: the person or the company reads it.</summary>
+        public string? Note { get; set; }
     }
 
     public class SetJobStatusRequest

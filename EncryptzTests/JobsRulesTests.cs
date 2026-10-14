@@ -29,11 +29,16 @@ namespace EncryptzTests
         }
 
         [Fact]
-        public void An_empty_profile_can_be_saved()
+        public void A_profile_needs_a_date_of_birth_and_nothing_else_to_be_saved()
         {
             // a person fills it in over time; visibility is what needs name and headline
-            Assert.Null(JobsRules.ProfileProblem(new JobProfileDto(), Today));
+            Assert.Equal("Enter your date of birth", JobsRules.ProfileProblem(new JobProfileDto(), Today));
+            Assert.Null(JobsRules.ProfileProblem(new JobProfileDto { DateOfBirth = new DateTime(1990, 5, 1) }, Today));
         }
+
+        [Fact]
+        public void Only_the_profile_started_from_the_user_master_is_taken_without_a_date_of_birth()
+            => Assert.Null(JobsRules.ProfileProblem(new JobProfileDto { FullName = "Leo" }, Today, requireBirthDate: false));
 
         [Fact]
         public void Nothing_sent_is_a_problem()

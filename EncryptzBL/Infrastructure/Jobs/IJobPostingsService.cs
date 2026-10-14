@@ -28,6 +28,19 @@ namespace EncryptzBL.Infrastructure.Jobs
     }
 
     /// <summary>
+    /// What the platform administrator checks: certificates people uploaded and jobs companies
+    /// want to publish. Every method takes the user first (the platform administrator who is
+    /// logged in); the API lets nobody else in.
+    /// </summary>
+    public interface IVerificationService
+    {
+        Task<ApiResponse<VerificationQueueDto>> GetVerificationQueue(int userId);
+        Task<ApiResponse<JobFileContent>> GetCertificateFileForReview(int userId, int certificateId);
+        Task<ApiResponse<bool>> DecideCertificate(int userId, int certificateId, bool verified, string? note, string adminName);
+        Task<ApiResponse<bool>> DecidePosting(int userId, int postingId, bool approved, string? note, string adminName);
+    }
+
+    /// <summary>
     /// Job Portal, the company's side: its postings and the people who applied to them.
     /// Every method takes the user and the company first: the user is who is logged in, the
     /// company is the one of their token. Whether that user may act for that company is
