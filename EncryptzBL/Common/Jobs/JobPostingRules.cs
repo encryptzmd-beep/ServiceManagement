@@ -91,5 +91,9 @@ namespace EncryptzBL.Common.Jobs
         }
 
         public static int Page(int? page) => page is > 0 and < 100_000 ? page.Value : 1;
+
+        /// <summary>The order of a search: the best match to the person's preferences first, unless the newest is asked for.</summary>
+        public static string Sort(string? sort)
+            => string.Equals((sort ?? "").Trim(), "newest", StringComparison.OrdinalIgnoreCase) ? "newest" : "match";
     }
 }

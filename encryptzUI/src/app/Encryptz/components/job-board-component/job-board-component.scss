@@ -56,6 +56,74 @@ $tint: #eef4fb;
   .jp-input { padding-left: 38px; }
 }
 
+/* ── the order of the result ── */
+.jb-order {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -4px 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: $muted;
+}
+
+.jb-segment {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid $line;
+  border-radius: 9px;
+  background: #fff;
+
+  button {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: $muted;
+    cursor: pointer;
+
+    &:hover { color: $ink; }
+    &.on { background: $tint; color: $navy; font-weight: 600; }
+    &:focus-visible { outline: 2px solid rgba(27, 74, 122, 0.4); }
+  }
+}
+
+.jb-hint {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px dashed #cfe0f1;
+  border-radius: 10px;
+  background: #f7fafd;
+  font-size: 13px;
+  color: $text;
+
+  .material-icons { font-size: 17px; color: $accent; }
+  a { font-weight: 600; color: $navy; }
+}
+
+.jb-match {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 2px 9px 2px 7px;
+  border-radius: 999px;
+  background: #f0faf3;
+  border: 1px solid #bfe3cb;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #166534;
+
+  .material-icons { font-size: 13px; }
+}
+
 /* ── a job in a list ── */
 .jb-card {
   display: flex;

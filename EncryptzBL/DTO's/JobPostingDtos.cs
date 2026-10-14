@@ -58,6 +58,18 @@ namespace EncryptzBL.DTO_s
         public string MyStatus { get; set; } = "";
         /// <summary>It still takes applications.</summary>
         public bool IsOpen { get; set; }
+        /// <summary>How well it fits the person's preferences: job 3, location 2, working mode 1 (0 = not at all).</summary>
+        public int MatchScore { get; set; }
+    }
+
+    /// <summary>A company looked at the person's profile or resume for one of its jobs.</summary>
+    public class JobProfileViewDto
+    {
+        public string CompanyName { get; set; } = "";
+        public string PostingTitle { get; set; } = "";
+        public int ProfileViews { get; set; }
+        public int ResumeViews { get; set; }
+        public DateTime LastViewedAt { get; set; }
     }
 
     public class JobPostingSearchResultDto

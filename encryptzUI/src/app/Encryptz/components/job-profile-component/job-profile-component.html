@@ -285,6 +285,23 @@
           </label>
           @if (visibleError()) { <div class="jp-error">{{ visibleError() }}</div> }
         </div>
+
+        @if (views(); as seen) {
+          <div class="jp-card jp-views">
+            <div class="jp-views-head">
+              <span class="material-icons" aria-hidden="true">visibility</span>
+              <strong>Who viewed your profile</strong>
+            </div>
+            @for (v of seen.slice(0, 5); track $index) {
+              <div class="jp-view">
+                <div class="jp-view-company">{{ v.companyName }}</div>
+                <div class="jp-view-sub">{{ v.postingTitle }} · {{ v.resumeViews > 0 ? 'profile and resume' : 'profile' }} · {{ agoLabel(v.lastViewedAt) }}</div>
+              </div>
+            } @empty {
+              <p class="jp-view-none">No company has opened your profile yet. A company sees it only after you apply to one of its jobs.</p>
+            }
+          </div>
+        }
       </aside>
     </div>
   }

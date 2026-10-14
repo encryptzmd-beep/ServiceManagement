@@ -486,6 +486,28 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
 .jp-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, $navy 0%, $accent 100%); transition: width 0.3s; }
 .jp-complete-hint { display: block; margin-top: 10px; font-size: 12.5px; line-height: 1.45; color: $muted; }
 
+/* ── who viewed the profile ── */
+.jp-views-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+
+  .material-icons { font-size: 18px; color: $accent; }
+  strong { font-size: 13.5px; font-weight: 600; color: $ink; }
+}
+
+.jp-view {
+  padding: 9px 0;
+  border-top: 1px solid $hair;
+
+  &:first-of-type { border-top: none; padding-top: 2px; }
+}
+
+.jp-view-company { font-size: 13.5px; font-weight: 600; color: $ink; overflow-wrap: anywhere; }
+.jp-view-sub { margin-top: 2px; font-size: 12.5px; line-height: 1.45; color: $muted; overflow-wrap: anywhere; }
+.jp-view-none { margin: 0; font-size: 12.5px; line-height: 1.5; color: $muted; }
+
 /* ── visibility ── */
 .jp-switch {
   display: flex;

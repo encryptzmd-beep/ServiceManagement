@@ -131,6 +131,17 @@ export interface JobPostingView {
   myStatus: JobApplicationStatus | '';
   /** It still takes applications. */
   isOpen: boolean;
+  /** How well it fits the person's preferences (0 = not at all). Only the search fills it. */
+  matchScore?: number;
+}
+
+/** A company looked at the person's profile or resume for one of its jobs. */
+export interface JobProfileView {
+  companyName: string;
+  postingTitle: string;
+  profileViews: number;
+  resumeViews: number;
+  lastViewedAt: string;
 }
 
 export interface JobPostingSearchResult {
@@ -146,6 +157,8 @@ export interface JobSearchFilter {
   type: string;
   mode: string;
   page: number;
+  /** 'match': the best match to the preferences first; 'newest': the newest first. */
+  sort: 'match' | 'newest';
 }
 
 export interface JobApplication {
@@ -256,7 +269,7 @@ export class JobsService {
   // ── job postings ──
 
   searchPostings(filter: JobSearchFilter): Observable<ApiResponse<JobPostingSearchResult>> {
-    const params: Record<string, string> = { page: String(filter.page) };
+    const params: Record<string, string> = { page: String(filter.page), sort: filter.sort };
     if (filter.q.trim()) params['q'] = filter.q.trim();
     if (filter.city.trim()) params['city'] = filter.city.trim();
     if (filter.type) params['type'] = filter.type;
@@ -284,6 +297,11 @@ export class JobsService {
 
   withdraw(applicationId: number): Observable<ApiResponse<boolean>> {
     return this.http.post<ApiResponse<boolean>>(`${this.api}/applications/${applicationId}/withdraw`, {});
+  }
+
+  /** Which company looked at the person's profile or resume, for which job. */
+  getProfileViews(): Observable<ApiResponse<JobProfileView[]>> {
+    return this.http.get<ApiResponse<JobProfileView[]>>(`${this.api}/profile-views`);
   }
 
   getSaved(): Observable<ApiResponse<JobPostingView[]>> {

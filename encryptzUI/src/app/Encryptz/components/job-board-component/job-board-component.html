@@ -46,6 +46,24 @@
     </form>
   }
 
+  @if (mode() === 'search' && !loading() && !unavailable() && postings().length) {
+    <div class="jb-order">
+      <span>{{ total() }} {{ total() === 1 ? 'job' : 'jobs' }}</span>
+      <span class="jb-grow"></span>
+      <div class="jb-segment" role="group" aria-label="Order">
+        <button type="button" [class.on]="filter.sort === 'match'" [attr.aria-pressed]="filter.sort === 'match'" (click)="setSort('match')">Best match</button>
+        <button type="button" [class.on]="filter.sort === 'newest'" [attr.aria-pressed]="filter.sort === 'newest'" (click)="setSort('newest')">Newest</button>
+      </div>
+    </div>
+    @if (filter.sort === 'match' && !anyMatch) {
+      <p class="jb-hint">
+        <span class="material-icons" aria-hidden="true">tips_and_updates</span>
+        Add the jobs, places and working modes you prefer to your profile, and the jobs that fit them come first.
+        <a routerLink="/apps/jobs">Open my profile</a>
+      </p>
+    }
+  }
+
   @if (loading()) {
     <div class="jp-state">
       <span class="jp-spinner" aria-hidden="true"></span>
@@ -96,6 +114,9 @@
         <div class="jb-logo" aria-hidden="true">{{ initial(p.companyName) }}</div>
         <div class="jb-card-main">
           <h2><button class="jb-title" (click)="open(p.postingId)">{{ p.title }}</button></h2>
+          @if ((p.matchScore ?? 0) > 0) {
+            <span class="jb-match"><span class="material-icons" aria-hidden="true">auto_awesome</span>Matches your preferences</span>
+          }
           <div class="jb-company">{{ p.companyName }}</div>
           <div class="jb-meta">
             <span><span class="material-icons">place</span>{{ p.city }}</span>

@@ -49,7 +49,7 @@ export class JobBoardComponent implements OnInit {
   applications = signal<JobApplication[]>([]);
 
   /** What is typed in the search bar; sent when Search is pressed. */
-  filter: JobSearchFilter = { q: '', city: '', type: '', mode: '', page: 1 };
+  filter: JobSearchFilter = { q: '', city: '', type: '', mode: '', page: 1, sort: 'match' };
 
   /** The job that is open with its description. */
   opened = signal<JobPostingView | null>(null);
@@ -128,7 +128,7 @@ export class JobBoardComponent implements OnInit {
   }
 
   clearSearch(): void {
-    this.filter = { q: '', city: '', type: '', mode: '', page: 1 };
+    this.filter = { q: '', city: '', type: '', mode: '', page: 1, sort: this.filter.sort };
     this.load();
   }
 
@@ -138,6 +138,18 @@ export class JobBoardComponent implements OnInit {
 
   get lastPage(): number {
     return Math.max(1, Math.ceil(this.total() / this.pageSize()));
+  }
+
+  setSort(sort: 'match' | 'newest'): void {
+    if (this.filter.sort === sort) return;
+    this.filter.sort = sort;
+    this.filter.page = 1;
+    this.load();
+  }
+
+  /** Some of the jobs shown fit the person's preferences: the order can be chosen. */
+  get anyMatch(): boolean {
+    return this.postings().some(p => (p.matchScore ?? 0) > 0);
   }
 
   goToPage(page: number): void {

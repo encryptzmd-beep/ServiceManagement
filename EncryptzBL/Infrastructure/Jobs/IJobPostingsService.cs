@@ -8,7 +8,7 @@ namespace EncryptzBL.Infrastructure.Jobs
     /// </summary>
     public interface IJobPostingsService
     {
-        Task<ApiResponse<JobPostingSearchResultDto>> SearchPostings(int userId, string? query, string? city, string? employmentType, string? workMode, int? page);
+        Task<ApiResponse<JobPostingSearchResultDto>> SearchPostings(int userId, string? query, string? city, string? employmentType, string? workMode, int? page, string? sort = null);
         Task<ApiResponse<JobPostingViewDto>> GetPosting(int userId, int postingId);
 
         Task<ApiResponse<int>> Apply(int userId, int postingId, string? note);
@@ -17,6 +17,9 @@ namespace EncryptzBL.Infrastructure.Jobs
 
         Task<ApiResponse<bool>> SetSaved(int userId, int postingId, bool saved);
         Task<ApiResponse<List<JobPostingViewDto>>> GetSavedPostings(int userId);
+
+        /// <summary>Which company looked at the person's profile or resume, for which job.</summary>
+        Task<ApiResponse<List<JobProfileViewDto>>> GetProfileViews(int userId);
     }
 
     /// <summary>

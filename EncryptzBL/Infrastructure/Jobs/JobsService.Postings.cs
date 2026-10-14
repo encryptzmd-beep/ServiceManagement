@@ -31,11 +31,13 @@ namespace EncryptzBL.Infrastructure.Jobs
             ClosesOn = DateOrNull(r, "ClosesOn"),
             IsSaved = Convert.ToBoolean(r["IsSaved"]),
             MyStatus = r["MyStatus"]?.ToString() ?? "",
-            IsOpen = Convert.ToBoolean(r["IsOpen"])
+            IsOpen = Convert.ToBoolean(r["IsOpen"]),
+            // only the search scores a job (script 07)
+            MatchScore = r.Table.Columns.Contains("MatchScore") && r["MatchScore"] != DBNull.Value ? Convert.ToInt32(r["MatchScore"]) : 0
         };
 
         public Task<ApiResponse<JobPostingSearchResultDto>> SearchPostings(
-            int userId, string? query, string? city, string? employmentType, string? workMode, int? page)
+            int userId, string? query, string? city, string? employmentType, string? workMode, int? page, string? sort = null)
             => Guarded(userId, "searching jobs", async () =>
             {
                 var pageNumber = JobPostingRules.Page(page);
@@ -49,7 +51,8 @@ namespace EncryptzBL.Infrastructure.Jobs
                     In("@EmploymentType", JobPostingRules.InList(JobPostingRules.EmploymentTypes, employmentType) ?? ""),
                     In("@WorkMode", JobPostingRules.InList(JobsRules.WorkModes, workMode) ?? ""),
                     In("@Page", pageNumber),
-                    In("@PageSize", JobPostingRules.PageSize)
+                    In("@PageSize", JobPostingRules.PageSize),
+                    In("@Sort", JobPostingRules.Sort(sort))
                 });
 
                 var result = new JobPostingSearchResultDto { Page = pageNumber, PageSize = JobPostingRules.PageSize };
@@ -133,6 +136,25 @@ namespace EncryptzBL.Infrastructure.Jobs
                     In("@PostingId", postingId),
                     In("@Saved", saved)
                 }))));
+
+        public Task<ApiResponse<List<JobProfileViewDto>>> GetProfileViews(int userId)
+            => Guarded(userId, "reading who viewed the profile", async () =>
+            {
+                var dt = await GetDataTableAsync("jobs.sp_ProfileView_ListMine", new[] { In("@UserId", userId) });
+
+                var list = dt == null
+                    ? new List<JobProfileViewDto>()
+                    : dt.Rows.Cast<DataRow>().Select(r => new JobProfileViewDto
+                    {
+                        CompanyName = r["CompanyName"]?.ToString() ?? "",
+                        PostingTitle = r["PostingTitle"]?.ToString() ?? "",
+                        ProfileViews = Convert.ToInt32(r["ProfileViews"]),
+                        ResumeViews = Convert.ToInt32(r["ResumeViews"]),
+                        LastViewedAt = Convert.ToDateTime(r["LastViewedAt"])
+                    }).ToList();
+
+                return ApiResponse<List<JobProfileViewDto>>.Ok(list);
+            });
 
         public Task<ApiResponse<List<JobPostingViewDto>>> GetSavedPostings(int userId)
             => Guarded(userId, "reading the saved jobs", async () =>

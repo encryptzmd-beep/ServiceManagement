@@ -63,6 +63,7 @@ describe('JobProfileComponent', () => {
       deleteResume: () => { calls.push(['deleteResume']); return ok(); },
       downloadFile: (id: number) => { calls.push(['downloadFile', id]); return of(new Blob(['x'])); },
       getPhoto: () => { calls.push(['getPhoto']); return of(null); },
+      getProfileViews: () => { calls.push(['getProfileViews']); return of({ success: true, message: '', data: [] }); },
       savePhoto: (file: any) => { calls.push(['savePhoto', file]); return ok(7, 'Photo saved'); },
       deletePhoto: () => { calls.push(['deletePhoto']); return ok(true, 'Photo removed'); },
     };
@@ -159,6 +160,52 @@ describe('JobProfileComponent', () => {
 
     (fixture.nativeElement.querySelector('.jp-close') as HTMLElement).click();
     expect(c.dialog()).toBeNull();
+  });
+
+  // ── who viewed the profile ────────────────────────────────────────────────
+
+  it('shows which company opened the profile or the resume, for which job', () => {
+    api.getProfileViews = () => of({ success: true, message: '', data: [
+      { companyName: 'Hamster A/C', postingTitle: 'Accountant', profileViews: 2, resumeViews: 1, lastViewedAt: '2020-01-15T10:00:00' },
+      { companyName: 'Felix', postingTitle: 'Clerk', profileViews: 1, resumeViews: 0, lastViewedAt: '2020-01-10T10:00:00' },
+    ] });
+    const card = create().nativeElement.querySelector('.jp-views') as HTMLElement;
+    const t = card.textContent!.replace(/\s+/g, ' ');
+
+    expect(t).toContain('Who viewed your profile');
+    expect(t).toContain('Hamster A/C');
+    expect(t).toContain('Accountant · profile and resume · 15 Jan 2020');
+    expect(t).toContain('Clerk · profile · 10 Jan 2020');
+  });
+
+  it('says nobody looked yet, and hides the card when the list cannot be read', () => {
+    expect(text(create())).toContain('No company has opened your profile yet');
+
+    api.getProfileViews = () => throwError(() => ({ status: 0 }));
+    const fixture = create();
+    expect(fixture.nativeElement.querySelector('.jp-views')).toBeNull();
+    expect(text(fixture)).toContain('Experience');
+  });
+
+  it('asks for skill suggestions once the typing stops, not for every letter', () => {
+    vi.useFakeTimers();
+    try {
+      const c = create().componentInstance;
+      c.suggest('ta');
+      c.suggest('tal');
+      c.suggest('tall');
+      expect(calls.some(x => x[0] === 'suggestSkills')).toBe(false);
+
+      vi.advanceTimersByTime(400);
+      expect(calls.filter(x => x[0] === 'suggestSkills')).toEqual([['suggestSkills', 'tall']]);
+      expect(c.suggestions()).toEqual(['Tally', 'Tally Prime']);
+
+      c.suggest('t');
+      vi.advanceTimersByTime(400);
+      expect(c.suggestions()).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   // ── photo ─────────────────────────────────────────────────────────────────
@@ -621,7 +668,7 @@ describe('JobProfileComponent', () => {
     box.dispatchEvent(new Event('change'));
     fixture.detectChanges();
 
-    expect(calls.map(x => x[0]).sort()).toEqual(['getPage', 'getPhoto']);   // only the first reads: setVisible is replaced above
+    expect(calls.map(x => x[0]).sort()).toEqual(['getPage', 'getPhoto', 'getProfileViews']);   // only the first reads: setVisible is replaced above
     expect(box.checked).toBe(false);
     expect(text(fixture)).toContain('Add your name and a headline before you switch this on');
   });

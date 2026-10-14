@@ -87,7 +87,35 @@ describe('JobBoardComponent', () => {
     Object.assign(c.filter, { q: ' tally ', city: 'Kochi', type: 'Full-time', mode: 'Remote' });
     c.search();
 
-    expect(calls.at(-1)).toEqual(['searchPostings', { q: ' tally ', city: 'Kochi', type: 'Full-time', mode: 'Remote', page: 1 }]);
+    expect(calls.at(-1)).toEqual(['searchPostings', { q: ' tally ', city: 'Kochi', type: 'Full-time', mode: 'Remote', page: 1, sort: 'match' }]);
+  });
+
+  it('puts the best match first by default, and the newest when asked, from the first page', () => {
+    const fixture = create('search');
+    const c = fixture.componentInstance;
+
+    expect(calls[0][1].sort).toBe('match');
+    c.filter.page = 2;
+    c.setSort('newest');
+    expect(calls.at(-1)![1]).toEqual(expect.objectContaining({ sort: 'newest', page: 1 }));
+
+    const before = calls.length;
+    c.setSort('newest');
+    expect(calls.length).toBe(before);
+  });
+
+  it('marks a job that matches the preferences, and otherwise says how to get matches', () => {
+    api.searchPostings = () => ok({ items: [posting({ matchScore: 5 }), posting({ postingId: 8, title: 'Site Engineer', matchScore: 0 })], total: 2, page: 1, pageSize: 20 });
+    let fixture = create('search');
+    const cards = Array.from(fixture.nativeElement.querySelectorAll('.jb-card')) as HTMLElement[];
+
+    expect(cards[0].textContent).toContain('Matches your preferences');
+    expect(cards[1].textContent).not.toContain('Matches your preferences');
+    expect(fixture.nativeElement.querySelector('.jb-hint')).toBeNull();
+
+    api.searchPostings = () => ok({ items: [posting()], total: 1, page: 1, pageSize: 20 });
+    fixture = create('search');
+    expect(fixture.nativeElement.querySelector('.jb-hint a').getAttribute('href')).toBe('/apps/jobs');
   });
 
   it('moves between the pages and not beyond them', () => {

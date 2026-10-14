@@ -25,8 +25,8 @@ namespace EncryptzAPI.Controllers
 
         [HttpGet("postings")]
         public async Task<IActionResult> Search([FromQuery] string? q, [FromQuery] string? city, [FromQuery] string? type,
-            [FromQuery] string? mode, [FromQuery] int? page)
-            => Ok(await _postings.SearchPostings(Caller(), q, city, type, mode, page));
+            [FromQuery] string? mode, [FromQuery] int? page, [FromQuery] string? sort)
+            => Ok(await _postings.SearchPostings(Caller(), q, city, type, mode, page, sort));
 
         [HttpGet("postings/{id:int}")]
         public async Task<IActionResult> GetPosting(int id)
@@ -51,6 +51,10 @@ namespace EncryptzAPI.Controllers
         [HttpPost("applications/{id:int}/withdraw")]
         public async Task<IActionResult> Withdraw(int id)
             => Ok(await _postings.Withdraw(Caller(), id));
+
+        [HttpGet("profile-views")]
+        public async Task<IActionResult> GetProfileViews()
+            => Ok(await _postings.GetProfileViews(Caller()));
 
         [HttpGet("saved")]
         public async Task<IActionResult> GetSaved()

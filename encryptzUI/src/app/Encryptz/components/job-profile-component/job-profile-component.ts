@@ -10,6 +10,7 @@ import {
   JobExperience,
   JobPreferences,
   JobProfilePage,
+  JobProfileView,
   JobSkill,
   JobWorkMode,
   JobsService,
@@ -32,6 +33,7 @@ interface Dialog {
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 const MAX_PREFERENCES = 10;
+const SUGGEST_AFTER_MS = 300;
 const NO_PREFERENCES: JobPreferences = { jobs: [], locations: [], workModes: [], expectedCtc: null };
 const HTTPS_LINK = /^https:\/\/[^\s"<>]+$/i;
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -78,13 +80,28 @@ export class JobProfileComponent implements OnInit, OnDestroy {
   photoError = signal('');
   photoBusy = signal(false);
 
+  /** Which company looked at the profile; null while it is read or when it could not be. */
+  views = signal<JobProfileView[] | null>(null);
+
+  private suggestTimer: ReturnType<typeof setTimeout> | null = null;
+
   ngOnInit(): void {
     this.load();
     this.loadPhoto();
+    this.loadViews();
   }
 
   ngOnDestroy(): void {
     this.showPhoto(null);
+    if (this.suggestTimer) clearTimeout(this.suggestTimer);
+  }
+
+  /** A failure only hides the card: the rest of the page is not affected. */
+  private loadViews(): void {
+    this.api.getProfileViews().subscribe({
+      next: res => this.views.set(res.success ? res.data ?? [] : null),
+      error: () => this.views.set(null),
+    });
   }
 
   load(): void {
@@ -246,13 +263,31 @@ export class JobProfileComponent implements OnInit, OnDestroy {
     this.formError.set(file ? this.fileProblem(file, 'certificate') : '');
   }
 
+  /** Asks for suggestions once the typing stops for a moment, not for every letter. */
   suggest(text: string): void {
+    if (this.suggestTimer) clearTimeout(this.suggestTimer);
     const query = (text || '').trim();
     if (query.length < 2) { this.suggestions.set([]); return; }
-    this.api.suggestSkills(query).subscribe({
-      next: res => this.suggestions.set(res.success ? res.data ?? [] : []),
-      error: () => this.suggestions.set([]),
-    });
+    this.suggestTimer = setTimeout(() => {
+      this.suggestTimer = null;
+      this.api.suggestSkills(query).subscribe({
+        next: res => this.suggestions.set(res.success ? res.data ?? [] : []),
+        error: () => this.suggestions.set([]),
+      });
+    }, SUGGEST_AFTER_MS);
+  }
+
+  /** "today", "yesterday", "5 days ago", or the date. */
+  agoLabel(value: string | null | undefined): string {
+    const day = this.dayOf(value);
+    if (!day) return '';
+    const [y, m, d] = day.split('-').map(Number);
+    const now = new Date();
+    const days = Math.round((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - Date.UTC(y, m - 1, d)) / 86_400_000);
+    if (days <= 0) return 'today';
+    if (days === 1) return 'yesterday';
+    if (days < 30) return `${days} days ago`;
+    return this.dayLabel(value);
   }
 
   save(): void {
