@@ -13,6 +13,13 @@ var builder = WebApplication.CreateBuilder(args);
 // 🔹 No "Server: Kestrel" header (version / stack disclosure)
 builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 
+#if DEBUG
+// 🔹 Local runs: the UI calls http://localhost:5092. When the exe is started without a
+//    launch profile (no --urls / ASPNETCORE_URLS) Kestrel would fall back to :5000.
+if (string.IsNullOrWhiteSpace(builder.Configuration["urls"]))
+    builder.WebHost.UseUrls("http://localhost:5092");
+#endif
+
 // 🔹 Controllers
 builder.Services.AddControllers();
 builder.Services.AddControllers(options =>
