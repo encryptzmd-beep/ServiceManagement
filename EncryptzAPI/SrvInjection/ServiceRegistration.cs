@@ -41,6 +41,7 @@ namespace EncryptzAPI.SrvInjection
             services.AddScoped<IJobPostingsService, JobsService>();                 // Job Portal: jobs as a person uses them
             services.AddScoped<ICompanyJobsService, JobsService>();                 // Job Portal: the jobs and applicants of a company
             services.AddScoped<IVerificationService, JobsService>();                // Job Portal: what the platform administrator checks
+            services.AddScoped<IConsultancyService, JobsService>();                 // Job Consultancy: candidates, clients, placements
             services.AddScoped<ITenantUserSyncService, TenantUserSyncService>();    // MainDB users -> project DB mirror
 
             // company creation: the database of a new company is built in the background
