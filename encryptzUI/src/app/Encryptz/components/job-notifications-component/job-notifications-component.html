@@ -1,0 +1,46 @@
+<app-personal-shell appName="Job Portal" icon="badge" [menu]="menu()">
+
+  <div class="jb-head">
+    <div class="jb-head-text">
+      <h1>Notifications</h1>
+      <p>What companies did with your applications.</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="jp-state">
+      <span class="jp-spinner" aria-hidden="true"></span>
+      <p>Loading…</p>
+    </div>
+  } @else if (unavailable()) {
+    <div class="jp-state">
+      <span class="material-icons">cloud_off</span>
+      <p>{{ unavailable() }}</p>
+      <button class="jp-btn primary" (click)="load()">Try again</button>
+    </div>
+  } @else {
+    @if (items().length) {
+      <div class="jp-card jn-list">
+        @for (n of items(); track n.notificationId) {
+          <div class="jn-item" [class.new]="!n.isRead">
+            <span class="jn-icon" aria-hidden="true"><span class="material-icons">{{ icon(n) }}</span></span>
+            <div class="jn-main">
+              <div class="jn-title">{{ n.title }}</div>
+              @if (n.body) { <div class="jn-body">{{ n.body }}</div> }
+              <div class="jn-when">{{ agoLabel(n.createdAt) }}@if (!n.isRead) { <span class="jn-new">New</span> }</div>
+            </div>
+            @if (canOpen(n)) {
+              <button class="jp-btn" (click)="openLink(n)">View</button>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="jp-card jb-empty">
+        <span class="material-icons">notifications_none</span>
+        <p>No notifications yet. You hear here when a company shortlists you, decides on your application or closes a job you applied to.</p>
+        <a class="jp-btn primary" routerLink="/apps/jobs/search">Search jobs</a>
+      </div>
+    }
+  }
+</app-personal-shell>

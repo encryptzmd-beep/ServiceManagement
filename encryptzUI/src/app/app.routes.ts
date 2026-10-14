@@ -41,6 +41,13 @@ export const routes: Routes = [
     canActivate: [authGuard],
     data: { title: 'Job Portal' },
   },
+  {
+    path: 'apps/jobs/notifications',
+    loadComponent: () => import('./Encryptz/components/job-notifications-component/job-notifications-component')
+      .then(m => m.JobNotificationsComponent),
+    canActivate: [authGuard],
+    data: { title: 'Job Portal' },
+  },
   ...(['search', 'applications', 'saved'] as const).map(mode => ({
     path: `apps/jobs/${mode}`,
     loadComponent: () => import('./Encryptz/components/job-board-component/job-board-component')

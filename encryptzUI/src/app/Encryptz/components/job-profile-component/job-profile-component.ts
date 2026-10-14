@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -15,7 +15,8 @@ import {
   JobWorkMode,
   JobsService,
 } from '../../Services/jobs-service';
-import { JOBS_MENU } from '../personal-shell-component/jobs-menu';
+import { JobAlertsService } from '../../Services/job-alerts-service';
+import { jobsMenu } from '../personal-shell-component/jobs-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 
 type DialogKind = 'profile' | 'preferences' | 'experience' | 'education' | 'skill' | 'certificate';
@@ -73,7 +74,8 @@ export class JobProfileComponent implements OnInit, OnDestroy {
   readonly levels = ['Beginner', 'Intermediate', 'Expert'];
   readonly workModes: JobWorkMode[] = ['On-site', 'Remote', 'Hybrid'];
 
-  readonly menu = JOBS_MENU;
+  private alerts = inject(JobAlertsService);
+  readonly menu = computed(() => jobsMenu(this.alerts.unread()));
 
   /** The photo as an address the page can show ('' when there is none). */
   photoUrl = signal('');
@@ -89,6 +91,7 @@ export class JobProfileComponent implements OnInit, OnDestroy {
     this.load();
     this.loadPhoto();
     this.loadViews();
+    this.alerts.refresh();
   }
 
   ngOnDestroy(): void {

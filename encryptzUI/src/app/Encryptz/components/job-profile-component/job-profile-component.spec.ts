@@ -1,4 +1,6 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { JobAlertsService } from '../../Services/job-alerts-service';
 import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { AuthService } from '../../Auth/auth-service';
@@ -20,6 +22,7 @@ describe('JobProfileComponent', () => {
   });
 
   let api: any;
+  let alerts: { unread: ReturnType<typeof signal<number>>; refresh: () => void; refreshed: number };
   let calls: any[][];
 
   const create = () => {
@@ -29,6 +32,7 @@ describe('JobProfileComponent', () => {
       providers: [
         provideRouter([]),
         { provide: JobsService, useValue: api },
+        { provide: JobAlertsService, useValue: alerts },
         { provide: AuthService, useValue: {
           userName: () => 'Leo Joseph',
           currentUser: () => ({ userId: 11, fullName: 'Leo Joseph', individualId: 'EZ-7K4M-2P9Q-XD3Q' }),
@@ -45,6 +49,7 @@ describe('JobProfileComponent', () => {
   const refused = (message: string) => of({ success: false, message, data: null });
 
   beforeEach(() => {
+    alerts = { unread: signal(0), refreshed: 0, refresh: () => { alerts.refreshed++; } };
     calls = [];
     api = {
       getPage: () => { calls.push(['getPage']); return of({ success: true, message: '', data: page() }); },
@@ -366,9 +371,9 @@ describe('JobProfileComponent', () => {
     const items = Array.from(fixture.nativeElement.querySelectorAll('.ps-nav-item')) as HTMLElement[];
     const label = (e: HTMLElement) => e.querySelector('.ps-nav-label')!.textContent!.trim();
 
-    expect(items.map(label)).toEqual(['My profile', 'Search jobs', 'My applications', 'Saved jobs']);
+    expect(items.map(label)).toEqual(['My profile', 'Search jobs', 'My applications', 'Saved jobs', 'Notifications']);
     expect(items.map(e => e.getAttribute('href')))
-      .toEqual(['/apps/jobs', '/apps/jobs/search', '/apps/jobs/applications', '/apps/jobs/saved']);
+      .toEqual(['/apps/jobs', '/apps/jobs/search', '/apps/jobs/applications', '/apps/jobs/saved', '/apps/jobs/notifications']);
     expect(fixture.nativeElement.textContent).not.toContain('Soon');
   });
 

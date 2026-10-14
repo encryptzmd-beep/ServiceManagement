@@ -72,6 +72,32 @@ namespace EncryptzBL.DTO_s
         public DateTime LastViewedAt { get; set; }
     }
 
+    /// <summary>Something that happened to one of the person's applications.</summary>
+    public class JobNotificationDto
+    {
+        public int NotificationId { get; set; }
+        /// <summary>Application or JobClosed.</summary>
+        public string Kind { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Body { get; set; } = "";
+        /// <summary>A page of Job Portal ('' when none).</summary>
+        public string Link { get; set; } = "";
+        public DateTime CreatedAt { get; set; }
+        public bool IsRead { get; set; }
+    }
+
+    public class JobNotificationsDto
+    {
+        public List<JobNotificationDto> Items { get; set; } = new();
+        public int Unread { get; set; }
+    }
+
+    public class MarkNotificationsReadRequest
+    {
+        /// <summary>One notification; null = all of them.</summary>
+        public int? NotificationId { get; set; }
+    }
+
     public class JobPostingSearchResultDto
     {
         public List<JobPostingViewDto> Items { get; set; } = new();

@@ -30,11 +30,37 @@ namespace EncryptzBL.Infrastructure.Jobs
             _users = users;
         }
 
+        /// <summary>Whether Job Portal is released, as the main database said it a moment ago.</summary>
+        private sealed record PortalState(DateTime At, bool Open);
+
+        private static PortalState _portal = new(DateTime.MinValue, true);
+        private static readonly TimeSpan PortalCheckedFor = TimeSpan.FromSeconds(60);
+
+        /// <summary>
+        /// Job Portal is a personal application of the catalogue: while the platform administrator
+        /// has not released it (or switched it off) its person side does not answer. The answer of
+        /// the main database is kept for a minute, so that not every call asks again.
+        /// </summary>
+        private async Task<bool> PortalOpenAsync()
+        {
+            if (_users == null)
+                return true;
+
+            var known = _portal;
+            if (DateTime.UtcNow - known.At < PortalCheckedFor)
+                return known.Open;
+
+            var open = JobsRules.PortalOpen((await _users.GetPersonalApps())?.Data);
+            _portal = new PortalState(DateTime.UtcNow, open);
+            return open;
+        }
+
         /// <summary>
         /// The one way into the database: no user = refused; no Personal DB = "not available";
-        /// a database error = the same sentence for the caller and the cause in the log.
+        /// Job Portal not released = "not available" (the person side only); a database error =
+        /// the same sentence for the caller and the cause in the log.
         /// </summary>
-        private async Task<ApiResponse<T>> Guarded<T>(int userId, string what, Func<Task<ApiResponse<T>>> work)
+        private async Task<ApiResponse<T>> Guarded<T>(int userId, string what, Func<Task<ApiResponse<T>>> work, bool personal = true)
         {
             if (userId <= 0)
                 return ApiResponse<T>.Fail("Please log in again");
@@ -44,6 +70,9 @@ namespace EncryptzBL.Infrastructure.Jobs
 
             try
             {
+                if (personal && !await PortalOpenAsync())
+                    return ApiResponse<T>.Fail(PersonalDbHelper.NotAvailable);
+
                 return await work();
             }
             catch (SqlException ex)

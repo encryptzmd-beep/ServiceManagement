@@ -15,6 +15,23 @@ namespace EncryptzBL.Common.Jobs
 
         public const string PhotoKind = "Photo";
 
+        /// <summary>The key of Job Portal in the catalogue (MainDB.dbo.Modules).</summary>
+        public const string PortalModuleKey = "JOBPORTAL";
+
+        /// <summary>
+        /// Whether Job Portal may answer: it is listed and released. A main database that lists
+        /// no personal application at all (before script 21) does not close it.
+        /// </summary>
+        public static bool PortalOpen(IEnumerable<PersonalAppDto>? apps)
+        {
+            var list = apps?.Where(a => a != null).ToList();
+            if (list == null || list.Count == 0)
+                return true;
+
+            var portal = list.FirstOrDefault(a => string.Equals(a.ModuleKey, PortalModuleKey, StringComparison.OrdinalIgnoreCase));
+            return portal != null && portal.IsReleased;
+        }
+
         public const int MaxFileBytes = 5 * 1024 * 1024;
         public const int MaxPhotoBytes = 2 * 1024 * 1024;
 

@@ -1,0 +1,65 @@
+/* The notifications of Job Portal. Cards and buttons come from the profile and the job pages. */
+
+$ink: #111827;
+$text: #374151;
+$muted: #6b7280;
+$faint: #9ca3af;
+$hair: #f0f1f3;
+$navy: #1b4a7a;
+$tint: #eef4fb;
+
+.jn-list { padding: 6px 0; }
+
+.jn-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 22px;
+  border-top: 1px solid $hair;
+
+  &:first-child { border-top: none; }
+  &.new { background: #f7fafd; box-shadow: inset 3px 0 0 $navy; }
+  .jp-btn { flex: 0 0 auto; align-self: center; }
+}
+
+.jn-icon {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: $tint;
+  color: $navy;
+
+  .material-icons { font-size: 19px; }
+}
+
+.jn-main { flex: 1 1 auto; min-width: 0; }
+.jn-title { font-size: 14.5px; font-weight: 600; line-height: 1.4; color: $ink; overflow-wrap: anywhere; }
+.jn-body { margin-top: 2px; font-size: 13px; color: $text; overflow-wrap: anywhere; }
+
+.jn-when {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  font-size: 12px;
+  color: $faint;
+}
+
+.jn-new {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: $navy;
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+@media (max-width: 640px) {
+  .jn-item { flex-wrap: wrap; padding: 14px 16px; }
+  .jn-item .jp-btn { margin-left: 50px; }
+}

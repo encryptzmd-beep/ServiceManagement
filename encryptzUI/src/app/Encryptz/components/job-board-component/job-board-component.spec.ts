@@ -1,4 +1,6 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { JobAlertsService } from '../../Services/job-alerts-service';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { AuthService } from '../../Auth/auth-service';
@@ -17,6 +19,7 @@ describe('JobBoardComponent', () => {
   });
 
   let api: any;
+  let alerts: { unread: ReturnType<typeof signal<number>>; refresh: () => void; refreshed: number };
   let calls: any[][];
 
   const create = (mode: JobBoardMode) => {
@@ -27,6 +30,7 @@ describe('JobBoardComponent', () => {
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { snapshot: { data: { mode } } } },
         { provide: JobsService, useValue: api },
+        { provide: JobAlertsService, useValue: alerts },
         { provide: AuthService, useValue: { userName: () => 'Leo Joseph', currentUser: () => ({ userId: 11, individualId: 'EZ-7K4M-2P9Q-XD3Q' }) } },
       ],
     });
@@ -40,6 +44,7 @@ describe('JobBoardComponent', () => {
   const refused = (message: string) => of({ success: false, message, data: null });
 
   beforeEach(() => {
+    alerts = { unread: signal(0), refreshed: 0, refresh: () => { alerts.refreshed++; } };
     calls = [];
     api = {
       searchPostings: (f: any) => { calls.push(['searchPostings', { ...f }]); return ok({ items: [posting(), posting({ postingId: 8, title: 'Site Engineer', myStatus: 'Applied', isSaved: true })], total: 45, page: f.page, pageSize: 20 }); },

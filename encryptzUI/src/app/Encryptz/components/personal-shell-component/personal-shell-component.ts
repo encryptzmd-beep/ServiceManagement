@@ -10,6 +10,8 @@ export interface PersonalMenuItem {
   route?: string;
   /** Marked as the current page only on exactly this address (for the first page of an application). */
   exact?: boolean;
+  /** A number beside it, for example unread notifications (nothing is shown for 0). */
+  badge?: number;
 }
 
 /**
@@ -55,6 +57,9 @@ export interface PersonalMenuItem {
                  [routerLinkActiveOptions]="{ exact: !!item.exact }">
                 <span class="material-icons">{{ item.icon }}</span>
                 <span class="ps-nav-label">{{ item.label }}</span>
+                @if (item.badge) {
+                  <span class="ps-nav-badge" [attr.aria-label]="item.badge + ' unread'">{{ item.badge > 99 ? '99+' : item.badge }}</span>
+                }
               </a>
             } @else {
               <span class="ps-nav-item soon" aria-disabled="true" title="Not available yet">

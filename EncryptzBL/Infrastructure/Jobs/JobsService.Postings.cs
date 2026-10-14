@@ -156,6 +156,40 @@ namespace EncryptzBL.Infrastructure.Jobs
                 return ApiResponse<List<JobProfileViewDto>>.Ok(list);
             });
 
+        public Task<ApiResponse<JobNotificationsDto>> GetNotifications(int userId)
+            => Guarded(userId, "reading the notifications", async () =>
+            {
+                var ds = await GetDataSetAsync("jobs.sp_Notification_ListMine", new[] { In("@UserId", userId) });
+                var result = new JobNotificationsDto();
+                if (ds == null || ds.Tables.Count == 0)
+                    return ApiResponse<JobNotificationsDto>.Ok(result);
+
+                result.Items = ds.Tables[0].Rows.Cast<DataRow>().Select(r => new JobNotificationDto
+                {
+                    NotificationId = Convert.ToInt32(r["NotificationId"]),
+                    Kind = r["Kind"]?.ToString() ?? "",
+                    Title = r["Title"]?.ToString() ?? "",
+                    Body = r["Body"]?.ToString() ?? "",
+                    // only a page of Job Portal is ever handed out as a link
+                    Link = (r["Link"]?.ToString() ?? "").StartsWith("/apps/jobs", StringComparison.Ordinal) ? r["Link"]!.ToString()! : "",
+                    CreatedAt = Convert.ToDateTime(r["CreatedAt"]),
+                    IsRead = Convert.ToBoolean(r["IsRead"])
+                }).ToList();
+
+                if (ds.Tables.Count > 1 && ds.Tables[1].Rows.Count > 0)
+                    result.Unread = Convert.ToInt32(ds.Tables[1].Rows[0]["Unread"]);
+
+                return ApiResponse<JobNotificationsDto>.Ok(result);
+            });
+
+        public Task<ApiResponse<bool>> MarkNotificationsRead(int userId, int? notificationId)
+            => Guarded(userId, "marking notifications as read", async () =>
+                AsFlag(Answer(await GetDataTableAsync("jobs.sp_Notification_MarkRead", new[]
+                {
+                    In("@UserId", userId),
+                    In("@NotificationId", notificationId is > 0 ? notificationId : null)
+                }))));
+
         public Task<ApiResponse<List<JobPostingViewDto>>> GetSavedPostings(int userId)
             => Guarded(userId, "reading the saved jobs", async () =>
             {

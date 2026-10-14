@@ -56,6 +56,14 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetProfileViews()
             => Ok(await _postings.GetProfileViews(Caller()));
 
+        [HttpGet("notifications")]
+        public async Task<IActionResult> GetNotifications()
+            => Ok(await _postings.GetNotifications(Caller()));
+
+        [HttpPost("notifications/read")]
+        public async Task<IActionResult> MarkNotificationsRead([FromBody] MarkNotificationsReadRequest? req)
+            => Ok(await _postings.MarkNotificationsRead(Caller(), req?.NotificationId));
+
         [HttpGet("saved")]
         public async Task<IActionResult> GetSaved()
             => Ok(await _postings.GetSavedPostings(Caller()));

@@ -135,6 +135,23 @@ export interface JobPostingView {
   matchScore?: number;
 }
 
+/** Something that happened to one of the person's applications. */
+export interface JobNotification {
+  notificationId: number;
+  kind: 'Application' | 'JobClosed' | string;
+  title: string;
+  body: string;
+  /** A page of Job Portal ('' when none). */
+  link: string;
+  createdAt: string;
+  isRead: boolean;
+}
+
+export interface JobNotifications {
+  items: JobNotification[];
+  unread: number;
+}
+
 /** A company looked at the person's profile or resume for one of its jobs. */
 export interface JobProfileView {
   companyName: string;
@@ -302,6 +319,15 @@ export class JobsService {
   /** Which company looked at the person's profile or resume, for which job. */
   getProfileViews(): Observable<ApiResponse<JobProfileView[]>> {
     return this.http.get<ApiResponse<JobProfileView[]>>(`${this.api}/profile-views`);
+  }
+
+  getNotifications(): Observable<ApiResponse<JobNotifications>> {
+    return this.http.get<ApiResponse<JobNotifications>>(`${this.api}/notifications`);
+  }
+
+  /** One notification as read, or all of them (null). */
+  markNotificationsRead(notificationId: number | null): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/notifications/read`, { notificationId });
   }
 
   getSaved(): Observable<ApiResponse<JobPostingView[]>> {

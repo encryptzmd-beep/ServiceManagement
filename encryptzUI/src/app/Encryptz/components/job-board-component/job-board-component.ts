@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -10,7 +10,8 @@ import {
   JobSearchFilter,
   JobsService,
 } from '../../Services/jobs-service';
-import { JOBS_MENU } from '../personal-shell-component/jobs-menu';
+import { JobAlertsService } from '../../Services/job-alerts-service';
+import { jobsMenu } from '../personal-shell-component/jobs-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 
 export type JobBoardMode = 'search' | 'applications' | 'saved';
@@ -33,7 +34,8 @@ export class JobBoardComponent implements OnInit {
   private api = inject(JobsService);
   private route = inject(ActivatedRoute);
 
-  readonly menu = JOBS_MENU;
+  private alerts = inject(JobAlertsService);
+  readonly menu = computed(() => jobsMenu(this.alerts.unread()));
   readonly employmentTypes = JOB_EMPLOYMENT_TYPES;
   readonly workModes = JOB_WORK_MODES;
 
@@ -66,6 +68,7 @@ export class JobBoardComponent implements OnInit {
   ngOnInit(): void {
     this.mode.set((this.route.snapshot.data['mode'] as JobBoardMode) ?? 'search');
     this.load();
+    this.alerts.refresh();
   }
 
   get subtitle(): string {

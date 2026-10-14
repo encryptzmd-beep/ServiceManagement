@@ -201,6 +201,18 @@
 
 .ps-nav-label { flex: 1 1 auto; }
 
+.ps-nav-badge {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #b42318;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
 .ps-nav-soon {
   padding: 1px 7px;
   border-radius: 999px;

@@ -26,7 +26,7 @@ namespace EncryptzBL.Infrastructure.Jobs
                     return ApiResponse<T>.Fail(refusal);
 
                 return await work(membership!.CompanyName.Trim());
-            });
+            }, personal: false);   // Job Consultancy has its own release and subscription (HiringAccess)
 
         private static CompanyPostingDto CompanyPosting(DataRow r)
         {
