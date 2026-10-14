@@ -140,7 +140,8 @@ namespace EncryptzTests
                 Assert.True(head >= 0, method.Name + " was not found");
                 var next = source.IndexOf("\n        public ", head, StringComparison.Ordinal);
                 var body = source.Substring(head, (next < 0 ? source.Length : next) - head);
-                Assert.True(body.Contains("GuardedCompany(userId, companyId,"), method.Name + " does not go through GuardedCompany");
+                Assert.True(body.Contains("GuardedTenant(userId, companyId,") || body.Contains("GuardedCompany(userId, companyId,"),
+                    method.Name + " does not go through GuardedTenant or GuardedCompany");
             }
         }
 
@@ -197,48 +198,95 @@ namespace EncryptzTests
             Assert.Equal(template, http.Template);
         }
 
-        private static string Script() => File.ReadAllText(Path.Combine(Root(), "EncryptzAPI", "Database", "PersonalDB", "10_Consultancy.sql"));
+        private static string Read(params string[] path) => File.ReadAllText(Path.Combine(new[] { Root(), "EncryptzAPI", "Database" }.Concat(path).ToArray()));
 
-        private static List<(string Name, string Body)> Procedures()
-            => Regex.Matches(Script(), @"CREATE OR ALTER PROCEDURE (consult|jobs)\.(\w+)(.*?)\nGO", RegexOptions.Singleline)
+        /// <summary>Name and body of every procedure of a script.</summary>
+        private static List<(string Name, string Body)> Procedures(string script)
+            => Regex.Matches(script, @"CREATE OR ALTER PROCEDURE (consult|jobs)\.(\w+)(.*?)\nGO", RegexOptions.Singleline)
                 .Select(m => (m.Groups[2].Value, m.Groups[3].Value)).ToList();
 
+        private static string CompanyScript() => Read("ProjectDB", "11_Consultancy.sql");
+        private static string PersonalScript() => Read("PersonalDB", "11_Consultancy_Leaves.sql");
+
         [Fact]
-        public void Every_consult_procedure_takes_the_company_first_and_names_it_in_every_statement_on_its_tables()
+        public void What_the_company_keeps_is_in_the_company_database_and_every_statement_names_the_company()
         {
-            foreach (var (name, body) in Procedures().Where(p => p.Name != "sp_ProfileView_ListMine"))
+            var script = CompanyScript();
+            foreach (var table in new[] { "Clients", "PostingClients", "Talent", "Placements" })
+                Assert.Contains($"CREATE TABLE consult.{table}", script);
+            Assert.Contains("is the Personal DB. Select a company database", script);
+            Assert.Contains("is the SaaS main database", script);
+            Assert.DoesNotMatch(new Regex(@"^\s*USE\s", RegexOptions.Multiline | RegexOptions.IgnoreCase), script);
+            // a person is named by the key of the profile, never by a user id
+            Assert.Contains("CandidateKey UNIQUEIDENTIFIER NOT NULL", script);
+            Assert.DoesNotMatch(new Regex(@"^\s+UserId\s+INT", RegexOptions.Multiline), script);
+
+            foreach (var (name, body) in Procedures(script))
             {
                 Assert.Equal("@CompanyId", Regex.Match(body, @"@\w+").Value);
-                foreach (var statement in body.Split(';').Where(s => Regex.IsMatch(s, @"consult\.(Clients|Talent|Invitations|Placements)\b|jobs\.(Postings|Applications)\b")))
+                foreach (var statement in body.Split(';').Where(s => Regex.IsMatch(s, @"consult\.(Clients|PostingClients|Talent|Placements)\b")))
                     Assert.True(statement.Contains("@CompanyId"), $"{name}: a statement does not name @CompanyId:\n{statement.Trim()}");
             }
         }
 
         [Fact]
+        public void New_company_databases_get_the_script_with_the_API()
+        {
+            var project = File.ReadAllText(Path.Combine(Root(), "EncryptzAPI", "EncryptzAPI.csproj"));
+            Assert.Contains("Database\\ProjectDB\\11_Consultancy.sql", project);
+            Assert.NotEmpty(EncryptzBL.Common.Provisioning.TenantScript.ParseFollowUp("11_Consultancy.sql", CompanyScript()).Batches);
+        }
+
+        [Fact]
+        public void The_personal_database_keeps_nothing_of_Job_Consultancy_and_throws_away_nothing_a_company_wrote()
+        {
+            var script = PersonalScript();
+
+            Assert.Contains("Move them to the company databases first. Nothing was changed.", script);
+            Assert.Contains("DROP SCHEMA consult", script);
+            Assert.Contains("ALTER TABLE jobs.Postings DROP COLUMN ClientId", script);
+            Assert.Contains("INSERT INTO jobs.CandidateInvitations", script);
+            Assert.DoesNotContain("CREATE OR ALTER PROCEDURE consult.", script);
+        }
+
+        [Fact]
         public void Every_read_of_a_person_by_a_company_needs_the_profile_to_be_findable()
         {
-            foreach (var name in new[] { "sp_Candidate_Search", "sp_Candidate_Get", "sp_Candidate_Resume", "sp_Talent_Save", "sp_Candidate_Invite" })
+            var procedures = Procedures(PersonalScript());
+            foreach (var name in new[] { "sp_Candidate_Search", "sp_Candidate_Find", "sp_Candidate_Get", "sp_Candidate_Resume", "sp_Candidate_Invite" })
             {
-                var body = Procedures().Single(p => p.Name == name).Body;
+                var body = procedures.Single(p => p.Name == name).Body;
+                Assert.Equal("@CompanyId", Regex.Match(body, @"@\w+").Value);
                 foreach (var statement in body.Split(';').Where(s => s.Contains("jobs.Profiles")))
                     Assert.True(statement.Contains("IsVisible = 1"), $"{name}: a read of jobs.Profiles without IsVisible = 1:\n{statement.Trim()}");
             }
+
+            // an applicant of the company's own job is reached through that job, not through the switch
+            var applicant = procedures.Single(p => p.Name == "sp_Company_Applicant_Identity").Body;
+            Assert.Contains("p.CompanyId = @CompanyId", applicant);
+            Assert.Contains("a.Status <> 'Withdrawn'", applicant);
         }
 
         [Fact]
         public void A_company_never_receives_a_user_id_or_what_a_person_expects_to_earn()
         {
-            foreach (var name in new[] { "sp_Candidate_Search", "sp_Candidate_Get", "sp_Placement_List", "sp_Client_List", "sp_Posting_ClientList" })
+            foreach (var (_, body) in Procedures(PersonalScript()))
             {
-                var body = Procedures().Single(p => p.Name == name).Body;
                 Assert.DoesNotContain("PreferenceTerms", body);
                 Assert.DoesNotContain("AS UserId", body);
-                // a user id is only ever written down (a look), never handed back
+                // a user id is only ever written down (a look, or a notification for the person), never handed back
                 foreach (var statement in body.Split(';').Where(s => Regex.IsMatch(s, @"\bpr\.UserId\s*,")))
-                    Assert.Contains("INSERT INTO jobs.ProfileViews", statement);
+                    Assert.Matches(@"INSERT INTO jobs\.(ProfileViews|Notifications)", statement);
             }
+        }
 
-            Assert.Contains("CandidateKey UNIQUEIDENTIFIER NOT NULL", Script());
+        [Fact]
+        public void A_company_database_without_the_script_is_told_plainly()
+        {
+            var source = File.ReadAllText(Path.Combine(Root(), "EncryptzBL", "Infrastructure", "Jobs", "JobsService.Consultancy.cs"));
+
+            Assert.Contains("catch (SqlException ex) when (ex.Number == 2812 || ex.Number == 208)", source);
+            Assert.Contains("_users!.GetApplicationDatabase(userId, companyId, HiringAccess.ModuleKey)", source);
         }
 
         private sealed class FakeConsultancy : IConsultancyService

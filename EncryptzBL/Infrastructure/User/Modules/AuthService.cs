@@ -766,6 +766,12 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 row["ModuleName"]?.ToString() ?? ""), "");
         }
 
+        public async Task<ApiResponse<string>> GetApplicationDatabase(int userId, int companyId, string moduleKey)
+        {
+            var (scope, error) = await ResolveModuleScope(userId, companyId, moduleKey);
+            return scope == null ? ApiResponse<string>.Fail(error) : ApiResponse<string>.Ok(scope.TenantKey);
+        }
+
         public async Task<ApiResponse<List<ModuleDto>>> GetModules(int userId, int companyId)
         {
             var dt = await GetDataTableAsync("sp_User_GetModules", new[]

@@ -35,6 +35,11 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
         // Company -> Module -> Branch scoping
         Task<ApiResponse<List<ModuleDto>>> GetModules(int userId, int companyId);
+        /// <summary>
+        /// The tenant key of the company's own database, when the user may open the application there
+        /// and the database is ready; otherwise the reason it is refused.
+        /// </summary>
+        Task<ApiResponse<string>> GetApplicationDatabase(int userId, int companyId, string moduleKey);
         Task<ApiResponse<List<PersonalAppDto>>> GetPersonalApps();
         /// <summary>For the deployed UI: the Service module shown as the company's one "project".</summary>
         Task<ApiResponse<List<ProjectDto>>> GetProjects(int userId, int companyId);

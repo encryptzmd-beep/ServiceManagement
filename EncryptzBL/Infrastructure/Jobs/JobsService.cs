@@ -3,6 +3,7 @@ using System.Text.Json;
 using EncryptzBL.Common;
 using EncryptzBL.Common.Jobs;
 using EncryptzBL.DTO_s;
+using EncryptzBL.Common.Tenant;
 using EncryptzBL.Infrastructure.User.Modules;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -21,13 +22,16 @@ namespace EncryptzBL.Infrastructure.Jobs
         private readonly PersonalDbHelper _personal;
         private readonly ILogger<JobsService> _logger;
         private readonly IAuthService? _users;
+        private readonly IConnectionResolver? _tenants;
 
         /// <param name="users">The user master (main database). Without it a profile starts empty.</param>
-        public JobsService(PersonalDbHelper db, ILogger<JobsService> logger, IAuthService? users = null) : base(db)
+        /// <param name="tenants">Finds the company's own database (Job Consultancy keeps its data there).</param>
+        public JobsService(PersonalDbHelper db, ILogger<JobsService> logger, IAuthService? users = null, IConnectionResolver? tenants = null) : base(db)
         {
             _personal = db;
             _logger = logger;
             _users = users;
+            _tenants = tenants;
         }
 
         /// <summary>Whether Job Portal is released, as the main database said it a moment ago.</summary>
