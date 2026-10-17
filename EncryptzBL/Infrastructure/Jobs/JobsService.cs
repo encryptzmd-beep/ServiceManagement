@@ -167,7 +167,7 @@ namespace EncryptzBL.Infrastructure.Jobs
             });
 
         /// <summary>
-        /// The six result sets of jobs.sp_Profile_Get as a page. <paramref name="first"/> is the
+        /// The result sets of jobs.sp_Profile_Get as a page (seven since script 13: the last are the sub-skills). <paramref name="first"/> is the
         /// index of the first of them: another procedure may put a set of its own in front.
         /// </summary>
         private static JobProfilePageDto MapPage(DataSet ds, int first)
@@ -210,13 +210,39 @@ namespace EncryptzBL.Infrastructure.Jobs
                 EndYear = r["EndYear"] == DBNull.Value ? null : Convert.ToInt32(r["EndYear"])
             }).ToList();
 
-            page.Skills = ds.Tables[first + 3].Rows.Cast<DataRow>().Select(r => new JobSkillDto
+            // the rating and the sub-skills come with script PersonalDB/13: without it the
+            // rating is read from the level and there are no sub-skills
+            var skills = ds.Tables[first + 3];
+            var hasRating = skills.Columns.Contains("Rating");
+            var subSkills = ds.Tables.Count > first + 6 && ds.Tables[first + 6].Columns.Contains("SubSkillName")
+                ? ds.Tables[first + 6].Rows.Cast<DataRow>().ToList()
+                : new List<DataRow>();
+
+            page.Skills = skills.Rows.Cast<DataRow>().Select(r =>
             {
-                SkillId = Convert.ToInt32(r["SkillId"]),
-                SkillName = r["SkillName"]?.ToString() ?? "",
-                Level = r["Level"]?.ToString() ?? "",
-                // a stored link that is not a plain https address is not handed out
-                EvidenceUrl = JobsRules.IsHttpsLink(r["EvidenceUrl"]?.ToString()) ? r["EvidenceUrl"]!.ToString() : ""
+                var skillId = Convert.ToInt32(r["SkillId"]);
+                var level = r["Level"]?.ToString() ?? "";
+                var rating = hasRating && r["Rating"] != DBNull.Value
+                    ? Convert.ToInt32(r["Rating"])
+                    : level == "Expert" ? 5 : level == "Intermediate" ? 3 : 2;
+
+                var parts = subSkills.Where(u => Convert.ToInt32(u["SkillId"]) == skillId).Select(u => new JobSubSkillDto
+                {
+                    Name = u["SubSkillName"]?.ToString() ?? "",
+                    Rating = Convert.ToInt32(u["Rating"])
+                }).ToList();
+
+                return new JobSkillDto
+                {
+                    SkillId = skillId,
+                    SkillName = r["SkillName"]?.ToString() ?? "",
+                    Rating = rating,
+                    Overall = parts.Count > 0 ? JobsRules.AverageRating(parts) : rating,
+                    Level = JobsRules.LevelOf(rating),
+                    // a stored link that is not a plain https address is not handed out
+                    EvidenceUrl = JobsRules.IsHttpsLink(r["EvidenceUrl"]?.ToString()) ? r["EvidenceUrl"]!.ToString() : "",
+                    SubSkills = parts
+                };
             }).ToList();
 
             page.Certificates = ds.Tables[first + 4].Rows.Cast<DataRow>().Select(r => new JobCertificateDto
@@ -441,8 +467,9 @@ namespace EncryptzBL.Infrastructure.Jobs
                     In("@UserId", userId),
                     In("@SkillId", dto.SkillId),
                     In("@SkillName", dto.SkillName),
-                    In("@Level", dto.Level),
-                    In("@EvidenceUrl", string.IsNullOrEmpty(dto.EvidenceUrl) ? null : dto.EvidenceUrl)
+                    In("@Rating", dto.Rating),
+                    In("@EvidenceUrl", string.IsNullOrEmpty(dto.EvidenceUrl) ? null : dto.EvidenceUrl),
+                    In("@SubSkills", JsonSerializer.Serialize(dto.SubSkills.Select(u => new { name = u.Name, rating = u.Rating })))
                 })));
             });
 
@@ -470,6 +497,38 @@ namespace EncryptzBL.Infrastructure.Jobs
                 var names = dt == null
                     ? new List<string>()
                     : dt.Rows.Cast<DataRow>().Select(r => r["SkillName"]?.ToString() ?? "").Where(n => n.Length > 0).ToList();
+
+                return ApiResponse<List<string>>.Ok(names);
+            });
+
+        /// <summary>
+        /// The sub-skills the catalogue (script PersonalDB/14) knows for a skill. A skill that is
+        /// not in it, or a database without the script, gives an empty list.
+        /// </summary>
+        public Task<ApiResponse<List<string>>> CatalogSubSkills(int userId, string? skill)
+            => Guarded(userId, "reading the sub-skills of a skill", async () =>
+            {
+                var name = (skill ?? "").Trim();
+                if (name.Length == 0 || name.Length > 100)
+                    return ApiResponse<List<string>>.Ok(new List<string>());
+
+                DataTable? dt;
+                try
+                {
+                    dt = await GetDataTableAsync("jobs.sp_Catalog_SubSkills", new[]
+                    {
+                        In("@UserId", userId),
+                        In("@SkillName", name)
+                    });
+                }
+                catch (SqlException ex) when (ex.Number == 2812) // the procedure is not there yet
+                {
+                    return ApiResponse<List<string>>.Ok(new List<string>());
+                }
+
+                var names = dt == null
+                    ? new List<string>()
+                    : dt.Rows.Cast<DataRow>().Select(r => r["Name"]?.ToString() ?? "").Where(n => n.Length > 0).ToList();
 
                 return ApiResponse<List<string>>.Ok(names);
             });

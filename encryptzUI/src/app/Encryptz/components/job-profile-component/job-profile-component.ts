@@ -35,6 +35,9 @@ const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 const MAX_PREFERENCES = 10;
 const SUGGEST_AFTER_MS = 300;
+const MAX_SUB_SKILLS = 20;
+/** How many catalogue sub-skills are offered as chips at a time. */
+const CATALOG_CHIPS = 30;
 const NO_PREFERENCES: JobPreferences = { jobs: [], locations: [], workModes: [], expectedCtc: null };
 const HTTPS_LINK = /^https:\/\/[^\s"<>]+$/i;
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -71,7 +74,11 @@ export class JobProfileComponent implements OnInit, OnDestroy {
   suggestions = signal<string[]>([]);
   toast = signal<{ text: string; ok: boolean } | null>(null);
 
-  readonly levels = ['Beginner', 'Intermediate', 'Expert'];
+  /** The sub-skills the catalogue knows for the skill in the dialog. */
+  catalog = signal<string[]>([]);
+
+  readonly stars = [1, 2, 3, 4, 5];
+  readonly maxSubSkills = MAX_SUB_SKILLS;
   readonly workModes: JobWorkMode[] = ['On-site', 'Remote', 'Hybrid'];
 
   private alerts = inject(JobAlertsService);
@@ -86,6 +93,7 @@ export class JobProfileComponent implements OnInit, OnDestroy {
   views = signal<JobProfileView[] | null>(null);
 
   private suggestTimer: ReturnType<typeof setTimeout> | null = null;
+  private catalogTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     this.load();
@@ -97,6 +105,7 @@ export class JobProfileComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.showPhoto(null);
     if (this.suggestTimer) clearTimeout(this.suggestTimer);
+    if (this.catalogTimer) clearTimeout(this.catalogTimer);
   }
 
   /** A failure only hides the card: the rest of the page is not affected. */
@@ -232,9 +241,78 @@ export class JobProfileComponent implements OnInit, OnDestroy {
 
   openSkill(row?: JobSkill): void {
     this.suggestions.set([]);
+    this.catalog.set([]);
     this.open('skill', row ? 'Edit skill' : 'Add skill', {
-      skillId: row?.skillId ?? 0, skillName: row?.skillName ?? '', level: row?.level ?? '', evidenceUrl: row?.evidenceUrl ?? '',
+      skillId: row?.skillId ?? 0, skillName: row?.skillName ?? '', rating: row?.rating ?? 0, evidenceUrl: row?.evidenceUrl ?? '',
+      subSkills: (row?.subSkills ?? []).map(u => ({ name: u.name, rating: u.rating })),
+      newSubSkill: '',
     });
+    if (row) this.loadCatalog(row.skillName);
+  }
+
+  /** The skill name changed: suggestions for it, and the sub-skills the catalogue knows. */
+  skillNameChanged(text: string): void {
+    this.suggest(text);
+    if (this.catalogTimer) clearTimeout(this.catalogTimer);
+    this.catalogTimer = setTimeout(() => {
+      this.catalogTimer = null;
+      this.loadCatalog(text);
+    }, SUGGEST_AFTER_MS);
+  }
+
+  private loadCatalog(skill: string): void {
+    const name = (skill || '').trim();
+    if (!name) { this.catalog.set([]); return; }
+    this.api.catalogSubSkills(name).subscribe({
+      next: res => {
+        // an answer for a name that was typed over is of no use
+        if ((this.dialog()?.model.skillName ?? '').trim() === name) this.catalog.set(res.success ? res.data ?? [] : []);
+      },
+      error: () => this.catalog.set([]),
+    });
+  }
+
+  /** Catalogue sub-skills not in the list yet. */
+  catalogChips(model: any): string[] {
+    const taken = new Set((model.subSkills as { name: string }[]).map(u => u.name.trim().toLowerCase()));
+    return this.catalog().filter(n => !taken.has(n.toLowerCase())).slice(0, CATALOG_CHIPS);
+  }
+
+  addSubSkill(model: any, name: string): void {
+    const text = (name || '').trim();
+    this.formError.set('');
+    if (!text) return;
+    if (model.subSkills.length >= MAX_SUB_SKILLS) { this.formError.set(`A skill can have up to ${MAX_SUB_SKILLS} sub-skills`); return; }
+    if (model.subSkills.some((u: { name: string }) => u.name.trim().toLowerCase() === text.toLowerCase())) {
+      this.formError.set('This sub-skill is in the list already');
+      return;
+    }
+    model.subSkills.push({ name: text, rating: 0 });
+    model.newSubSkill = '';
+  }
+
+  removeSubSkill(model: any, index: number): void {
+    model.subSkills.splice(index, 1);
+  }
+
+  /** "4 out of 5" for a screen reader, and for the title of a star. */
+  ratingLabel(rating: number): string {
+    return rating ? `${rating} out of 5` : 'Not rated';
+  }
+
+  /**
+   * The overall rating of the skill in the dialog: the average of the sub-skills rated so far,
+   * to one decimal. 0 while none is rated. The API works it out the same way on save.
+   */
+  overallOf(model: any): number {
+    const rated = (model.subSkills as { rating: number }[]).map(u => u.rating).filter(r => r >= 1 && r <= 5);
+    if (!rated.length) return 0;
+    return Math.round((rated.reduce((a, b) => a + b, 0) / rated.length) * 10) / 10;
+  }
+
+  /** What a skill on the page shows: the average of its sub-skills, or its own rating. */
+  shownRating(s: JobSkill): number {
+    return s.overall || s.rating;
   }
 
   openCertificate(row?: JobCertificate): void {
@@ -370,9 +448,19 @@ export class JobProfileComponent implements OnInit, OnDestroy {
 
       case 'skill':
         if (!t(m.skillName)) return 'Enter the skill';
-        if (!this.levels.includes(m.level)) return 'Choose a level';
         if (t(m.evidenceUrl) && !HTTPS_LINK.test(t(m.evidenceUrl))) return 'The link must start with https://';
-        return this.api.saveSkill({ skillId: m.skillId, skillName: t(m.skillName), level: m.level, evidenceUrl: t(m.evidenceUrl) });
+        if (t(m.newSubSkill)) return 'Press Add for the sub-skill you typed, or clear it';
+        if (m.subSkills.some((u: { rating: number }) => !(u.rating >= 1 && u.rating <= 5))) return 'Rate every sub-skill from 1 to 5';
+        // with sub-skills the overall rating is theirs; without them the skill is rated itself
+        // (from the exact average, as the API does: 3.45 is 3, not 3.5 and then 4)
+        const rating = m.subSkills.length
+          ? Math.round(m.subSkills.reduce((a: number, u: { rating: number }) => a + u.rating, 0) / m.subSkills.length)
+          : m.rating;
+        if (!(rating >= 1 && rating <= 5)) return 'Rate the skill from 1 to 5';
+        return this.api.saveSkill({
+          skillId: m.skillId, skillName: t(m.skillName), rating, evidenceUrl: t(m.evidenceUrl),
+          subSkills: m.subSkills.map((u: { name: string; rating: number }) => ({ name: t(u.name), rating: u.rating })),
+        });
 
       case 'certificate': {
         if (!t(m.title)) return 'Enter the title of the certificate';
@@ -535,7 +623,10 @@ export class JobProfileComponent implements OnInit, OnDestroy {
   }
 
   skillsLine(skills: JobSkill[]): string {
-    return skills.map(s => `${s.skillName} (${s.level})`).join(', ');
+    return skills.map(s => {
+      const parts = (s.subSkills ?? []).map(u => `${u.name} ${u.rating}/5`).join(', ');
+      return `${s.skillName} (${this.shownRating(s)}/5${parts ? `: ${parts}` : ''})`;
+    }).join('; ');
   }
 
   /** The same checks the API makes on the name and the size; the API also looks into the file. */

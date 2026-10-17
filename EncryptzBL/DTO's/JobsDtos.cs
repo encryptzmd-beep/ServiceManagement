@@ -42,10 +42,26 @@ namespace EncryptzBL.DTO_s
     {
         public int SkillId { get; set; }
         public string SkillName { get; set; } = "";
-        /// <summary>Beginner | Intermediate | Expert</summary>
+        /// <summary>
+        /// 1 to 5. With sub-skills it is their average, rounded, and the API sets it; without
+        /// them the person rates the skill.
+        /// </summary>
+        public int Rating { get; set; }
+        /// <summary>What is shown: the average of the sub-skills to one decimal (3.7), or the rating.</summary>
+        public double Overall { get; set; }
+        /// <summary>Beginner | Intermediate | Expert: follows the rating, never typed (1-2, 3-4, 5).</summary>
         public string Level { get; set; } = "";
         /// <summary>https:// only ('' or null when none).</summary>
         public string? EvidenceUrl { get; set; }
+        /// <summary>The parts of the skill, each rated 1 to 5. Up to 20.</summary>
+        public List<JobSubSkillDto> SubSkills { get; set; } = new();
+    }
+
+    public class JobSubSkillDto
+    {
+        public string Name { get; set; } = "";
+        /// <summary>1 to 5.</summary>
+        public int Rating { get; set; }
     }
 
     public class JobCertificateDto

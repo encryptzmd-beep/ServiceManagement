@@ -90,6 +90,10 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SuggestSkills([FromQuery] string? q)
             => Ok(await _jobs.SuggestSkills(Caller(), q));
 
+        [HttpGet("skills/subskills")]
+        public async Task<IActionResult> CatalogSubSkills([FromQuery] string? skill)
+            => Ok(await _jobs.CatalogSubSkills(Caller(), skill));
+
         // ── certificates ──────────────────────────────────────────────────────
 
         [HttpPost("certificates")]

@@ -11,7 +11,7 @@ import {
   JobApplicant,
   JobApplicantPage,
 } from '../../Services/company-jobs-service';
-import { JOB_EMPLOYMENT_TYPES, JOB_WORK_MODES, JobEducation } from '../../Services/jobs-service';
+import { JOB_EMPLOYMENT_TYPES, JOB_WORK_MODES, JobEducation, JobSkill } from '../../Services/jobs-service';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
 import { ConsultClient, ConsultancyService, PostingClient } from '../../Services/consultancy-service';
@@ -363,6 +363,11 @@ export class HiringComponent implements OnInit {
   safeLink(url: string | null | undefined): string {
     const text = (url ?? '').trim();
     return /^https:\/\/[^\s"<>]+$/i.test(text) ? text : '';
+  }
+
+  /** "GST 4/5, Payroll 3/5": the sub-skills of a skill with the rating the person gave them. */
+  subSkillsLine(skill: JobSkill): string {
+    return (skill.subSkills ?? []).map(u => `${u.name} ${u.rating}/5`).join(', ');
   }
 
   // dates are taken as text: a Date object would shift them by the time zone

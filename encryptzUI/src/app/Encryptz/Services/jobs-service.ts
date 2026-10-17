@@ -42,12 +42,25 @@ export interface JobEducation {
 
 export type JobSkillLevel = 'Beginner' | 'Intermediate' | 'Expert';
 
+export interface JobSubSkill {
+  name: string;
+  /** 1 to 5. */
+  rating: number;
+}
+
 export interface JobSkill {
   skillId: number;
   skillName: string;
-  level: JobSkillLevel;
+  /** 1 to 5. With sub-skills it is their average, rounded (the API sets it); without them the person rates the skill. */
+  rating: number;
+  /** What is shown: the average of the sub-skills to one decimal (3.7), or the rating. The API sets it. */
+  overall?: number;
+  /** Follows the rating (1-2 Beginner, 3-4 Intermediate, 5 Expert); the API sets it. */
+  level?: JobSkillLevel;
   /** https:// only ('' when none). */
   evidenceUrl?: string | null;
+  /** Up to 20. */
+  subSkills: JobSubSkill[];
 }
 
 export interface JobCertificate {
@@ -224,6 +237,11 @@ export class JobsService {
 
   suggestSkills(query: string): Observable<ApiResponse<string[]>> {
     return this.http.get<ApiResponse<string[]>>(`${this.api}/skills/suggest`, { params: { q: query } });
+  }
+
+  /** The sub-skills the catalogue knows for a skill (an empty list when it is not in it). */
+  catalogSubSkills(skill: string): Observable<ApiResponse<string[]>> {
+    return this.http.get<ApiResponse<string[]>>(`${this.api}/skills/subskills`, { params: { skill } });
   }
 
   /** The file is optional: without one the certificate keeps the file it has. */

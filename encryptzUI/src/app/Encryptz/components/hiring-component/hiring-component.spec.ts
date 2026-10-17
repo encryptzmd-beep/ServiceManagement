@@ -23,7 +23,7 @@ describe('HiringComponent', () => {
       profile: { fullName: 'Leo Joseph', headline: 'Accountant, 5 years', summary: 'About me', city: 'Kochi', contactEmail: 'leo@example.com', contactPhone: '', dateOfBirth: null, isVisible: false },
       experience: [{ experienceId: 1, organisation: 'Acme', title: 'Clerk', startMonth: '2019-04-01T00:00:00', endMonth: null, description: 'd' }],
       education: [{ educationId: 2, institution: 'MG University', course: 'B.Com', fieldOfStudy: 'Finance', startYear: 2012, endYear: 2015 }],
-      skills: [{ skillId: 3, skillName: 'Tally', level: 'Expert', evidenceUrl: 'javascript:alert(1)' }],
+      skills: [{ skillId: 3, skillName: 'Tally', rating: 5, level: 'Expert', subSkills: [{ name: 'GST', rating: 4 }], evidenceUrl: 'javascript:alert(1)' }],
       certificates: [{ certificateId: 5, title: 'Tally Prime', issuer: 'Institute', issuedOn: '2020-01-15T00:00:00', status: 'Uploaded', fileId: 0, fileName: '', sizeBytes: 0 }],
       resume: { fileId: 8, fileName: 'cv.pdf', sizeBytes: 1048576, uploadedAt: '2026-10-13T10:00:00' },
       completeness: 90,

@@ -16,7 +16,7 @@ describe('ConsultancyCandidatesComponent', () => {
     candidateKey: key, inPool: false, stage: '', note: '', preferredJobs: ['Accountant'], preferredLocations: ['Thrissur'], workModes: ['Remote'],
     profile: {
       profile: { fullName: 'Leo Joseph', headline: 'Accountant, 5 years', summary: 'About me', city: 'Kochi', contactEmail: 'leo@example.com', contactPhone: '', dateOfBirth: null, isVisible: true },
-      experience: [], education: [], skills: [{ skillId: 3, skillName: 'Tally', level: 'Expert', evidenceUrl: 'javascript:alert(1)' }],
+      experience: [], education: [], skills: [{ skillId: 3, skillName: 'Tally', rating: 5, level: 'Expert', subSkills: [{ name: 'GST', rating: 4 }], evidenceUrl: 'javascript:alert(1)' }],
       certificates: [{ certificateId: 5, title: 'Tally Prime', issuer: '', issuedOn: null, status: 'Verified', fileId: 0, fileName: '', sizeBytes: 0 }],
       resume: { fileId: 8, fileName: 'cv.pdf', sizeBytes: 100, uploadedAt: '2026-10-13T10:00:00' }, completeness: 80,
     },

@@ -13,8 +13,8 @@ describe('JobProfileComponent', () => {
     experience: [{ experienceId: 1, organisation: 'Acme', title: 'Clerk', startMonth: '2019-04-01T00:00:00', endMonth: null, description: 'd' }],
     education: [{ educationId: 2, institution: 'MG University', course: 'B.Com', fieldOfStudy: 'Finance', startYear: 2012, endYear: 2015 }],
     skills: [
-      { skillId: 3, skillName: 'Tally', level: 'Expert', evidenceUrl: 'https://youtube.com/watch?v=abc' },
-      { skillId: 4, skillName: 'Typing', level: 'Beginner', evidenceUrl: 'javascript:alert(1)' },
+      { skillId: 3, skillName: 'Tally', rating: 5, level: 'Expert', subSkills: [{ name: 'GST', rating: 4 }], evidenceUrl: 'https://youtube.com/watch?v=abc' },
+      { skillId: 4, skillName: 'Typing', rating: 2, level: 'Beginner', subSkills: [], evidenceUrl: 'javascript:alert(1)' },
     ],
     certificates: [{ certificateId: 5, title: 'Tally Prime', issuer: 'Institute', issuedOn: '2020-01-15T00:00:00', status: 'Uploaded', fileId: 9, fileName: 'c.pdf', sizeBytes: 2048 }],
     resume: { fileId: 8, fileName: 'cv.pdf', sizeBytes: 1048576, uploadedAt: '2026-10-13T10:00:00' },
@@ -62,6 +62,7 @@ describe('JobProfileComponent', () => {
       saveSkill: (s: any) => { calls.push(['saveSkill', s]); return ok(3); },
       deleteSkill: (id: number) => { calls.push(['deleteSkill', id]); return ok(); },
       suggestSkills: (q: string) => { calls.push(['suggestSkills', q]); return of({ success: true, message: '', data: ['Tally', 'Tally Prime'] }); },
+      catalogSubSkills: (s: string) => { calls.push(['catalogSubSkills', s]); return of({ success: true, message: '', data: ['GST', 'Payroll', 'Inventory'] }); },
       saveCertificate: (c: any, file: any) => { calls.push(['saveCertificate', c, file]); return ok(5); },
       deleteCertificate: (id: number) => { calls.push(['deleteCertificate', id]); return ok(); },
       saveResume: (file: any) => { calls.push(['saveResume', file]); return ok(8); },
@@ -318,7 +319,7 @@ describe('JobProfileComponent', () => {
     expect(t).toContain('Acme');
     expect(t).toContain('Apr 2019 – Present');
     expect(t).toContain('B.Com, Finance');
-    expect(t).toContain('Tally (Expert), Typing (Beginner)');
+    expect(t).toContain('Tally (5/5: GST 4/5); Typing (2/5)');
     expect(t).toContain('Tally Prime');
     // nothing a resume reader cannot parse or should not see
     expect(cv.querySelector('img, table, a, button')).toBeNull();
@@ -525,12 +526,69 @@ describe('JobProfileComponent', () => {
     expect(calls.some(x => ['saveEducation', 'saveSkill', 'saveCertificate'].includes(x[0]))).toBe(false);
   });
 
+  it('needs a rating out of 5 for the skill and for every sub-skill', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    c.openSkill();
+    const m = c.dialog()!.model;
+    m.skillName = 'Tally';
+    c.save();
+    expect(c.formError()).toBe('Rate the skill from 1 to 5');
+
+    m.rating = 4;
+    c.addSubSkill(m, 'GST');
+    c.save();
+    expect(c.formError()).toBe('Rate every sub-skill from 1 to 5');
+    expect(calls.some(x => x[0] === 'saveSkill')).toBe(false);
+
+    m.subSkills[0].rating = 3;
+    c.save();
+    expect(calls.find(x => x[0] === 'saveSkill')![1]).toEqual(
+      { skillId: 0, skillName: 'Tally', rating: 3, evidenceUrl: '', subSkills: [{ name: 'GST', rating: 3 }] });
+  });
+
+  it('takes the overall rating of a skill from the average of its sub-skills', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    c.openSkill();
+    const m = c.dialog()!.model;
+    m.skillName = 'Accounting';
+    m.rating = 1;                                   // a rating typed before the sub-skills is not used
+    c.addSubSkill(m, 'GST');
+    c.addSubSkill(m, 'Payroll');
+    c.addSubSkill(m, 'TDS');
+    m.subSkills[0].rating = 4;
+    m.subSkills[1].rating = 3;
+    m.subSkills[2].rating = 3;
+
+    expect(c.overallOf(m)).toBe(3.3);
+    c.save();
+    expect(calls.find(x => x[0] === 'saveSkill')![1].rating).toBe(3);
+  });
+
+  it('offers the sub-skills of the catalogue that are not in the list yet', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    c.openSkill(c.page()!.skills[0]);
+    const m = c.dialog()!.model;
+    expect(calls.filter(x => x[0] === 'catalogSubSkills')).toEqual([['catalogSubSkills', 'Tally']]);
+    expect(c.catalogChips(m)).toEqual(['Payroll', 'Inventory']);
+
+    c.addSubSkill(m, 'payroll');
+    expect(c.catalogChips(m)).toEqual(['Inventory']);
+    c.addSubSkill(m, 'GST');
+    expect(c.formError()).toBe('This sub-skill is in the list already');
+  });
+
   it('refuses a skill link that is not https before it is sent', () => {
     const fixture = create();
     const c = fixture.componentInstance;
 
     c.openSkill();
-    Object.assign(c.dialog()!.model, { skillName: 'Singing', level: 'Expert', evidenceUrl: 'http://youtube.com/x' });
+    Object.assign(c.dialog()!.model, { skillName: 'Singing', rating: 5, evidenceUrl: 'http://youtube.com/x' });
     c.save();
 
     expect(c.formError()).toBe('The link must start with https://');
@@ -676,7 +734,7 @@ describe('JobProfileComponent', () => {
     const c = fixture.componentInstance;
 
     c.openSkill();
-    Object.assign(c.dialog()!.model, { skillName: 'Singing', level: 'Expert' });
+    Object.assign(c.dialog()!.model, { skillName: 'Singing', rating: 5 });
     c.save();
     c.closeDialog();
 

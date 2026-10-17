@@ -26,6 +26,7 @@ namespace EncryptzBL.Infrastructure.Jobs
         Task<ApiResponse<int>> SaveSkill(int userId, JobSkillDto dto);
         Task<ApiResponse<bool>> DeleteSkill(int userId, int skillId);
         Task<ApiResponse<List<string>>> SuggestSkills(int userId, string? query);
+        Task<ApiResponse<List<string>>> CatalogSubSkills(int userId, string? skill);
 
         Task<ApiResponse<int>> SaveCertificate(int userId, JobCertificateDto dto, JobUpload? file);
         Task<ApiResponse<bool>> DeleteCertificate(int userId, int certificateId);

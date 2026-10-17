@@ -58,7 +58,7 @@ namespace EncryptzTests
             var jobs = Service("this is not a connection string");
 
             var page = await jobs.GetPage(11);
-            var save = await jobs.SaveSkill(11, new JobSkillDto { SkillName = "Tally", Level = "Expert" });
+            var save = await jobs.SaveSkill(11, new JobSkillDto { SkillName = "Tally", Rating = 5 });
 
             Assert.False(page.Success);
             Assert.Equal(PersonalDbHelper.NotAvailable, page.Message);
@@ -69,7 +69,7 @@ namespace EncryptzTests
         public async Task A_rule_is_answered_before_the_database_is_tried()
         {
             // the connection would fail: the rule must answer first
-            var result = await Service("this is not a connection string").SaveSkill(11, new JobSkillDto { SkillName = "", Level = "Expert" });
+            var result = await Service("this is not a connection string").SaveSkill(11, new JobSkillDto { SkillName = "", Rating = 5 });
 
             Assert.Equal("Enter the skill", result.Message);
         }
@@ -114,6 +114,7 @@ namespace EncryptzTests
             public Task<ApiResponse<int>> SaveSkill(int userId, JobSkillDto dto) => throw new NotSupportedException();
             public Task<ApiResponse<bool>> DeleteSkill(int userId, int skillId) => throw new NotSupportedException();
             public Task<ApiResponse<List<string>>> SuggestSkills(int userId, string? query) => throw new NotSupportedException();
+            public Task<ApiResponse<List<string>>> CatalogSubSkills(int userId, string? skill) => throw new NotSupportedException();
             public Task<ApiResponse<int>> SaveCertificate(int userId, JobCertificateDto dto, JobUpload? file) => throw new NotSupportedException();
             public Task<ApiResponse<bool>> DeleteCertificate(int userId, int certificateId) => throw new NotSupportedException();
             public Task<ApiResponse<int>> SaveResume(int userId, JobUpload? file) => throw new NotSupportedException();

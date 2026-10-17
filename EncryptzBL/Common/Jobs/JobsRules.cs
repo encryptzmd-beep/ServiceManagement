@@ -38,7 +38,20 @@ namespace EncryptzBL.Common.Jobs
         private const int FirstYear = 1950;
         private const int MaxFileNameLength = 120;
 
-        private static readonly string[] Levels = { "Beginner", "Intermediate", "Expert" };
+        public const int MaxRating = 5;
+        public const int MaxSubSkills = 20;
+
+        /// <summary>The level a rating stands for: 1-2 Beginner, 3-4 Intermediate, 5 Expert.</summary>
+        public static string LevelOf(int rating)
+            => rating >= 5 ? "Expert" : rating >= 3 ? "Intermediate" : "Beginner";
+
+        /// <summary>The average of the sub-skill ratings, to one decimal (3.7). 0 without sub-skills.</summary>
+        public static double AverageRating(IReadOnlyCollection<JobSubSkillDto> subSkills)
+            => subSkills.Count == 0 ? 0 : Math.Round(subSkills.Average(u => (double)u.Rating), 1, MidpointRounding.AwayFromZero);
+
+        /// <summary>The overall rating a skill stores: the average of its sub-skills, rounded (3.5 is 4).</summary>
+        public static int OverallRating(IReadOnlyCollection<JobSubSkillDto> subSkills)
+            => (int)Math.Round(subSkills.Average(u => (double)u.Rating), MidpointRounding.AwayFromZero);
 
         private static readonly Regex Email = new(@"^[^\s@<>""']+@[^\s@<>""']+\.[^\s@<>""'.]{2,}\z", RegexOptions.CultureInvariant);
         private static readonly Regex Phone = new(@"^[0-9 +()\-]+\z", RegexOptions.CultureInvariant);
@@ -233,9 +246,25 @@ namespace EncryptzBL.Common.Jobs
             if (s.SkillName.Length == 0) return "Enter the skill";
             if (s.SkillName.Length > 100) return "The skill name is too long";
 
-            var level = Levels.FirstOrDefault(l => string.Equals(l, (s.Level ?? "").Trim(), StringComparison.OrdinalIgnoreCase));
-            if (level == null) return "Choose a level";
-            s.Level = level;
+            s.SubSkills ??= new List<JobSubSkillDto>();
+            foreach (var sub in s.SubSkills)
+                sub.Name = (sub?.Name ?? "").Trim();
+            // a row left empty in the form is not a sub-skill
+            s.SubSkills = s.SubSkills.Where(sub => sub != null && sub.Name.Length > 0).ToList();
+
+            if (s.SubSkills.Count > MaxSubSkills) return "A skill can have up to 20 sub-skills";
+            if (s.SubSkills.Any(sub => sub.Name.Length > 100)) return "A sub-skill name is too long";
+            if (s.SubSkills.Any(sub => sub.Rating < 1 || sub.Rating > MaxRating)) return "Rate every sub-skill from 1 to 5";
+            if (s.SubSkills.GroupBy(sub => sub.Name, StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1))
+                return "A sub-skill is in the list twice";
+
+            // with sub-skills the overall rating is theirs, whatever was sent; without them the
+            // person rates the skill itself
+            if (s.SubSkills.Count > 0)
+                s.Rating = OverallRating(s.SubSkills);
+            else if (s.Rating < 1 || s.Rating > MaxRating)
+                return "Rate the skill from 1 to 5";
+            s.Level = LevelOf(s.Rating);
 
             if (s.EvidenceUrl.Length > 400) return "The link is too long";
             if (s.EvidenceUrl.Length > 0 && !IsHttpsLink(s.EvidenceUrl))

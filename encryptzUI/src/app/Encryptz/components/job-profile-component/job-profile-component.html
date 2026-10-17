@@ -174,11 +174,29 @@
             <div class="jp-skills">
               @for (s of pg.skills; track s.skillId) {
                 <div class="jp-skill">
-                  <div class="jp-skill-main">
-                    <strong>{{ s.skillName }}</strong>
-                    <span class="jp-pill" [attr.data-level]="s.level">{{ s.level }}</span>
-                    @if (safeLink(s.evidenceUrl); as link) {
-                      <a class="jp-evidence" [href]="link" target="_blank" rel="noopener noreferrer">See evidence</a>
+                  <div class="jp-skill-body">
+                    <div class="jp-skill-main">
+                      <strong>{{ s.skillName }}</strong>
+                      <span class="jp-stars" role="img" [attr.aria-label]="'Overall ' + ratingLabel(shownRating(s))" [title]="'Overall ' + ratingLabel(shownRating(s))">
+                        @for (n of stars; track n) { <span class="material-icons" [class.on]="n <= s.rating">{{ n <= s.rating ? 'star' : 'star_border' }}</span> }
+                        <span class="jp-rate-text">{{ shownRating(s) }}</span>
+                      </span>
+                      <span class="jp-pill" [attr.data-level]="s.level">{{ s.level }}</span>
+                      @if (safeLink(s.evidenceUrl); as link) {
+                        <a class="jp-evidence" [href]="link" target="_blank" rel="noopener noreferrer">See evidence</a>
+                      }
+                    </div>
+                    @if (s.subSkills.length) {
+                      <ul class="jp-subskills">
+                        @for (u of s.subSkills; track u.name) {
+                          <li>
+                            <span class="jp-subskill-name">{{ u.name }}</span>
+                            <span class="jp-stars small" role="img" [attr.aria-label]="ratingLabel(u.rating)" [title]="ratingLabel(u.rating)">
+                              @for (n of stars; track n) { <span class="material-icons" [class.on]="n <= u.rating">{{ n <= u.rating ? 'star' : 'star_border' }}</span> }
+                            </span>
+                          </li>
+                        }
+                      </ul>
                     }
                   </div>
                   <div class="jp-row-actions">
@@ -517,17 +535,75 @@
 
           @case ('skill') {
             <label>Skill *
-              <input class="jp-input" name="skillName" [(ngModel)]="d.model.skillName" (ngModelChange)="suggest($event)" maxlength="100" list="jp-skill-suggestions" autocomplete="off" />
+              <input class="jp-input" name="skillName" [(ngModel)]="d.model.skillName" (ngModelChange)="skillNameChanged($event)" maxlength="100" list="jp-skill-suggestions" autocomplete="off" />
               <datalist id="jp-skill-suggestions">
                 @for (name of suggestions(); track name) { <option [value]="name"></option> }
               </datalist>
             </label>
-            <label>Level *
-              <select class="jp-input" name="level" [(ngModel)]="d.model.level">
-                <option value="" disabled>Choose…</option>
-                @for (level of levels; track level) { <option [value]="level">{{ level }}</option> }
-              </select>
-            </label>
+            <div class="jp-field">
+              <span class="jp-field-label">Sub-skills (up to {{ maxSubSkills }}) — rate each out of 5</span>
+              @if (d.model.subSkills.length) {
+                <ul class="jp-subskill-edit">
+                  @for (u of d.model.subSkills; track $index; let i = $index) {
+                    <li>
+                      <input class="jp-input" [name]="'subSkill' + i" [(ngModel)]="u.name" maxlength="100" [attr.aria-label]="'Sub-skill ' + (i + 1)" />
+                      <div class="jp-rate small" role="radiogroup" [attr.aria-label]="'Your rating of ' + u.name + ', out of 5'">
+                        @for (n of stars; track n) {
+                          <button type="button" class="jp-star" [class.on]="n <= u.rating" role="radio" [attr.aria-checked]="n === u.rating"
+                                  [attr.aria-label]="ratingLabel(n)" [title]="ratingLabel(n)" (click)="u.rating = n">
+                            <span class="material-icons">{{ n <= u.rating ? 'star' : 'star_border' }}</span>
+                          </button>
+                        }
+                      </div>
+                      <button type="button" class="jp-icon-btn danger" (click)="removeSubSkill(d.model, i)" [attr.aria-label]="'Remove ' + u.name" title="Remove"><span class="material-icons">close</span></button>
+                    </li>
+                  }
+                </ul>
+              }
+              @if (d.model.subSkills.length < maxSubSkills) {
+                <div class="jp-subskill-add">
+                  <input class="jp-input" name="newSubSkill" [(ngModel)]="d.model.newSubSkill" maxlength="100" list="jp-subskill-catalog" autocomplete="off"
+                         placeholder="Type a sub-skill" (keydown.enter)="$event.preventDefault(); addSubSkill(d.model, d.model.newSubSkill)" />
+                  <datalist id="jp-subskill-catalog">
+                    @for (name of catalogChips(d.model); track name) { <option [value]="name"></option> }
+                  </datalist>
+                  <button type="button" class="jp-btn" (click)="addSubSkill(d.model, d.model.newSubSkill)"><span class="material-icons">add</span>Add</button>
+                </div>
+                @if (catalogChips(d.model).length) {
+                  <small>Suggested for {{ d.model.skillName }} — click to add:</small>
+                  <div class="jp-subskill-chips">
+                    @for (name of catalogChips(d.model); track name) {
+                      <button type="button" class="jp-chip-btn" (click)="addSubSkill(d.model, name)"><span class="material-icons">add</span>{{ name }}</button>
+                    }
+                  </div>
+                }
+              }
+            </div>
+
+            <div class="jp-field jp-overall">
+              <span class="jp-field-label">Overall rating *</span>
+              @if (d.model.subSkills.length) {
+                <!-- with sub-skills the overall rating is their average: it is not typed -->
+                <div class="jp-rate" role="img" [attr.aria-label]="'Overall ' + ratingLabel(overallOf(d.model))">
+                  <span class="jp-stars">
+                    @for (n of stars; track n) { <span class="material-icons" [class.on]="n <= overallOf(d.model) + 0.5">{{ n <= overallOf(d.model) + 0.5 ? 'star' : 'star_border' }}</span> }
+                  </span>
+                  <span class="jp-rate-text">{{ overallOf(d.model) ? overallOf(d.model) + ' / 5' : 'Rate the sub-skills' }} — the average of the sub-skills</span>
+                </div>
+              } @else {
+                <div class="jp-rate" role="radiogroup" aria-label="Your rating of the skill, out of 5">
+                  @for (n of stars; track n) {
+                    <button type="button" class="jp-star" [class.on]="n <= d.model.rating" role="radio" [attr.aria-checked]="n === d.model.rating"
+                            [attr.aria-label]="ratingLabel(n)" [title]="ratingLabel(n)" (click)="d.model.rating = n">
+                      <span class="material-icons">{{ n <= d.model.rating ? 'star' : 'star_border' }}</span>
+                    </button>
+                  }
+                  <span class="jp-rate-text">{{ d.model.rating ? d.model.rating + ' / 5' : 'Not rated' }}</span>
+                </div>
+                <small>Add sub-skills and the overall rating comes from them. Without sub-skills, rate the skill here.</small>
+              }
+            </div>
+
             <label>Link that shows it (optional)
               <input class="jp-input" name="evidenceUrl" type="url" [(ngModel)]="d.model.evidenceUrl" maxlength="400" placeholder="https://youtube.com/…" />
               <small>A video, a post or a portfolio page. It must start with https://</small>

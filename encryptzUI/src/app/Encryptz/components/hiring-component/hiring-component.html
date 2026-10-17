@@ -256,7 +256,8 @@
             <h4>Skills</h4>
             <div class="jb-skills">
               @for (s of pg.skills; track s.skillId) {
-                <span class="jp-chip">{{ s.skillName }} · {{ s.level }}
+                <span class="jp-chip">{{ s.skillName }} · {{ s.overall || s.rating }}/5
+                  @if (s.subSkills.length) { <small class="jb-subskills">({{ subSkillsLine(s) }})</small> }
                   @if (safeLink(s.evidenceUrl); as link) { <a class="jp-evidence" [href]="link" target="_blank" rel="noopener noreferrer">evidence</a> }
                 </span>
               }

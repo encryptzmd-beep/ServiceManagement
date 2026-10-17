@@ -196,24 +196,80 @@ namespace EncryptzTests
         // ── skills ────────────────────────────────────────────────────────────
 
         [Theory]
-        [InlineData("beginner", "Beginner")]
-        [InlineData(" EXPERT ", "Expert")]
-        [InlineData("Intermediate", "Intermediate")]
-        public void A_level_is_stored_in_its_one_spelling(string typed, string stored)
+        [InlineData(1, "Beginner")]
+        [InlineData(2, "Beginner")]
+        [InlineData(3, "Intermediate")]
+        [InlineData(4, "Intermediate")]
+        [InlineData(5, "Expert")]
+        public void The_level_follows_the_rating(int rating, string level)
         {
-            var s = new JobSkillDto { SkillName = " Tally ", Level = typed };
+            var s = new JobSkillDto { SkillName = " Tally ", Rating = rating, Level = "Guru" };
 
             Assert.Null(JobsRules.SkillProblem(s));
-            Assert.Equal(stored, s.Level);
+            Assert.Equal(level, s.Level);
             Assert.Equal("Tally", s.SkillName);
         }
 
-        [Fact]
-        public void A_skill_needs_a_name_and_a_known_level()
+        [Theory]
+        [InlineData(0)]
+        [InlineData(6)]
+        [InlineData(-1)]
+        public void A_skill_is_rated_from_1_to_5(int rating)
         {
-            Assert.Equal("Enter the skill", JobsRules.SkillProblem(new JobSkillDto { SkillName = " ", Level = "Expert" }));
-            Assert.Equal("Choose a level", JobsRules.SkillProblem(new JobSkillDto { SkillName = "Tally", Level = "Guru" }));
-            Assert.Equal("The skill name is too long", JobsRules.SkillProblem(new JobSkillDto { SkillName = new string('s', 101), Level = "Expert" }));
+            Assert.Equal("Rate the skill from 1 to 5", JobsRules.SkillProblem(new JobSkillDto { SkillName = "Tally", Rating = rating }));
+        }
+
+        [Fact]
+        public void Every_sub_skill_is_rated_from_1_to_5_and_empty_rows_are_dropped()
+        {
+            var s = new JobSkillDto
+            {
+                SkillName = "Accounting", Rating = 4,
+                SubSkills = { new() { Name = " GST ", Rating = 4 }, new() { Name = " ", Rating = 0 }, new() { Name = "Payroll", Rating = 3 } }
+            };
+
+            Assert.Null(JobsRules.SkillProblem(s));
+            Assert.Equal(new[] { "GST", "Payroll" }, s.SubSkills.Select(u => u.Name));
+
+            s.SubSkills.Add(new() { Name = "TDS", Rating = 6 });
+            Assert.Equal("Rate every sub-skill from 1 to 5", JobsRules.SkillProblem(s));
+        }
+
+        [Fact]
+        public void With_sub_skills_the_overall_rating_is_their_average_whatever_was_sent()
+        {
+            // 4 + 3 + 3 = 3.33 -> 3; the rating sent is not used
+            var s = new JobSkillDto
+            {
+                SkillName = "Accounting", Rating = 0,
+                SubSkills = { new() { Name = "GST", Rating = 4 }, new() { Name = "Payroll", Rating = 3 }, new() { Name = "TDS", Rating = 3 } }
+            };
+
+            Assert.Null(JobsRules.SkillProblem(s));
+            Assert.Equal(3, s.Rating);
+            Assert.Equal("Intermediate", s.Level);
+            Assert.Equal(3.3, JobsRules.AverageRating(s.SubSkills));
+
+            // 4.5 is 5
+            Assert.Equal(5, JobsRules.OverallRating(new List<JobSubSkillDto> { new() { Name = "A", Rating = 4 }, new() { Name = "B", Rating = 5 } }));
+        }
+
+        [Fact]
+        public void A_sub_skill_is_listed_once_and_there_are_at_most_20()
+        {
+            var twice = new JobSkillDto { SkillName = "Accounting", Rating = 4, SubSkills = { new() { Name = "GST", Rating = 4 }, new() { Name = "gst", Rating = 2 } } };
+            Assert.Equal("A sub-skill is in the list twice", JobsRules.SkillProblem(twice));
+
+            var many = new JobSkillDto { SkillName = "Accounting", Rating = 4 };
+            many.SubSkills.AddRange(Enumerable.Range(1, 21).Select(i => new JobSubSkillDto { Name = "Part " + i, Rating = 3 }));
+            Assert.Equal("A skill can have up to 20 sub-skills", JobsRules.SkillProblem(many));
+        }
+
+        [Fact]
+        public void A_skill_needs_a_name_and_a_rating()
+        {
+            Assert.Equal("Enter the skill", JobsRules.SkillProblem(new JobSkillDto { SkillName = " ", Rating = 5 }));
+            Assert.Equal("The skill name is too long", JobsRules.SkillProblem(new JobSkillDto { SkillName = new string('s', 101), Rating = 5 }));
         }
 
         [Theory]
@@ -223,7 +279,7 @@ namespace EncryptzTests
         [InlineData(null)]
         public void An_evidence_link_is_https_or_empty(string? url)
         {
-            Assert.Null(JobsRules.SkillProblem(new JobSkillDto { SkillName = "Singing", Level = "Expert", EvidenceUrl = url }));
+            Assert.Null(JobsRules.SkillProblem(new JobSkillDto { SkillName = "Singing", Rating = 5, EvidenceUrl = url }));
         }
 
         [Theory]
@@ -239,14 +295,14 @@ namespace EncryptzTests
         public void Any_other_link_is_refused(string url)
         {
             Assert.Equal("The link must start with https:// and be a full address",
-                JobsRules.SkillProblem(new JobSkillDto { SkillName = "Singing", Level = "Expert", EvidenceUrl = url }));
+                JobsRules.SkillProblem(new JobSkillDto { SkillName = "Singing", Rating = 5, EvidenceUrl = url }));
         }
 
         [Fact]
         public void A_link_of_more_than_400_characters_is_refused()
         {
             Assert.Equal("The link is too long",
-                JobsRules.SkillProblem(new JobSkillDto { SkillName = "Singing", Level = "Expert", EvidenceUrl = "https://example.com/" + new string('a', 400) }));
+                JobsRules.SkillProblem(new JobSkillDto { SkillName = "Singing", Rating = 5, EvidenceUrl = "https://example.com/" + new string('a', 400) }));
         }
 
         // ── certificates ──────────────────────────────────────────────────────

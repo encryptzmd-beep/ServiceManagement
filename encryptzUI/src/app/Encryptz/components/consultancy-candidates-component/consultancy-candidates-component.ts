@@ -12,7 +12,7 @@ import {
   TALENT_STAGES,
   TalentStage,
 } from '../../Services/consultancy-service';
-import { JOB_WORK_MODES, JobEducation } from '../../Services/jobs-service';
+import { JOB_WORK_MODES, JobEducation, JobSkill } from '../../Services/jobs-service';
 import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 
@@ -270,6 +270,11 @@ export class ConsultancyCandidatesComponent implements OnInit {
   safeLink(url: string | null | undefined): string {
     const text = (url ?? '').trim();
     return /^https:\/\/[^\s"<>]+$/i.test(text) ? text : '';
+  }
+
+  /** "GST 4/5, Payroll 3/5": the sub-skills of a skill with the rating the person gave them. */
+  subSkillsLine(skill: JobSkill): string {
+    return (skill.subSkills ?? []).map(u => `${u.name} ${u.rating}/5`).join(', ');
   }
 
   private notify(text: string | undefined, ok: boolean): void {
