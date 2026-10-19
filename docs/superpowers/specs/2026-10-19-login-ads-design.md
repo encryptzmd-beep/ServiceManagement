@@ -27,8 +27,7 @@ to change without a code release. The page also gets a new, lighter colour schem
   picks a company, so there is one global set of ads.
 - Click tracking, impressions or analytics on ads.
 - Video slides, or ads anywhere other than the login page.
-- Changes to the register page. It keeps its current look, which is a possible
-  follow-up.
+- Changes to what the register form asks for or does. Only its look changes.
 
 ## Anti-goals (would count as failure even if it works)
 
@@ -96,6 +95,42 @@ because nothing behind it exists today. Inputs keep their current bindings and
   **not fetched**.
 - **Loading:** the form never waits for the ads. While they load, the fallback slide
   shows.
+
+## The register page
+
+The register page gets the same redesign, so moving between Sign in and Register
+feels like one page.
+
+**Same as the login page:**
+
+- The same left panel: the ad slider, showing the same slides from the same
+  endpoint.
+- The same light right panel and colours.
+
+**Shared code:** the slider is built **once**, as a shared standalone component
+(`login-ad-slider`), used by both pages. Each page drops its copy of the old SVG
+slides and slider CSS.
+
+**Right panel, top to bottom:**
+
+1. "Create your account" heading and the line "Register for the Encryptz ERP
+   platform."
+2. The six fields, in the same two-column grid as now (one column below 820px):
+   - Full name
+   - Email address
+   - Mobile number
+   - Aadhaar (optional)
+   - Password
+   - Confirm password
+3. The password-mismatch, error and success messages, restyled for the light theme.
+4. The red "Create account" button.
+5. "Already have an account? Sign in", linking to `/login`.
+6. The copyright footer.
+
+The form is taller than the login form. If the right panel does not fit the window,
+it scrolls on its own and the slider stays fixed.
+
+Bindings, validation and the register call are unchanged.
 
 ## The admin tab (Platform Admin → Login Ads)
 
@@ -209,15 +244,14 @@ Follow the existing patterns in `EncryptzTests`:
 
 Angular specs for:
 
-- the login slider: the fallback when the list is empty, one slide with no controls,
-  next and previous wrapping around, and empty fields hidden
+- the shared slider component: the fallback when the list is empty, one slide with
+  no controls, next and previous wrapping around, and empty fields hidden
+- the login and register pages still submit as before
 - the new admin tab: the guard, the list, save and reorder
 
 ## Builder's call
 
 - Exact spacing, sizes and hover states, based on the mockup.
-- Whether the slider becomes its own small component, such as
-  `login-ad-slider`.
 - Cross-fade versus slide transition, as long as it is short (300–500 ms) and
   respects `prefers-reduced-motion`.
 - Error and empty states in the admin tab, following the other tabs.
@@ -229,4 +263,4 @@ Angular specs for:
 - Images are stored in the database, the same way as Job Portal photos. The limit is
   2 MB, and JPG, PNG and WebP are allowed.
 - The optional show-from and show-until dates use the server's date.
-- The register page is left unchanged.
+- The register page shows the same ads as the login page. It is not a separate set.
