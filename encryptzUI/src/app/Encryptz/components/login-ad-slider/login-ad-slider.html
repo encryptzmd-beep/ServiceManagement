@@ -1,0 +1,59 @@
+<!-- Encryptz/components/login-ad-slider/login-ad-slider.html -->
+<div class="slider" (mouseenter)="pause()" (mouseleave)="resume()">
+
+  @if (current(); as ad) {
+    <img class="ad-img" [src]="imageUrl(ad)" [alt]="ad.title || ''" />
+    @if (hasText(ad)) {
+      <div class="slide-shade"></div>
+    }
+  } @else {
+    <div class="fallback">
+      <div class="fallback-line">Enterprise Resource Planning Platform</div>
+    </div>
+  }
+
+  <div class="top-bar">
+    <div class="brand-badge">
+      <img src="logo.png" alt="" />
+      <span class="brand-name">ENCRYPTZ <span>ERP</span></span>
+    </div>
+    @if (many()) {
+      <div class="slide-count">{{ index() + 1 }} / {{ ads().length }}</div>
+    }
+  </div>
+
+  @if (current(); as ad) {
+    <div class="slide-text">
+      @if (ad.tag) { <div class="slide-tag">{{ ad.tag }}</div> }
+      @if (ad.title) { <div class="slide-title">{{ ad.title }}</div> }
+      @if (ad.body) { <div class="slide-body">{{ ad.body }}</div> }
+
+      <div class="slide-foot">
+        @if (cta(ad); as link) {
+          <a class="slide-cta" [href]="link" target="_blank" rel="noopener noreferrer">
+            {{ ad.buttonText }}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        } @else {
+          <span></span>
+        }
+
+        @if (many()) {
+          <div class="slide-controls">
+            <div class="slide-dots">
+              @for (a of ads(); track a.loginAdId; let i = $index) {
+                <button type="button" class="dot" [class.on]="i === index()" (click)="go(i)" [attr.aria-label]="'Show slide ' + (i + 1)"></button>
+              }
+            </div>
+            <button type="button" class="arrow" aria-label="Previous slide" (click)="prev()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <button type="button" class="arrow" aria-label="Next slide" (click)="next()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>
