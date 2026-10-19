@@ -1,5 +1,7 @@
 using EncryptzAPI.Middleware;
+using EncryptzBL.Common.LoginAds;
 using EncryptzBL.DTO_s;
+using EncryptzBL.Infrastructure.LoginAds;
 using EncryptzBL.Infrastructure.User.Modules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,11 +24,16 @@ namespace EncryptzAPI.Controllers
     {
         private readonly IPlatformService _service;
         private readonly IPlatformUnlockService _unlock;
+        private readonly ILoginAdService _loginAds;
 
-        public PlatformController(IPlatformService service, IPlatformUnlockService unlock)
+        /// <summary>A login ad image of at most 2 MB plus the form fields.</summary>
+        private const long LoginAdUploadLimit = 2_621_440;
+
+        public PlatformController(IPlatformService service, IPlatformUnlockService unlock, ILoginAdService loginAds)
         {
             _service = service;
             _unlock = unlock;
+            _loginAds = loginAds;
         }
 
         // ── ACCESS CODE (the only endpoints that work while the screen is locked) ──
@@ -185,6 +192,62 @@ namespace EncryptzAPI.Controllers
         [HttpPost("settings/save")]
         public async Task<IActionResult> SaveSetting([FromBody] SavePlatformSettingRequest req)
             => Ok(await _service.SaveSetting(req, Actor()));
+
+        // ── LOGIN ADS ─────────────────────────────
+
+        [PlatformUnlocked]
+        [HttpGet("login-ads")]
+        public async Task<IActionResult> GetLoginAds()
+            => Ok(await _loginAds.ListAll(Actor()));
+
+        /// <summary>The image of any slide, hidden ones too, for the list of the administrator.</summary>
+        [PlatformUnlocked]
+        [HttpGet("login-ads/{id:int}/image")]
+        public async Task<IActionResult> GetLoginAdImage(int id)
+        {
+            var image = await _loginAds.GetAdminImage(id, Actor());
+            if (image == null)
+                return NotFound();
+
+            Response.Headers["X-Content-Type-Options"] = "nosniff";
+            Response.Headers["Cache-Control"] = "private, no-store";
+            return File(image.Content, LoginAdRules.ContentTypeFor(image.FileName));
+        }
+
+        [PlatformUnlocked]
+        [HttpPost("login-ads/save")]
+        [RequestSizeLimit(LoginAdUploadLimit)]
+        public async Task<IActionResult> SaveLoginAd([FromForm] SaveLoginAdForm form)
+        {
+            LoginAdUpload? image = null;
+            if (form.File != null)
+            {
+                // the declared length is checked before anything is read into memory
+                if (form.File.Length > LoginAdRules.MaxImageBytes)
+                    return Ok(ApiResponse<int>.Fail("The image is larger than 2 MB"));
+
+                using var memory = new MemoryStream((int)form.File.Length);
+                await form.File.CopyToAsync(memory);
+                image = new LoginAdUpload(form.File.FileName ?? "", memory.ToArray());
+            }
+
+            return Ok(await _loginAds.Save(form, image, Actor()));
+        }
+
+        [PlatformUnlocked]
+        [HttpPost("login-ads/{id:int}/active")]
+        public async Task<IActionResult> SetLoginAdActive(int id, [FromBody] SetLoginAdActiveRequest req)
+            => Ok(await _loginAds.SetActive(id, req?.IsActive ?? false, Actor()));
+
+        [PlatformUnlocked]
+        [HttpPost("login-ads/reorder")]
+        public async Task<IActionResult> ReorderLoginAds([FromBody] List<int> ids)
+            => Ok(await _loginAds.Reorder(ids, Actor()));
+
+        [PlatformUnlocked]
+        [HttpDelete("login-ads/{id:int}")]
+        public async Task<IActionResult> DeleteLoginAd(int id)
+            => Ok(await _loginAds.Delete(id, Actor()));
 
         // ── MENU TREE ─────────────────────────────
 

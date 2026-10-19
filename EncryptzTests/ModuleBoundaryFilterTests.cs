@@ -97,7 +97,8 @@ namespace EncryptzTests
             var controlPlane = new[]
             {
                 "AuthController", "CompanyController", "PlatformController", "WeatherForecastController",
-                "JobsController", "JobPostingsController", "CompanyJobsController", "VerificationController", "ConsultancyController", "NotificationsController"
+                "JobsController", "JobPostingsController", "CompanyJobsController", "VerificationController", "ConsultancyController", "NotificationsController",
+                "LoginAdsController"   // the sign-in page, before anyone has a company
             };
 
             var untagged = typeof(AuthController).Assembly.GetTypes()
