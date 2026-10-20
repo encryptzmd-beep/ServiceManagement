@@ -444,16 +444,14 @@ describe('CompanySelectorComponent', () => {
     });
   });
 
-  it('puts the personal applications before the companies, each in its own frame', () => {
+  it('puts the personal applications in Quick Access and the companies in the workspace switcher', () => {
     auth.getPersonalApps = () => of({ success: true, message: '', data: [
       { moduleId: 8, moduleKey: 'JOBPORTAL', moduleName: 'Job Portal', description: 'd', icon: 'badge', family: '', routePath: '/apps/jobs', sortOrder: 1, isReleased: true },
     ] });
     const fixture = create('company');
-    const frames = Array.from(fixture.nativeElement.querySelectorAll('.frame')) as HTMLElement[];
 
-    expect(frames.length).toBe(2);
-    expect(frames[0].querySelectorAll('.personal-app-item').length).toBe(1);
-    expect(frames[1].querySelectorAll('.company-item').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('#quick-access').querySelectorAll('.personal-app-item').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('.ws-menu').querySelectorAll('.company-item').length).toBe(1);
   });
 
   it('stands a company on its card with up to two letters of its name', () => {

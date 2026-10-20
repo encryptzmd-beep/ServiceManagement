@@ -1,203 +1,63 @@
-<div class="scope-page">
+<!-- Encryptz/components/company-selector-component/company-selector-component.html -->
+<div class="ws-page">
 
-  <!-- ── TOP BAR ── -->
-  <header class="topbar">
-    <div class="topbar-in">
-      <div class="logo-badge"><img src="logo.png" alt="Encryptz" /></div>
-      <div class="brand">
-        <div class="brand-name">ENCRYPTZ <span>ERP</span></div>
-        <div class="brand-sub">Enterprise Resource Planning Platform</div>
-      </div>
-      <span class="spacer"></span>
-      @if (stage() === 'company') {
-        @if (individualId(); as id) {
-          <div class="individual-id" title="Your lifelong ID on this platform. It never changes.">
-            Individual ID <strong>{{ id }}</strong>
-          </div>
-        }
-      }
-      <app-notification-bell />
-      @if (userName()) {
-        <div class="user">
-          <span class="user-pic">{{ userName().charAt(0).toUpperCase() }}</span>
-          <span class="user-name">{{ userName() }}</span>
-        </div>
-      }
-      <button class="top-link" type="button" (click)="openChangePassword()">
-        <span class="material-icons">lock</span><span class="top-link-text">Change Password</span>
-      </button>
-      <button class="top-link" type="button" (click)="logout()">
-        <span class="material-icons">logout</span><span class="top-link-text">Logout</span>
-      </button>
+  <!-- ── SIDEBAR ── -->
+  <aside class="ws-sidebar">
+    <div class="ws-brand">
+      <img src="logo.png" alt="" />
+      <span>ENCRYPTZ</span>
     </div>
-  </header>
 
-  <main class="scope-main" [class.company-step]="stage() === 'company'" [class.two-frames]="stage() === 'company' && personalApps().length > 0">
+    <!-- workspace switcher: the personal workspace and every company of the user -->
+    <div class="ws-switch" (click)="$event.stopPropagation()">
+      <button type="button" class="ws-switch-btn" [class.open]="menuOpen()" (click)="toggleMenu()"
+              aria-haspopup="true" [attr.aria-expanded]="menuOpen()">
+        <span class="ws-switch-icon" [class.is-company]="stage() !== 'company'">
+          <span class="material-icons">{{ stage() === 'company' ? 'groups' : 'apartment' }}</span>
+        </span>
+        <span class="ws-switch-name">{{ stage() === 'company' ? 'Personal Workspace' : currentCompanyName() }}</span>
+        <span class="material-icons ws-chevron">expand_more</span>
+      </button>
 
-    @if (stage() === 'company') {
-      <div class="welcome">
-        <div class="welcome-text">
-          <h1>Welcome back@if (userName()) {, {{ userName() }}}</h1>
-          <p>Open one of your own applications, or choose a company to continue.</p>
-        </div>
-        <div class="welcome-stats">
-          @if (personalApps().length > 0) {
-            <div class="stat"><strong>{{ personalApps().length }}</strong><span>Applications</span></div>
-          }
-          <div class="stat"><strong>{{ companies().length }}</strong><span>Companies</span></div>
-        </div>
-      </div>
-    }
+      <div class="ws-menu" [class.open]="menuOpen()">
+        @if (stage() === 'company' && showSearch()) {
+          <label class="search">
+            <span class="material-icons">search</span>
+            <input type="search" placeholder="Search company..." aria-label="Search companies"
+                   [ngModel]="search()" (ngModelChange)="search.set($event)" />
+          </label>
+        }
 
-    <!-- PERSONAL APPLICATIONS: free, open to every user, no company needed -->
-    @if (stage() === 'company' && personalApps().length > 0) {
-      <section class="frame apps-frame">
-        <div class="frame-head">
-          <div class="frame-icon"><span class="material-icons">apps</span></div>
-          <div class="frame-titles">
-            <h2 class="frame-title">Personal applications</h2>
-            <div class="frame-sub">Yours alone, no company needed</div>
-          </div>
-          <span class="count">{{ personalApps().length }}</span>
+        <div class="ws-item ws-personal" [class.current]="stage() === 'company'" role="button" tabindex="0"
+             (click)="goPersonal()" (keydown.enter)="goPersonal()">
+          <span class="ws-item-icon home"><span class="material-icons">home</span></span>
+          <span class="ws-item-text">
+            <strong>Personal Workspace</strong>
+            <small>My personal apps &amp; tools</small>
+          </span>
+          @if (stage() === 'company') { <span class="material-icons ws-check">verified</span> }
         </div>
-        <div class="frame-body">
-          <div class="app-grid">
-            @for (app of personalApps(); track app.moduleKey) {
-              <div class="company-item personal-app-item app-card" [class.disabled]="!canOpenPersonalApp(app)"
-                   [attr.aria-disabled]="!canOpenPersonalApp(app)" (click)="openPersonalApp(app)"
-                   role="button" [attr.tabindex]="canOpenPersonalApp(app) ? 0 : -1"
-                   (keydown.enter)="openPersonalApp(app)" (keydown.space)="openPersonalApp(app); $event.preventDefault()">
-                <div class="tile-top">
-                  <div class="company-avatar">
-                    <span class="material-icons">{{ app.icon || 'apps' }}</span>
-                  </div>
-                  @if (!app.isReleased) { <span class="soon-badge">Coming soon</span> }
-                </div>
-                <div class="company-info">
-                  <h3>{{ app.moduleName }}</h3>
-                  <p class="tile-desc">{{ app.description }}</p>
-                </div>
-                <div class="tile-foot">
-                  @if (canOpenPersonalApp(app)) {
-                    <span class="open-link">Open <span class="material-icons arrow">chevron_right</span></span>
-                  } @else {
-                    <span class="material-icons arrow">schedule</span>
-                  }
-                </div>
-              </div>
-            }
-          </div>
-        </div>
-      </section>
-    }
 
-    <section class="frame main-frame" [class.companies-frame]="stage() === 'company'">
-      <div class="frame-head">
         @if (stage() === 'company') {
-          <div class="frame-icon"><span class="material-icons">apartment</span></div>
-          <div class="frame-titles">
-            <h2 class="frame-title">{{ showCreate() ? 'New Company' : 'Select Company' }}</h2>
-            <div class="frame-sub">{{ showCreate() ? 'Set up a company of your own' : 'Please choose a company to continue' }}</div>
-          </div>
-          @if (!showCreate()) {
-            @if (companies().length > 0) { <span class="count">{{ companies().length }}</span> }
-            <span class="spacer"></span>
-            @if (showSearch()) {
-              <label class="search">
-                <span class="material-icons">search</span>
-                <input type="search" placeholder="Search name or code" aria-label="Search companies"
-                       [ngModel]="search()" (ngModelChange)="search.set($event)" />
-              </label>
-            }
-            <button class="btn-signin create-company-btn" type="button" (click)="openCreate()" [disabled]="!creation()?.canCreate">Create Company</button>
+          @if (loading()) {
+            <div class="loading-state">
+              <div class="spinner"></div>
+              <span>Loading your companies...</span>
+            </div>
           }
-        } @else if (stage() === 'module') {
-          <div class="frame-icon"><span class="material-icons">widgets</span></div>
-          <div class="frame-titles">
-            <h2 class="frame-title">Modules</h2>
-            <div class="frame-sub">Choose what you want to work with</div>
-          </div>
-          <span class="spacer"></span>
-          @if (canAdminister()) {
-            <button class="link-back" (click)="openAdministration()">
-              <span class="material-icons">admin_panel_settings</span> Administration
-            </button>
-          }
-          <button class="link-back" (click)="backToCompanies()">
-            <span class="material-icons">chevron_left</span> Back to companies
-          </button>
-        } @else {
-          <div class="frame-icon"><span class="material-icons">storefront</span></div>
-          <div class="frame-titles">
-            <h2 class="frame-title">Select Branch</h2>
-            <div class="frame-sub">Choose where you'll work</div>
-          </div>
-          <span class="spacer"></span>
-          <button class="link-back" (click)="backToModules()">
-            <span class="material-icons">chevron_left</span> Back to modules
-          </button>
-        }
-      </div>
 
-      <div class="frame-body">
-
-        @if (loading() || entering()) {
-          <div class="loading-state">
-            <div class="spinner"></div>
-            @if (stage() === 'company') { <span>Loading your companies...</span> }
-            @else if (stage() === 'module') { <span>Loading the modules...</span> }
-            @else if (entering()) { <span>Setting up your workspace…</span> }
-            @else { <span>Loading the branches...</span> }
-          </div>
-        }
-
-        <!-- STEP 1: COMPANY -->
-        @if (stage() === 'company' && !showCreate()) {
-          @if (creation() && !creation()!.canCreate) {
-            <p class="notice create-reason">{{ creation()!.message }}</p>
-          }
-          @if (creationFailed() && !creation()) {
-            <p class="notice create-reason">
-              Could not check whether you can create a company.
-              <button class="link-back" (click)="reload()">Refresh</button>
-            </p>
-          }
-        }
-
-        @if (!loading() && !error() && stage() === 'company' && companies().length === 0 && !showCreate()) {
-          <div class="empty-state">
-            <span class="material-icons">business</span>
-            <p>You are not in a company yet.</p>
-            <p class="small">Create your own company, or join one you were invited to.</p>
-            <button class="link-back" (click)="openInvitations()">Invitations and join requests</button>
-          </div>
-        }
-
-        @if (!loading() && stage() === 'company' && companies().length > 0 && !showCreate()) {
-          <div class="tile-grid">
-            @for (company of filteredCompanies(); track company.companyId) {
-              <div class="company-item tile" [class.disabled]="!enterable(company)"
+          @if (!loading() && companies().length > 0) {
+            @for (company of filteredCompanies(); track company.companyId; let i = $index) {
+              <div class="company-item ws-item" [class.disabled]="!enterable(company)"
                    [attr.aria-disabled]="!enterable(company)" (click)="selectCompany(company)"
                    role="button" [attr.tabindex]="enterable(company) ? 0 : -1"
                    (keydown.enter)="onRowKey(company, $event)" (keydown.space)="onRowKey(company, $event, true)">
-                <div class="tile-top">
-                  <div class="company-avatar" aria-hidden="true">{{ initials(company.companyName) }}</div>
-                  @if (enterable(company)) {
-                    <span class="material-icons arrow">chevron_right</span>
-                  } @else if (company.provisionStatus === 'Provisioning') {
-                    <span class="material-icons arrow">hourglass_top</span>
-                  } @else {
-                    <span class="material-icons arrow">error_outline</span>
-                  }
-                </div>
-                <div class="company-info">
+                <span class="ws-item-icon" [attr.data-tone]="tone(i + 1)" aria-hidden="true">
+                  <span class="material-icons">apartment</span>
+                </span>
+                <span class="ws-item-text">
                   <h3>{{ company.companyName }}</h3>
-                  <p class="company-code">{{ company.companyCode }}</p>
-                </div>
-                <div class="tile-foot">
-                  <span class="role-badge" [class]="getRoleClass(company.roleInCompany)">
-                    {{ company.roleInCompany }}
-                  </span>
+                  <small class="company-code">{{ company.companyCode }}</small>
                   @if (companyStatus(company)) {
                     <span class="status-badge">{{ companyStatus(company) }}</span>
                   }
@@ -207,10 +67,11 @@
                         {{ retrying() === company.companyId ? 'Retrying…' : 'Retry' }}
                       </button>
                     } @else {
-                      <p class="small">Ask the person who created this company to retry.</p>
+                      <small class="small">Ask the person who created this company to retry.</small>
                     }
                   }
-                </div>
+                </span>
+                <span class="role-badge" [class]="getRoleClass(company.roleInCompany)">{{ company.roleInCompany }}</span>
               </div>
             } @empty {
               <div class="no-match">
@@ -218,133 +79,410 @@
                 No company matches "{{ search() }}".
               </div>
             }
-          </div>
+          }
 
+          @if (!loading() && !error() && companies().length === 0) {
+            <div class="empty-state">
+              <p>You are not in a company yet.</p>
+              <p class="small">Create your own company, or join one you were invited to.</p>
+              <button class="link-back" (click)="openInvitations()">Invitations and join requests</button>
+            </div>
+          }
+
+          @if (creation() && !creation()!.canCreate) {
+            <p class="notice create-reason">{{ creation()!.message }}</p>
+          }
+          @if (creationFailed() && !creation()) {
+            <p class="notice create-reason">
+              Could not check whether you can create a company.
+              <button class="link-back" (click)="reload()">Refresh</button>
+            </p>
+          }
           @if (pollStopped()) {
             <p class="notice">
               Still setting up. Come back in a few minutes.
               <button class="link-back" (click)="reload()">Refresh</button>
             </p>
           }
-        }
 
-        <!-- STEP 1b: CREATE A COMPANY -->
-        @if (stage() === 'company' && showCreate()) {
-          <form class="create-form" (ngSubmit)="submitCreate()">
-            <label>Company name *
-              <input class="form-input" name="companyName" [(ngModel)]="createForm.companyName" (ngModelChange)="onNameTyped()" maxlength="200" autocomplete="organization" />
-            </label>
-            <label>Company code *
-              <input class="form-input" name="companyCode" [(ngModel)]="createForm.companyCode" (input)="onCodeTyped()" maxlength="20" placeholder="e.g. ACME" />
-              <small>Your customers type this code to reach your portal. Letters, digits, - and _.</small>
-            </label>
-            <label>First branch
-              <input class="form-input" name="firstBranchName" [(ngModel)]="createForm.firstBranchName" maxlength="200" placeholder="Head Office" />
-            </label>
-            <label>City
-              <input class="form-input" name="city" [(ngModel)]="createForm.city" maxlength="100" />
-            </label>
-            <label>Phone
-              <input class="form-input" name="phoneNumber" [(ngModel)]="createForm.phoneNumber" maxlength="30" />
-            </label>
-            <label>Address
-              <input class="form-input" name="address" [(ngModel)]="createForm.address" maxlength="400" />
-            </label>
-
-            @if (createError()) { <div class="error-msg">{{ createError() }}</div> }
-
-            <button class="btn-signin" type="submit" [disabled]="creating()">{{ creating() ? 'Creating…' : 'Create Company' }}</button>
-            <button class="link-back" type="button" (click)="closeCreate()" [disabled]="creating()">
-              <span class="material-icons">chevron_left</span> Back to companies
-            </button>
-            <p class="small">Setting up a new company takes a few minutes. You can stay on the next screen or come back later.</p>
-          </form>
-        }
-
-        <!-- STEP 2: MODULE (every module is listed; the ones this user cannot open are disabled) -->
-        @if (!loading() && stage() === 'module') {
-          <div class="tile-grid">
-            @for (module of modules(); track module.moduleKey) {
-              <div class="company-item module-item tile" [class.disabled]="module.state !== 'Available'"
-                   [attr.aria-disabled]="module.state !== 'Available'" (click)="openModule(module)"
-                   role="button" [attr.tabindex]="module.state === 'Available' ? 0 : -1"
-                   (keydown.enter)="openModule(module)" (keydown.space)="openModule(module); $event.preventDefault()">
-                <div class="tile-top">
-                  <div class="company-avatar">
-                    <span class="material-icons">{{ module.icon || 'apps' }}</span>
-                  </div>
-                  @if (module.state === 'Available') {
-                    <span class="material-icons arrow">chevron_right</span>
-                  } @else if (module.state === 'ComingSoon') {
-                    <span class="material-icons arrow">schedule</span>
-                  } @else {
-                    <span class="material-icons arrow">lock</span>
-                  }
-                </div>
-                <div class="company-info">
-                  <h3>{{ module.moduleName }}</h3>
-                  <p class="tile-desc">{{ module.description }}</p>
-                </div>
-                <div class="tile-foot">
-                  @if (module.state === 'ComingSoon') {
-                    <span class="soon-badge">Coming soon</span>
-                  } @else if (caption(module)) {
-                    <span class="status-badge">{{ caption(module) }}</span>
-                  }
-                </div>
-              </div>
+          <div class="ws-menu-foot">
+            <button type="button" class="ws-add create-company-btn" (click)="openCreate()" [disabled]="!creation()?.canCreate">Create Company</button>
+            @if (companies().length > 0) {
+              <button type="button" class="ws-add" (click)="openInvitations()">Join a Company</button>
             }
           </div>
-        }
-
-        <!-- STEP 3: BRANCH -->
-        @if (!loading() && !entering() && stage() === 'branch') {
-          @if (noBranch()) {
-            <div class="empty-state">
-              <span class="material-icons">location_off</span>
-              <p>No branch assigned.</p>
-              @if (canAdminister()) {
-                <p class="small">Add a branch in Administration.</p>
-                <button class="link-back" (click)="openAdministration()">
-                  <span class="material-icons">admin_panel_settings</span> Administration
-                </button>
-              } @else {
-                <p class="small">Ask your administrator to give you a branch.</p>
-              }
-            </div>
-          } @else {
-            <div class="tile-grid">
-              @for (branch of branches(); track branch.locationId) {
-                <div class="company-item branch-item tile" (click)="enterBranch(branch)"
-                     role="button" tabindex="0" (keydown.enter)="enterBranch(branch)" (keydown.space)="enterBranch(branch); $event.preventDefault()">
-                  <div class="tile-top">
-                    <div class="company-avatar">
-                      <span class="material-icons">storefront</span>
-                    </div>
-                    <span class="material-icons arrow">chevron_right</span>
-                  </div>
-                  <div class="company-info">
-                    <h3>{{ branch.locationName }}</h3>
-                    <p class="company-code">{{ branch.city || branch.locationCode }}</p>
-                  </div>
-                </div>
-              }
-            </div>
-          }
-        }
-
-        @if (error() && !showCreate()) {
-          <div class="error-msg">
-            <span class="material-icons">error_outline</span>
-            {{ error() }}
-            <button (click)="reload()" class="retry-btn">{{ stage() === 'company' ? 'Refresh' : 'Retry' }}</button>
+        } @else {
+          <div class="ws-item current">
+            <span class="ws-item-icon" data-tone="red"><span class="material-icons">apartment</span></span>
+            <span class="ws-item-text">
+              <strong>{{ currentCompanyName() }}</strong>
+              <small>Current company</small>
+            </span>
+            <span class="material-icons ws-check">verified</span>
           </div>
         }
       </div>
-    </section>
-  </main>
+    </div>
 
-  <footer class="page-footer">&copy; 2026 Encryptz ERP. All rights reserved.</footer>
+    <nav class="ws-nav">
+      @if (stage() === 'company') {
+        <button type="button" class="ws-link active" (click)="scrollToTop()">
+          <span class="material-icons">home</span>Home
+        </button>
+        @if (personalApps().length > 0) {
+          <div class="ws-section">Personal applications</div>
+          @for (app of personalApps(); track app.moduleKey) {
+            <button type="button" class="ws-link" [class.soon]="!canOpenPersonalApp(app)" (click)="openPersonalApp(app)"
+                    [attr.aria-disabled]="!canOpenPersonalApp(app)">
+              <span class="material-icons">{{ app.icon || 'apps' }}</span>{{ app.moduleName }}
+            </button>
+          }
+        }
+      } @else {
+        <button type="button" class="ws-link" (click)="backToCompanies()">
+          <span class="material-icons">home</span>Home
+        </button>
+        <div class="ws-section">{{ currentCompanyName() }}</div>
+        <button type="button" class="ws-link" [class.active]="stage() === 'module'" (click)="backToModules()">
+          <span class="material-icons">widgets</span>Modules
+        </button>
+        @if (stage() === 'branch') {
+          <button type="button" class="ws-link active">
+            <span class="material-icons">storefront</span>Branches
+          </button>
+        }
+      }
+    </nav>
+
+    <div class="ws-nav ws-nav-bottom">
+      <button type="button" class="ws-link" (click)="openChangePassword()">
+        <span class="material-icons">lock</span>Change Password
+      </button>
+      <button type="button" class="ws-link" (click)="logout()">
+        <span class="material-icons">logout</span>Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <div class="ws-main">
+    <header class="ws-topbar">
+      @if (stage() === 'company') {
+        <label class="ws-search">
+          <span class="material-icons">search</span>
+          <input type="search" placeholder="Search your applications..." aria-label="Search your applications"
+                 [ngModel]="appSearch()" (ngModelChange)="appSearch.set($event)" />
+        </label>
+      }
+      <span class="spacer"></span>
+      <div class="ws-round"><app-notification-bell /></div>
+      <div class="ws-user" (click)="$event.stopPropagation()">
+        <button type="button" class="ws-user-btn" (click)="toggleUserMenu()" aria-haspopup="true" [attr.aria-expanded]="userMenuOpen()">
+          <span class="user-pic">{{ (userName() || '?').charAt(0).toUpperCase() }}</span>
+          <span class="ws-user-text">
+            <strong class="user-name">{{ userName() }}</strong>
+            <small>{{ stage() === 'company' ? 'Personal Account' : currentCompanyName() }}</small>
+          </span>
+          <span class="material-icons">expand_more</span>
+        </button>
+        @if (userMenuOpen()) {
+          <div class="ws-user-menu">
+            <button type="button" (click)="openChangePassword()"><span class="material-icons">lock</span>Change Password</button>
+            <button type="button" (click)="logout()"><span class="material-icons">logout</span>Logout</button>
+          </div>
+        }
+      </div>
+    </header>
+
+    <main class="ws-content" [class.with-aside]="stage() === 'company' && !showCreate()">
+
+      @if (stage() === 'company' && !showCreate()) {
+        <div class="ws-center">
+          @if (error()) {
+            <div class="error-msg">
+              <span class="material-icons">error_outline</span>
+              {{ error() }}
+              <button (click)="reload()" class="retry-btn">Refresh</button>
+            </div>
+          }
+
+          <!-- greeting banner -->
+          <section class="ws-hero">
+            <div class="ws-hero-text">
+              <h1>{{ greeting() }}@if (firstName()) {, {{ firstName() }}}! <span class="wave">👋</span></h1>
+              <p>Manage your career, finance &amp; daily tasks<br />from one powerful workspace.</p>
+              @if (individualId(); as id) {
+                <div class="individual-id" title="Your lifelong ID on this platform. It never changes.">
+                  Individual ID <strong>{{ id }}</strong>
+                </div>
+              }
+              <div class="ws-hero-actions">
+                <button type="button" class="hero-btn solid" (click)="scrollTo('quick-access')">
+                  <span class="material-icons">auto_awesome</span>Quick Actions
+                </button>
+                <button type="button" class="hero-btn ghost" (click)="scrollTo('insights')">
+                  <span class="material-icons">insights</span>View Insights
+                </button>
+              </div>
+            </div>
+            <img class="ws-hero-art" src="workspace-hero.jpg" alt="" />
+          </section>
+
+          <!-- quick access: the personal applications of the catalogue -->
+          @if (personalApps().length > 0) {
+            <section class="ws-block" id="quick-access">
+              <div class="ws-block-head"><h2>Quick Access</h2></div>
+              <div class="quick-grid">
+                @for (app of filteredApps(); track app.moduleKey; let i = $index) {
+                  <div class="company-item personal-app-item quick-tile" [class.disabled]="!canOpenPersonalApp(app)"
+                       [attr.aria-disabled]="!canOpenPersonalApp(app)" (click)="openPersonalApp(app)"
+                       role="button" [attr.tabindex]="canOpenPersonalApp(app) ? 0 : -1" [title]="app.description"
+                       (keydown.enter)="openPersonalApp(app)" (keydown.space)="openPersonalApp(app); $event.preventDefault()">
+                    <div class="quick-icon" [attr.data-tone]="tone(i)">
+                      <span class="material-icons">{{ app.icon || 'apps' }}</span>
+                    </div>
+                    <h3>{{ app.moduleName }}</h3>
+                    @if (!app.isReleased) { <span class="soon-badge">Coming soon</span> }
+                  </div>
+                } @empty {
+                  <div class="ws-empty-line">No application matches "{{ appSearch() }}".</div>
+                }
+              </div>
+            </section>
+          }
+
+          <!-- insights: filled in by the applications as they are released -->
+          <section class="ws-block" id="insights">
+            <div class="ws-block-head">
+              <h2>Insights &amp; Summary</h2>
+              <span class="ws-pill">This Month</span>
+            </div>
+            <div class="insight-grid">
+              @for (card of insights; track card.title) {
+                <div class="insight-card">
+                  <div class="insight-icon" [attr.data-tone]="card.tone"><span class="material-icons">{{ card.icon }}</span></div>
+                  <div class="insight-title">{{ card.title }}</div>
+                  <div class="insight-value">—</div>
+                  <div class="insight-foot"><span class="material-icons">schedule</span>No data yet</div>
+                </div>
+              }
+            </div>
+          </section>
+        </div>
+
+        <aside class="ws-aside">
+          <section class="side-card">
+            <div class="side-head"><h2>Upcoming</h2></div>
+            <div class="side-empty">
+              <span class="side-empty-icon" data-tone="blue"><span class="material-icons">event_available</span></span>
+              <div>
+                <strong>Nothing coming up</strong>
+                <small>Interviews, bills and deadlines will show here.</small>
+              </div>
+            </div>
+          </section>
+
+          <section class="side-card">
+            <div class="side-head">
+              <h2>Spending Overview</h2>
+              <span class="ws-pill small">This Month</span>
+            </div>
+            <div class="spend">
+              <div class="donut"><div class="donut-in"><strong>₹0</strong><small>Total</small></div></div>
+              <ul class="legend">
+                @for (l of spending; track l.label) {
+                  <li><span class="dot" [style.background]="l.color"></span>{{ l.label }}<em>0%</em></li>
+                }
+              </ul>
+            </div>
+          </section>
+
+          <section class="side-card">
+            <div class="side-head">
+              <h2>Job Matches for You</h2>
+              @if (jobPortal(); as jp) {
+                <button type="button" class="view-all" (click)="openPersonalApp(jp)">View All</button>
+              }
+            </div>
+            <div class="side-empty">
+              <span class="side-empty-icon" data-tone="green"><span class="material-icons">work_outline</span></span>
+              <div>
+                <strong>No matches yet</strong>
+                <small>Complete your Job Portal profile to get matched.</small>
+              </div>
+            </div>
+          </section>
+        </aside>
+      }
+
+      <!-- create a company -->
+      @if (stage() === 'company' && showCreate()) {
+        <section class="frame main-frame">
+          <div class="frame-head">
+            <div class="frame-icon"><span class="material-icons">apartment</span></div>
+            <div class="frame-titles">
+              <h2 class="frame-title">New Company</h2>
+              <div class="frame-sub">Set up a company of your own</div>
+            </div>
+          </div>
+          <div class="frame-body">
+            <form class="create-form" (ngSubmit)="submitCreate()">
+              <label>Company name *
+                <input class="form-input" name="companyName" [(ngModel)]="createForm.companyName" (ngModelChange)="onNameTyped()" maxlength="200" autocomplete="organization" />
+              </label>
+              <label>Company code *
+                <input class="form-input" name="companyCode" [(ngModel)]="createForm.companyCode" (input)="onCodeTyped()" maxlength="20" placeholder="e.g. ACME" />
+                <small>Your customers type this code to reach your portal. Letters, digits, - and _.</small>
+              </label>
+              <label>First branch
+                <input class="form-input" name="firstBranchName" [(ngModel)]="createForm.firstBranchName" maxlength="200" placeholder="Head Office" />
+              </label>
+              <label>City
+                <input class="form-input" name="city" [(ngModel)]="createForm.city" maxlength="100" />
+              </label>
+              <label>Phone
+                <input class="form-input" name="phoneNumber" [(ngModel)]="createForm.phoneNumber" maxlength="30" />
+              </label>
+              <label>Address
+                <input class="form-input" name="address" [(ngModel)]="createForm.address" maxlength="400" />
+              </label>
+
+              @if (createError()) { <div class="error-msg">{{ createError() }}</div> }
+
+              <button class="btn-signin" type="submit" [disabled]="creating()">{{ creating() ? 'Creating…' : 'Create Company' }}</button>
+              <button class="link-back" type="button" (click)="closeCreate()" [disabled]="creating()">
+                <span class="material-icons">chevron_left</span> Back to workspace
+              </button>
+              <p class="small">Setting up a new company takes a few minutes. You can stay on the next screen or come back later.</p>
+            </form>
+          </div>
+        </section>
+      }
+
+      <!-- STEP 2 / 3: MODULE and BRANCH of the chosen company -->
+      @if (stage() !== 'company') {
+        <section class="frame main-frame">
+          <div class="frame-head">
+            @if (stage() === 'module') {
+              <div class="frame-icon"><span class="material-icons">widgets</span></div>
+              <div class="frame-titles">
+                <h2 class="frame-title">Modules</h2>
+                <div class="frame-sub">Choose what you want to work with</div>
+              </div>
+              <span class="spacer"></span>
+              @if (canAdminister()) {
+                <button class="link-back" (click)="openAdministration()">
+                  <span class="material-icons">admin_panel_settings</span> Administration
+                </button>
+              }
+              <button class="link-back" (click)="backToCompanies()">
+                <span class="material-icons">chevron_left</span> Back to workspace
+              </button>
+            } @else {
+              <div class="frame-icon"><span class="material-icons">storefront</span></div>
+              <div class="frame-titles">
+                <h2 class="frame-title">Select Branch</h2>
+                <div class="frame-sub">Choose where you'll work</div>
+              </div>
+              <span class="spacer"></span>
+              <button class="link-back" (click)="backToModules()">
+                <span class="material-icons">chevron_left</span> Back to modules
+              </button>
+            }
+          </div>
+
+          <div class="frame-body">
+            @if (loading() || entering()) {
+              <div class="loading-state">
+                <div class="spinner"></div>
+                @if (stage() === 'module') { <span>Loading the modules...</span> }
+                @else if (entering()) { <span>Setting up your workspace…</span> }
+                @else { <span>Loading the branches...</span> }
+              </div>
+            }
+
+            @if (!loading() && stage() === 'module') {
+              <div class="tile-grid">
+                @for (module of modules(); track module.moduleKey; let i = $index) {
+                  <div class="company-item module-item tile" [class.disabled]="module.state !== 'Available'"
+                       [attr.aria-disabled]="module.state !== 'Available'" (click)="openModule(module)"
+                       role="button" [attr.tabindex]="module.state === 'Available' ? 0 : -1"
+                       (keydown.enter)="openModule(module)" (keydown.space)="openModule(module); $event.preventDefault()">
+                    <div class="tile-top">
+                      <div class="quick-icon" [attr.data-tone]="tone(i)">
+                        <span class="material-icons">{{ module.icon || 'apps' }}</span>
+                      </div>
+                      @if (module.state === 'Available') {
+                        <span class="material-icons arrow">chevron_right</span>
+                      } @else if (module.state === 'ComingSoon') {
+                        <span class="material-icons arrow">schedule</span>
+                      } @else {
+                        <span class="material-icons arrow">lock</span>
+                      }
+                    </div>
+                    <div class="company-info">
+                      <h3>{{ module.moduleName }}</h3>
+                      <p class="tile-desc">{{ module.description }}</p>
+                    </div>
+                    <div class="tile-foot">
+                      @if (module.state === 'ComingSoon') {
+                        <span class="soon-badge">Coming soon</span>
+                      } @else if (caption(module)) {
+                        <span class="status-badge">{{ caption(module) }}</span>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (!loading() && !entering() && stage() === 'branch') {
+              @if (noBranch()) {
+                <div class="empty-state">
+                  <span class="material-icons">location_off</span>
+                  <p>No branch assigned.</p>
+                  @if (canAdminister()) {
+                    <p class="small">Add a branch in Administration.</p>
+                    <button class="link-back" (click)="openAdministration()">
+                      <span class="material-icons">admin_panel_settings</span> Administration
+                    </button>
+                  } @else {
+                    <p class="small">Ask your administrator to give you a branch.</p>
+                  }
+                </div>
+              } @else {
+                <div class="tile-grid">
+                  @for (branch of branches(); track branch.locationId) {
+                    <div class="company-item branch-item tile" (click)="enterBranch(branch)"
+                         role="button" tabindex="0" (keydown.enter)="enterBranch(branch)" (keydown.space)="enterBranch(branch); $event.preventDefault()">
+                      <div class="tile-top">
+                        <div class="quick-icon" data-tone="blue">
+                          <span class="material-icons">storefront</span>
+                        </div>
+                        <span class="material-icons arrow">chevron_right</span>
+                      </div>
+                      <div class="company-info">
+                        <h3>{{ branch.locationName }}</h3>
+                        <p class="company-code">{{ branch.city || branch.locationCode }}</p>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            }
+
+            @if (error()) {
+              <div class="error-msg">
+                <span class="material-icons">error_outline</span>
+                {{ error() }}
+                <button (click)="reload()" class="retry-btn">Retry</button>
+              </div>
+            }
+          </div>
+        </section>
+      }
+    </main>
+  </div>
 </div>
 
 <!-- Change Password Modal -->

@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
 import { NotificationBellComponent } from '../notification-bell-component/notification-bell-component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -396,6 +396,90 @@ export class CompanySelectorComponent {
   openPersonalApp(app: PersonalApp): void {
     if (!this.canOpenPersonalApp(app)) return;
     this.router.navigateByUrl(app.routePath);
+  }
+
+  // ── WORKSPACE LAYOUT ──────────────────────────────────────────────
+
+  /** The workspace switcher in the sidebar and the user menu in the top bar. */
+  menuOpen = signal(false);
+  userMenuOpen = signal(false);
+
+  /** What the user typed in the top bar to find one of their applications. */
+  appSearch = signal('');
+  filteredApps = computed(() => {
+    const term = this.appSearch().trim().toLowerCase();
+    if (!term) return this.personalApps();
+    return this.personalApps().filter(a => (a.moduleName || '').toLowerCase().includes(term));
+  });
+
+  /** The Job Portal of the catalogue, when it can be opened (for "View All" of the job matches). */
+  jobPortal = computed(() => this.personalApps().find(a => a.moduleKey === 'JOBPORTAL' && this.canOpenPersonalApp(a)) ?? null);
+
+  /** The summary cards; the applications behind them fill them in once they are released. */
+  readonly insights = [
+    { title: 'Total Expenses', icon: 'currency_rupee', tone: 'violet' },
+    { title: 'Income', icon: 'savings', tone: 'green' },
+    { title: 'Active Tasks', icon: 'assignment', tone: 'orange' },
+    { title: 'Jobs Applied', icon: 'work_outline', tone: 'sky' },
+  ];
+
+  readonly spending = [
+    { label: 'Food', color: '#3B82F6' },
+    { label: 'Transport', color: '#8B5CF6' },
+    { label: 'Shopping', color: '#F59E0B' },
+    { label: 'Bills', color: '#10B981' },
+  ];
+
+  private static readonly Tones = ['blue', 'green', 'orange', 'teal', 'red', 'violet', 'sky', 'purple'];
+
+  /** A colour for the n-th icon tile, so neighbouring tiles differ. */
+  tone(i: number): string {
+    return CompanySelectorComponent.Tones[i % CompanySelectorComponent.Tones.length];
+  }
+
+  toggleMenu(): void {
+    this.menuOpen.update(v => !v);
+    this.userMenuOpen.set(false);
+  }
+
+  toggleUserMenu(): void {
+    this.userMenuOpen.update(v => !v);
+    this.menuOpen.set(false);
+  }
+
+  /** A click anywhere else closes the menus (the menus stop their own clicks). */
+  @HostListener('document:click')
+  closeMenus(): void {
+    this.menuOpen.set(false);
+    this.userMenuOpen.set(false);
+  }
+
+  goPersonal(): void {
+    this.menuOpen.set(false);
+    if (this.stage() !== 'company') this.backToCompanies();
+  }
+
+  greeting(): string {
+    const h = new Date().getHours();
+    return h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
+  }
+
+  firstName(): string {
+    return this.userName().trim().split(/\s+/)[0] || '';
+  }
+
+  /** Name of the company being opened (module and branch steps). */
+  currentCompanyName(): string {
+    const id = this.auth.scopeState().companyId;
+    return this.auth.companies().find(c => c.companyId === id)?.companyName || 'Company';
+  }
+
+  scrollTo(id: string): void {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  scrollToTop(): void {
+    document.querySelector('.ws-content')?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   // ── STEP 2: MODULE ────────────────────────────────────────────────
