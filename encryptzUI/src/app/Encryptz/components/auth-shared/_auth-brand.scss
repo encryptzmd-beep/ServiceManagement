@@ -1,0 +1,57 @@
+/* Encryptz/components/auth-shared/_auth-brand.scss */
+/* The brand (logo + name + tagline): on the dark brand panel and on the sign-in / register card. */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* logo.png has a white background: a white rounded tile keeps it clean on the dark panel too */
+.logo-mark {
+  height: 64px;
+  width: 64px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 14px;
+  padding: 3px;
+}
+
+.brand-light .logo-mark { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25); }
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.brand-name {
+  font-family: var(--display);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.5px;
+}
+
+.brand-tag {
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 3px;
+}
+
+.brand-light {
+  color: #fff;
+  .brand-tag { color: rgba(255, 255, 255, 0.9); }
+}
+
+.brand-dark {
+  color: #1E2B4D;
+  justify-content: center;
+  .brand-name { color: var(--navy); }
+  .brand-tag { font-size: 9.5px; letter-spacing: 1.6px; color: #33415C; }
+}
+
+@media (max-width: 820px) {
+  .brand-dark .brand-name { font-size: 28px; }
+  .logo-mark { height: 52px; width: 52px; }
+}

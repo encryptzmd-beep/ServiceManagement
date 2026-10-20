@@ -4,11 +4,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
+import { LoginBrandPanelComponent } from '../login-brand-panel/login-brand-panel';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, LoginBrandPanelComponent],
   templateUrl: './login-component.html',
   styleUrls: ['./login-component.scss']
 })
@@ -21,6 +22,10 @@ export class LoginComponent {
   error = signal('');
   otpSent = signal(false);
   locationLogoutMsg = signal('');
+
+  showPassword = signal(false);
+  rememberMe = true;
+  private static readonly RememberKey = 'encryptz_remember_email';
 
   // Forgot Password States
   showForgotPasswordModal = signal(false);
@@ -49,6 +54,20 @@ export class LoginComponent {
       sessionStorage.removeItem('encryptz_location_error');
       sessionStorage.removeItem('encryptz_location_logout');
     }
+
+    this.email = this.readRemembered();
+  }
+
+  /** Remember me keeps only the sign-in name on this browser, never the password. */
+  private readRemembered(): string {
+    try { return localStorage.getItem(LoginComponent.RememberKey) ?? ''; } catch { return ''; }
+  }
+
+  private saveRemembered(): void {
+    try {
+      if (this.rememberMe) localStorage.setItem(LoginComponent.RememberKey, this.email);
+      else localStorage.removeItem(LoginComponent.RememberKey);
+    } catch { /* storage blocked: nothing to remember */ }
   }
 
  loginEmail(): void {
@@ -63,6 +82,8 @@ export class LoginComponent {
         this.error.set(res.message);
         return;
       }
+
+      this.saveRemembered();
 
       // A platform administrator manages the platform: no company to pick.
       if (res.data.isPlatformAdmin) {

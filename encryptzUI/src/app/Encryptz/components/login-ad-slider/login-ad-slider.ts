@@ -1,5 +1,5 @@
 // Encryptz/components/login-ad-slider/login-ad-slider.ts
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, output, signal } from '@angular/core';
 import { LoginAd, LoginAdService } from '../../Services/login-ad-service';
 
 /**
@@ -21,6 +21,8 @@ export class LoginAdSliderComponent implements OnInit, OnDestroy {
   static readonly IntervalMs = 5000;
 
   ads = signal<LoginAd[]>([]);
+  /** How many slides arrived (0 also when they cannot be read), so a page can show its own panel instead. */
+  loaded = output<number>();
   index = signal(0);
   current = computed(() => this.ads()[this.index()] ?? null);
   many = computed(() => this.ads().length > 1);
@@ -36,8 +38,9 @@ export class LoginAdSliderComponent implements OnInit, OnDestroy {
         this.ads.set(res?.success && Array.isArray(res.data) ? res.data : []);
         this.index.set(0);
         this.start();
+        this.loaded.emit(this.ads().length);
       },
-      error: () => this.ads.set([])
+      error: () => { this.ads.set([]); this.loaded.emit(0); }
     });
   }
 

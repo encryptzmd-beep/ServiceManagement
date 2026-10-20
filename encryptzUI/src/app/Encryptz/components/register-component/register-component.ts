@@ -5,11 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
 import { ROLES } from '../../Models/ApiModels';
+import { LoginBrandPanelComponent } from '../login-brand-panel/login-brand-panel';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, LoginBrandPanelComponent],
   templateUrl: './register-component.html',
   styleUrls: ['./register-component.scss'],
 })
@@ -21,6 +22,7 @@ export class RegisterComponent {
   error = signal('');
   success = signal('');
   passwordMismatch = signal(false);
+  showPassword = signal(false);
 
   fullName = '';
   email = '';
