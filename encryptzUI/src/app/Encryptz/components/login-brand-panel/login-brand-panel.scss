@@ -62,36 +62,48 @@ app-login-ad-slider.is-hidden { display: none; }
   margin-top: 3.4vh;
   display: grid;
   grid-template-columns: 210px 1fr;
-  row-gap: 2.4vh;
+  row-gap: 2vh;
   column-gap: 0;
 }
 
 .module {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
+/* Small glass tiles: a translucent tint of the module colour with a bright icon. */
 .module-icon {
-  width: clamp(40px, 5.7vh, 58px);
-  height: clamp(40px, 5.7vh, 58px);
-  border-radius: 12px;
+  --tone: 255, 255, 255;
+  width: clamp(30px, 4vh, 38px);
+  height: clamp(30px, 4vh, 38px);
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.18);
+  color: rgb(var(--tone));
+  background: linear-gradient(145deg, rgba(var(--tone), 0.28), rgba(var(--tone), 0.10));
+  border: 1px solid rgba(var(--tone), 0.38);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 3px 10px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(6px);
+  transition: transform 0.2s ease, background 0.2s ease;
 
-  .material-icons { font-size: clamp(22px, 3.1vh, 32px); }
+  .material-icons { font-size: clamp(16px, 2.2vh, 20px); }
 
-  &[data-tone="blue"]   { background: linear-gradient(180deg, #F2F7FF, #D6E6FF); color: #1D5BD8; }
-  &[data-tone="red"]    { background: linear-gradient(180deg, #FFF1F1, #FFD9D9); color: #E11D2A; }
-  &[data-tone="green"]  { background: linear-gradient(180deg, #EEFBF4, #CDF2DF); color: #10A55B; }
-  &[data-tone="violet"] { background: linear-gradient(180deg, #F5F1FF, #E2D8FF); color: #6D3BE8; }
-  &[data-tone="orange"] { background: linear-gradient(180deg, #FFF3EE, #FFDCCD); color: #F2552C; }
-  &[data-tone="amber"]  { background: linear-gradient(180deg, #FFF8E8, #FFE7B0); color: #F29A0B; }
-  &[data-tone="cyan"]   { background: linear-gradient(180deg, #EEFBFD, #C9F1F7); color: #0EA5C6; }
-  &[data-tone="pink"]   { background: linear-gradient(180deg, #FFF0F4, #FFD3DF); color: #E11D48; }
+  &[data-tone="blue"]   { --tone: 110, 168, 255; }
+  &[data-tone="red"]    { --tone: 255, 112, 120; }
+  &[data-tone="green"]  { --tone: 74, 222, 148; }
+  &[data-tone="violet"] { --tone: 176, 148, 255; }
+  &[data-tone="orange"] { --tone: 255, 146, 102; }
+  &[data-tone="amber"]  { --tone: 255, 196, 84; }
+  &[data-tone="cyan"]   { --tone: 80, 214, 240; }
+  &[data-tone="pink"]   { --tone: 255, 120, 160; }
+}
+
+.module:hover .module-icon {
+  transform: translateY(-2px);
+  background: linear-gradient(145deg, rgba(var(--tone), 0.38), rgba(var(--tone), 0.16));
 }
 
 .module-title {
@@ -124,7 +136,7 @@ app-login-ad-slider.is-hidden { display: none; }
 
   & + .stat { padding-left: 18px; border-left: 1px solid rgba(255, 255, 255, 0.18); }
 
-  .material-icons { font-size: clamp(30px, 4vh, 40px); color: #fff; }
+  .material-icons { font-size: clamp(22px, 3vh, 28px); color: #fff; }
 }
 
 .stat-title {
