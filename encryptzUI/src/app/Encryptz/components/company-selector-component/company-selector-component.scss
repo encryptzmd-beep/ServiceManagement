@@ -61,7 +61,7 @@ button { font-family: inherit; }
   padding: 0 10px 14px;
 
   img { width: 30px; height: 30px; object-fit: contain; border-radius: 7px; }
-  span { font-family: var(--display); font-size: 19px; font-weight: 700; color: var(--navy); letter-spacing: 0.3px; }
+  span { font-family: var(--display); font-size: 17px; font-weight: 700; color: var(--navy); letter-spacing: 0.3px; }
 }
 
 /* the workspace switcher */
@@ -102,7 +102,7 @@ button { font-family: inherit; }
 .ws-switch-name {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text);
   white-space: nowrap;
@@ -295,23 +295,23 @@ button { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 12px;
-  height: 38px;
+  height: 36px;
   padding: 0 14px;
   border: 0;
   border-radius: 10px;
   background: none;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text);
   text-align: left;
   cursor: pointer;
   transition: background 0.12s;
 
-  .material-icons { font-size: 19px; color: #2F55C8; }
+  .material-icons { font-size: 18px; color: #2F55C8; }
   &:hover { background: #F4F7FD; }
   &.soon { color: var(--muted); cursor: not-allowed; }
   &.active {
-    height: 38px;
+    height: 36px;
     background: linear-gradient(135deg, #2F6BF3, #1D4ED8);
     color: #fff;
     box-shadow: 0 6px 14px rgba(37, 99, 235, 0.3);
@@ -396,8 +396,8 @@ button { font-family: inherit; }
 .ws-user-text {
   display: flex;
   flex-direction: column;
-  strong { font-size: 13.5px; font-weight: 600; color: var(--text); max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  small { font-size: 11.5px; color: var(--muted); }
+  strong { font-size: 13px; font-weight: 600; color: var(--text); max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  small { font-size: 11px; color: var(--muted); }
 }
 
 .ws-user-menu {
@@ -578,38 +578,47 @@ button { font-family: inherit; }
 .insight-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
 }
 
+/* a compact card: the icon on the left, title, value and note beside it */
 .insight-card {
-  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: 'icon title' 'icon value' 'icon foot';
+  column-gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
   background: var(--card);
   border-radius: 14px;
   box-shadow: var(--shadow);
 }
 
 .insight-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+  grid-area: icon;
+  align-self: start;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff !important;
   background: var(--tone) !important;
-  .material-icons { font-size: 20px; }
+  .material-icons { font-size: 18px; }
 }
 
-.insight-title { margin-top: 16px; font-size: 14px; font-weight: 600; }
-.insight-value { margin-top: 8px; font-family: var(--display); font-size: 24px; font-weight: 700; }
+.insight-title { grid-area: title; font-size: 12.5px; font-weight: 600; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.insight-value { grid-area: value; margin-top: 1px; font-family: var(--display); font-size: 18px; font-weight: 700; line-height: 1.2; }
 .insight-foot {
-  margin-top: 10px;
+  grid-area: foot;
+  margin-top: 2px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 4px;
+  font-size: 11px;
   color: var(--muted);
-  .material-icons { font-size: 16px; }
+  .material-icons { font-size: 13px; }
 }
 
 /* right column */
@@ -704,7 +713,8 @@ button { font-family: inherit; }
 /* ═════════ COMPANY STEPS (create, module, branch) ═════════ */
 .frame {
   background: var(--card);
-  border-radius: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
   box-shadow: var(--shadow);
   overflow: hidden;
 }
@@ -712,27 +722,30 @@ button { font-family: inherit; }
 .frame-head {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 20px 24px;
+  gap: 12px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--line);
+  background: linear-gradient(110deg, #F6F9FF 0%, #FFFFFF 60%);
 
   .spacer { flex: 1 1 auto; }
 }
 
 .frame-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   background: var(--blue-soft);
   color: var(--blue);
   display: flex;
   align-items: center;
   justify-content: center;
+
+  .material-icons { font-size: 19px; }
 }
 
-.frame-title { margin: 0; font-family: var(--display); font-size: 21px; font-weight: 600; }
-.frame-sub { margin-top: 2px; font-size: 13.5px; color: var(--muted); }
-.frame-body { padding: 24px; }
+.frame-title { margin: 0; font-family: var(--display); font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+.frame-sub { margin-top: 1px; font-size: 12px; color: var(--muted); }
+.frame-body { padding: 18px 20px 20px; }
 
 .tile-grid {
   display: grid;
@@ -756,6 +769,75 @@ button { font-family: inherit; }
 
   .quick-icon { width: 54px; height: 54px; border-radius: 14px; outline: 0; .material-icons { font-size: 28px; } }
 }
+
+/* the modules of a company: compact tiles in one row each, the description as a tooltip */
+.module-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.module-tile {
+  position: relative;
+  flex-direction: row;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 10px 10px 12px;
+  border-radius: 12px;
+  border-color: #EBEEF4;
+
+  &:hover:not(.disabled) { transform: translateY(-1px); border-color: #C9D8F5; box-shadow: 0 8px 18px rgba(20, 40, 90, 0.08); .arrow { color: var(--blue); } }
+
+  .quick-icon { width: 34px; height: 34px; border-radius: 9px; flex: 0 0 auto; box-shadow: none; .material-icons { font-size: 18px; } }
+
+  .company-info {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+
+    h3 { font-size: 13px; font-weight: 600; letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  }
+
+  .status-badge, .soon-badge { font-size: 9.5px; padding: 0 7px; line-height: 15px; }
+  .arrow { flex: 0 0 auto; font-size: 16px; color: #B3BCCB; transition: color 0.15s; }
+
+  /* the tooltip: shown above the tile after a moment */
+  &[data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    z-index: 30;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    width: max-content;
+    max-width: 240px;
+    padding: 7px 11px;
+    border-radius: 9px;
+    background: #1e293b;
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 400;
+    line-height: 1.45;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(20, 40, 90, 0.2);
+    opacity: 0;
+    transform: translate(-50%, 4px);
+    pointer-events: none;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+
+  &[data-tip]:hover::after, &[data-tip]:focus-visible::after {
+    opacity: 1;
+    transform: translate(-50%, 0);
+    transition-delay: 0.25s;
+  }
+
+  /* a locked module stays readable: only the icon is faded */
+  &.disabled { opacity: 1; .quick-icon { opacity: 0.55; } h3 { color: var(--muted); } }
+}
+
+.ws-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 .tile-top { display: flex; align-items: center; justify-content: space-between; }
 .tile-top .arrow { color: var(--muted); }
@@ -832,7 +914,7 @@ button { font-family: inherit; }
   border: 0;
   border-radius: 8px;
   background: none;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   color: #44556d;
   cursor: pointer;

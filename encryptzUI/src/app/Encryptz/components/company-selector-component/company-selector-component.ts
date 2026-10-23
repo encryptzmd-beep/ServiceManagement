@@ -119,6 +119,12 @@ export class CompanySelectorComponent {
       return;
     }
 
+    // after a reload on the module or branch step the list is not in memory: the name of
+    // the company in the switcher and the user menu comes from it
+    if (this.stage() !== 'company' && this.auth.companies().length === 0) {
+      this.auth.getUserCompanies().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ error: () => {} });
+    }
+
     if (this.stage() === 'module') {
       this.loadModules();
     } else if (this.stage() === 'branch') {

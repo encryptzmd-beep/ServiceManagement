@@ -227,6 +227,19 @@ describe('CompanySelectorComponent', () => {
     expect(fixture.nativeElement.querySelector('.error-msg')).toBeNull();
   });
 
+  it('reads the companies on the module step after a reload, and only when none are in memory', () => {
+    let calls = 0;
+    auth.companies = () => [];
+    auth.getUserCompanies = () => { calls++; return of([company]); };
+    create('module').detectChanges();
+    expect(calls).toBe(1);
+
+    calls = 0;
+    auth.companies = () => [company];
+    create('module').detectChanges();
+    expect(calls).toBe(0);
+  });
+
   it('shows the empty state and no error when the API returns no companies', () => {
     auth.companies = () => [];
     auth.getUserCompanies = () => of([]);

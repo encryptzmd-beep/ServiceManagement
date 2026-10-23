@@ -402,35 +402,33 @@
             }
 
             @if (!loading() && stage() === 'module') {
-              <div class="tile-grid">
+              <!-- compact tiles: the description is the tooltip -->
+              <div class="tile-grid module-grid">
                 @for (module of modules(); track module.moduleKey; let i = $index) {
-                  <div class="company-item module-item tile" [class.disabled]="module.state !== 'Available'"
+                  <div class="company-item module-item tile module-tile" [class.disabled]="module.state !== 'Available'"
                        [attr.aria-disabled]="module.state !== 'Available'" (click)="openModule(module)"
                        role="button" [attr.tabindex]="module.state === 'Available' ? 0 : -1"
+                       [attr.data-tip]="module.description || null"
                        (keydown.enter)="openModule(module)" (keydown.space)="openModule(module); $event.preventDefault()">
-                    <div class="tile-top">
-                      <div class="quick-icon" [attr.data-tone]="tone(i)">
-                        <span class="material-icons">{{ module.icon || 'apps' }}</span>
-                      </div>
-                      @if (module.state === 'Available') {
-                        <span class="material-icons arrow">chevron_right</span>
-                      } @else if (module.state === 'ComingSoon') {
-                        <span class="material-icons arrow">schedule</span>
-                      } @else {
-                        <span class="material-icons arrow">lock</span>
-                      }
+                    <div class="quick-icon" [attr.data-tone]="tone(i)">
+                      <span class="material-icons">{{ module.icon || 'apps' }}</span>
                     </div>
                     <div class="company-info">
                       <h3>{{ module.moduleName }}</h3>
-                      <p class="tile-desc">{{ module.description }}</p>
-                    </div>
-                    <div class="tile-foot">
+                      @if (module.description) { <span class="ws-sr">{{ module.description }}</span> }
                       @if (module.state === 'ComingSoon') {
                         <span class="soon-badge">Coming soon</span>
                       } @else if (caption(module)) {
                         <span class="status-badge">{{ caption(module) }}</span>
                       }
                     </div>
+                    @if (module.state === 'Available') {
+                      <span class="material-icons arrow">chevron_right</span>
+                    } @else if (module.state === 'ComingSoon') {
+                      <span class="material-icons arrow">schedule</span>
+                    } @else {
+                      <span class="material-icons arrow">lock</span>
+                    }
                   </div>
                 }
               </div>
