@@ -1,30 +1,47 @@
+/* the look of the workspace: its blue, its fonts, soft round cards */
 :host {
   display: block;
-  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'DM Sans', 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
-$ink: #111827;
-$text: #374151;
-$muted: #6b7280;
-$faint: #9ca3af;
-$line: #e5e7eb;
-$hair: #f0f1f3;
-$navy: #1b4a7a;
-$navy-dark: #153a60;
-$red: #b42318;
-$accent: #2f6fb3;
-$tint: #eef4fb;
-$soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
+$display: 'Outfit', 'DM Sans', sans-serif;
+$ink: #141b34;
+$text: #3b4357;
+$muted: #6b7489;
+$faint: #9aa3b5;
+$line: #e4e8f0;
+$hair: #eef1f6;
+$navy: #1d4ed8;
+$navy-dark: #1e40af;
+$red: #d42b2b;
+$accent: #2563eb;
+$tint: #eef4ff;
+$soft: 0 1px 2px rgba(20, 40, 90, 0.04), 0 6px 20px rgba(20, 40, 90, 0.06);
+
+/* ── tones of the section icons ── */
+[data-tone] { color: var(--tone); background: var(--tone-bg); }
+[data-tone='blue']   { --tone: #2563eb; --tone-bg: #e7f0ff; }
+[data-tone='violet'] { --tone: #6d4ae8; --tone-bg: #eee9ff; }
+[data-tone='green']  { --tone: #0ea371; --tone-bg: #ddf7ec; }
+[data-tone='amber']  { --tone: #d97706; --tone-bg: #fff1dd; }
+[data-tone='pink']   { --tone: #db2777; --tone-bg: #fde7f1; }
+[data-tone='teal']   { --tone: #0e9f8f; --tone-bg: #dcf6f2; }
+[data-tone='orange'] { --tone: #ea580c; --tone-bg: #ffedd5; }
 
 .jp-card {
   background: #fff;
-  border: 1px solid #e6eaf0;
-  border-radius: 14px;
+  border: 1px solid #edf0f6;
+  border-radius: 18px;
   padding: 22px 24px;
   box-shadow: $soft;
+  transition: box-shadow 0.2s;
 }
 
-.jp-section { margin-bottom: 16px; }
+.jp-section {
+  margin-bottom: 16px;
+
+  &:hover { box-shadow: 0 1px 2px rgba(20, 40, 90, 0.04), 0 12px 28px rgba(20, 40, 90, 0.09); }
+}
 
 .jp-layout {
   display: grid;
@@ -48,36 +65,37 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
   display: flex;
   align-items: center;
   gap: 10px;
+  gap: 12px;
   padding-bottom: 14px;
   margin-bottom: 4px;
   border-bottom: 1px solid $hair;
 
-  h2 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; color: $ink; }
+  h2 { margin: 0; font-family: $display; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; color: $ink; }
   .jp-btn { margin-left: auto; }
 }
 
 .jp-section-icon {
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 9px;
-  background: $tint;
-  color: $navy;
+  border-radius: 11px;
+  background: var(--tone-bg, #{$tint});
+  color: var(--tone, #{$accent});
 
-  .material-icons { font-size: 18px; }
+  .material-icons { font-size: 20px; }
 }
 
 .jp-count {
   min-width: 22px;
   padding: 1px 8px;
   border-radius: 999px;
-  background: #f1f3f6;
+  background: $tint;
   font-size: 12px;
-  font-weight: 600;
-  color: $muted;
+  font-weight: 700;
+  color: $accent;
   text-align: center;
 }
 
@@ -88,7 +106,7 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
   color: $muted;
 
   > .material-icons { font-size: 40px; color: $faint; }
-  p { margin: 12px 0 18px; font-size: 14.5px; color: $text; }
+  p { margin: 12px 0 18px; font-size: 13.5px; color: $text; }
   .jp-link { display: block; margin-top: 16px; color: $navy; font-size: 13px; }
 }
 
@@ -108,34 +126,35 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
 .jp-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 7px 13px;
-  border-radius: 8px;
-  border: 1px solid #d5dbe3;
+  gap: 5px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 1px solid $line;
   background: #fff;
   color: $text;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  box-shadow: 0 1px 2px rgba(20, 40, 90, 0.04);
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 12.5px;
+  font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.15s;
 
-  .material-icons { font-size: 16px; color: $muted; }
+  .material-icons { font-size: 16px; color: $accent; }
 
-  &:hover { background: #f9fafb; border-color: #9ca3af; }
-  &:focus-visible { outline: 2px solid rgba(27, 74, 122, 0.4); outline-offset: 2px; }
+  &:hover { background: $tint; border-color: #c9d8f5; color: $navy; }
+  &:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.4); outline-offset: 2px; }
   &:disabled, &.disabled { opacity: 0.55; cursor: default; }
 
+  /* the main action: a light blue, not a solid one */
   &.primary {
-    background: linear-gradient(180deg, #215789 0%, $navy 100%);
-    border-color: $navy;
-    color: #fff;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1), 0 2px 6px rgba(27, 74, 122, 0.22);
+    background: linear-gradient(135deg, #e7f0ff 0%, #dde9ff 100%);
+    border-color: #c9d8f5;
+    color: $navy;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
 
-    .material-icons { color: rgba(255, 255, 255, 0.9); }
-    &:hover:not(:disabled) { background: $navy-dark; border-color: $navy-dark; }
+    .material-icons { color: $accent; }
+    &:hover:not(:disabled) { color: $navy-dark; background: #d6e4ff; transform: translateY(-1px); box-shadow: 0 8px 18px rgba(37, 99, 235, 0.16); }
   }
 
   &.ghost { border-color: transparent; box-shadow: none; color: $muted; &:hover { background: #f3f4f6; border-color: transparent; } }
@@ -166,47 +185,50 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
   padding: 0;
   overflow: hidden;
 
-  /* a quiet band of colour behind the picture */
+  &:hover { box-shadow: $soft; }
+
+  /* a light pastel band behind the picture, with two soft rings */
   &::before {
     content: '';
     display: block;
-    height: 76px;
+    height: 112px;
     background:
-      radial-gradient(ellipse 45% 140% at 100% 0%, rgba(47, 111, 179, 0.16), transparent 70%),
-      linear-gradient(120deg, #e6eff9 0%, #f1f5fa 55%, #f7f4f6 100%);
-    border-bottom: 1px solid #e6eaf0;
+      radial-gradient(circle at 88% -30%, rgba(255, 255, 255, 0.7) 0 70px, transparent 71px),
+      radial-gradient(circle at 72% 130%, rgba(255, 255, 255, 0.55) 0 90px, transparent 91px),
+      linear-gradient(110deg, #e3eeff 0%, #ece8ff 50%, #fde8f1 100%);
+    border-bottom: 1px solid #edf0f6;
   }
 }
 
 .jp-hero-body {
   display: flex;
   align-items: flex-end;
-  gap: 18px;
-  margin-top: -40px;
-  padding: 0 24px 22px;
+  gap: 20px;
+  margin-top: -52px;
+  padding: 0 24px 20px;
 }
 
 .jp-hero-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; align-self: flex-end; }
 
-.jp-avatar-wrap { position: relative; flex: 0 0 96px; }
+.jp-avatar-wrap { position: relative; flex: 0 0 104px; }
 
 .jp-avatar {
-  width: 96px;
-  height: 96px;
+  width: 104px;
+  height: 104px;
   border: 4px solid #fff;
-  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.14);
+  box-shadow: 0 8px 22px rgba(20, 40, 90, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: linear-gradient(135deg, #215789 0%, $navy 60%, #153a60 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #dbe8ff 0%, #e9e2ff 100%);
+  color: $navy;
   font-size: 30px;
   font-weight: 600;
   letter-spacing: 0.02em;
   overflow: hidden;
 
-  .material-icons { font-size: 36px; color: rgba(255, 255, 255, 0.85); }
+  .material-icons { font-size: 36px; color: #7c95d6; }
   img { width: 100%; height: 100%; max-width: none; object-fit: cover; display: block; }
 }
 
@@ -220,17 +242,17 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #d1d5db;
+  border: 2px solid #fff;
   border-radius: 50%;
-  background: #fff;
-  color: $text;
+  background: #e7f0ff;
+  color: $accent;
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(17, 24, 39, 0.12);
-  transition: background 0.12s, color 0.12s;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.16);
+  transition: background 0.12s, transform 0.12s;
 
-  .material-icons { font-size: 16px; }
+  .material-icons { font-size: 15px; }
 
-  &:hover { background: #f3f4f6; color: $navy; }
+  &:hover { background: #d6e4ff; transform: scale(1.06); }
   &:focus-within { outline: 2px solid rgba(27, 74, 122, 0.4); outline-offset: 2px; }
   &.disabled { opacity: 0.55; cursor: default; }
 }
@@ -263,7 +285,8 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
 .jp-hero-text { flex: 1 1 auto; min-width: 0; padding-bottom: 2px; }
 
 .jp-name {
-  font-size: 23px;
+  font-family: $display;
+  font-size: 25px;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.25;
@@ -273,7 +296,23 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
   &.muted { color: $muted; }
 }
 
-.jp-headline { margin-top: 3px; font-size: 14.5px; font-weight: 500; color: $navy; overflow-wrap: anywhere; }
+.jp-headline { margin-top: 3px; font-size: 14.5px; font-weight: 600; color: $accent; overflow-wrap: anywhere; }
+
+/* age and time worked, under the headline */
+.jp-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+.jp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 11px 3px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--tone) 18%, #fff);
+  font-size: 12.5px;
+  font-weight: 600;
+
+  .material-icons { font-size: 15px; }
+}
 
 .jp-summary {
   margin: 0;
@@ -289,19 +328,105 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
 .jp-facts {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 28px;
+  gap: 8px;
   margin: 0;
   padding: 14px 24px;
   border-top: 1px solid $hair;
-  background: #fafbfc;
+  background: #f8faff;
 
-  > div { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; }
+  /* each fact a soft pill */
+  > div {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    padding: 5px 12px 5px 9px;
+    border: 1px solid #e3eafa;
+    border-radius: 999px;
+    background: #fff;
+  }
 
   .material-icons { font-size: 16px; color: $accent; }
 
   /* the label stays for screen readers; the icon says it to the eye */
   dt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   dd { margin: 0; font-size: 13px; color: $text; overflow-wrap: anywhere; }
+}
+
+/* ── social media links: the logo of each platform, in its own colour ── */
+.jp-socials {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px 14px;
+  border-top: 1px solid $hair;
+}
+
+.jp-social {
+  --brand: #{$navy};
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 10%, #fff);
+  border: 1px solid color-mix(in srgb, var(--brand) 22%, #fff);
+  transition: transform 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+
+  svg { width: 17px; height: 17px; fill: currentColor; }
+  .material-icons { font-size: 18px; }
+
+  &:is(a):hover, &:is(a):focus-visible {
+    transform: translateY(-2px);
+    background: color-mix(in srgb, var(--brand) 18%, #fff);
+    border-color: color-mix(in srgb, var(--brand) 35%, #fff);
+    box-shadow: 0 6px 14px color-mix(in srgb, var(--brand) 18%, transparent);
+  }
+
+  &.small { width: 32px; height: 32px; }
+}
+
+.jp-social-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  color: $accent;
+
+  .material-icons { font-size: 16px; }
+  &:hover { color: $navy; }
+}
+
+.jp-link-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid $line;
+    border-radius: 10px;
+  }
+}
+
+.jp-link-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+
+  strong { font-size: 13px; color: $ink; }
+  small { font-size: 12px; color: $muted; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
 /* ── job preferences ── */
@@ -312,7 +437,7 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
   margin: 0;
   padding-top: 12px;
 
-  dt { font-size: 12px; font-weight: 500; color: $muted; margin-bottom: 6px; }
+  dt { font-size: 11.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: $faint; margin-bottom: 8px; }
   dd { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
   .jp-prefs-text { font-size: 14px; font-weight: 600; color: $ink; }
 }
@@ -322,13 +447,13 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
   align-items: center;
   gap: 4px;
   max-width: 100%;
-  padding: 3px 11px;
-  border: 1px solid #d9e5f2;
+  padding: 4px 12px;
+  border: 1px solid #d6e3fd;
   border-radius: 999px;
   background: $tint;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
-  color: #1f4268;
+  color: #1e3a8a;
   overflow-wrap: anywhere;
 
   button {
@@ -360,19 +485,20 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
 .jp-row {
   display: flex;
   gap: 12px;
-  padding: 14px 10px;
-  margin: 0 -10px;
+  padding: 14px 12px;
+  margin: 0 -12px;
   border-top: 1px solid $hair;
+  border-radius: 12px;
   transition: background 0.12s;
 
-  &:hover { background: #fafbfc; }
+  &:hover { background: #f8faff; }
 
   &:first-of-type { border-top: none; }
   &:last-of-type { padding-bottom: 2px; }
 }
 
-.jp-row-main { flex: 1 1 auto; min-width: 0; font-size: 14px; color: $ink; overflow-wrap: anywhere; strong { font-weight: 600; } }
-.jp-row-sub { font-size: 13px; color: $muted; margin-top: 3px; }
+.jp-row-main { flex: 1 1 auto; min-width: 0; font-size: 13.5px; color: $ink; overflow-wrap: anywhere; strong { font-weight: 600; } }
+.jp-row-sub { font-size: 12.5px; color: $muted; margin-top: 3px; }
 .jp-row-text { margin: 8px 0 0; max-width: 78ch; font-size: 13.5px; line-height: 1.6; color: $text; white-space: pre-line; }
 .jp-row-actions { display: flex; align-items: flex-start; gap: 2px; white-space: nowrap; opacity: 0.75; }
 .jp-row:hover .jp-row-actions, .jp-skill:hover .jp-row-actions, .jp-row-actions:focus-within { opacity: 1; }
@@ -557,7 +683,14 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
   line-height: 1.5;
   color: $muted;
 
-  &.boxed { margin: 0; padding: 14px 0 2px; }
+  /* an empty section: a dashed box that invites to add */
+  &.boxed {
+    margin: 14px 0 2px;
+    padding: 14px 16px;
+    border: 1.5px dashed #dbe3f0;
+    border-radius: 12px;
+    background: #fafbfe;
+  }
 }
 
 .jp-note { margin: 14px 0 0; font-size: 12px; color: $faint; }
@@ -580,11 +713,16 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
   margin-bottom: 10px;
 
   span { font-size: 13.5px; font-weight: 600; color: $ink; }
-  strong { font-size: 13.5px; font-weight: 600; color: $ink; font-variant-numeric: tabular-nums; }
+  strong { font-family: $display; font-size: 24px; font-weight: 700; color: $accent; font-variant-numeric: tabular-nums; }
 }
 
-.jp-bar { height: 8px; border-radius: 999px; background: #eef0f3; overflow: hidden; }
-.jp-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, $navy 0%, $accent 100%); transition: width 0.3s; }
+/* the side cards: a soft blue wash on the completeness card */
+.jp-complete { background: linear-gradient(160deg, #f3f7ff 0%, #fff 60%); }
+.jp-visibility.on { border-color: #bfe3cb; background: linear-gradient(160deg, #effaf3 0%, #fff 60%); }
+.jp-visibility.on .jp-switch input:checked { background: #6fd3a8; }
+
+.jp-bar { height: 10px; border-radius: 999px; background: #eef1f7; overflow: hidden; }
+.jp-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #93b8ff 0%, #8ee3cf 100%); transition: width 0.4s; }
 .jp-complete-hint { display: block; margin-top: 10px; font-size: 12.5px; line-height: 1.45; color: $muted; }
 
 /* ── who viewed the profile ── */
@@ -672,7 +810,7 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
   border-radius: 8px;
   background: $ink;
   color: #fff;
-  font-size: 13.5px;
+  font-size: 13px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
   z-index: 60;
 
@@ -700,8 +838,8 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
   display: flex;
   flex-direction: column;
   background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 24px 56px rgba(17, 24, 39, 0.24);
+  border-radius: 18px;
+  box-shadow: 0 24px 56px rgba(20, 40, 90, 0.24);
   overflow: hidden;
 }
 
@@ -709,10 +847,11 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 14px 14px 24px;
+  padding: 16px 14px 16px 24px;
   border-bottom: 1px solid $line;
+  background: linear-gradient(110deg, #f3f7ff 0%, #fff 70%);
 
-  h3 { margin: 0; font-size: 16px; font-weight: 600; color: $ink; }
+  h3 { margin: 0; font-family: $display; font-size: 18px; font-weight: 600; color: $ink; }
 }
 
 .jp-close {
@@ -738,8 +877,8 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
   flex-direction: column;
   gap: 14px;
 
-  label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500; color: $text; }
-  small { font-weight: 400; font-size: 12.5px; color: $muted; }
+  label { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; font-weight: 500; color: $text; }
+  small { font-weight: 400; font-size: 12px; color: $muted; }
 }
 
 .jp-check {
@@ -757,16 +896,16 @@ $soft: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.05);
   width: 100%;
   box-sizing: border-box;
   padding: 9px 12px;
-  border: 1px solid #d5dbe3;
-  border-radius: 8px;
+  border: 1px solid #dce3ec;
+  border-radius: 10px;
+  background: #f9fafd;
   font: inherit;
   font-weight: 400;
-  font-size: 14px;
+  font-size: 13.5px;
   color: $ink;
-  background: #fff;
-  transition: border-color 0.12s, box-shadow 0.12s;
+  transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
 
-  &:focus { outline: none; border-color: $navy; box-shadow: 0 0 0 3px rgba(27, 74, 122, 0.14); }
+  &:focus { outline: none; border-color: $accent; background: #fff; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14); }
   &:disabled { background: #f3f4f6; color: $faint; }
 }
 

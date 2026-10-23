@@ -93,9 +93,25 @@ export interface JobPreferences {
   expectedCtc: number | null;
 }
 
+/** What the person likes to do. Both lists are optional. */
+export interface JobInterests {
+  interests: string[];
+  hobbies: string[];
+}
+
+/** A professional or social media profile. The API names the platform from the address. */
+export interface JobSocialLink {
+  /** LinkedIn, GitHub, X, ...; Website for any other address. */
+  platform: string;
+  /** A full https address. */
+  url: string;
+}
+
 export interface JobProfilePage {
   profile: JobProfile;
   preferences?: JobPreferences | null;
+  interests?: JobInterests | null;
+  socialLinks?: JobSocialLink[] | null;
   experience: JobExperience[];
   education: JobEducation[];
   skills: JobSkill[];
@@ -209,6 +225,16 @@ export class JobsService {
   /** Replaces everything the person prefers. */
   savePreferences(preferences: JobPreferences): Observable<ApiResponse<boolean>> {
     return this.http.post<ApiResponse<boolean>>(`${this.api}/preferences`, preferences);
+  }
+
+  /** Replaces the interests and hobbies. */
+  saveInterests(interests: JobInterests): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/interests`, interests);
+  }
+
+  /** Replaces the social media links; only the addresses count, the API names the platforms. */
+  saveSocialLinks(urls: string[]): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/social-links`, { links: urls.map(url => ({ platform: '', url })) });
   }
 
   saveExperience(entry: JobExperience): Observable<ApiResponse<number>> {

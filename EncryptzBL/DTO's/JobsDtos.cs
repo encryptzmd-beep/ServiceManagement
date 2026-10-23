@@ -95,6 +95,8 @@ namespace EncryptzBL.DTO_s
         public List<JobCertificateDto> Certificates { get; set; } = new();
         public JobFileInfoDto? Resume { get; set; }
         public JobPreferencesDto Preferences { get; set; } = new();
+        public JobInterestsDto Interests { get; set; } = new();
+        public List<JobSocialLinkDto> SocialLinks { get; set; } = new();
         /// <summary>0 to 100.</summary>
         public int Completeness { get; set; }
     }
@@ -108,6 +110,27 @@ namespace EncryptzBL.DTO_s
         public List<string> WorkModes { get; set; } = new();
         /// <summary>Per year, in rupees; null = not said.</summary>
         public int? ExpectedCtc { get; set; }
+    }
+
+    /// <summary>What the person likes to do. Both lists are optional.</summary>
+    public class JobInterestsDto
+    {
+        public List<string> Interests { get; set; } = new();
+        public List<string> Hobbies { get; set; } = new();
+    }
+
+    /// <summary>A professional or social media profile of the person.</summary>
+    public class JobSocialLinkDto
+    {
+        /// <summary>LinkedIn, GitHub, X, ...; Website for any other address. The API names it from the address.</summary>
+        public string Platform { get; set; } = "";
+        /// <summary>A full https address.</summary>
+        public string Url { get; set; } = "";
+    }
+
+    public class SaveJobSocialLinksRequest
+    {
+        public List<JobSocialLinkDto> Links { get; set; } = new();
     }
 
     public class SetJobVisibilityRequest

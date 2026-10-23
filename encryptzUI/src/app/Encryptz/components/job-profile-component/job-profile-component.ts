@@ -8,18 +8,23 @@ import {
   JobCertificate,
   JobEducation,
   JobExperience,
+  JobInterests,
   JobPreferences,
   JobProfilePage,
   JobProfileView,
   JobSkill,
+  JobSocialLink,
   JobWorkMode,
   JobsService,
 } from '../../Services/jobs-service';
 import { JobAlertsService } from '../../Services/job-alerts-service';
 import { jobsMenu } from '../personal-shell-component/jobs-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
+import { SOCIAL_PLATFORMS, SocialPlatform, platformOf } from './social-platforms';
 
-type DialogKind = 'profile' | 'preferences' | 'experience' | 'education' | 'skill' | 'certificate';
+type DialogKind = 'profile' | 'preferences' | 'interests' | 'social' | 'experience' | 'education' | 'skill' | 'certificate';
+/** The lists of words typed into a box and shown as chips. */
+type ListKind = 'jobs' | 'locations' | 'interests' | 'hobbies';
 type RowKind = 'experience' | 'education' | 'skill' | 'certificate';
 
 interface Dialog {
@@ -34,11 +39,21 @@ interface Dialog {
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 const MAX_PREFERENCES = 10;
+const MAX_INTERESTS = 15;
+const MAX_SOCIAL_LINKS = 10;
+/** The box each list is typed into, how many it takes, and what the limit says. */
+const LISTS: Record<ListKind, { box: string; max: number; tooMany: string }> = {
+  jobs: { box: 'jobInput', max: MAX_PREFERENCES, tooMany: 'Choose at most 10 preferred jobs' },
+  locations: { box: 'locationInput', max: MAX_PREFERENCES, tooMany: 'Choose at most 10 preferred locations' },
+  interests: { box: 'interestInput', max: MAX_INTERESTS, tooMany: 'Add at most 15 interests' },
+  hobbies: { box: 'hobbyInput', max: MAX_INTERESTS, tooMany: 'Add at most 15 hobbies' },
+};
 const SUGGEST_AFTER_MS = 300;
 const MAX_SUB_SKILLS = 20;
 /** How many catalogue sub-skills are offered as chips at a time. */
 const CATALOG_CHIPS = 30;
 const NO_PREFERENCES: JobPreferences = { jobs: [], locations: [], workModes: [], expectedCtc: null };
+const NO_INTERESTS: JobInterests = { interests: [], hobbies: [] };
 const HTTPS_LINK = /^https:\/\/[^\s"<>]+$/i;
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -193,18 +208,18 @@ export class JobProfileComponent implements OnInit, OnDestroy {
   }
 
   /** Adds what is typed in the box of that list; commas separate several entries. */
-  addPreference(kind: 'jobs' | 'locations'): void {
+  addPreference(kind: ListKind): void {
     const m = this.dialog()?.model;
     if (!m) return;
 
-    const box = kind === 'jobs' ? 'jobInput' : 'locationInput';
+    const { box, max, tooMany } = LISTS[kind];
     const list: string[] = m[kind];
     this.formError.set('');
 
     for (const entry of String(m[box] ?? '').split(',').map(v => v.trim()).filter(Boolean)) {
       if (list.some(v => v.toLowerCase() === entry.toLowerCase())) continue;
-      if (list.length >= MAX_PREFERENCES) {
-        this.formError.set(`Choose at most 10 preferred ${kind}`);
+      if (list.length >= max) {
+        this.formError.set(tooMany);
         break;
       }
       list.push(entry.slice(0, 100));
@@ -212,7 +227,7 @@ export class JobProfileComponent implements OnInit, OnDestroy {
     m[box] = '';
   }
 
-  removePreference(kind: 'jobs' | 'locations', index: number): void {
+  removePreference(kind: ListKind, index: number): void {
     this.dialog()?.model[kind].splice(index, 1);
     this.formError.set('');
   }
@@ -222,6 +237,57 @@ export class JobProfileComponent implements OnInit, OnDestroy {
     if (!modes) return;
     const at = modes.indexOf(mode);
     if (at >= 0) modes.splice(at, 1); else modes.push(mode);
+  }
+
+  openInterests(): void {
+    const i = this.interestsOf(this.page());
+    this.open('interests', 'Interests & hobbies', {
+      interests: [...i.interests], hobbies: [...i.hobbies], interestInput: '', hobbyInput: '',
+    });
+  }
+
+  openSocialLinks(): void {
+    this.open('social', 'Social media links', {
+      links: this.linksOf(this.page()).map(l => l.url), linkInput: '',
+    });
+  }
+
+  /**
+   * Adds the address typed in the box. "linkedin.com/in/me" becomes https://linkedin.com/in/me
+   * and an http address becomes https: only https addresses are stored.
+   */
+  addSocialLink(): void {
+    const m = this.dialog()?.model;
+    if (!m) return;
+    this.formError.set('');
+
+    let url = String(m.linkInput ?? '').trim();
+    if (!url) return;
+    if (/^http:\/\//i.test(url)) url = 'https://' + url.slice(7);
+    else if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) url = 'https://' + url;
+
+    if (!this.isLink(url)) { this.formError.set('Enter the full address of the profile, for example https://linkedin.com/in/your-name'); return; }
+    if (m.links.some((v: string) => v.toLowerCase() === url.toLowerCase())) { this.formError.set('This link is in the list already'); return; }
+    if (m.links.length >= MAX_SOCIAL_LINKS) { this.formError.set('Add at most 10 links'); return; }
+
+    m.links.push(url);
+    m.linkInput = '';
+  }
+
+  removeSocialLink(index: number): void {
+    this.dialog()?.model.links.splice(index, 1);
+    this.formError.set('');
+  }
+
+  /** A plain https address with a host that has a dot, as the API takes it. */
+  private isLink(url: string): boolean {
+    if (url.length > 400 || !HTTPS_LINK.test(url)) return false;
+    try {
+      const u = new URL(url);
+      return u.hostname.includes('.') && !u.username && !u.password;
+    } catch {
+      return false;
+    }
   }
 
   openExperience(row?: JobExperience): void {
@@ -426,6 +492,22 @@ export class JobProfileComponent implements OnInit, OnDestroy {
         });
       }
 
+      case 'interests': {
+        // what is still in a box counts as typed
+        this.addPreference('interests');
+        if (this.formError()) return this.formError();
+        this.addPreference('hobbies');
+        if (this.formError()) return this.formError();
+        return this.api.saveInterests({ interests: [...m.interests], hobbies: [...m.hobbies] });
+      }
+
+      case 'social':
+        if (t(m.linkInput)) {
+          this.addSocialLink();
+          if (this.formError()) return this.formError();
+        }
+        return this.api.saveSocialLinks([...m.links]);
+
       case 'experience':
         if (!t(m.organisation) || !t(m.title)) return 'Enter the organisation and your title';
         if (!t(m.startMonth)) return 'Choose the month you started';
@@ -608,6 +690,31 @@ export class JobProfileComponent implements OnInit, OnDestroy {
     return page?.preferences ?? NO_PREFERENCES;
   }
 
+  /** The interests and hobbies of the page; empty ones when the API sent none. */
+  interestsOf(page: JobProfilePage | null): JobInterests {
+    return page?.interests ?? NO_INTERESTS;
+  }
+
+  /** The social links of the page that are plain https addresses. */
+  linksOf(page: JobProfilePage | null): JobSocialLink[] {
+    return (page?.socialLinks ?? []).filter(l => !!this.safeLink(l.url));
+  }
+
+  /** The platform an address belongs to, for the logo in the dialog before it is saved. */
+  platformOf(url: string): string {
+    return platformOf(url);
+  }
+
+  /** The logo and colour of a platform; null for a Website, which shows a globe. */
+  logo(platform: string): SocialPlatform | null {
+    return SOCIAL_PLATFORMS[platform] ?? null;
+  }
+
+  /** "linkedin.com/in/someone": the address without https:// and www. */
+  shortLink(url: string): string {
+    return url.replace(/^https:\/\/(www\.)?/i, '').replace(/\/$/, '');
+  }
+
   hasPreferences(p: JobPreferences): boolean {
     return p.jobs.length + p.locations.length + p.workModes.length > 0 || p.expectedCtc != null;
   }
@@ -686,6 +793,56 @@ export class JobProfileComponent implements OnInit, OnDestroy {
     if (!day) return '';
     const [year, m, d] = day.split('-').map(Number);
     return `${d} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m - 1]} ${year}`;
+  }
+
+  /** Full years since the date of birth; null without one (or one in the future). */
+  ageOf(dateOfBirth: string | null | undefined, today = new Date()): number | null {
+    const day = this.dayOf(dateOfBirth);
+    if (!day) return null;
+    const [y, m, d] = day.split('-').map(Number);
+    let age = today.getFullYear() - y;
+    if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) age--;
+    return age >= 0 && age < 130 ? age : null;
+  }
+
+  /**
+   * The time worked over all experience entries: "5 yrs 3 mos", "8 mos", '' for none.
+   * Months in which two jobs overlap count once; a job without an end runs to this month.
+   */
+  experienceLabel(rows: JobExperience[] | null | undefined, today = new Date()): string {
+    const now = today.getFullYear() * 12 + today.getMonth();
+    const index = (value: string | null | undefined) => {
+      const month = this.monthOf(value);
+      if (!month) return null;
+      const [y, m] = month.split('-').map(Number);
+      return y * 12 + m - 1;
+    };
+
+    const spans = (rows ?? [])
+      .map(r => [index(r.startMonth), r.endMonth ? index(r.endMonth) : now] as const)
+      .filter((s): s is readonly [number, number] => s[0] != null && s[1] != null && s[0] <= Math.min(s[1], now))
+      .map(([start, end]) => [start, Math.min(end, now)])
+      .sort((a, b) => a[0] - b[0]);
+
+    // both months count: April to June is three months
+    let months = 0;
+    let open = -1;
+    let close = -1;
+    for (const [start, end] of spans) {
+      if (start > close + 1) {
+        if (close >= open && open >= 0) months += close - open + 1;
+        open = start;
+        close = end;
+      } else {
+        close = Math.max(close, end);
+      }
+    }
+    if (open >= 0) months += close - open + 1;
+
+    const years = Math.floor(months / 12);
+    const rest = months % 12;
+    return [years ? `${years} ${years === 1 ? 'yr' : 'yrs'}` : '', rest ? `${rest} ${rest === 1 ? 'mo' : 'mos'}` : '']
+      .filter(Boolean).join(' ');
   }
 
   years(row: JobEducation): string {

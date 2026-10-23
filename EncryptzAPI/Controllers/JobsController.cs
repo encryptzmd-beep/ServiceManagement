@@ -56,6 +56,14 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SavePreferences([FromBody] JobPreferencesDto dto)
             => Ok(await _jobs.SavePreferences(Caller(), dto));
 
+        [HttpPost("interests")]
+        public async Task<IActionResult> SaveInterests([FromBody] JobInterestsDto dto)
+            => Ok(await _jobs.SaveInterests(Caller(), dto));
+
+        [HttpPost("social-links")]
+        public async Task<IActionResult> SaveSocialLinks([FromBody] SaveJobSocialLinksRequest req)
+            => Ok(await _jobs.SaveSocialLinks(Caller(), req));
+
         // ── experience ────────────────────────────────────────────────────────
 
         [HttpPost("experience")]

@@ -168,6 +168,96 @@ namespace EncryptzBL.Common.Jobs
             return null;
         }
 
+        // ── interests and hobbies ─────────────────────────────────────────────
+
+        private const int MaxInterests = 15;
+
+        /// <summary>Tidies the lists (trimmed, no blanks, no repeats, order kept) and checks them.</summary>
+        public static string? InterestsProblem(JobInterestsDto? i)
+        {
+            if (i == null)
+                return "Nothing to save";
+
+            i.Interests = TidyList(i.Interests);
+            i.Hobbies = TidyList(i.Hobbies);
+
+            if (i.Interests.Count > MaxInterests) return "Add at most 15 interests";
+            if (i.Hobbies.Count > MaxInterests) return "Add at most 15 hobbies";
+            if (i.Interests.Any(v => v.Length > MaxPreferenceLength)) return "An interest can have at most 100 characters";
+            if (i.Hobbies.Any(v => v.Length > MaxPreferenceLength)) return "A hobby can have at most 100 characters";
+
+            return null;
+        }
+
+        private static List<string> TidyList(List<string>? values)
+            => (values ?? new List<string>())
+                .Select(v => (v ?? "").Trim())
+                .Where(v => v.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+        // ── social media links ────────────────────────────────────────────────
+
+        private const int MaxSocialLinks = 10;
+        private const int MaxSocialLinkLength = 400;
+
+        /// <summary>The platform an address belongs to (by its host), and the domains that name it.</summary>
+        private static readonly (string Platform, string[] Domains)[] Platforms =
+        {
+            ("LinkedIn", new[] { "linkedin.com", "lnkd.in" }),
+            ("GitHub", new[] { "github.com" }),
+            ("GitLab", new[] { "gitlab.com" }),
+            ("X", new[] { "x.com", "twitter.com" }),
+            ("Facebook", new[] { "facebook.com", "fb.com" }),
+            ("Instagram", new[] { "instagram.com" }),
+            ("YouTube", new[] { "youtube.com", "youtu.be" }),
+            ("Behance", new[] { "behance.net" }),
+            ("Dribbble", new[] { "dribbble.com" }),
+            ("Medium", new[] { "medium.com" }),
+            ("Stack Overflow", new[] { "stackoverflow.com" }),
+        };
+
+        public const string WebsitePlatform = "Website";
+
+        /// <summary>LinkedIn, GitHub, ... for an address on one of their sites; Website for any other.</summary>
+        public static string PlatformOf(string? url)
+        {
+            if (!Uri.TryCreate(url ?? "", UriKind.Absolute, out var uri))
+                return WebsitePlatform;
+
+            var host = uri.Host.ToLowerInvariant();
+            foreach (var (platform, domains) in Platforms)
+                if (domains.Any(d => host == d || host.EndsWith("." + d, StringComparison.Ordinal)))
+                    return platform;
+
+            return WebsitePlatform;
+        }
+
+        /// <summary>
+        /// Tidies the links (trimmed, no blanks, no repeated address, order kept), checks that
+        /// each is a full https address and names its platform: what a client sent as the
+        /// platform is not taken.
+        /// </summary>
+        public static string? SocialLinksProblem(SaveJobSocialLinksRequest? req)
+        {
+            if (req == null)
+                return "Nothing to save";
+
+            var links = (req.Links ?? new List<JobSocialLinkDto>())
+                .Where(l => l != null)
+                .Select(l => (l.Url ?? "").Trim())
+                .Where(u => u.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (links.Count > MaxSocialLinks) return "Add at most 10 links";
+            if (links.Any(u => u.Length > MaxSocialLinkLength)) return "A link can have at most 400 characters";
+            if (links.Any(u => !IsHttpsLink(u))) return "A link must start with https:// and be a full address";
+
+            req.Links = links.Select(u => new JobSocialLinkDto { Platform = PlatformOf(u), Url = u }).ToList();
+            return null;
+        }
+
         // ── experience ────────────────────────────────────────────────────────
 
         public static string? ExperienceProblem(JobExperienceDto? e, DateTime today)

@@ -162,6 +162,8 @@ namespace EncryptzBL.Infrastructure.Jobs
                     page.Profile = await StartProfile(userId) ?? page.Profile;
 
                 page.Preferences = await ReadPreferences(userId);
+                page.Interests = await ReadInterests(userId);
+                page.SocialLinks = await ReadSocialLinks(userId);
                 page.Completeness = JobsRules.Completeness(page);
                 return ApiResponse<JobProfilePageDto>.Ok(page);
             });
@@ -325,6 +327,99 @@ namespace EncryptzBL.Infrastructure.Jobs
                     In("@Locations", JsonSerializer.Serialize(dto.Locations)),
                     In("@WorkModes", JsonSerializer.Serialize(dto.WorkModes)),
                     In("@ExpectedCtc", dto.ExpectedCtc)
+                })));
+            });
+
+        // ── interests, hobbies and social links (script PersonalDB/15) ────────
+
+        /// <summary>
+        /// The interests and hobbies. A database that does not have script 15 yet gives an
+        /// empty answer: the rest of the page must still open.
+        /// </summary>
+        private async Task<JobInterestsDto> ReadInterests(int userId)
+        {
+            var interests = new JobInterestsDto();
+
+            try
+            {
+                var ds = await GetDataSetAsync("jobs.sp_Interest_List", new[] { In("@UserId", userId) });
+                if (ds == null || ds.Tables.Count == 0)
+                    return interests;
+
+                foreach (DataRow r in ds.Tables[0].Rows)
+                {
+                    var value = r["Value"]?.ToString() ?? "";
+                    switch (r["Kind"]?.ToString())
+                    {
+                        case "Interest": interests.Interests.Add(value); break;
+                        case "Hobby": interests.Hobbies.Add(value); break;
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                _logger.LogWarning(ex, "Job Portal: the interests of user {UserId} could not be read (SQL error {Number})", userId, ex.Number);
+                return new JobInterestsDto();
+            }
+
+            return interests;
+        }
+
+        public Task<ApiResponse<bool>> SaveInterests(int userId, JobInterestsDto dto)
+            => Guarded(userId, "saving the interests", async () =>
+            {
+                var problem = JobsRules.InterestsProblem(dto);
+                if (problem != null)
+                    return ApiResponse<bool>.Fail(problem);
+
+                return AsFlag(Answer(await GetDataTableAsync("jobs.sp_Interest_Save", new[]
+                {
+                    In("@UserId", userId),
+                    In("@Interests", JsonSerializer.Serialize(dto.Interests)),
+                    In("@Hobbies", JsonSerializer.Serialize(dto.Hobbies))
+                })));
+            });
+
+        /// <summary>The social media links; empty on a database without script 15.</summary>
+        private async Task<List<JobSocialLinkDto>> ReadSocialLinks(int userId)
+        {
+            var links = new List<JobSocialLinkDto>();
+
+            try
+            {
+                var ds = await GetDataSetAsync("jobs.sp_SocialLink_List", new[] { In("@UserId", userId) });
+                if (ds == null || ds.Tables.Count == 0)
+                    return links;
+
+                foreach (DataRow r in ds.Tables[0].Rows)
+                {
+                    var url = r["Url"]?.ToString() ?? "";
+                    // only an address that is still a plain https link reaches the page
+                    if (JobsRules.IsHttpsLink(url))
+                        links.Add(new JobSocialLinkDto { Platform = JobsRules.PlatformOf(url), Url = url });
+                }
+            }
+            catch (SqlException ex)
+            {
+                _logger.LogWarning(ex, "Job Portal: the social links of user {UserId} could not be read (SQL error {Number})", userId, ex.Number);
+                return new List<JobSocialLinkDto>();
+            }
+
+            return links;
+        }
+
+        public Task<ApiResponse<bool>> SaveSocialLinks(int userId, SaveJobSocialLinksRequest req)
+            => Guarded(userId, "saving the social links", async () =>
+            {
+                var problem = JobsRules.SocialLinksProblem(req);
+                if (problem != null)
+                    return ApiResponse<bool>.Fail(problem);
+
+                var links = req.Links.Select(l => new { platform = l.Platform, url = l.Url });
+                return AsFlag(Answer(await GetDataTableAsync("jobs.sp_SocialLink_Save", new[]
+                {
+                    In("@UserId", userId),
+                    In("@Links", JsonSerializer.Serialize(links))
                 })));
             });
 

@@ -98,6 +98,98 @@ describe('JobProfileComponent', () => {
     expect(t).toContain('₹6,00,000 per year');
   });
 
+  it('saves the interests and hobbies: comma-separated entries are added once, what is left in a box is taken', () => {
+    api.saveInterests = (i: any) => { calls.push(['saveInterests', i]); return ok(true, 'Interests and hobbies saved'); };
+    api.getPage = () => of({ success: true, message: '', data: { ...page(), interests: { interests: ['Travel'], hobbies: [] } } });
+    const fixture = create();
+    const c = fixture.componentInstance;
+    expect(text(fixture)).toContain('Interests & hobbies');
+    expect(text(fixture)).toContain('Travel');
+
+    c.openInterests();
+    const m = c.dialog()!.model;
+    m.interestInput = 'Photography, travel';
+    c.addPreference('interests');
+    m.hobbyInput = 'Cricket';                    // left in the box: taken on save
+    c.save();
+
+    expect(calls.find(x => x[0] === 'saveInterests')![1]).toEqual({ interests: ['Travel', 'Photography'], hobbies: ['Cricket'] });
+    expect(c.dialog()).toBeNull();
+  });
+
+  it('shows each social link as the logo of its platform, and only https links', () => {
+    api.getPage = () => of({ success: true, message: '', data: { ...page(), socialLinks: [
+      { platform: 'LinkedIn', url: 'https://www.linkedin.com/in/leo' },
+      { platform: 'Website', url: 'https://leo.dev' },
+      { platform: 'GitHub', url: 'javascript:alert(1)' },
+    ] } });
+    const fixture = create();
+    const icons = Array.from(fixture.nativeElement.querySelectorAll('a.jp-social')) as HTMLAnchorElement[];
+
+    expect(icons.map(a => a.getAttribute('href'))).toEqual(['https://www.linkedin.com/in/leo', 'https://leo.dev']);
+    expect(icons[0].querySelector('svg path')).not.toBeNull();
+    expect(icons[0].getAttribute('target')).toBe('_blank');
+    expect(icons[1].textContent).toContain('language');
+  });
+
+  it('saves the social links: an address without https is completed, a bad one or a repeat is refused', () => {
+    api.saveSocialLinks = (urls: string[]) => { calls.push(['saveSocialLinks', urls]); return ok(true, 'Social links saved'); };
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    c.openSocialLinks();
+    const m = c.dialog()!.model;
+    m.linkInput = 'linkedin.com/in/leo';
+    c.addSocialLink();
+    m.linkInput = 'http://github.com/leo';
+    c.addSocialLink();
+    expect(m.links).toEqual(['https://linkedin.com/in/leo', 'https://github.com/leo']);
+    expect(c.platformOf(m.links[1])).toBe('GitHub');
+
+    m.linkInput = 'https://LINKEDIN.com/in/leo';
+    c.addSocialLink();
+    expect(c.formError()).toBe('This link is in the list already');
+
+    m.linkInput = 'javascript:alert(1)';
+    c.addSocialLink();
+    expect(c.formError()).toContain('Enter the full address');
+
+    m.linkInput = '';
+    c.removeSocialLink(0);
+    c.save();
+    expect(calls.find(x => x[0] === 'saveSocialLinks')![1]).toEqual(['https://github.com/leo']);
+  });
+
+  it('works out the age from the date of birth, counting the birthday', () => {
+    const c = create().componentInstance;
+    const today = new Date(2026, 9, 23);   // 23 Oct 2026
+
+    expect(c.ageOf('1996-10-23T00:00:00', today)).toBe(30);
+    expect(c.ageOf('1996-10-24', today)).toBe(29);
+    expect(c.ageOf(null, today)).toBeNull();
+    expect(c.ageOf('2030-01-01', today)).toBeNull();
+  });
+
+  it('adds up the experience: overlapping months count once, a current job runs to this month', () => {
+    const c = create().componentInstance;
+    const today = new Date(2026, 9, 23);   // Oct 2026
+    const row = (start: string, end: string | null) =>
+      ({ experienceId: 0, organisation: 'A', title: 'T', startMonth: start, endMonth: end, description: '' });
+
+    expect(c.experienceLabel([row('2024-04-01', '2024-06-01')], today)).toBe('3 mos');
+    expect(c.experienceLabel([row('2020-01-01', '2021-12-01'), row('2021-06-01', '2022-12-01')], today)).toBe('3 yrs');
+    expect(c.experienceLabel([row('2025-10-01', null)], today)).toBe('1 yr 1 mo');
+    expect(c.experienceLabel([], today)).toBe('');
+  });
+
+  it('shows the age and the experience under the headline', () => {
+    api.getPage = () => of({ success: true, message: '', data: { ...page(), profile: { ...page().profile, dateOfBirth: '1990-01-15T00:00:00' } } });
+    const t = text(create());
+
+    expect(t).toMatch(/\d+ years old/);
+    expect(t).toMatch(/\d+ yrs?( \d+ mos?)? experience/);
+  });
+
   it('asks for the preferences when there are none (also from an API that sends none)', () => {
     expect(text(create())).toContain('Say which jobs, places and working modes you prefer');
   });

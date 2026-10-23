@@ -38,6 +38,14 @@
           @if (pg.profile.fullName || pg.profile.headline) {
             <div class="jp-name">{{ pg.profile.fullName || '—' }}</div>
             <div class="jp-headline">{{ pg.profile.headline }}</div>
+            @let age = ageOf(pg.profile.dateOfBirth);
+            @let worked = experienceLabel(pg.experience);
+            @if (age != null || worked) {
+              <div class="jp-badges">
+                @if (age != null) { <span class="jp-badge" data-tone="violet"><span class="material-icons">cake</span>{{ age }} years old</span> }
+                @if (worked) { <span class="jp-badge" data-tone="green"><span class="material-icons">work_history</span>{{ worked }} experience</span> }
+              </div>
+            }
           } @else {
             <div class="jp-name muted">Your profile</div>
             <p class="jp-empty">Add your name and a headline. A headline says in a few words what you do, for example "Accountant, 5 years".</p>
@@ -68,6 +76,25 @@
           @if (pg.profile.dateOfBirth) { <div><span class="material-icons">cake</span><dt>Date of birth</dt><dd>{{ dayLabel(pg.profile.dateOfBirth) }}</dd></div> }
         </dl>
       }
+
+      <!-- the logo of each platform, a link to the profile there -->
+      @let links = linksOf(pg);
+      <div class="jp-socials">
+        @for (l of links; track l.url) {
+          @let lg = logo(l.platform);
+          <a class="jp-social" [href]="safeLink(l.url)" target="_blank" rel="noopener noreferrer"
+             [style.--brand]="lg?.color ?? null" [title]="l.platform + ': ' + shortLink(l.url)" [attr.aria-label]="l.platform + ' profile'">
+            @if (lg) {
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="lg.path" /></svg>
+            } @else {
+              <span class="material-icons" aria-hidden="true">language</span>
+            }
+          </a>
+        }
+        <button class="jp-text-btn jp-social-edit" (click)="openSocialLinks()">
+          <span class="material-icons">{{ links.length ? 'edit' : 'add_link' }}</span>{{ links.length ? 'Edit links' : 'Add social media links' }}
+        </button>
+      </div>
     </section>
 
     <div class="jp-layout">
@@ -77,7 +104,7 @@
         @let pf = prefs(pg);
         <section class="jp-card jp-section">
           <div class="jp-section-head">
-            <span class="jp-section-icon"><span class="material-icons">tune</span></span>
+            <span class="jp-section-icon" data-tone="violet"><span class="material-icons">tune</span></span>
             <h2>Job preferences</h2>
             <button class="jp-btn" (click)="openPreferences()"><span class="material-icons">edit</span>Edit</button>
           </div>
@@ -116,7 +143,7 @@
         <!-- ═══════════ EXPERIENCE ═══════════ -->
         <section class="jp-card jp-section">
           <div class="jp-section-head">
-            <span class="jp-section-icon"><span class="material-icons">work_outline</span></span>
+            <span class="jp-section-icon" data-tone="blue"><span class="material-icons">work_outline</span></span>
             <h2>Experience</h2>
             @if (pg.experience.length) { <span class="jp-count">{{ pg.experience.length }}</span> }
             <button class="jp-btn" (click)="openExperience()"><span class="material-icons">add</span>Add</button>
@@ -141,7 +168,7 @@
         <!-- ═══════════ EDUCATION ═══════════ -->
         <section class="jp-card jp-section">
           <div class="jp-section-head">
-            <span class="jp-section-icon"><span class="material-icons">school</span></span>
+            <span class="jp-section-icon" data-tone="green"><span class="material-icons">school</span></span>
             <h2>Education</h2>
             @if (pg.education.length) { <span class="jp-count">{{ pg.education.length }}</span> }
             <button class="jp-btn" (click)="openEducation()"><span class="material-icons">add</span>Add</button>
@@ -165,7 +192,7 @@
         <!-- ═══════════ SKILLS ═══════════ -->
         <section class="jp-card jp-section">
           <div class="jp-section-head">
-            <span class="jp-section-icon"><span class="material-icons">bolt</span></span>
+            <span class="jp-section-icon" data-tone="amber"><span class="material-icons">bolt</span></span>
             <h2>Skills</h2>
             @if (pg.skills.length) { <span class="jp-count">{{ pg.skills.length }}</span> }
             <button class="jp-btn" (click)="openSkill()"><span class="material-icons">add</span>Add</button>
@@ -211,10 +238,38 @@
           }
         </section>
 
+        <!-- ═══════════ INTERESTS & HOBBIES ═══════════ -->
+        @let ih = interestsOf(pg);
+        <section class="jp-card jp-section">
+          <div class="jp-section-head">
+            <span class="jp-section-icon" data-tone="pink"><span class="material-icons">interests</span></span>
+            <h2>Interests &amp; hobbies</h2>
+            <button class="jp-btn" (click)="openInterests()"><span class="material-icons">edit</span>Edit</button>
+          </div>
+          @if (ih.interests.length || ih.hobbies.length) {
+            <dl class="jp-prefs">
+              @if (ih.interests.length) {
+                <div>
+                  <dt>Interests</dt>
+                  <dd>@for (v of ih.interests; track v) { <span class="jp-chip">{{ v }}</span> }</dd>
+                </div>
+              }
+              @if (ih.hobbies.length) {
+                <div>
+                  <dt>Hobbies</dt>
+                  <dd>@for (v of ih.hobbies; track v) { <span class="jp-chip">{{ v }}</span> }</dd>
+                </div>
+              }
+            </dl>
+          } @else {
+            <p class="jp-empty boxed">Add what interests you and what you do in your free time, for example Photography or Cricket.</p>
+          }
+        </section>
+
         <!-- ═══════════ CERTIFICATES ═══════════ -->
         <section class="jp-card jp-section">
           <div class="jp-section-head">
-            <span class="jp-section-icon"><span class="material-icons">workspace_premium</span></span>
+            <span class="jp-section-icon" data-tone="teal"><span class="material-icons">workspace_premium</span></span>
             <h2>Certificates</h2>
             @if (pg.certificates.length) { <span class="jp-count">{{ pg.certificates.length }}</span> }
             <button class="jp-btn" (click)="openCertificate()"><span class="material-icons">add</span>Add</button>
@@ -244,7 +299,7 @@
         <!-- ═══════════ RESUME ═══════════ -->
         <section class="jp-card jp-section">
           <div class="jp-section-head">
-            <span class="jp-section-icon"><span class="material-icons">description</span></span>
+            <span class="jp-section-icon" data-tone="orange"><span class="material-icons">description</span></span>
             <h2>Resume</h2>
             <label class="jp-btn" [class.disabled]="resumeBusy()">
               <span class="material-icons">upload</span>
@@ -340,6 +395,7 @@
       <h1>{{ pg.profile.fullName }}</h1>
       @if (pg.profile.headline) { <p class="jp-cv-headline">{{ pg.profile.headline }}</p> }
       @if (contactLine(pg.profile); as contact) { <p class="jp-cv-contact">{{ contact }}</p> }
+      @for (l of linksOf(pg); track l.url) { <p class="jp-cv-contact">{{ l.platform }}: {{ shortLink(l.url) }}</p> }
     </header>
 
     @if (pg.profile.summary) {
@@ -393,6 +449,15 @@
             @if (c.issuedOn) { <p class="jp-cv-dates">{{ dayLabel(c.issuedOn) }}</p> }
           </div>
         }
+      </section>
+    }
+
+    @let cvInterests = interestsOf(pg);
+    @if (cvInterests.interests.length || cvInterests.hobbies.length) {
+      <section>
+        <h2>Interests</h2>
+        @if (cvInterests.interests.length) { <p class="jp-cv-text">{{ cvInterests.interests.join(', ') }}</p> }
+        @if (cvInterests.hobbies.length) { <p class="jp-cv-text">Hobbies: {{ cvInterests.hobbies.join(', ') }}</p> }
       </section>
     }
   </article>
@@ -488,6 +553,68 @@
                      [(ngModel)]="d.model.expectedCtc" placeholder="600000" />
               <small>The yearly amount in rupees, for example 600000 for 6 LPA. Leave it empty if you prefer not to say.</small>
             </label>
+          }
+
+          @case ('interests') {
+            <div class="jp-field">
+              <label for="jp-interest">Interests</label>
+              <div class="jp-add">
+                <input id="jp-interest" class="jp-input" name="interestInput" [(ngModel)]="d.model.interestInput" maxlength="300"
+                       placeholder="Photography" (keydown.enter)="addPreference('interests'); $event.preventDefault()" />
+                <button type="button" class="jp-btn" (click)="addPreference('interests')">Add</button>
+              </div>
+              <div class="jp-chips">
+                @for (v of d.model.interests; track v; let i = $index) {
+                  <span class="jp-chip">{{ v }}
+                    <button type="button" (click)="removePreference('interests', i)" [attr.aria-label]="'Remove ' + v">✕</button>
+                  </span>
+                }
+              </div>
+            </div>
+
+            <div class="jp-field">
+              <label for="jp-hobby">Hobbies</label>
+              <div class="jp-add">
+                <input id="jp-hobby" class="jp-input" name="hobbyInput" [(ngModel)]="d.model.hobbyInput" maxlength="300"
+                       placeholder="Cricket" (keydown.enter)="addPreference('hobbies'); $event.preventDefault()" />
+                <button type="button" class="jp-btn" (click)="addPreference('hobbies')">Add</button>
+              </div>
+              <div class="jp-chips">
+                @for (v of d.model.hobbies; track v; let i = $index) {
+                  <span class="jp-chip">{{ v }}
+                    <button type="button" (click)="removePreference('hobbies', i)" [attr.aria-label]="'Remove ' + v">✕</button>
+                  </span>
+                }
+              </div>
+              <small>Up to 15 of each. Separate several with a comma.</small>
+            </div>
+          }
+
+          @case ('social') {
+            <div class="jp-field">
+              <label for="jp-link">Profile link</label>
+              <div class="jp-add">
+                <input id="jp-link" class="jp-input" name="linkInput" type="url" [(ngModel)]="d.model.linkInput" maxlength="400"
+                       placeholder="https://linkedin.com/in/your-name" (keydown.enter)="addSocialLink(); $event.preventDefault()" />
+                <button type="button" class="jp-btn" (click)="addSocialLink()">Add</button>
+              </div>
+              <small>Paste the address of your profile: LinkedIn, GitHub, X, Instagram, YouTube, Facebook, Behance, Dribbble, Medium, Stack Overflow or your own website. Up to 10.</small>
+            </div>
+            @if (d.model.links.length) {
+              <ul class="jp-link-list">
+                @for (url of d.model.links; track url; let i = $index) {
+                  @let platform = platformOf(url);
+                  @let lg = logo(platform);
+                  <li>
+                    <span class="jp-social small" [style.--brand]="lg?.color ?? null" aria-hidden="true">
+                      @if (lg) { <svg viewBox="0 0 24 24"><path [attr.d]="lg.path" /></svg> } @else { <span class="material-icons">language</span> }
+                    </span>
+                    <span class="jp-link-text"><strong>{{ platform }}</strong><small>{{ shortLink(url) }}</small></span>
+                    <button type="button" class="jp-icon-btn danger" (click)="removeSocialLink(i)" [attr.aria-label]="'Remove ' + platform + ' link'" title="Remove"><span class="material-icons">close</span></button>
+                  </li>
+                }
+              </ul>
+            }
           }
 
           @case ('experience') {
