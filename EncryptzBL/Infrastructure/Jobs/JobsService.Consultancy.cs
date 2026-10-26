@@ -32,6 +32,11 @@ namespace EncryptzBL.Infrastructure.Jobs
         Task<ApiResponse<bool>> RemoveTalent(int userId, int companyId, Guid candidateKey);
         Task<ApiResponse<bool>> InviteCandidate(int userId, int companyId, Guid candidateKey, CandidateInviteRequest req);
 
+        /// <summary>The people who fit one job of the company, best first, with why (script 24).</summary>
+        Task<ApiResponse<List<CandidateMatchDto>>> GetPostingMatches(int userId, int companyId, int postingId);
+        /// <summary>How many suitable people each open job (or one in review) of the company has.</summary>
+        Task<ApiResponse<List<PostingMatchCountDto>>> GetPostingMatchCounts(int userId, int companyId);
+
         Task<ApiResponse<PlacementListDto>> GetPlacements(int userId, int companyId);
         Task<ApiResponse<int>> SavePlacement(int userId, int companyId, PlacementSaveRequest req);
         Task<ApiResponse<bool>> DeletePlacement(int userId, int companyId, int placementId);
@@ -375,6 +380,60 @@ namespace EncryptzBL.Infrastructure.Jobs
                     In("@Message", req.Message),
                     In("@UserId", userId)
                 })));
+            });
+
+        // ── suitable candidates of a job (script PersonalDB/24) ────────────────
+
+        private const int MatchesShown = 30;
+
+        public Task<ApiResponse<List<CandidateMatchDto>>> GetPostingMatches(int userId, int companyId, int postingId)
+            => GuardedCompany(userId, companyId, "finding candidates for a job", async _ =>
+            {
+                var dt = await GetDataTableAsync("jobs.sp_Posting_Matches", new[]
+                {
+                    In("@CompanyId", companyId),
+                    In("@PostingId", postingId),
+                    In("@Count", MatchesShown)
+                });
+
+                var list = dt == null || !dt.Columns.Contains("MatchScore")
+                    ? new List<CandidateMatchDto>()
+                    : dt.Rows.Cast<DataRow>().Select(r => new CandidateMatchDto
+                    {
+                        CandidateKey = (Guid)r["CandidateKey"],
+                        FullName = Text(r, "FullName"),
+                        Headline = Text(r, "Headline"),
+                        City = Text(r, "City"),
+                        ExperienceYears = Convert.ToInt32(r["ExperienceYears"]),
+                        ExperienceSource = Text(r, "ExperienceSource"),
+                        IsVerified = Convert.ToBoolean(r["IsVerified"]),
+                        HasResume = Convert.ToBoolean(r["HasResume"]),
+                        MatchedSkills = Text(r, "MatchedSkills"),
+                        SkillHits = Convert.ToInt32(r["SkillHits"]),
+                        SkillsWanted = Convert.ToInt32(r["SkillsWanted"]),
+                        TitleHits = Convert.ToInt32(r["TitleHits"]),
+                        CityMatch = Convert.ToBoolean(r["CityMatch"]),
+                        ModeMatch = Convert.ToBoolean(r["ModeMatch"]),
+                        ExperienceFit = Convert.ToInt32(r["ExperienceFit"]),
+                        AlreadyInvited = Convert.ToBoolean(r["AlreadyInvited"]),
+                        MatchScore = Convert.ToInt32(r["MatchScore"])
+                    }).ToList();
+
+                return ApiResponse<List<CandidateMatchDto>>.Ok(list);
+            });
+
+        public Task<ApiResponse<List<PostingMatchCountDto>>> GetPostingMatchCounts(int userId, int companyId)
+            => GuardedCompany(userId, companyId, "counting candidates for the jobs", async _ =>
+            {
+                var dt = await GetDataTableAsync("jobs.sp_Posting_Match_Counts", new[] { In("@CompanyId", companyId) });
+
+                return ApiResponse<List<PostingMatchCountDto>>.Ok(dt == null
+                    ? new List<PostingMatchCountDto>()
+                    : dt.Rows.Cast<DataRow>().Select(r => new PostingMatchCountDto
+                    {
+                        PostingId = Convert.ToInt32(r["PostingId"]),
+                        Suitable = Convert.ToInt32(r["Suitable"])
+                    }).ToList());
             });
 
         // ── placements (company database) ─────────────────────────────────────

@@ -64,6 +64,9 @@ describe('HiringComponent', () => {
       getClients: () => ok([]),
       getPostingClients: () => ok([]),
       setPostingClient: (postingId: number, clientId: number | null) => { calls.push(['setPostingClient', postingId, clientId]); return ok(true); },
+      getPostingMatchCounts: () => ok([]),
+      getPostingMatches: (id: number) => { calls.push(['getPostingMatches', id]); return ok([]); },
+      invite: (key: string, postingId: number, message: string) => { calls.push(['invite', key, postingId, message]); return ok(true, 'Invitation sent'); },
     };
     companyId = 2;
     api = {
@@ -269,7 +272,8 @@ describe('HiringComponent', () => {
     const cards = Array.from(fixture.nativeElement.querySelectorAll('.jb-card')) as HTMLElement[];
 
     expect(calls).toContainEqual(['getApplicants', 7]);
-    expect(text(fixture)).toContain('2 applicants');
+    // the count of applicants is on the Applicants tab of the job
+    expect(fixture.nativeElement.querySelector('.hr-tabs button.on').textContent.replace(/\s+/g, ' ')).toContain('Applicants 2');
     expect(cards[0].textContent).toContain('Leo Joseph');
     expect(cards[0].textContent).toContain('I can start in November');
     expect(cards[0].textContent).toContain('Resume attached');
@@ -333,5 +337,59 @@ describe('HiringComponent', () => {
 
     expect(c.selected()).toBeNull();
     expect(calls.filter(x => x[0] === 'getPostings').length).toBe(2);
+  });
+
+  // ── the people who fit a job ──────────────────────────────────────────────
+
+  const match = (over: any = {}) => ({
+    candidateKey: '11111111-2222-3333-4444-555555555555', fullName: 'Sruthi Das', headline: 'Accountant, 5 years', city: 'Kochi',
+    experienceYears: 5, experienceSource: 'Headline', isVerified: true, hasResume: false, matchedSkills: 'Tally, GST', skillHits: 2,
+    skillsWanted: 3, titleHits: 1, cityMatch: true, modeMatch: false, experienceFit: 1, alreadyInvited: false, matchScore: 17, ...over,
+  });
+
+  it('shows how many suitable candidates each open job has, and opens them', () => {
+    consultancy.getPostingMatchCounts = () => ok([{ postingId: 7, suitable: 4 }]);
+    consultancy.getPostingMatches = (id: number) => { calls.push(['getPostingMatches', id]); return ok([match()]); };
+    const fixture = create();
+    const button = fixture.nativeElement.querySelector('.hr-suitable') as HTMLButtonElement;
+
+    expect(button.textContent).toContain('4 suitable candidates');
+    button.click();
+    fixture.detectChanges();
+
+    expect(calls).toContainEqual(['getPostingMatches', 7]);
+    expect(fixture.componentInstance.view()).toBe('matches');
+    const card = fixture.nativeElement.querySelector('.hr-match');
+    expect(card.textContent).toContain('Sruthi Das');
+    expect(card.textContent).toContain('2 of 3 skills');
+    expect(card.textContent).toContain('5 years (from headline)');
+    // 2 of 3 skills, with the city and the experience of the job
+    expect(card.querySelector('.hr-fit').textContent.trim()).toBe('Strong fit');
+  });
+
+  it('invites a suitable candidate in one click and marks them invited', () => {
+    consultancy.getPostingMatches = () => ok([match()]);
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.showMatches(c.postings()[0]);
+    fixture.detectChanges();
+
+    c.inviteMatch(c.matches()[0]);
+    fixture.detectChanges();
+
+    expect(calls).toContainEqual(['invite', '11111111-2222-3333-4444-555555555555', 7, '']);
+    expect(c.matches()[0].alreadyInvited).toBe(true);
+    expect(fixture.nativeElement.querySelector('.hr-invited').textContent).toContain('Invited');
+  });
+
+  it('opens the whole profile of a suitable candidate in Candidates', () => {
+    consultancy.getPostingMatches = () => ok([match()]);
+    const fixture = create();
+    const c = fixture.componentInstance;
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    c.showMatches(c.postings()[0]);
+
+    c.viewMatch(c.matches()[0]);
+    expect(navigate).toHaveBeenCalledWith(['/consultancy/candidates'], { queryParams: { candidate: '11111111-2222-3333-4444-555555555555' } });
   });
 });

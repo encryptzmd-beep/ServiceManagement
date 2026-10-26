@@ -310,6 +310,8 @@ namespace EncryptzTests
             public Task<ApiResponse<bool>> SaveTalent(int userId, int companyId, Guid candidateKey, TalentSaveRequest req) => Seen(userId, companyId, true);
             public Task<ApiResponse<bool>> RemoveTalent(int userId, int companyId, Guid candidateKey) => Seen(userId, companyId, true);
             public Task<ApiResponse<bool>> InviteCandidate(int userId, int companyId, Guid candidateKey, CandidateInviteRequest req) => Seen(userId, companyId, true);
+            public Task<ApiResponse<List<CandidateMatchDto>>> GetPostingMatches(int userId, int companyId, int postingId) => Seen(userId, companyId, new List<CandidateMatchDto>());
+            public Task<ApiResponse<List<PostingMatchCountDto>>> GetPostingMatchCounts(int userId, int companyId) => Seen(userId, companyId, new List<PostingMatchCountDto>());
             public Task<ApiResponse<PlacementListDto>> GetPlacements(int userId, int companyId) => Seen(userId, companyId, new PlacementListDto());
             public Task<ApiResponse<int>> SavePlacement(int userId, int companyId, PlacementSaveRequest req) => Seen(userId, companyId, 1);
             public Task<ApiResponse<bool>> DeletePlacement(int userId, int companyId, int placementId) => Seen(userId, companyId, true);

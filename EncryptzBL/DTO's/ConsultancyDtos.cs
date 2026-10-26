@@ -126,6 +126,39 @@ namespace EncryptzBL.DTO_s
         public string? Note { get; set; }
     }
 
+    /// <summary>A person who fits one job of the company (script PersonalDB/24), and why.</summary>
+    public class CandidateMatchDto
+    {
+        public Guid CandidateKey { get; set; }
+        public string FullName { get; set; } = "";
+        public string Headline { get; set; } = "";
+        public string City { get; set; } = "";
+        public int ExperienceYears { get; set; }
+        /// <summary>Entries, Headline or None (as the candidate search).</summary>
+        public string ExperienceSource { get; set; } = "";
+        public bool IsVerified { get; set; }
+        public bool HasResume { get; set; }
+        /// <summary>The skills of the job the person has, and how many the job names.</summary>
+        public string MatchedSkills { get; set; } = "";
+        public int SkillHits { get; set; }
+        public int SkillsWanted { get; set; }
+        /// <summary>How many words of the title are in the headline, a past job title or a job the person looks for.</summary>
+        public int TitleHits { get; set; }
+        public bool CityMatch { get; set; }
+        public bool ModeMatch { get; set; }
+        /// <summary>1 in the range of the job, 0 out of it, -1 not known (no range, or no experience).</summary>
+        public int ExperienceFit { get; set; }
+        /// <summary>Invited to this job already.</summary>
+        public bool AlreadyInvited { get; set; }
+        public int MatchScore { get; set; }
+    }
+
+    public class PostingMatchCountDto
+    {
+        public int PostingId { get; set; }
+        public int Suitable { get; set; }
+    }
+
     public class CandidateInviteRequest
     {
         public int PostingId { get; set; }

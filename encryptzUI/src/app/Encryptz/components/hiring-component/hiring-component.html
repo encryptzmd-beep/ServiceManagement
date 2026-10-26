@@ -20,10 +20,72 @@
       <button class="jp-btn" (click)="backToJobs()"><span class="material-icons">chevron_left</span>All jobs</button>
       <h1>{{ job.title }}</h1>
       <span [class]="postingClass(job.status)">{{ postingLabel(job.status) }}</span>
-      <span class="jp-count">{{ applicants().length }} {{ applicants().length === 1 ? 'applicant' : 'applicants' }}</span>
     </div>
 
-    @if (applicantsLoading()) {
+    <div class="hr-tabs" role="tablist" aria-label="Who">
+      <button type="button" role="tab" [class.on]="view() === 'applicants'" [attr.aria-selected]="view() === 'applicants'" (click)="setView('applicants')">
+        <span class="material-icons" aria-hidden="true">how_to_reg</span>Applicants <span class="hr-tab-count">{{ applicants().length }}</span>
+      </button>
+      <button type="button" role="tab" [class.on]="view() === 'matches'" [attr.aria-selected]="view() === 'matches'" (click)="setView('matches')">
+        <span class="material-icons" aria-hidden="true">auto_awesome</span>Suitable candidates
+        @if (matchCount()[job.postingId] !== undefined) { <span class="hr-tab-count">{{ matchCount()[job.postingId] }}</span> }
+      </button>
+    </div>
+
+    @if (view() === 'matches') {
+
+      <!-- ═══════════ PEOPLE WHO FIT THE JOB ═══════════ -->
+      <p class="hr-matches-intro">People on Job Portal who let employers find them and fit this job: its skills and title first, then city, experience and work mode. Applicants are under Applicants.</p>
+      @if (matchesLoading()) {
+        <div class="jp-state"><span class="jp-spinner" aria-hidden="true"></span></div>
+      } @else {
+        @for (m of matches(); track m.candidateKey) {
+          @let fit = fitLabel(m);
+          <article class="jp-card jb-card hr-match">
+            <div class="hr-avatar" aria-hidden="true">{{ initials(m.fullName) || '?' }}</div>
+            <div class="jb-card-main">
+              <h2><button class="jb-title" (click)="viewMatch(m)">{{ m.fullName }}</button>@if (m.isVerified) { <app-verified-badge hint="Person verified by Encryptz" /> }</h2>
+              <div class="jb-company">{{ m.headline }}</div>
+              <div class="jb-meta">
+                @if (m.city) { <span [class.hr-hit]="m.cityMatch"><span class="material-icons">place</span>{{ m.city }}</span> }
+                <span [class.hr-hit]="m.experienceFit === 1" [class.hr-miss]="m.experienceFit === 0"><span class="material-icons">work_outline</span>{{ matchExperience(m) }}</span>
+                @if (m.modeMatch) { <span class="hr-hit"><span class="material-icons">apartment</span>{{ job.workMode }}</span> }
+                <span><span class="material-icons">description</span>{{ m.hasResume ? 'Resume' : 'No resume' }}</span>
+              </div>
+              @if (matchSkills(m).length) {
+                <div class="hr-why">
+                  <span class="hr-why-label">{{ m.skillHits }} of {{ m.skillsWanted }} skills</span>
+                  @for (s of matchSkills(m); track s) { <span class="hr-skill"><span class="material-icons" aria-hidden="true">check</span>{{ s }}</span> }
+                </div>
+              } @else if (m.titleHits) {
+                <div class="hr-why"><span class="hr-why-label">The job title matches their work</span></div>
+              }
+            </div>
+            <div class="jb-card-side">
+              <span class="hr-fit" [attr.data-tone]="fit.tone">{{ fit.text }}</span>
+              @if (m.alreadyInvited) {
+                <span class="hr-invited"><span class="material-icons" aria-hidden="true">check_circle</span>Invited</span>
+              } @else {
+                <button class="jp-btn primary" (click)="inviteMatch(m)" [disabled]="inviting() !== null || job.status !== 'Open'"
+                        [title]="job.status === 'Open' ? 'Invite to apply for this job' : 'The job takes applications once it is approved'">
+                  <span class="material-icons">send</span>{{ inviting() === m.candidateKey ? 'Sending…' : 'Invite' }}
+                </button>
+              }
+              <div class="hr-actions">
+                <button class="jp-btn" (click)="messageMatch(m)" [disabled]="messaging()" title="Message"><span class="material-icons">chat_bubble_outline</span></button>
+                <button class="jp-btn" (click)="viewMatch(m)">View profile</button>
+              </div>
+            </div>
+          </article>
+        } @empty {
+          <div class="jp-card jb-empty">
+            <span class="material-icons">person_search</span>
+            <p>Nobody fits this job yet. Add its skills to the job, or look in <a routerLink="/consultancy/candidates">Candidates</a>.</p>
+          </div>
+        }
+      }
+
+    } @else if (applicantsLoading()) {
       <div class="jp-state"><span class="jp-spinner" aria-hidden="true"></span></div>
     } @else {
       @for (a of applicants(); track a.applicationId) {
@@ -85,6 +147,9 @@
               }
             } @else if (p.status === 'InReview') {
               <span>Waiting for review by Encryptz. People find it once it is approved.</span>
+              @if (matchCount()[p.postingId]; as n) {
+                <button class="hr-suitable" (click)="showMatches(p)"><span class="material-icons" aria-hidden="true">auto_awesome</span>{{ n }} suitable</button>
+              }
               @if (applicantCount(p)) {
                 <button class="jb-title" (click)="showApplicants(p)">· {{ applicantCount(p) }} {{ applicantCount(p) === 1 ? 'applicant' : 'applicants' }}</button>
               }
@@ -92,6 +157,9 @@
               <button class="jb-title" (click)="showApplicants(p)">
                 {{ applicantCount(p) }} {{ applicantCount(p) === 1 ? 'applicant' : 'applicants' }}
               </button>
+              @if (matchCount()[p.postingId]; as n) {
+                <button class="hr-suitable" (click)="showMatches(p)"><span class="material-icons" aria-hidden="true">auto_awesome</span>{{ n }} suitable {{ n === 1 ? 'candidate' : 'candidates' }}</button>
+              }
               @if (applicantCount(p)) {
                 <span>· {{ p.applied }} new · {{ p.shortlisted }} shortlisted · {{ p.hired }} hired · {{ p.rejected }} rejected</span>
               }

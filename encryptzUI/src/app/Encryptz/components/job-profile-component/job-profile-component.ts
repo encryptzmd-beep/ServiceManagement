@@ -89,6 +89,8 @@ export class JobProfileComponent implements OnInit, OnDestroy {
   share = signal<JobProfileShare | null>(null);
   shareBusy = signal(false);
   shareError = signal('');
+  /** The server cannot answer the link yet (PersonalDB script 19 not run, or an older API). */
+  shareUnavailable = signal(false);
 
   resumeError = signal('');
   resumeBusy = signal(false);
@@ -136,8 +138,8 @@ export class JobProfileComponent implements OnInit, OnDestroy {
   /** A failure only hides the card: the rest of the page is not affected. */
   private loadShare(): void {
     this.api.getShare().subscribe({
-      next: res => this.share.set(res.success && res.data ? res.data : null),
-      error: () => this.share.set(null),
+      next: res => { this.share.set(res.success && res.data ? res.data : null); this.shareUnavailable.set(!(res.success && res.data)); },
+      error: () => { this.share.set(null); this.shareUnavailable.set(true); },
     });
   }
 

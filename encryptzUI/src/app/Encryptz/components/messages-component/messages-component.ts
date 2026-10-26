@@ -6,6 +6,7 @@ import { JobAlertsService } from '../../Services/job-alerts-service';
 import { JobsService } from '../../Services/jobs-service';
 import { ChatMessage, Conversation, ConversationSummary, MessageSide, MessagesService } from '../../Services/messages-service';
 import { NotificationService } from '../../Services/notification-service';
+import { MessageAlertsService } from '../../Services/message-alerts-service';
 import { jobPath } from '../../Services/public-jobs-service';
 import { initial } from '../../Services/job-labels';
 import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
@@ -39,6 +40,7 @@ export class MessagesComponent implements OnDestroy {
   private companyJobs = inject(CompanyJobsService);
   private notices = inject(NotificationService);
   private alerts = inject(JobAlertsService);
+  private messageAlerts = inject(MessageAlertsService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
 
@@ -162,6 +164,7 @@ export class MessagesComponent implements OnDestroy {
         this.open.set(res.data);
         // it is read now: its unread count goes
         this.conversations.update(list => list.map(c => (c.conversationId === id ? { ...c, unread: 0 } : c)));
+        this.messageAlerts.refresh(this.side);
         if (grew) this.scrollDown();
       },
       error: () => { this.openLoading.set(false); if (!quiet) this.notify('The conversation could not be opened', false); },

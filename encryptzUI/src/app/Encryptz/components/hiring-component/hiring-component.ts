@@ -15,7 +15,7 @@ import { JOB_EMPLOYMENT_TYPES, JOB_WORK_MODES, JobEducation, JobSkill } from '..
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
 import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
-import { ConsultClient, ConsultancyService, PostingClient } from '../../Services/consultancy-service';
+import { CandidateMatch, ConsultClient, ConsultancyService, PostingClient } from '../../Services/consultancy-service';
 import { MessagesService } from '../../Services/messages-service';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -70,6 +70,14 @@ export class HiringComponent implements OnInit {
   applicants = signal<JobApplicant[]>([]);
   applicantsLoading = signal(false);
 
+  /** One job shows its applicants, or the people who fit it. */
+  view = signal<'applicants' | 'matches'>('applicants');
+  matches = signal<CandidateMatch[]>([]);
+  matchesLoading = signal(false);
+  /** How many suitable people each open job has (empty until known). */
+  matchCount = signal<Record<number, number>>({});
+  inviting = signal<string | null>(null);
+
   /** The applicant who is open with their profile. */
   applicant = signal<JobApplicantPage | null>(null);
   statusBusy = signal(false);
@@ -83,6 +91,19 @@ export class HiringComponent implements OnInit {
     }
     this.load();
     this.loadClients();
+    this.loadMatchCounts();
+  }
+
+  /** The numbers only add to the page: when they cannot be read, the jobs still show. */
+  private loadMatchCounts(): void {
+    this.consultancy.getPostingMatchCounts().subscribe({
+      next: res => {
+        const map: Record<number, number> = {};
+        for (const m of res.success ? res.data ?? [] : []) map[m.postingId] = m.suitable;
+        this.matchCount.set(map);
+      },
+      error: () => {},
+    });
   }
 
   /** The clients only add to the page: when they cannot be read, the jobs still show. */
@@ -235,7 +256,89 @@ export class HiringComponent implements OnInit {
   showApplicants(posting: CompanyPosting): void {
     this.selected.set(posting);
     this.applicants.set([]);
+    this.view.set('applicants');
     this.loadApplicants();
+  }
+
+  // ── the people who fit a job ──────────────────────────────────────────────
+
+  showMatches(posting: CompanyPosting): void {
+    if (this.selected()?.postingId !== posting.postingId) this.showApplicants(posting);
+    this.setView('matches');
+  }
+
+  setView(view: 'applicants' | 'matches'): void {
+    this.view.set(view);
+    if (view === 'matches') this.loadMatches();
+  }
+
+  private loadMatches(): void {
+    const posting = this.selected();
+    if (!posting) return;
+    this.matchesLoading.set(true);
+    this.consultancy.getPostingMatches(posting.postingId).subscribe({
+      next: res => {
+        this.matchesLoading.set(false);
+        this.matches.set(res.success ? res.data ?? [] : []);
+        if (!res.success) this.notify(res.message, false);
+      },
+      error: () => { this.matchesLoading.set(false); this.notify('The candidates could not be found. Please try again', false); },
+    });
+  }
+
+  /** An invitation to apply for this job, in one click (the person is told). */
+  inviteMatch(m: CandidateMatch): void {
+    const posting = this.selected();
+    if (!posting || this.inviting() || m.alreadyInvited) return;
+    this.inviting.set(m.candidateKey);
+    this.consultancy.invite(m.candidateKey, posting.postingId, '').subscribe({
+      next: res => {
+        this.inviting.set(null);
+        this.notify(res.success ? `Invitation sent to ${m.fullName}` : res.message, res.success);
+        if (res.success || res.message === 'This candidate was already invited to the job') {
+          this.matches.update(list => list.map(x => (x.candidateKey === m.candidateKey ? { ...x, alreadyInvited: true } : x)));
+        }
+      },
+      error: () => { this.inviting.set(null); this.notify('Could not send the invitation. Please try again', false); },
+    });
+  }
+
+  messageMatch(m: CandidateMatch): void {
+    const posting = this.selected();
+    if (!posting || this.messaging()) return;
+    this.messaging.set(true);
+    this.messages.startAsCompany({ candidateKey: m.candidateKey, postingId: posting.postingId }).subscribe({
+      next: res => {
+        this.messaging.set(false);
+        if (res.success && res.data) this.router.navigate(['/consultancy/messages'], { queryParams: { c: res.data } });
+        else this.notify(res.message || 'Could not open the conversation', false);
+      },
+      error: () => { this.messaging.set(false); this.notify('Could not open the conversation. Please try again', false); },
+    });
+  }
+
+  /** The whole profile, in Candidates (the person sees which company opened it). */
+  viewMatch(m: CandidateMatch): void {
+    this.router.navigate(['/consultancy/candidates'], { queryParams: { candidate: m.candidateKey } });
+  }
+
+  matchSkills(m: CandidateMatch): string[] {
+    return (m.matchedSkills || '').split(',').map(s => s.trim()).filter(Boolean);
+  }
+
+  /** Strong, good or fair: the share of what the job asks that the person has. */
+  fitLabel(m: CandidateMatch): { text: string; tone: string } {
+    const skills = m.skillsWanted > 0 ? m.skillHits / m.skillsWanted : (m.titleHits > 0 ? 1 : 0);
+    const extra = (m.cityMatch ? 1 : 0) + (m.experienceFit === 1 ? 1 : 0) + (m.modeMatch ? 1 : 0);
+    if (skills >= 0.6 && extra >= 2) return { text: 'Strong fit', tone: 'strong' };
+    if (skills >= 0.3 || (m.titleHits > 0 && extra >= 1)) return { text: 'Good fit', tone: 'good' };
+    return { text: 'Fair fit', tone: 'fair' };
+  }
+
+  matchExperience(m: CandidateMatch): string {
+    if (m.experienceSource === 'None') return 'Experience not added';
+    const years = `${m.experienceYears} ${m.experienceYears === 1 ? 'year' : 'years'}`;
+    return m.experienceSource === 'Headline' ? `${years} (from headline)` : years;
   }
 
   private loadApplicants(): void {

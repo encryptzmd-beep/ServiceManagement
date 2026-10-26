@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
 import { CompanyJobsService, CompanyPosting } from '../../Services/company-jobs-service';
 import {
@@ -28,6 +28,14 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
  * note), opens a profile (the person sees which company looked) and invites a candidate
  * to apply for one of its open jobs.
  */
+/** An open job whose closing day (if any) is today or later: it still takes applications. */
+export function takesApplications(p: { status: string; closesOn?: string | null }, today = new Date()): boolean {
+  if (p.status !== 'Open') return false;
+  if (!p.closesOn) return true;
+  const day = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  return p.closesOn.slice(0, 10) >= day;
+}
+
 @Component({
   selector: 'app-consultancy-candidates-component',
   standalone: true,
@@ -44,6 +52,7 @@ export class ConsultancyCandidatesComponent implements OnInit {
   private jobs = inject(CompanyJobsService);
   private auth = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private messages = inject(MessagesService);
 
   readonly menu = CONSULTANCY_MENU;
@@ -85,6 +94,8 @@ export class ConsultancyCandidatesComponent implements OnInit {
   invitePostingId: number | null = null;
   inviteMessage = '';
   inviting = signal(false);
+  /** The invitations sent to the open candidate while the dialog is open: shown in it. */
+  invited = signal<string[]>([]);
 
   panelError = signal('');
   toast = signal<{ text: string; ok: boolean } | null>(null);
@@ -92,8 +103,12 @@ export class ConsultancyCandidatesComponent implements OnInit {
   ngOnInit(): void {
     if (!this.auth.scopeState().companyId) { this.router.navigate(['/select-company']); return; }
     this.load();
+    // a candidate named in the address (a suitable candidate of a job): opened at once
+    const named = this.route.snapshot.queryParamMap.get('candidate');
+    if (named && /^[0-9a-f-]{36}$/i.test(named)) this.openCandidate({ candidateKey: named } as Candidate);
     this.jobs.getPostings().subscribe({
-      next: res => this.openJobs.set(res.success ? (res.data ?? []).filter(p => p.status === 'Open') : []),
+      // only a job that still takes applications: one past its closing day is refused by the server
+      next: res => this.openJobs.set(res.success ? (res.data ?? []).filter(p => takesApplications(p)) : []),
       error: () => this.openJobs.set([]),
     });
   }
@@ -229,6 +244,7 @@ export class ConsultancyCandidatesComponent implements OnInit {
         this.poolNote = res.data.note || '';
         this.invitePostingId = this.openJobs()[0]?.postingId ?? null;
         this.inviteMessage = '';
+        this.invited.set([]);
         this.open.set(res.data);
       },
       error: () => this.notify('The candidate could not be opened. Please try again', false),
@@ -292,6 +308,8 @@ export class ConsultancyCandidatesComponent implements OnInit {
       next: res => {
         this.inviting.set(false);
         if (!res.success) { this.panelError.set(res.message || 'Could not send the invitation'); return; }
+        const job = this.openJobs().find(j => j.postingId === this.invitePostingId);
+        if (job) this.invited.update(list => [...list, job.title]);
         this.inviteMessage = '';
         this.notify(res.message, true);
       },

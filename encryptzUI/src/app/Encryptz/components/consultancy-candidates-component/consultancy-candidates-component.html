@@ -242,8 +242,11 @@
             <div class="cd-pool-actions">
               <button class="jp-btn" (click)="invite()" [disabled]="inviting()"><span class="material-icons">send</span>{{ inviting() ? 'Sending…' : 'Send invitation' }}</button>
             </div>
+            @for (t of invited(); track $index) {
+              <p class="cd-invited"><span class="material-icons" aria-hidden="true">check_circle</span>Invitation sent for <strong>{{ t }}</strong>. {{ pg.profile.fullName }} is told now.</p>
+            }
           } @else {
-            <p class="jp-note">Publish a job to invite candidates to apply for it.</p>
+            <p class="jp-note">You have no job that takes applications now. Publish a job (or extend its closing day) to invite candidates to it.</p>
           }
         </section>
 

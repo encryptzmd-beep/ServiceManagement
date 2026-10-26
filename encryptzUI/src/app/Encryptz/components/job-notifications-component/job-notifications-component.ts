@@ -85,6 +85,7 @@ export class JobNotificationsComponent implements OnInit {
       case 'Rejected': return 'do_not_disturb_on';
       case 'JobClosed': return 'event_busy';
       case 'Invitation': return 'campaign';
+      case 'Message': return 'chat';
       case 'JobApproved': return 'task_alt';
       case 'JobReturned': return 'undo';
       case 'ReviewWaiting':

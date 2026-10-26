@@ -138,3 +138,107 @@ $hair: #f0f1f3;
 
 .hr-actions { justify-content: flex-start; }
 }
+
+/* ── one job: its applicants, or the people who fit it ── */
+.hr-tabs {
+  display: inline-flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border: 1px solid #e4e8f0;
+  border-radius: 12px;
+  background: #fff;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border: none;
+    border-radius: 9px;
+    background: none;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7489;
+    cursor: pointer;
+
+    .material-icons { font-size: 16px; }
+    &.on { background: #eef4ff; color: #1d4ed8; font-weight: 600; }
+  }
+}
+
+.hr-tab-count { min-width: 18px; padding: 0 6px; border-radius: 999px; background: #f1f4f9; font-size: 11px; font-weight: 700; text-align: center; }
+.hr-tabs button.on .hr-tab-count { background: #fff; }
+
+.hr-matches-intro { margin: -4px 0 12px; font-size: 12.5px; color: #6b7489; }
+
+.hr-suitable {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 2px 10px 2px 7px;
+  border: 1px solid #d6e3fd;
+  border-radius: 999px;
+  background: #eef4ff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1d4ed8;
+  cursor: pointer;
+
+  .material-icons { font-size: 14px; color: #f59e0b; }
+  &:hover { background: #e2ebff; }
+}
+
+.hr-match .jb-meta > span.hr-hit { border-color: #c4ecd9; background: #ecfbf4; color: #0e6b4a; .material-icons { color: #0e8a5f; } }
+.hr-match .jb-meta > span.hr-miss { border-color: #fbe0b5; background: #fff7eb; color: #92400e; }
+
+.hr-why {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.hr-why-label { margin-right: 4px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em; color: #6b7489; }
+
+.hr-skill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 9px 2px 6px;
+  border: 1px solid #c4ecd9;
+  border-radius: 999px;
+  background: #ecfbf4;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #0e6b4a;
+
+  .material-icons { font-size: 13px; }
+}
+
+.hr-fit {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &[data-tone='strong'] { background: #ecfbf4; color: #0e8a5f; border: 1px solid #c4ecd9; }
+  &[data-tone='good'] { background: #eef4ff; color: #1d4ed8; border: 1px solid #d6e3fd; }
+  &[data-tone='fair'] { background: #f7f8fb; color: #6b7489; border: 1px solid #e4e8f0; }
+}
+
+.hr-invited {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0e8a5f;
+
+  .material-icons { font-size: 16px; }
+}

@@ -89,6 +89,16 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> RemoveTalent(Guid key)
             => Answer(await _consultancy.RemoveTalent(Caller(), Company(), key));
 
+        /// <summary>The people who fit one job of the company, best first, with why.</summary>
+        [HttpGet("postings/{id:int}/matches")]
+        public async Task<IActionResult> GetPostingMatches(int id)
+            => Answer(await _consultancy.GetPostingMatches(Caller(), Company(), id));
+
+        /// <summary>How many suitable people each open job of the company has.</summary>
+        [HttpGet("postings/match-counts")]
+        public async Task<IActionResult> GetPostingMatchCounts()
+            => Answer(await _consultancy.GetPostingMatchCounts(Caller(), Company()));
+
         [HttpPost("candidates/{key:guid}/invite")]
         public async Task<IActionResult> InviteCandidate(Guid key, [FromBody] CandidateInviteRequest? req)
             => Answer(await _consultancy.InviteCandidate(Caller(), Company(), key, req ?? new CandidateInviteRequest()));

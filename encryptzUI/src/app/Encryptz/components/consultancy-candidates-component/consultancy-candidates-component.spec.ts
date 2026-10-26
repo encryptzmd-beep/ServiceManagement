@@ -4,7 +4,7 @@ import { of } from 'rxjs';
 import { AuthService } from '../../Auth/auth-service';
 import { CompanyJobsService } from '../../Services/company-jobs-service';
 import { ConsultancyService } from '../../Services/consultancy-service';
-import { ConsultancyCandidatesComponent } from './consultancy-candidates-component';
+import { ConsultancyCandidatesComponent, takesApplications } from './consultancy-candidates-component';
 
 describe('ConsultancyCandidatesComponent', () => {
   const key = '6f9619ff-8b86-d011-b42d-00cf4fc964ff';
@@ -135,6 +135,15 @@ describe('ConsultancyCandidatesComponent', () => {
     expect(fixture.componentInstance.countOf('Band', 'none')).toBe(1);
   });
 
+  it('offers only jobs that still take applications for an invitation', () => {
+    const today = new Date(2026, 9, 26);
+    expect(takesApplications({ status: 'Open', closesOn: null }, today)).toBe(true);
+    expect(takesApplications({ status: 'Open', closesOn: '2026-10-26' }, today)).toBe(true);
+    expect(takesApplications({ status: 'Open', closesOn: '2026-10-25T00:00:00' }, today)).toBe(false);
+    expect(takesApplications({ status: 'InReview', closesOn: null }, today)).toBe(false);
+    expect(takesApplications({ status: 'Closed', closesOn: null }, today)).toBe(false);
+  });
+
   it('says so when the server is older than the filters, instead of showing an unfiltered list as filtered', () => {
     // the answer of a server from before the filters: no choices at all
     const fixture = create();
@@ -208,6 +217,10 @@ describe('ConsultancyCandidatesComponent', () => {
     c.inviteMessage = ' Fits you ';
     c.invite();
     expect(calls).toContainEqual(['invite', key, 7, 'Fits you']);
+    // the dialog says it was sent, for which job (a toast alone is easy to miss)
+    expect(c.invited().length).toBe(1);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.cd-invited').textContent).toContain('Invitation sent for');
 
     c.invitePostingId = null;
     c.invite();

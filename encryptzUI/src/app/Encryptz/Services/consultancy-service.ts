@@ -56,6 +56,35 @@ export interface Candidate {
   stage: TalentStage | '';
 }
 
+/** A person who fits one job of the company, and why (best first). */
+export interface CandidateMatch {
+  candidateKey: string;
+  fullName: string;
+  headline: string;
+  city: string;
+  experienceYears: number;
+  experienceSource: 'Entries' | 'Headline' | 'None' | '';
+  isVerified: boolean;
+  hasResume: boolean;
+  /** The skills of the job the person has (comma separated), and how many the job names. */
+  matchedSkills: string;
+  skillHits: number;
+  skillsWanted: number;
+  /** Words of the title found in the headline, a past job title or a job the person looks for. */
+  titleHits: number;
+  cityMatch: boolean;
+  modeMatch: boolean;
+  /** 1 in the range of the job, 0 out of it, -1 not known. */
+  experienceFit: number;
+  alreadyInvited: boolean;
+  matchScore: number;
+}
+
+export interface PostingMatchCount {
+  postingId: number;
+  suitable: number;
+}
+
 /** Years of experience a candidate can be filtered by. */
 export const EXPERIENCE_BANDS: { value: string; label: string }[] = [
   { value: '0-1', label: 'Under 1 year' },
@@ -186,6 +215,16 @@ export class ConsultancyService {
     if (s.verifiedOnly) params = params.set('verifiedOnly', true);
     if (s.withResume) params = params.set('withResume', true);
     return this.http.get<ApiResponse<CandidateSearchResult>>(`${this.api}/candidates`, { params });
+  }
+
+  /** The people who fit one job of the company, best first. */
+  getPostingMatches(postingId: number): Observable<ApiResponse<CandidateMatch[]>> {
+    return this.http.get<ApiResponse<CandidateMatch[]>>(`${this.api}/postings/${postingId}/matches`);
+  }
+
+  /** How many suitable people each open job of the company has. */
+  getPostingMatchCounts(): Observable<ApiResponse<PostingMatchCount[]>> {
+    return this.http.get<ApiResponse<PostingMatchCount[]>>(`${this.api}/postings/match-counts`);
   }
 
   getCandidate(key: string): Observable<ApiResponse<CandidatePage>> {

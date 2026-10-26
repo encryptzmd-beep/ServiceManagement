@@ -385,6 +385,15 @@
           </div>
         }
 
+        @if (!share() && shareUnavailable()) {
+          <div class="jp-card jp-visibility jp-share">
+            <span class="jp-switch-text">
+              <strong>Share my profile</strong>
+              <small>The link to your profile is not available yet. Please try again later.</small>
+            </span>
+          </div>
+        }
+
         @if (views(); as seen) {
           <div class="jp-card jp-views">
             <div class="jp-views-head">

@@ -1,7 +1,12 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, computed, effect, inject, input, untracked } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
 import { NotificationBellComponent } from '../notification-bell-component/notification-bell-component';
+import { MessageAlertsService } from '../../Services/message-alerts-service';
+import { MessageSide } from '../../Services/messages-service';
+
+/** The Messages page of each side: its menu line gets the number of unread messages. */
+const MESSAGE_PAGES: Record<string, MessageSide> = { '/apps/jobs/messages': 'person', '/consultancy/messages': 'company' };
 
 /** One line of the side menu of a personal application. */
 export interface PersonalMenuItem {
@@ -53,7 +58,7 @@ export interface PersonalMenuItem {
     <div class="ps-body" [class.with-nav]="menu().length">
       @if (menu().length) {
         <nav class="ps-nav" [attr.aria-label]="appName() + ' menu'">
-          @for (item of menu(); track item.label) {
+          @for (item of shownMenu(); track item.label) {
             @if (item.route) {
               <a class="ps-nav-item" [routerLink]="item.route" routerLinkActive="active"
                  [routerLinkActiveOptions]="{ exact: !!item.exact }">
@@ -89,6 +94,22 @@ export class PersonalShellComponent {
   subtitle = input<string>('Personal application');
   backLabel = input<string>('Back to companies');
   backRoute = input<string>('/select-company');
+
+  private messageAlerts = inject(MessageAlertsService);
+
+  /** The menu as given, with the number of unread messages beside "Messages". */
+  readonly shownMenu = computed(() => this.menu().map(item => {
+    const side = item.route ? MESSAGE_PAGES[item.route] : undefined;
+    return side && !item.badge ? { ...item, badge: this.messageAlerts.unread[side]() } : item;
+  }));
+
+  constructor() {
+    // a menu with Messages: its number is read when the page opens
+    effect(() => {
+      const sides = new Set(this.menu().map(i => (i.route ? MESSAGE_PAGES[i.route] : undefined)).filter((s): s is MessageSide => !!s));
+      untracked(() => sides.forEach(side => this.messageAlerts.watch(side)));
+    });
+  }
 
   /** The first letters of the first two words of the name, for the picture place. */
   initials(): string {
