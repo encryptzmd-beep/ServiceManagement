@@ -30,6 +30,8 @@ namespace EncryptzBL.DTO_s
         public string Status { get; set; } = "";
         /// <summary>Why the platform administrator returned the job ('' when not returned).</summary>
         public string ReviewNote { get; set; } = "";
+        /// <summary>The platform administrator approved it and it is open or closed: it carries the Verified tick.</summary>
+        public bool IsVerified { get; set; }
         public DateTime? PublishedAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public int Applied { get; set; }
@@ -60,6 +62,8 @@ namespace EncryptzBL.DTO_s
         public string MyStatus { get; set; } = "";
         /// <summary>It still takes applications.</summary>
         public bool IsOpen { get; set; }
+        /// <summary>The platform administrator approved the job: it carries the Verified tick (script 16).</summary>
+        public bool IsVerified { get; set; }
         /// <summary>How well it fits the person's preferences: job 3, location 2, working mode 1 (0 = not at all).</summary>
         public int MatchScore { get; set; }
     }
@@ -117,6 +121,8 @@ namespace EncryptzBL.DTO_s
         public DateTime AppliedAt { get; set; }
         public DateTime StatusAt { get; set; }
         public bool HasResume { get; set; }
+        /// <summary>The platform administrator verified the person.</summary>
+        public bool IsVerified { get; set; }
     }
 
     /// <summary>One applicant opened by the company: the application and the person's profile as it is now.</summary>
@@ -158,6 +164,34 @@ namespace EncryptzBL.DTO_s
     {
         public List<CertificateReviewDto> Certificates { get; set; } = new();
         public List<PostingReviewDto> Postings { get; set; } = new();
+    }
+
+    /// <summary>A person the platform administrator can verify (script 16). Named by the key, never by a user id.</summary>
+    public class PersonReviewDto
+    {
+        public Guid CandidateKey { get; set; }
+        public string FullName { get; set; } = "";
+        public string Headline { get; set; } = "";
+        public string City { get; set; } = "";
+        public string ContactEmail { get; set; } = "";
+        public string ContactPhone { get; set; } = "";
+        public DateTime? DateOfBirth { get; set; }
+        /// <summary>"Employers can find me".</summary>
+        public bool IsVisible { get; set; }
+        public DateTime? VerifiedAt { get; set; }
+        public string VerifiedBy { get; set; } = "";
+        public DateTime UpdatedAt { get; set; }
+        public int ExperienceCount { get; set; }
+        public int VerifiedCertificates { get; set; }
+        public bool HasResume { get; set; }
+    }
+
+    public class PersonReviewPageDto
+    {
+        public List<PersonReviewDto> Items { get; set; } = new();
+        public int Total { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
     }
 
     public class VerificationDecisionRequest

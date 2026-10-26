@@ -13,6 +13,7 @@ import {
 } from '../../Services/company-jobs-service';
 import { JOB_EMPLOYMENT_TYPES, JOB_WORK_MODES, JobEducation, JobSkill } from '../../Services/jobs-service';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
+import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
 import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
 import { ConsultClient, ConsultancyService, PostingClient } from '../../Services/consultancy-service';
 
@@ -28,7 +29,7 @@ const REFUSED = "You don't have access to Job Consultancy. Ask your administrato
 @Component({
   selector: 'app-hiring-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent],
   templateUrl: './hiring-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',

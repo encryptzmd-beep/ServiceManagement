@@ -129,6 +129,8 @@ namespace EncryptzTests
         [InlineData("GetCertificateFile", "GET", "certificates/{id:int}/file")]
         [InlineData("DecideCertificate", "POST", "certificates/{id:int}")]
         [InlineData("DecidePosting", "POST", "postings/{id:int}")]
+        [InlineData("GetPeople", "GET", "people")]
+        [InlineData("DecidePerson", "POST", "people/{key:guid}")]
         public void The_endpoints_exist_behind_a_login_and_an_unlocked_screen(string action, string verb, string? template)
         {
             var http = typeof(VerificationController).GetMethod(action)!.GetCustomAttributes().OfType<HttpMethodAttribute>().Single();
@@ -151,6 +153,10 @@ namespace EncryptzTests
             public Task<ApiResponse<bool>> DecideCertificate(int userId, int certificateId, bool verified, string? note, string adminName)
             { Calls++; LastAdmin = adminName; return Task.FromResult(ApiResponse<bool>.Ok(true)); }
             public Task<ApiResponse<bool>> DecidePosting(int userId, int postingId, bool approved, string? note, string adminName)
+            { Calls++; LastAdmin = adminName; return Task.FromResult(ApiResponse<bool>.Ok(true)); }
+            public Task<ApiResponse<PersonReviewPageDto>> GetPeopleForReview(int userId, string? query, string? show, int? page)
+            { Calls++; return Task.FromResult(ApiResponse<PersonReviewPageDto>.Ok(new PersonReviewPageDto())); }
+            public Task<ApiResponse<bool>> DecidePerson(int userId, Guid candidateKey, bool verified, string? note, string adminName)
             { Calls++; LastAdmin = adminName; return Task.FromResult(ApiResponse<bool>.Ok(true)); }
         }
 
@@ -180,6 +186,8 @@ namespace EncryptzTests
             Assert.Equal(403, Assert.IsType<ObjectResult>(await controller.GetCertificateFile(1)).StatusCode);
             Assert.Equal(403, Assert.IsType<ObjectResult>(await controller.DecideCertificate(1, new VerificationDecisionRequest { Approve = true })).StatusCode);
             Assert.Equal(403, Assert.IsType<ObjectResult>(await controller.DecidePosting(1, new VerificationDecisionRequest { Approve = true })).StatusCode);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(await controller.GetPeople(null, null, null)).StatusCode);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(await controller.DecidePerson(Guid.NewGuid(), new VerificationDecisionRequest { Approve = true })).StatusCode);
             Assert.Equal(0, fake.Calls);
         }
 

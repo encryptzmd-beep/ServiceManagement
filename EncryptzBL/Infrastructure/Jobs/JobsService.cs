@@ -188,7 +188,8 @@ namespace EncryptzBL.Infrastructure.Jobs
                     ContactEmail = r["ContactEmail"]?.ToString() ?? "",
                     ContactPhone = r["ContactPhone"]?.ToString() ?? "",
                     DateOfBirth = r["DateOfBirth"] == DBNull.Value ? null : Convert.ToDateTime(r["DateOfBirth"]),
-                    IsVisible = Convert.ToBoolean(r["IsVisible"])
+                    IsVisible = Convert.ToBoolean(r["IsVisible"]),
+                    IsVerified = FlagOrFalse(r, "IsVerified")
                 };
             }
 

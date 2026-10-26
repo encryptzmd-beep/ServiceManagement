@@ -20,6 +20,7 @@ import {
 import { JobAlertsService } from '../../Services/job-alerts-service';
 import { jobsMenu } from '../personal-shell-component/jobs-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
+import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
 import { SOCIAL_PLATFORMS, SocialPlatform, platformOf } from './social-platforms';
 
 type DialogKind = 'profile' | 'preferences' | 'interests' | 'social' | 'experience' | 'education' | 'skill' | 'certificate';
@@ -64,7 +65,7 @@ const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 @Component({
   selector: 'app-job-profile-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent],
   templateUrl: './job-profile-component.html',
   styleUrl: './job-profile-component.scss',
 })

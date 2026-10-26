@@ -14,6 +14,8 @@ namespace EncryptzBL.DTO_s
         public DateTime? DateOfBirth { get; set; }
         /// <summary>"Employers can find me". Changed only through the visibility endpoint.</summary>
         public bool IsVisible { get; set; }
+        /// <summary>The platform administrator verified the person (script 16). Read only: saving the profile ignores it.</summary>
+        public bool IsVerified { get; set; }
     }
 
     public class JobExperienceDto

@@ -113,7 +113,7 @@
       <article class="jp-card jb-card" [class.closed]="!p.isOpen">
         <div class="jb-logo" aria-hidden="true">{{ initial(p.companyName) }}</div>
         <div class="jb-card-main">
-          <h2><button class="jb-title" (click)="open(p.postingId)">{{ p.title }}</button></h2>
+          <h2><button class="jb-title" (click)="open(p.postingId)">{{ p.title }}</button>@if (p.isVerified) { <app-verified-badge hint="Job verified by Encryptz" /> }</h2>
           @if ((p.matchScore ?? 0) > 0) {
             <span class="jb-match"><span class="material-icons" aria-hidden="true">auto_awesome</span>Matches your preferences</span>
           }
@@ -187,6 +187,7 @@
         <div class="jb-detail-company">
           <div class="jb-logo" aria-hidden="true">{{ initial(p.companyName) }}</div>
           <div class="jb-company">{{ p.companyName }}</div>
+          @if (p.isVerified) { <app-verified-badge label="Verified job" hint="Encryptz checked this job before it was published" /> }
         </div>
         <div class="jb-meta">
           <span><span class="material-icons">place</span>{{ p.city }}</span>

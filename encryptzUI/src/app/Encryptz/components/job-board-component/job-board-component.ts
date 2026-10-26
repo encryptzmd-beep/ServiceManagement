@@ -13,6 +13,7 @@ import {
 import { JobAlertsService } from '../../Services/job-alerts-service';
 import { jobsMenu } from '../personal-shell-component/jobs-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
+import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
 
 export type JobBoardMode = 'search' | 'applications' | 'saved';
 
@@ -26,7 +27,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 @Component({
   selector: 'app-job-board-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent],
   templateUrl: './job-board-component.html',
   styleUrls: ['../job-profile-component/job-profile-component.scss', './job-board-component.scss'],
 })

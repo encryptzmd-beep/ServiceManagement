@@ -15,6 +15,7 @@ import {
 import { JOB_WORK_MODES, JobEducation, JobSkill } from '../../Services/jobs-service';
 import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
+import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -27,7 +28,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 @Component({
   selector: 'app-consultancy-candidates-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent],
   templateUrl: './consultancy-candidates-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',
@@ -240,6 +241,13 @@ export class ConsultancyCandidatesComponent implements OnInit {
 
   initials(name: string | null | undefined): string {
     return (name ?? '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => Array.from(w)[0].toUpperCase()).join('');
+  }
+
+  /** One of four pastel tones for an avatar, the same for the same name. */
+  tone(name: string | null | undefined): number {
+    let sum = 0;
+    for (const ch of name ?? '') sum = (sum + ch.charCodeAt(0)) % 997;
+    return sum % 4;
   }
 
   list(text: string): string[] {

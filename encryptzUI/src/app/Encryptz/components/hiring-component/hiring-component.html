@@ -30,7 +30,7 @@
         <article class="jp-card jb-card">
           <div class="hr-avatar" aria-hidden="true">{{ initials(a.fullName) || '?' }}</div>
           <div class="jb-card-main">
-            <h2><button class="jb-title" (click)="openApplicant(a)">{{ a.fullName || 'No name' }}</button></h2>
+            <h2><button class="jb-title" (click)="openApplicant(a)">{{ a.fullName || 'No name' }}</button>@if (a.isVerified) { <app-verified-badge hint="Person verified by Encryptz" /> }</h2>
             <div class="jb-company">{{ a.headline }}</div>
             <div class="jb-meta">
               @if (a.city) { <span><span class="material-icons">place</span>{{ a.city }}</span> }
@@ -68,7 +68,7 @@
       <article class="jp-card jb-card">
         <div class="jb-logo" aria-hidden="true"><span class="material-icons">work_outline</span></div>
         <div class="jb-card-main">
-          <h2>{{ p.title }}</h2>
+          <h2>{{ p.title }}@if (p.isVerified) { <app-verified-badge label="Verified" hint="Encryptz approved this job" /> }</h2>
           <div class="jb-meta">
             <span><span class="material-icons">place</span>{{ p.city }}</span>
             <span><span class="material-icons">schedule</span>{{ p.employmentType }}</span>
@@ -209,7 +209,7 @@
   <div class="jp-overlay">
     <div class="jp-dialog jb-detail" role="dialog" aria-modal="true">
       <div class="jp-dialog-head">
-        <h3>{{ pg.profile.fullName || 'Applicant' }}</h3>
+        <h3>{{ pg.profile.fullName || 'Applicant' }}@if (pg.profile.isVerified) { <app-verified-badge label="Verified" hint="Encryptz verified this person" /> }</h3>
         <button class="jp-close" (click)="closeApplicant()" aria-label="Close"><span class="material-icons">close</span></button>
       </div>
       <div class="jp-dialog-body hr-profile">

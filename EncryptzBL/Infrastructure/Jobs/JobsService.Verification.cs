@@ -100,6 +100,70 @@ namespace EncryptzBL.Infrastructure.Jobs
                 })));
             }, personal: false);
 
+        // ── people (script PersonalDB/16) ─────────────────────────────────────
+
+        private const int PeoplePageSize = 20;
+
+        public Task<ApiResponse<PersonReviewPageDto>> GetPeopleForReview(int userId, string? query, string? show, int? page)
+            => Guarded(userId, "reading the people to verify", async () =>
+            {
+                var pageNumber = JobPostingRules.Page(page);
+                var shown = show is "verified" or "all" ? show : "waiting";
+
+                var dt = await GetDataTableAsync("jobs.sp_Admin_Person_List", new[]
+                {
+                    In("@Query", JobPostingRules.SearchText(query)),
+                    In("@Show", shown),
+                    In("@Page", pageNumber),
+                    In("@PageSize", PeoplePageSize)
+                });
+
+                var result = new PersonReviewPageDto { Page = pageNumber, PageSize = PeoplePageSize };
+                if (dt != null && dt.Rows.Count > 0)
+                {
+                    result.Items = dt.Rows.Cast<DataRow>().Select(r => new PersonReviewDto
+                    {
+                        CandidateKey = (Guid)r["CandidateKey"],
+                        FullName = r["FullName"]?.ToString() ?? "",
+                        Headline = r["Headline"]?.ToString() ?? "",
+                        City = r["City"]?.ToString() ?? "",
+                        ContactEmail = r["ContactEmail"]?.ToString() ?? "",
+                        ContactPhone = r["ContactPhone"]?.ToString() ?? "",
+                        DateOfBirth = DateOrNull(r, "DateOfBirth"),
+                        IsVisible = Convert.ToBoolean(r["IsVisible"]),
+                        VerifiedAt = DateOrNull(r, "VerifiedAt"),
+                        VerifiedBy = r["VerifiedBy"]?.ToString() ?? "",
+                        UpdatedAt = Convert.ToDateTime(r["UpdatedAt"]),
+                        ExperienceCount = Convert.ToInt32(r["ExperienceCount"]),
+                        VerifiedCertificates = Convert.ToInt32(r["VerifiedCertificates"]),
+                        HasResume = Convert.ToBoolean(r["HasResume"])
+                    }).ToList();
+                    result.Total = Convert.ToInt32(dt.Rows[0]["TotalCount"]);
+                }
+
+                return ApiResponse<PersonReviewPageDto>.Ok(result);
+            }, personal: false);
+
+        public Task<ApiResponse<bool>> DecidePerson(int userId, Guid candidateKey, bool verified, string? note, string adminName)
+            => Guarded(userId, "deciding on a person", async () =>
+            {
+                var text = (note ?? "").Trim();
+                if (candidateKey == Guid.Empty)
+                    return ApiResponse<bool>.Fail(NotFound);
+                if (text.Length > MaxNoteLength)
+                    return ApiResponse<bool>.Fail("The note can have at most 500 characters");
+                if (!verified && text.Length == 0)
+                    return ApiResponse<bool>.Fail("Say why the tick is taken away. The person reads it");
+
+                return AsFlag(Answer(await Told("jobs.sp_Admin_Person_Decide", new[]
+                {
+                    In("@CandidateKey", candidateKey),
+                    In("@Verified", verified),
+                    In("@Note", text),
+                    In("@AdminName", AdminName(adminName))
+                })));
+            }, personal: false);
+
         private static string AdminName(string? name)
         {
             var text = (name ?? "").Trim();

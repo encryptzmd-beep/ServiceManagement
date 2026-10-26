@@ -1,40 +1,70 @@
 /* Job Consultancy, Candidates. Cards, search bar, chips and dialogs come from the profile and the job pages. */
 
-$ink: #111827;
-$muted: #6b7280;
-$line: #e6eaf0;
-$hair: #f0f1f3;
-$navy: #1b4a7a;
-$tint: #eef4fb;
+$display: 'Outfit', 'DM Sans', sans-serif;
+$ink: #141b34;
+$text: #3b4357;
+$muted: #6b7489;
+$faint: #9aa3b5;
+$line: #e4e8f0;
+$hair: #eef1f6;
+$navy: #1d4ed8;
+$accent: #2563eb;
+$tint: #eef4ff;
+$green: #0e8a5f;
 
-.jb-card:hover { transform: none; }
+/* ── head: title on the left, the two views on the right ── */
+.jb-head { flex-wrap: wrap; }
+.jb-head-text { flex: 1 1 320px; }
 
 .cd-tabs {
   display: inline-flex;
   gap: 4px;
-  padding: 3px;
-  margin-bottom: 12px;
+  padding: 4px;
   border: 1px solid $line;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #fff;
+  box-shadow: 0 1px 2px rgba(20, 40, 90, 0.04);
 
   button {
-    padding: 6px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
     border: none;
-    border-radius: 7px;
+    border-radius: 9px;
     background: none;
     font: inherit;
     font-size: 13px;
     font-weight: 500;
     color: $muted;
     cursor: pointer;
+    transition: background 0.15s, color 0.15s;
 
-    &.on { background: $tint; color: $navy; font-weight: 600; }
+    .material-icons { font-size: 16px; }
+    &:hover { color: $ink; }
+    &.on { background: $tint; color: $navy; font-weight: 600; box-shadow: inset 0 0 0 1px #d6e3fd; }
+    &:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.4); outline-offset: 1px; }
   }
 }
 
-.jb-search { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto; }
+.jb-search {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  box-shadow: 0 1px 2px rgba(20, 40, 90, 0.04), 0 8px 24px rgba(20, 40, 90, 0.05);
 
+  .jp-btn .material-icons { font-size: 17px; }
+}
+
+/* ── a candidate in the list ── */
+.cd-card {
+  align-items: flex-start;
+
+  .jb-company { color: $text; font-weight: 500; }
+  .jb-card-side { align-self: center; }
+  .jb-card-side .jp-btn .material-icons { font-size: 16px; transition: transform 0.15s; }
+  &:hover .jb-card-side .jp-btn .material-icons { transform: translateX(2px); }
+}
+
+/* the initials on a pastel circle; the tone comes from the name */
 .cd-avatar {
   width: 46px;
   height: 46px;
@@ -43,45 +73,114 @@ $tint: #eef4fb;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: linear-gradient(135deg, #215789 0%, $navy 60%, #153a60 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #e7f0ff 0%, #eee9ff 100%);
+  box-shadow: inset 0 0 0 1px rgba(29, 78, 216, 0.08);
+  color: $navy;
+  font-family: $display;
   font-size: 15px;
   font-weight: 600;
+  letter-spacing: 0.02em;
+
+  &[data-tone='1'] { background: linear-gradient(135deg, #ddf7ec 0%, #dcf6f2 100%); color: $green; }
+  &[data-tone='2'] { background: linear-gradient(135deg, #fff1dd 0%, #ffedd5 100%); color: #c2410c; }
+  &[data-tone='3'] { background: linear-gradient(135deg, #fde7f1 0%, #eee9ff 100%); color: #be185d; }
+
+  &.lg { width: 52px; height: 52px; flex-basis: 52px; font-size: 18px; }
 }
 
+.cd-resume.on {
+  border-color: #c4ecd9 !important;
+  background: #ecfbf4 !important;
+  color: $green;
+  .material-icons { color: $green !important; }
+}
+
+.cd-looking {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px dashed $hair;
+  font-size: 12px;
+  color: $muted;
+
+  .material-icons { font-size: 14px; color: #d97706; }
+  strong { font-weight: 600; color: $text; }
+}
+
+/* ── one candidate, opened ── */
 .cd-dialog { max-width: 760px; }
+
+.cd-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.cd-hero-text {
+  min-width: 0;
+
+  h3 { line-height: 1.25; overflow-wrap: anywhere; }
+  .jb-company { margin-top: 3px; font-size: 13px; }
+}
+
+.cd-contact { margin-top: 0; }
 
 .cd-body {
   gap: 16px;
 
-  section { padding-top: 14px; border-top: 1px solid $hair; }
-  h4 { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: $navy; }
+  section { padding-top: 16px; border-top: 1px solid $hair; }
+
+  h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: $muted;
+
+    .material-icons { font-size: 16px; color: $accent; }
+    .jb-status { margin-left: auto; text-transform: none; letter-spacing: 0; }
+  }
 }
 
 .cd-pool, .cd-invite {
-  padding: 14px !important;
+  padding: 16px !important;
   border: 1px solid $line !important;
-  border-radius: 10px;
-  background: #fafbfd;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8faff 0%, #fff 100%);
+
+  h4 { color: $ink; }
 }
+
+.cd-invite { background: linear-gradient(180deg, #fbf8ff 0%, #fff 100%); }
 
 .cd-pool-row {
   display: flex;
   gap: 12px;
 
-  label { flex: 0 0 auto; min-width: 160px; }
+  label { flex: 0 0 auto; min-width: 180px; }
   .cd-grow { flex: 1 1 auto; }
 }
 
-.cd-pool-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.cd-pool-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 
+/* experience, education and certificates: a line down the side, a dot for each */
 .cd-item {
-  padding: 8px 0;
+  position: relative;
+  padding: 0 0 14px 18px;
   font-size: 14px;
   color: $ink;
   overflow-wrap: anywhere;
 
-  &:first-of-type { padding-top: 0; }
+  &::before { content: ''; position: absolute; left: 3px; top: 7px; width: 7px; height: 7px; border-radius: 50%; background: $accent; box-shadow: 0 0 0 3px $tint; }
+  &::after { content: ''; position: absolute; left: 6px; top: 18px; bottom: 2px; width: 1px; background: $line; }
+  &:last-child { padding-bottom: 0; &::after { display: none; } }
+
   strong { font-weight: 600; }
   .jp-pill { margin-left: 8px; }
 }
@@ -89,5 +188,11 @@ $tint: #eef4fb;
 .cd-ic { font-size: 13px !important; vertical-align: -2px; }
 
 @media (max-width: 640px) {
+  .cd-tabs { width: 100%; button { flex: 1; justify-content: center; } }
   .cd-pool-row { flex-direction: column; label { min-width: 0; } }
+  .cd-card .jb-card-side { align-self: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cd-card:hover .jb-card-side .jp-btn .material-icons { transform: none; }
 }

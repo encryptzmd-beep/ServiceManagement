@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment.development';
 import { ApiResponse } from '../Models/ApiModels';
@@ -218,6 +218,34 @@ export interface PostingReview {
   wasPublished: boolean;
 }
 
+/** A person Encryptz can verify. Named by the key, never by a user id. */
+export interface PersonReview {
+  candidateKey: string;
+  fullName: string;
+  headline: string;
+  city: string;
+  contactEmail: string;
+  contactPhone: string;
+  dateOfBirth?: string | null;
+  /** "Employers can find me". */
+  isVisible: boolean;
+  verifiedAt?: string | null;
+  verifiedBy: string;
+  updatedAt: string;
+  experienceCount: number;
+  verifiedCertificates: number;
+  hasResume: boolean;
+}
+
+export type PersonReviewShow = 'waiting' | 'verified' | 'all';
+
+export interface PersonReviewPage {
+  items: PersonReview[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface VerificationQueue {
   certificates: CertificateReview[];
   postings: PostingReview[];
@@ -264,6 +292,15 @@ export class PlatformService {
 
   decidePosting(postingId: number, approve: boolean, note: string): Observable<ApiResponse<boolean>> {
     return this.http.post<ApiResponse<boolean>>(`${this.api}/verification/postings/${postingId}`, { approve, note }, { headers: this.headers });
+  }
+
+  getPeopleForReview(q: string, show: PersonReviewShow, page: number): Observable<ApiResponse<PersonReviewPage>> {
+    const params = new HttpParams().set('q', q).set('show', show).set('page', page);
+    return this.http.get<ApiResponse<PersonReviewPage>>(`${this.api}/verification/people`, { headers: this.headers, params });
+  }
+
+  decidePerson(candidateKey: string, approve: boolean, note: string): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/verification/people/${encodeURIComponent(candidateKey)}`, { approve, note }, { headers: this.headers });
   }
 
   isUnlocked(): Observable<{ success: boolean; unlocked: boolean }> {

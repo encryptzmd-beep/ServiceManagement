@@ -224,6 +224,7 @@ namespace EncryptzBL.Infrastructure.Jobs
                             PreferredJobs = Text(r, "PreferredJobs"),
                             WorkModes = Text(r, "WorkModes"),
                             HasResume = Convert.ToBoolean(r["HasResume"]),
+                            IsVerified = FlagOrFalse(r, "IsVerified"),
                             InPool = inPool,
                             Stage = inPool ? p.Stage : ""
                         };

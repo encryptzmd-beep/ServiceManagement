@@ -47,6 +47,8 @@ namespace EncryptzBL.DTO_s
         public string PreferredJobs { get; set; } = "";
         public string WorkModes { get; set; } = "";
         public bool HasResume { get; set; }
+        /// <summary>The platform administrator verified the person.</summary>
+        public bool IsVerified { get; set; }
         /// <summary>In this company's pool.</summary>
         public bool InPool { get; set; }
         /// <summary>The stage in the pool ('' when not in it).</summary>

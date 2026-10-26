@@ -33,6 +33,11 @@ namespace EncryptzBL.Infrastructure.Jobs
         Task<ApiResponse<JobFileContent>> GetCertificateFileForReview(int userId, int certificateId);
         Task<ApiResponse<bool>> DecideCertificate(int userId, int certificateId, bool verified, string? note, string adminName);
         Task<ApiResponse<bool>> DecidePosting(int userId, int postingId, bool approved, string? note, string adminName);
+
+        /// <summary>People to verify. <paramref name="show"/>: waiting (not verified), verified or all.</summary>
+        Task<ApiResponse<PersonReviewPageDto>> GetPeopleForReview(int userId, string? query, string? show, int? page);
+        /// <summary>Verifies a person, or takes the tick away (that needs a reason the person reads).</summary>
+        Task<ApiResponse<bool>> DecidePerson(int userId, Guid candidateKey, bool verified, string? note, string adminName);
     }
 
     /// <summary>

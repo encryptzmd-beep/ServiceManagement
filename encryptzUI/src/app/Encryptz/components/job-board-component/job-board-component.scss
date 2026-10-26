@@ -196,6 +196,9 @@ $tint: #eef4ff;
   &:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.4); outline-offset: 2px; border-radius: 2px; }
 }
 
+/* the Verified tick right after a title */
+.jb-card h2 app-verified-badge, .jp-dialog-head h3 app-verified-badge { margin-left: 8px; vertical-align: 1px; }
+
 .jb-company { margin-top: 2px; font-size: 12.5px; font-weight: 600; color: $accent; overflow-wrap: anywhere; }
 
 /* each fact a soft pill */

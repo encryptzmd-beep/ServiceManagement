@@ -48,6 +48,8 @@ export interface Candidate {
   preferredJobs: string;
   workModes: string;
   hasResume: boolean;
+  /** Encryptz verified the person. */
+  isVerified?: boolean;
   inPool: boolean;
   stage: TalentStage | '';
 }

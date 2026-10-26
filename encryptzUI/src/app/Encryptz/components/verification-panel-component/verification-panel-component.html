@@ -2,18 +2,117 @@
   <div class="vp-head">
     <div>
       <h2>Verification</h2>
-      <p>Certificates people uploaded and jobs companies want to publish. Nothing here is visible to others until it is approved.</p>
+      <p>Certificates people uploaded and jobs companies want to publish. Nothing here is visible to others until it is approved. Verified people and approved jobs carry the Verified tick.</p>
     </div>
-    <button class="vp-btn" (click)="load()" [disabled]="loading()"><span class="material-icons">refresh</span>Refresh</button>
+    <button class="vp-btn" (click)="refresh()" [disabled]="loading() || peopleLoading()"><span class="material-icons">refresh</span>Refresh</button>
   </div>
 
   <div class="vp-filters" role="group" aria-label="Show">
-    <button [class.on]="filter() === 'all'" (click)="filter.set('all')">All <span>{{ certificates().length + postings().length }}</span></button>
-    <button [class.on]="filter() === 'certificates'" (click)="filter.set('certificates')">Certificates <span>{{ certificates().length }}</span></button>
-    <button [class.on]="filter() === 'postings'" (click)="filter.set('postings')">Job postings <span>{{ postings().length }}</span></button>
+    <button [class.on]="filter() === 'all'" (click)="showFilter('all')">All <span>{{ certificates().length + postings().length }}</span></button>
+    <button [class.on]="filter() === 'certificates'" (click)="showFilter('certificates')">Certificates <span>{{ certificates().length }}</span></button>
+    <button [class.on]="filter() === 'postings'" (click)="showFilter('postings')">Job postings <span>{{ postings().length }}</span></button>
+    <button [class.on]="filter() === 'people'" (click)="showFilter('people')"><i class="material-icons vp-ic" aria-hidden="true">verified</i>People</button>
   </div>
 
-  @if (loading()) {
+  @if (filter() === 'people') {
+
+    <!-- ═══════════ PEOPLE: verify a person, or take the tick away ═══════════ -->
+    <form class="vp-tools" (ngSubmit)="loadPeople(1)">
+      <label class="vp-search">
+        <span class="material-icons" aria-hidden="true">search</span>
+        <input name="peopleQuery" [(ngModel)]="peopleQuery" maxlength="100" placeholder="Name, headline, email or phone" aria-label="Search people" />
+      </label>
+      <button class="vp-btn" type="submit">Search</button>
+      <span class="vp-grow"></span>
+      <div class="vp-seg" role="group" aria-label="Which people">
+        <button type="button" [class.on]="peopleShow() === 'waiting'" (click)="setPeopleShow('waiting')">Not verified</button>
+        <button type="button" [class.on]="peopleShow() === 'verified'" (click)="setPeopleShow('verified')">Verified</button>
+        <button type="button" [class.on]="peopleShow() === 'all'" (click)="setPeopleShow('all')">All</button>
+      </div>
+    </form>
+
+    @if (peopleLoading()) {
+      <div class="vp-state"><span class="vp-spinner" aria-hidden="true"></span> Loading…</div>
+    } @else if (peopleError()) {
+      <div class="vp-state bad">{{ peopleError() }} <button class="vp-btn" (click)="loadPeople(peoplePage())">Try again</button></div>
+    } @else {
+      <p class="vp-count">{{ peopleTotal() }} {{ peopleTotal() === 1 ? 'person' : 'people' }}</p>
+      @for (p of people(); track p.candidateKey) {
+        @let key = personKey(p);
+        <article class="vp-card vp-person" [class.verified]="!!p.verifiedAt">
+          <div class="vp-person-top">
+            <div class="vp-avatar" aria-hidden="true">{{ (p.fullName || '?').trim().charAt(0).toUpperCase() }}</div>
+            <div class="vp-person-main">
+              <h3>{{ p.fullName }}@if (p.verifiedAt) { <app-verified-badge [compact]="true" /> }</h3>
+              <div class="vp-person-headline">{{ p.headline }}</div>
+            </div>
+            @if (p.verifiedAt) {
+              <span class="vp-kind ok"><span class="material-icons">verified</span>Verified</span>
+            } @else {
+              <span class="vp-kind cert"><span class="material-icons">pending</span>Not verified</span>
+            }
+          </div>
+
+          <div class="vp-meta vp-contact">
+            @if (p.city) { <span><span class="material-icons">place</span>{{ p.city }}</span> }
+            @if (p.contactEmail) { <span><span class="material-icons">mail_outline</span>{{ p.contactEmail }}</span> }
+            @if (p.contactPhone) { <span><span class="material-icons">call</span>{{ p.contactPhone }}</span> }
+            <span><span class="material-icons">cake</span>{{ p.dateOfBirth ? dayLabel(p.dateOfBirth) : 'No date of birth' }}</span>
+          </div>
+          <div class="vp-facts">
+            <span>{{ p.experienceCount }} {{ p.experienceCount === 1 ? 'job' : 'jobs' }} in experience</span>
+            <span>{{ p.verifiedCertificates }} verified {{ p.verifiedCertificates === 1 ? 'certificate' : 'certificates' }}</span>
+            <span>{{ p.hasResume ? 'Resume uploaded' : 'No resume' }}</span>
+            <span>{{ p.isVisible ? 'Employers can find them' : 'Private profile' }}</span>
+          </div>
+
+          <div class="vp-foot">
+            <span class="vp-when">
+              @if (p.verifiedAt) { Verified {{ dayLabel(p.verifiedAt) }}@if (p.verifiedBy) { by {{ p.verifiedBy }} } }
+              @else { Profile changed {{ dayLabel(p.updatedAt) }} }
+            </span>
+            @if (refusing() !== key) {
+              <span class="vp-grow"></span>
+              @if (p.verifiedAt) {
+                <button class="vp-btn" (click)="startPersonRefusal(p)" [disabled]="busy() !== null">Take the tick away</button>
+              } @else {
+                <button class="vp-btn primary" (click)="verifyPerson(p)" [disabled]="busy() !== null"><span class="material-icons">verified</span>Verify person</button>
+              }
+            }
+          </div>
+
+          @if (refusing() === key) {
+            <div class="vp-refuse">
+              <label>
+                Why is the tick taken away? The person reads this.
+                <textarea rows="3" maxlength="500" [(ngModel)]="reason" name="reason"></textarea>
+              </label>
+              <div class="vp-refuse-foot">
+                <button class="vp-btn ghost" (click)="cancelRefusal()" [disabled]="busy() !== null">Cancel</button>
+                <button class="vp-btn danger" (click)="unverifyPerson(p)" [disabled]="busy() !== null">Take the tick away</button>
+              </div>
+            </div>
+          }
+
+          @if (itemError()?.key === key) { <div class="vp-error">{{ itemError()!.text }}</div> }
+        </article>
+      } @empty {
+        <div class="vp-empty">
+          <span class="material-icons">{{ peopleShow() === 'waiting' ? 'task_alt' : 'person_search' }}</span>
+          <p>{{ peopleShow() === 'waiting' && !peopleQuery.trim() ? 'Everybody with a profile is verified.' : 'Nobody matches.' }}</p>
+        </div>
+      }
+
+      @if (peopleLastPage > 1) {
+        <nav class="vp-pages" aria-label="Pages">
+          <button class="vp-btn" (click)="loadPeople(peoplePage() - 1)" [disabled]="peoplePage() <= 1">Previous</button>
+          <span>Page {{ peoplePage() }} of {{ peopleLastPage }}</span>
+          <button class="vp-btn" (click)="loadPeople(peoplePage() + 1)" [disabled]="peoplePage() >= peopleLastPage">Next</button>
+        </nav>
+      }
+    }
+
+  } @else if (loading()) {
     <div class="vp-state"><span class="vp-spinner" aria-hidden="true"></span> Loading…</div>
   } @else if (error()) {
     <div class="vp-state bad">{{ error() }} <button class="vp-btn" (click)="load()">Try again</button></div>

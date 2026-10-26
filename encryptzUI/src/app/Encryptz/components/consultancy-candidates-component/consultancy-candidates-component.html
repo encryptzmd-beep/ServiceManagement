@@ -6,11 +6,10 @@
       <h1>Candidates @if (!loading() && !unavailable()) { <span class="jp-count">{{ total() }}</span> }</h1>
       <p>People on Job Portal who chose to be found by employers. They see which company opened their profile.</p>
     </div>
-  </div>
-
-  <div class="cd-tabs" role="group" aria-label="Show">
-    <button [class.on]="!filter.pool" (click)="setPool(false)">Search all</button>
-    <button [class.on]="filter.pool" (click)="setPool(true)">My pool</button>
+    <div class="cd-tabs" role="group" aria-label="Show">
+      <button type="button" [class.on]="!filter.pool" (click)="setPool(false)"><span class="material-icons" aria-hidden="true">travel_explore</span>Search all</button>
+      <button type="button" [class.on]="filter.pool" (click)="setPool(true)"><span class="material-icons" aria-hidden="true">bookmarks</span>My pool</button>
+    </div>
   </div>
 
   <form class="jp-card jb-search" (ngSubmit)="search()">
@@ -37,7 +36,7 @@
         @for (m of workModes; track m) { <option [value]="m">{{ m }}</option> }
       </select>
     </label>
-    <button class="jp-btn primary" type="submit">Search</button>
+    <button class="jp-btn primary" type="submit"><span class="material-icons" aria-hidden="true">search</span>Search</button>
   </form>
 
   @if (loading()) {
@@ -52,24 +51,24 @@
   } @else {
     @for (c of items(); track c.candidateKey) {
       <article class="jp-card jb-card cd-card">
-        <div class="cd-avatar" aria-hidden="true">{{ initials(c.fullName) || '?' }}</div>
+        <div class="cd-avatar" [attr.data-tone]="tone(c.fullName)" aria-hidden="true">{{ initials(c.fullName) || '?' }}</div>
         <div class="jb-card-main">
-          <h2><button class="jb-title" (click)="openCandidate(c)">{{ c.fullName }}</button></h2>
+          <h2><button class="jb-title" (click)="openCandidate(c)">{{ c.fullName }}</button>@if (c.isVerified) { <app-verified-badge hint="Person verified by Encryptz" /> }</h2>
           <div class="jb-company">{{ c.headline }}</div>
           <div class="jb-meta">
             @if (c.city) { <span><span class="material-icons">place</span>{{ c.city }}</span> }
             <span><span class="material-icons">work_outline</span>{{ c.experienceYears }} {{ c.experienceYears === 1 ? 'year' : 'years' }}</span>
             @if (c.workModes) { <span><span class="material-icons">apartment</span>{{ c.workModes }}</span> }
-            <span><span class="material-icons">description</span>{{ c.hasResume ? 'Resume' : 'No resume' }}</span>
+            <span class="cd-resume" [class.on]="c.hasResume"><span class="material-icons">{{ c.hasResume ? 'task' : 'description' }}</span>{{ c.hasResume ? 'Resume' : 'No resume' }}</span>
           </div>
           @if (list(c.skills).length) {
             <div class="jb-skills">@for (s of list(c.skills); track s) { <span class="jp-chip">{{ s }}</span> }</div>
           }
-          @if (c.preferredJobs) { <div class="jb-foot">Looking for: {{ c.preferredJobs }}</div> }
+          @if (c.preferredJobs) { <div class="jb-foot cd-looking"><span class="material-icons" aria-hidden="true">flag</span><span>Looking for <strong>{{ c.preferredJobs }}</strong></span></div> }
         </div>
         <div class="jb-card-side">
           @if (c.inPool) { <span [class]="stageClass(c.stage)">{{ stageLabel(c.stage) }}</span> }
-          <button class="jp-btn" (click)="openCandidate(c)">View profile</button>
+          <button class="jp-btn" (click)="openCandidate(c)">View profile<span class="material-icons" aria-hidden="true">arrow_forward</span></button>
         </div>
       </article>
     } @empty {
@@ -106,13 +105,18 @@
   <div class="jp-overlay">
     <div class="jp-dialog jb-detail cd-dialog" role="dialog" aria-modal="true">
       <div class="jp-dialog-head">
-        <h3>{{ pg.profile.fullName }}</h3>
+        <div class="cd-hero">
+          <div class="cd-avatar lg" [attr.data-tone]="tone(pg.profile.fullName)" aria-hidden="true">{{ initials(pg.profile.fullName) || '?' }}</div>
+          <div class="cd-hero-text">
+            <h3>{{ pg.profile.fullName }}@if (pg.profile.isVerified) { <app-verified-badge label="Verified" hint="Encryptz verified this person" /> }</h3>
+            @if (pg.profile.headline) { <div class="jb-company">{{ pg.profile.headline }}</div> }
+          </div>
+        </div>
         <button class="jp-close" (click)="close()" aria-label="Close"><span class="material-icons">close</span></button>
       </div>
       <div class="jp-dialog-body cd-body">
         <div>
-          <div class="jb-company">{{ pg.profile.headline }}</div>
-          <div class="jb-meta">
+          <div class="jb-meta cd-contact">
             @if (pg.profile.city) { <span><span class="material-icons">place</span>{{ pg.profile.city }}</span> }
             @if (pg.profile.contactEmail) { <span><span class="material-icons">mail_outline</span>{{ pg.profile.contactEmail }}</span> }
             @if (pg.profile.contactPhone) { <span><span class="material-icons">call</span>{{ pg.profile.contactPhone }}</span> }
@@ -121,6 +125,9 @@
 
         <!-- the pool: stage and note of this company -->
         <section class="cd-pool">
+          <h4><span class="material-icons" aria-hidden="true">bookmarks</span>My pool
+            @if (c.inPool) { <span [class]="stageClass(c.stage)">{{ stageLabel(c.stage) }}</span> }
+          </h4>
           <div class="cd-pool-row">
             <label>Stage
               <select class="jp-input" name="poolStage" [(ngModel)]="poolStage">
@@ -141,6 +148,7 @@
 
         <!-- an invitation to one of the open jobs -->
         <section class="cd-invite">
+          <h4><span class="material-icons" aria-hidden="true">mark_email_unread</span>Invite to a job</h4>
           @if (openJobs().length) {
             <div class="cd-pool-row">
               <label>Invite to apply for

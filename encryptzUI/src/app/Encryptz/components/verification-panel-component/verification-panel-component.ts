@@ -1,9 +1,10 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CertificateReview, PlatformService, PostingReview } from '../../Services/platform-service';
+import { CertificateReview, PersonReview, PersonReviewShow, PlatformService, PostingReview } from '../../Services/platform-service';
+import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
 
-type Filter = 'all' | 'certificates' | 'postings';
+type Filter = 'all' | 'certificates' | 'postings' | 'people';
 
 /** One thing that waits: a certificate or a job, in one list. */
 export type ReviewItem =
@@ -14,11 +15,13 @@ export type ReviewItem =
  * Platform Admin, Verification: everything that waits for a platform administrator in one
  * list, oldest first: certificates people uploaded and jobs companies want to publish.
  * Approving needs one click; refusing needs a reason, which the person or the company reads.
+ * People are a list of their own (they do not wait): the administrator verifies a person,
+ * which gives the Verified tick, or takes the tick away with a reason the person reads.
  */
 @Component({
   selector: 'app-verification-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, VerifiedBadgeComponent],
   templateUrl: './verification-panel-component.html',
   styleUrl: './verification-panel-component.scss',
 })
@@ -41,12 +44,110 @@ export class VerificationPanelComponent implements OnInit {
   readonly items = computed<ReviewItem[]>(() => {
     const certificates: ReviewItem[] = this.certificates().map(c => ({ kind: 'certificate', key: `c${c.certificateId}`, at: c.submittedAt, item: c }));
     const postings: ReviewItem[] = this.postings().map(p => ({ kind: 'posting', key: `p${p.postingId}`, at: p.submittedAt, item: p }));
+    if (this.filter() === 'people') return [];
     const shown = this.filter() === 'certificates' ? certificates : this.filter() === 'postings' ? postings : [...certificates, ...postings];
     return shown.sort((a, b) => a.at.localeCompare(b.at));
   });
 
+  /** People to verify: the page shown, what is searched and which of them. */
+  people = signal<PersonReview[]>([]);
+  peopleTotal = signal(0);
+  peopleLoading = signal(false);
+  peopleError = signal('');
+  peopleShow = signal<PersonReviewShow>('waiting');
+  peoplePage = signal(1);
+  peoplePageSize = signal(20);
+  peopleQuery = '';
+  private peopleLoaded = false;
+
+  get peopleLastPage(): number {
+    return Math.max(1, Math.ceil(this.peopleTotal() / this.peoplePageSize()));
+  }
+
   ngOnInit(): void {
     this.load();
+  }
+
+  showFilter(filter: Filter): void {
+    this.filter.set(filter);
+    this.cancelRefusal();
+    if (filter === 'people' && !this.peopleLoaded) this.loadPeople(1);
+  }
+
+  refresh(): void {
+    if (this.filter() === 'people') this.loadPeople(this.peoplePage());
+    else this.load();
+  }
+
+  loadPeople(page: number): void {
+    this.peopleLoaded = true;
+    this.peopleLoading.set(true);
+    this.api.getPeopleForReview(this.peopleQuery.trim(), this.peopleShow(), page).subscribe({
+      next: res => {
+        this.peopleLoading.set(false);
+        if (!res.success || !res.data) { this.peopleError.set(res.message || 'The list could not be loaded'); return; }
+        this.peopleError.set('');
+        this.people.set(res.data.items ?? []);
+        this.peopleTotal.set(res.data.total ?? 0);
+        this.peoplePage.set(res.data.page || page);
+        this.peoplePageSize.set(res.data.pageSize || 20);
+      },
+      error: () => { this.peopleLoading.set(false); this.peopleError.set('The list could not be loaded. Please try again.'); },
+    });
+  }
+
+  setPeopleShow(show: PersonReviewShow): void {
+    this.peopleShow.set(show);
+    this.cancelRefusal();
+    this.loadPeople(1);
+  }
+
+  personKey(p: PersonReview): string {
+    return `u${p.candidateKey}`;
+  }
+
+  verifyPerson(p: PersonReview): void {
+    this.decidePerson(p, true, '');
+  }
+
+  startPersonRefusal(p: PersonReview): void {
+    this.reason = '';
+    this.itemError.set(null);
+    this.refusing.set(this.personKey(p));
+  }
+
+  unverifyPerson(p: PersonReview): void {
+    const reason = this.reason.trim();
+    const key = this.personKey(p);
+    if (!reason) { this.itemError.set({ key, text: 'Say why the tick is taken away. The person reads it' }); return; }
+    if (reason.length > 500) { this.itemError.set({ key, text: 'The reason can have at most 500 characters' }); return; }
+    this.decidePerson(p, false, reason);
+  }
+
+  private decidePerson(p: PersonReview, verify: boolean, note: string): void {
+    const key = this.personKey(p);
+    if (this.busy()) return;
+    this.busy.set(key);
+    this.itemError.set(null);
+
+    this.api.decidePerson(p.candidateKey, verify, note).subscribe({
+      next: res => {
+        this.busy.set(null);
+        if (!res.success) { this.itemError.set({ key, text: res.message || 'Could not save the decision' }); return; }
+        this.refusing.set(null);
+        this.reason = '';
+        if (this.peopleShow() === 'all') {
+          // the list keeps everybody: only the tick changes
+          this.people.update(list => list.map(x => x.candidateKey !== p.candidateKey ? x
+            : { ...x, verifiedAt: verify ? new Date().toISOString() : null, verifiedBy: verify ? 'you' : '' }));
+        } else {
+          this.people.update(list => list.filter(x => x.candidateKey !== p.candidateKey));
+          this.peopleTotal.update(n => Math.max(0, n - 1));
+        }
+        this.notify(res.message, true);
+      },
+      error: () => { this.busy.set(null); this.itemError.set({ key, text: 'Could not save the decision. Please try again' }); },
+    });
   }
 
   load(): void {

@@ -36,7 +36,7 @@
 
         <div class="jp-hero-text">
           @if (pg.profile.fullName || pg.profile.headline) {
-            <div class="jp-name">{{ pg.profile.fullName || '—' }}</div>
+            <div class="jp-name">{{ pg.profile.fullName || '—' }}@if (pg.profile.isVerified) { <app-verified-badge label="Verified" hint="Encryptz verified your profile. Employers see this tick" /> }</div>
             <div class="jp-headline">{{ pg.profile.headline }}</div>
             @let age = ageOf(pg.profile.dateOfBirth);
             @let worked = experienceLabel(pg.experience);
@@ -476,6 +476,9 @@
       <div class="jp-dialog-body">
         @switch (d.kind) {
           @case ('profile') {
+            @if (page()?.profile?.isVerified) {
+              <p class="jp-verified-note"><span class="material-icons" aria-hidden="true">info</span>Your profile is verified. Changing your name or date of birth removes the Verified tick until Encryptz checks it again.</p>
+            }
             <label>Full name
               <input class="jp-input" name="fullName" [(ngModel)]="d.model.fullName" maxlength="200" autocomplete="name" />
             </label>

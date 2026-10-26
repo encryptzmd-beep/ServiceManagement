@@ -13,6 +13,10 @@ namespace EncryptzBL.Infrastructure.Jobs
         private static DateTime? DateOrNull(DataRow r, string column)
             => r[column] == DBNull.Value ? null : Convert.ToDateTime(r[column]);
 
+        /// <summary>A flag a procedure may not answer yet (a database without the script that added it): false then.</summary>
+        private static bool FlagOrFalse(DataRow r, string column)
+            => r.Table.Columns.Contains(column) && r[column] != DBNull.Value && Convert.ToBoolean(r[column]);
+
         private static JobPostingViewDto PostingView(DataRow r) => new()
         {
             PostingId = Convert.ToInt32(r["PostingId"]),
@@ -32,6 +36,7 @@ namespace EncryptzBL.Infrastructure.Jobs
             IsSaved = Convert.ToBoolean(r["IsSaved"]),
             MyStatus = r["MyStatus"]?.ToString() ?? "",
             IsOpen = Convert.ToBoolean(r["IsOpen"]),
+            IsVerified = FlagOrFalse(r, "IsVerified"),
             // only the search scores a job (script 07)
             MatchScore = r.Table.Columns.Contains("MatchScore") && r["MatchScore"] != DBNull.Value ? Convert.ToInt32(r["MatchScore"]) : 0
         };

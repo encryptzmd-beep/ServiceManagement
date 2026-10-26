@@ -60,5 +60,15 @@ namespace EncryptzAPI.Controllers
         [HttpPost("postings/{id:int}")]
         public async Task<IActionResult> DecidePosting(int id, [FromBody] VerificationDecisionRequest? req)
             => Admin() == 0 ? NotAdmin() : Ok(await _verification.DecidePosting(Admin(), id, req?.Approve ?? false, req?.Note, AdminName()));
+
+        /// <summary>People to verify: show = waiting (not verified), verified or all.</summary>
+        [HttpGet("people")]
+        public async Task<IActionResult> GetPeople([FromQuery] string? q, [FromQuery] string? show, [FromQuery] int? page)
+            => Admin() == 0 ? NotAdmin() : Ok(await _verification.GetPeopleForReview(Admin(), q, show, page));
+
+        /// <summary>Approve = verify the person; otherwise the tick is taken away (a note is needed).</summary>
+        [HttpPost("people/{key:guid}")]
+        public async Task<IActionResult> DecidePerson(Guid key, [FromBody] VerificationDecisionRequest? req)
+            => Admin() == 0 ? NotAdmin() : Ok(await _verification.DecidePerson(Admin(), key, req?.Approve ?? false, req?.Note, AdminName()));
     }
 }

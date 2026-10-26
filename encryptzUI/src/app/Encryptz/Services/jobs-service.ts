@@ -18,6 +18,8 @@ export interface JobProfile {
   dateOfBirth?: string | null;
   /** "Employers can find me". Changed only with setVisible. */
   isVisible: boolean;
+  /** Encryptz verified the person: the Verified tick. Read only; saving the profile ignores it. */
+  isVerified?: boolean;
 }
 
 export interface JobExperience {
@@ -160,6 +162,8 @@ export interface JobPostingView {
   myStatus: JobApplicationStatus | '';
   /** It still takes applications. */
   isOpen: boolean;
+  /** Encryptz approved the job: the Verified tick. */
+  isVerified?: boolean;
   /** How well it fits the person's preferences (0 = not at all). Only the search fills it. */
   matchScore?: number;
 }
@@ -214,7 +218,7 @@ export class JobsService {
     return this.http.get<ApiResponse<JobProfilePage>>(`${this.api}/profile`);
   }
 
-  saveProfile(profile: Omit<JobProfile, 'isVisible'>): Observable<ApiResponse<boolean>> {
+  saveProfile(profile: Omit<JobProfile, 'isVisible' | 'isVerified'>): Observable<ApiResponse<boolean>> {
     return this.http.post<ApiResponse<boolean>>(`${this.api}/profile`, profile);
   }
 

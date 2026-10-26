@@ -33,6 +33,8 @@ export interface CompanyPosting extends CompanyPostingFields {
   status: CompanyPostingStatus;
   /** Why Encryptz returned the job ('' when it was not returned). */
   reviewNote?: string;
+  /** Encryptz approved it and it is open or closed: the Verified tick. */
+  isVerified?: boolean;
   publishedAt?: string | null;
   createdAt: string;
   applied: number;
@@ -51,6 +53,8 @@ export interface JobApplicant {
   appliedAt: string;
   statusAt: string;
   hasResume: boolean;
+  /** Encryptz verified the person. */
+  isVerified?: boolean;
 }
 
 /** One applicant opened: the application and the person's profile as it is now. */

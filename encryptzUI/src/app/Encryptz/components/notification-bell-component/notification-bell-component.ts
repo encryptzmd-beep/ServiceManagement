@@ -119,6 +119,8 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
       case 'CertificateWaiting': return 'fact_check';
       case 'CertificateVerified': return 'verified';
       case 'CertificateRejected': return 'gpp_maybe';
+      case 'ProfileVerified': return 'verified';
+      case 'ProfileUnverified': return 'gpp_maybe';
       default: return 'notifications_none';
     }
   }

@@ -48,6 +48,7 @@ namespace EncryptzBL.Infrastructure.Jobs
                 ClosesOn = DateOrNull(r, "ClosesOn"),
                 Status = r["Status"]?.ToString() ?? "",
                 ReviewNote = r.Table.Columns.Contains("ReviewNote") ? r["ReviewNote"]?.ToString() ?? "" : "",
+                IsVerified = FlagOrFalse(r, "IsVerified"),
                 PublishedAt = DateOrNull(r, "PublishedAt"),
                 CreatedAt = Convert.ToDateTime(r["CreatedAt"]),
                 Applied = Count("Applied"),
@@ -155,7 +156,8 @@ namespace EncryptzBL.Infrastructure.Jobs
                         Note = r["Note"]?.ToString() ?? "",
                         AppliedAt = Convert.ToDateTime(r["AppliedAt"]),
                         StatusAt = Convert.ToDateTime(r["StatusAt"]),
-                        HasResume = Convert.ToBoolean(r["HasResume"])
+                        HasResume = Convert.ToBoolean(r["HasResume"]),
+                        IsVerified = FlagOrFalse(r, "IsVerified")
                     }).ToList();
 
                 return ApiResponse<List<JobApplicantDto>>.Ok(list);
