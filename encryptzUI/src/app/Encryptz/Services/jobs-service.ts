@@ -22,6 +22,12 @@ export interface JobProfile {
   isVerified?: boolean;
 }
 
+/** The shareable link of the profile (/p/code). */
+export interface JobProfileShare {
+  isOn: boolean;
+  code: string;
+}
+
 export interface JobExperience {
   experienceId: number;
   organisation: string;
@@ -224,6 +230,15 @@ export class JobsService {
 
   setVisible(isVisible: boolean): Observable<ApiResponse<boolean>> {
     return this.http.post<ApiResponse<boolean>>(`${this.api}/profile/visible`, { isVisible });
+  }
+
+  /** The shareable link of the profile: on or off, and its code ('' before it was first switched on). */
+  getShare(): Observable<ApiResponse<JobProfileShare>> {
+    return this.http.get<ApiResponse<JobProfileShare>>(`${this.api}/profile/share`);
+  }
+
+  setShare(on: boolean): Observable<ApiResponse<JobProfileShare>> {
+    return this.http.post<ApiResponse<JobProfileShare>>(`${this.api}/profile/share`, { on });
   }
 
   /** Replaces everything the person prefers. */

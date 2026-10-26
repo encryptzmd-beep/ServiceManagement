@@ -292,6 +292,7 @@
       </div>
       <div class="jp-dialog-foot hr-status-foot">
         <span [class]="statusClass(a.status)">{{ a.status }}</span>
+        <button class="jp-btn" (click)="messageApplicant(a)" [disabled]="messaging()"><span class="material-icons">chat_bubble_outline</span>Message</button>
         @if (a.status === 'Hired') {
           <button class="jp-btn" (click)="recordPlacement(a)"><span class="material-icons">verified</span>Record placement</button>
         }

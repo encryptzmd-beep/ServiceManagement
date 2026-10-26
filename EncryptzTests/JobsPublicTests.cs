@@ -57,6 +57,64 @@ GO", RegexOptions.Singleline).Groups[1].Value;
             Assert.DoesNotContain("Applications", body);
         }
 
+        // ── a shared profile (script 19) ──────────────────────────────────────
+
+        private static string Body19(string procedure)
+            => Regex.Match(Read("EncryptzAPI", "Database", "PersonalDB", "19_Jobs_Profile_Share.sql"),
+                $@"CREATE OR ALTER PROCEDURE jobs.{procedure}(.*?)
+GO", RegexOptions.Singleline).Groups[1].Value;
+
+        [Fact]
+        public void A_shared_profile_never_shows_contact_details_birth_date_files_or_preferences()
+        {
+            foreach (var procedure in new[] { "sp_Public_Profile_Get", "sp_Public_Profile_Photo" })
+            {
+                var body = Body19(procedure);
+                foreach (var hidden in new[] { "ContactEmail", "ContactPhone", "DateOfBirth", "Preferences", "'Resume'", "'Certificate'", "UserId AS" })
+                    Assert.DoesNotContain(hidden, body);
+                Assert.Contains("ShareOn = 1", body);
+            }
+
+            Assert.DoesNotContain("Content", Body19("sp_Public_Profile_Get"));
+        }
+
+        [Fact]
+        public void A_link_is_made_once_from_the_random_generator_and_needs_a_name()
+        {
+            var set = Body19("sp_Profile_Share_Set");
+
+            Assert.Contains("CRYPT_GEN_RANDOM", set);
+            Assert.Contains("FullName <> '' AND Headline <> ''", set);
+            Assert.Contains("WHILE @Code IS NULL OR EXISTS", set);
+        }
+
+        [Theory]
+        [InlineData("../../etc")]
+        [InlineData("ABCDEFGHIJ1")]
+        [InlineData("abc")]
+        [InlineData("abcdefghi0")]
+        [InlineData(null)]
+        public async Task A_code_the_database_never_makes_is_not_looked_up(string? code)
+        {
+            var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:PersonalConnection"] = "Server=nowhere;Database=x;Connect Timeout=1" }).Build();
+            var jobs = new JobsService(new PersonalDbHelper(config), NullLogger<JobsService>.Instance);
+
+            // refused before any database is asked: "Not found", not "not available"
+            Assert.Equal("Not found", (await jobs.GetPublicProfile(code)).Message);
+        }
+
+        [Fact]
+        public async Task A_profile_link_that_is_off_is_a_404_never_kept_and_never_indexed()
+        {
+            var controller = new PublicProfilesController(new FakePublic()) { ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
+
+            Assert.IsType<NotFoundObjectResult>(await controller.GetProfile("zzzzzzzzzz"));
+            Assert.IsType<OkObjectResult>(await controller.GetProfile("abcdefghij"));
+            Assert.Equal("no-store", controller.Response.Headers["Cache-Control"].ToString());
+            Assert.Equal("noindex, nofollow", controller.Response.Headers["X-Robots-Tag"].ToString());
+            Assert.NotNull(typeof(PublicProfilesController).GetCustomAttribute<AllowAnonymousAttribute>());
+        }
+
         [Fact]
         public void Every_public_method_is_shielded_and_asks_as_nobody()
         {
@@ -114,6 +172,10 @@ GO", RegexOptions.Singleline).Groups[1].Value;
                 => Task.FromResult(ApiResponse<List<JobPostingViewDto>>.Ok(new List<JobPostingViewDto>()));
             public Task<ApiResponse<List<PublicPostingLinkDto>>> GetPublicSitemap()
                 => Task.FromResult(ApiResponse<List<PublicPostingLinkDto>>.Ok(new List<PublicPostingLinkDto>()));
+            public Task<ApiResponse<PublicProfileDto>> GetPublicProfile(string? code)
+                => Task.FromResult(code == "abcdefghij" ? ApiResponse<PublicProfileDto>.Ok(new PublicProfileDto { FullName = "Leema" }) : ApiResponse<PublicProfileDto>.Fail("Not found"));
+            public Task<ApiResponse<JobFileContent>> GetPublicProfilePhoto(string? code)
+                => Task.FromResult(ApiResponse<JobFileContent>.Fail("Not found"));
         }
 
         private static PublicJobsController Controller()

@@ -32,6 +32,10 @@ namespace EncryptzBL.Infrastructure.Jobs
         Task<ApiResponse<JobPostingViewDto>> GetPublicPosting(int postingId);
         /// <summary>The open jobs most like one job (title, skills, city, type, mode), never the job itself.</summary>
         Task<ApiResponse<List<JobPostingViewDto>>> GetRelatedPublicPostings(int postingId);
+        /// <summary>A shared profile (/p/code). "Not found" when the code is unknown or its link is off.</summary>
+        Task<ApiResponse<PublicProfileDto>> GetPublicProfile(string? code);
+        /// <summary>The photo of a shared profile. "Not found" when there is none or the link is off.</summary>
+        Task<ApiResponse<JobFileContent>> GetPublicProfilePhoto(string? code);
         /// <summary>Every job people can find now, for the sitemap.</summary>
         Task<ApiResponse<List<PublicPostingLinkDto>>> GetPublicSitemap();
     }

@@ -121,6 +121,7 @@
               <li><span class="material-icons" aria-hidden="true">send</span>Apply, and follow your application</li>
             </ul>
           </div>
+          <button class="jp-btn pd-share" type="button" (click)="share(p)"><span class="material-icons" aria-hidden="true">share</span>{{ copied() || 'Share this job' }}</button>
           @if (p.isVerified) {
             <div class="pd-trust">
               <span class="material-icons" aria-hidden="true">verified_user</span>

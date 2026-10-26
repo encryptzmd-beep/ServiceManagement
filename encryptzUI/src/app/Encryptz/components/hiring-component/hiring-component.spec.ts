@@ -95,8 +95,8 @@ describe('HiringComponent', () => {
     const items = Array.from(fixture.nativeElement.querySelectorAll('.ps-nav-item')) as HTMLElement[];
 
     expect(text(fixture)).toContain('Job Consultancy');
-    expect(items.map(e => e.querySelector('.ps-nav-label')!.textContent!.trim())).toEqual(['Job postings', 'Candidates', 'Clients', 'Placements']);
-    expect(items.map(e => e.getAttribute('href'))).toEqual(['/consultancy/postings', '/consultancy/candidates', '/consultancy/clients', '/consultancy/placements']);
+    expect(items.map(e => e.querySelector('.ps-nav-label')!.textContent!.trim())).toEqual(['Job postings', 'Candidates', 'Messages', 'Clients', 'Placements']);
+    expect(items.map(e => e.getAttribute('href'))).toEqual(['/consultancy/postings', '/consultancy/candidates', '/consultancy/messages', '/consultancy/clients', '/consultancy/placements']);
     expect(fixture.nativeElement.querySelector('.ps-back').getAttribute('href')).toBe('/select-module');
   });
 

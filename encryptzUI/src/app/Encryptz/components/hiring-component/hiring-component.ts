@@ -16,6 +16,7 @@ import { PersonalShellComponent } from '../personal-shell-component/personal-she
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
 import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
 import { ConsultClient, ConsultancyService, PostingClient } from '../../Services/consultancy-service';
+import { MessagesService } from '../../Services/messages-service';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const REFUSED = "You don't have access to Job Consultancy. Ask your administrator";
@@ -42,6 +43,7 @@ export class HiringComponent implements OnInit {
   private auth = inject(AuthService);
   private router = inject(Router);
   private consultancy = inject(ConsultancyService);
+  private messages = inject(MessagesService);
 
   readonly menu = CONSULTANCY_MENU;
 
@@ -289,6 +291,23 @@ export class HiringComponent implements OnInit {
         this.loadApplicants();
       },
       error: () => { this.statusBusy.set(false); this.notify('Could not change it. Please try again', false); },
+    });
+  }
+
+  messaging = signal(false);
+
+  /** The conversation with this applicant (made when there is none), in Messages. */
+  messageApplicant(a: JobApplicantPage): void {
+    const posting = this.selected();
+    if (!posting || this.messaging()) return;
+    this.messaging.set(true);
+    this.messages.startAsCompany({ applicationId: a.applicationId, postingId: posting.postingId }).subscribe({
+      next: res => {
+        this.messaging.set(false);
+        if (res.success && res.data) this.router.navigate(['/consultancy/messages'], { queryParams: { c: res.data } });
+        else this.notify(res.message || 'Could not open the conversation', false);
+      },
+      error: () => { this.messaging.set(false); this.notify('Could not open the conversation. Please try again', false); },
     });
   }
 

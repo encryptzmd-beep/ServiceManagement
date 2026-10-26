@@ -244,6 +244,7 @@
         </section>
       </div>
       <div class="jp-dialog-foot">
+        <button class="jp-btn" (click)="message()" [disabled]="messaging()"><span class="material-icons">chat_bubble_outline</span>Message</button>
         <button class="jp-btn" (click)="recordPlacement()"><span class="material-icons">verified</span>Record a placement</button>
         <span class="jb-grow"></span>
         <button class="jp-btn ghost" (click)="close()">Close</button>

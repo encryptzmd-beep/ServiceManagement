@@ -31,6 +31,12 @@ export const routes: Routes = [
     loadComponent: () => import('./Encryptz/components/public-jobs-component/public-jobs-component')
       .then(m => m.PublicJobsComponent),
   },
+  // a profile a person shared with a link: no login, never indexed
+  {
+    path: 'p/:code',
+    loadComponent: () => import('./Encryptz/components/public-profile-component/public-profile-component')
+      .then(m => m.PublicProfileComponent),
+  },
   ...['jobs/:id', 'jobs/:id/:slug'].map(path => ({
     path,
     loadComponent: () => import('./Encryptz/components/public-job-component/public-job-component')
@@ -56,6 +62,27 @@ export const routes: Routes = [
     path: 'apps/jobs/notifications',
     loadComponent: () => import('./Encryptz/components/job-notifications-component/job-notifications-component')
       .then(m => m.JobNotificationsComponent),
+    canActivate: [authGuard],
+    data: { title: 'Job Portal' },
+  },
+  {
+    path: 'apps/jobs/messages',
+    loadComponent: () => import('./Encryptz/components/messages-component/messages-component')
+      .then(m => m.MessagesComponent),
+    canActivate: [authGuard],
+    data: { title: 'Job Portal', side: 'person' },
+  },
+  {
+    path: 'consultancy/messages',
+    loadComponent: () => import('./Encryptz/components/messages-component/messages-component')
+      .then(m => m.MessagesComponent),
+    canActivate: [authGuard],
+    data: { title: 'Job Consultancy', side: 'company' },
+  },
+  {
+    path: 'apps/jobs/job/:id',
+    loadComponent: () => import('./Encryptz/components/job-detail-component/job-detail-component')
+      .then(m => m.JobDetailComponent),
     canActivate: [authGuard],
     data: { title: 'Job Portal' },
   },

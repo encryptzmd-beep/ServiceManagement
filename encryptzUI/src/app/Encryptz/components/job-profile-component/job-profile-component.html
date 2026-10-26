@@ -359,6 +359,32 @@
           @if (visibleError()) { <div class="jp-error">{{ visibleError() }}</div> }
         </div>
 
+        @if (share(); as s) {
+          <div class="jp-card jp-visibility jp-share" [class.on]="s.isOn">
+            <label class="jp-switch">
+              <span class="jp-switch-text">
+                <strong>Share my profile</strong>
+                <small>
+                  @if (s.isOn) {
+                    On: anybody with the link sees your profile. Never your email, phone, date of birth or resume.
+                  } @else {
+                    Off: a link to send to anybody, or to put on your CV. Search engines never list it.
+                  }
+                </small>
+              </span>
+              <input type="checkbox" [checked]="s.isOn" [disabled]="shareBusy()" (change)="onShareChange($event)" />
+            </label>
+            @if (s.isOn && shareUrl) {
+              <div class="jp-share-link">
+                <input class="jp-input" [value]="shareUrl" readonly aria-label="Link to your profile" (focus)="$any($event.target).select()" />
+                <button class="jp-btn" type="button" (click)="copyShareLink()" title="Copy the link"><span class="material-icons">content_copy</span>Copy</button>
+                <a class="jp-btn ghost" [href]="'/p/' + s.code" target="_blank" rel="noopener" title="See it as others do"><span class="material-icons">open_in_new</span></a>
+              </div>
+            }
+            @if (shareError()) { <div class="jp-error">{{ shareError() }}</div> }
+          </div>
+        }
+
         @if (views(); as seen) {
           <div class="jp-card jp-views">
             <div class="jp-views-head">

@@ -4,7 +4,7 @@ import { jobPath, jobSlug } from '../Services/public-jobs-service';
 describe('the page to come back to after signing in', () => {
   it('takes a page of Job Portal', () => {
     expect(safeNextUrl('/apps/jobs/search?posting=7')).toBe('/apps/jobs/search?posting=7');
-    expect(safeNextUrl(applyUrl(42))).toBe('/apps/jobs/search?posting=42');
+    expect(safeNextUrl(applyUrl(42))).toBe('/apps/jobs/job/42?apply=1');
   });
 
   it('drops anything that could send someone elsewhere', () => {

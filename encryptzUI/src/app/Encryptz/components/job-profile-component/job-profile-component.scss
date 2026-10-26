@@ -1019,3 +1019,13 @@ textarea.jp-input { resize: vertical; line-height: 1.5; }
   .jp-spinner { animation-duration: 2.4s; }
   * { transition: none !important; }
 }
+
+/* ── the shareable link ── */
+.jp-share-link {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+
+  .jp-input { flex: 1 1 auto; min-width: 0; height: 34px; font-size: 12.5px; color: #1e3a8a; background: #fff; }
+  .jp-btn { height: 34px; padding: 0 10px; text-decoration: none; .material-icons { font-size: 16px; } }
+}

@@ -11,6 +11,7 @@ import {
   JobInterests,
   JobPreferences,
   JobProfilePage,
+  JobProfileShare,
   JobProfileView,
   JobSkill,
   JobSocialLink,
@@ -84,6 +85,11 @@ export class JobProfileComponent implements OnInit, OnDestroy {
   visibleError = signal('');
   visibleBusy = signal(false);
 
+  /** The shareable link: null until it is read (or when it cannot be). */
+  share = signal<JobProfileShare | null>(null);
+  shareBusy = signal(false);
+  shareError = signal('');
+
   resumeError = signal('');
   resumeBusy = signal(false);
 
@@ -115,6 +121,7 @@ export class JobProfileComponent implements OnInit, OnDestroy {
     this.load();
     this.loadPhoto();
     this.loadViews();
+    this.loadShare();
     this.alerts.refresh();
   }
 
@@ -122,6 +129,57 @@ export class JobProfileComponent implements OnInit, OnDestroy {
     this.showPhoto(null);
     if (this.suggestTimer) clearTimeout(this.suggestTimer);
     if (this.catalogTimer) clearTimeout(this.catalogTimer);
+  }
+
+  // ── the shareable link ────────────────────────────────────────────────
+
+  /** A failure only hides the card: the rest of the page is not affected. */
+  private loadShare(): void {
+    this.api.getShare().subscribe({
+      next: res => this.share.set(res.success && res.data ? res.data : null),
+      error: () => this.share.set(null),
+    });
+  }
+
+  /** The whole address of the shared profile, for copying and sending. */
+  get shareUrl(): string {
+    const code = this.share()?.code;
+    return code ? `${location.origin}/p/${code}` : '';
+  }
+
+  onShareChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const stored = !!this.share()?.isOn;
+    if (this.shareBusy()) { input.checked = stored; return; }
+
+    this.shareError.set('');
+    this.shareBusy.set(true);
+    this.api.setShare(input.checked).subscribe({
+      next: res => {
+        this.shareBusy.set(false);
+        if (!res.success || !res.data) {
+          this.shareError.set(res.message || 'Could not change this. Please try again.');
+          input.checked = stored;
+          return;
+        }
+        this.share.set(res.data);
+        this.notify(res.message, true);
+      },
+      error: () => {
+        this.shareBusy.set(false);
+        this.shareError.set('Could not change this. Please try again.');
+        input.checked = stored;
+      },
+    });
+  }
+
+  copyShareLink(): void {
+    const url = this.shareUrl;
+    if (!url) return;
+    navigator.clipboard?.writeText(url).then(
+      () => this.notify('Link copied. Paste it anywhere to share your profile', true),
+      () => this.notify('Copy the link from the box', false),
+    );
   }
 
   /** A failure only hides the card: the rest of the page is not affected. */

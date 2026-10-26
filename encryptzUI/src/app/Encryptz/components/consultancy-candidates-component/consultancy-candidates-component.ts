@@ -13,6 +13,7 @@ import {
   TalentStage,
 } from '../../Services/consultancy-service';
 import { JOB_WORK_MODES, JobEducation, JobSkill } from '../../Services/jobs-service';
+import { MessagesService } from '../../Services/messages-service';
 import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
@@ -41,6 +42,7 @@ export class ConsultancyCandidatesComponent implements OnInit {
   private jobs = inject(CompanyJobsService);
   private auth = inject(AuthService);
   private router = inject(Router);
+  private messages = inject(MessagesService);
 
   readonly menu = CONSULTANCY_MENU;
   readonly stages = TALENT_STAGES;
@@ -220,6 +222,23 @@ export class ConsultancyCandidatesComponent implements OnInit {
   }
 
   /** A placement for this candidate, on the Placements page. */
+  /** The conversation with this candidate (made when there is none), in Messages. */
+  message(): void {
+    const c = this.open();
+    if (!c || this.messaging()) return;
+    this.messaging.set(true);
+    this.messages.startAsCompany({ candidateKey: c.candidateKey }).subscribe({
+      next: res => {
+        this.messaging.set(false);
+        if (res.success && res.data) this.router.navigate(['/consultancy/messages'], { queryParams: { c: res.data } });
+        else this.panelError.set(res.message || 'Could not open the conversation');
+      },
+      error: () => { this.messaging.set(false); this.panelError.set('Could not open the conversation. Please try again'); },
+    });
+  }
+
+  messaging = signal(false);
+
   recordPlacement(): void {
     const c = this.open();
     if (!c) return;

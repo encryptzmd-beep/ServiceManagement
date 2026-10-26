@@ -149,13 +149,14 @@ describe('JobBoardComponent', () => {
 
   // ── one job, save, apply ──────────────────────────────────────────────────
 
-  it('opens a job with its description', () => {
+  it('opens a job on its own page in a new tab, not in a popup', () => {
     const fixture = create('search');
-    fixture.componentInstance.open(7);
-    fixture.detectChanges();
+    const link = fixture.nativeElement.querySelector('.jb-card h2 a.jb-title') as HTMLAnchorElement;
 
-    expect(calls).toContainEqual(['getPosting', 7]);
-    expect(fixture.nativeElement.querySelector('.jb-detail').textContent).toContain('Books of three branches.');
+    expect(link.getAttribute('href')).toBe('/apps/jobs/job/7');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toContain('noopener');
+    expect(fixture.nativeElement.querySelector('.jb-detail')).toBeNull();
   });
 
   it('saves and unsaves a job through the API and shows it', () => {

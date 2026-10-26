@@ -1,0 +1,172 @@
+<app-personal-shell [appName]="side === 'company' ? 'Job Consultancy' : 'Job Portal'" [icon]="side === 'company' ? 'work' : 'badge'"
+                    [subtitle]="side === 'company' ? 'Commercial application' : 'Personal application'" [menu]="menu()"
+                    [backLabel]="side === 'company' ? 'Back to modules' : 'Back to companies'" [backRoute]="side === 'company' ? '/select-module' : '/select-company'">
+
+  @if (loading()) {
+    <div class="jp-state"><span class="jp-spinner" aria-hidden="true"></span><p>Loading messages…</p></div>
+  } @else if (unavailable()) {
+    <div class="jp-state">
+      <span class="material-icons">lock_outline</span>
+      <p>{{ unavailable() }}</p>
+      <button class="jp-btn primary" (click)="loadList()">Try again</button>
+    </div>
+  } @else {
+    <div class="ms" [class.has-open]="openId() !== null">
+
+      <!-- ═══════════ CONVERSATIONS ═══════════ -->
+      <aside class="ms-list" aria-label="Conversations">
+        <div class="ms-list-head">
+          <h1>Messages</h1>
+          <label class="ms-filter">
+            <span class="material-icons" aria-hidden="true">search</span>
+            <span class="jp-sr">Search messages</span>
+            <input [(ngModel)]="filter" (ngModelChange)="setFilter($event)" placeholder="Search by name or job" />
+          </label>
+        </div>
+
+        <div class="ms-items">
+          @for (c of shown(); track c.conversationId) {
+            <button type="button" class="ms-item" [class.on]="openId() === c.conversationId" [class.unread]="c.unread > 0" (click)="select(c.conversationId)">
+              <span class="ms-avatar" aria-hidden="true">{{ initial(otherName(c)) }}</span>
+              <span class="ms-item-text">
+                <span class="ms-item-top">
+                  <span class="ms-name">{{ otherName(c) }}@if (c.isVerified) { <app-verified-badge [compact]="true" hint="Person verified by Encryptz" /> }</span>
+                  <span class="ms-time">{{ when(c.lastMessageAt) }}</span>
+                </span>
+                @if (c.postingTitle) { <span class="ms-about">{{ c.postingTitle }}</span> }
+                <span class="ms-last">
+                  @if ((c.lastFromSide === 'Person') === (side === 'person')) { <span class="ms-you">You:</span> }
+                  {{ c.lastIsJob ? 'Shared a job' : c.lastBody }}
+                </span>
+              </span>
+              @if (c.unread > 0) { <span class="ms-badge" [attr.aria-label]="c.unread + ' unread'">{{ c.unread }}</span> }
+              @if (c.blockedByPerson) { <span class="material-icons ms-blocked" title="Blocked">block</span> }
+            </button>
+          } @empty {
+            <div class="ms-none">
+              <span class="material-icons" aria-hidden="true">forum</span>
+              @if (filter) {
+                <p>No conversation matches.</p>
+              } @else if (side === 'person') {
+                <p>No messages yet. Open a job and press <strong>Message the company</strong>, or wait for a company to write to you.</p>
+                <a class="jp-btn" routerLink="/apps/jobs/search">Search jobs</a>
+              } @else {
+                <p>No messages yet. Open a candidate or an applicant and press <strong>Message</strong>.</p>
+                <a class="jp-btn" routerLink="/consultancy/candidates">Find candidates</a>
+              }
+            </div>
+          }
+        </div>
+      </aside>
+
+      <!-- ═══════════ ONE CONVERSATION ═══════════ -->
+      <section class="ms-thread-pane" aria-label="Conversation">
+        @if (open(); as c) {
+          <header class="ms-thread-head">
+            <button class="ms-back" type="button" (click)="back()" aria-label="Back to the conversations"><span class="material-icons">arrow_back</span></button>
+            <span class="ms-avatar lg" aria-hidden="true">{{ initial(otherName(c)) }}</span>
+            <div class="ms-thread-who">
+              <h2>{{ otherName(c) }}@if (c.isVerified) { <app-verified-badge label="Verified" hint="Encryptz verified this person" /> }</h2>
+              <p>
+                @if (side === 'company') { {{ c.headline }}@if (c.city) { · {{ c.city }} } }
+                @else { Company }
+                @if (c.postingTitle) { · about <strong>{{ c.postingTitle }}</strong> }
+              </p>
+            </div>
+            @if (side === 'company' && c.candidateKey) {
+              <a class="jp-btn" routerLink="/consultancy/candidates" title="Find this person in Candidates"><span class="material-icons">person_search</span><span class="ms-hide-sm">Candidates</span></a>
+            }
+            @if (side === 'person') {
+              <button class="jp-btn ghost" type="button" (click)="toggleBlock()" [title]="c.blockedByPerson ? 'Let this company write to you again' : 'Stop this company writing to you'">
+                <span class="material-icons">{{ c.blockedByPerson ? 'lock_open' : 'block' }}</span><span class="ms-hide-sm">{{ c.blockedByPerson ? 'Unblock' : 'Block' }}</span>
+              </button>
+            }
+          </header>
+
+          <div class="ms-thread" #thread>
+            @for (m of c.messages; track m.messageId; let i = $index) {
+              @if (dayBreak(c, i); as day) { <div class="ms-day"><span>{{ day }}</span></div> }
+              <div class="ms-msg" [class.mine]="mine(m)">
+                @if (!mine(m) && side === 'person') { <span class="ms-sender">{{ m.senderName }}</span> }
+                <div class="ms-bubble">
+                  @if (m.body) { <p>{{ m.body }}</p> }
+                  @if (m.sharedPosting; as j) {
+                    <a class="ms-job" [routerLink]="jobLink(j)" target="_blank" rel="noopener">
+                      <span class="ms-job-logo" aria-hidden="true">{{ initial(j.companyName) }}</span>
+                      <span class="ms-job-text">
+                        <strong>{{ j.title }}</strong>
+                        <span>{{ j.companyName }} · {{ j.city }}</span>
+                        <em>{{ j.isOpen ? 'View job' : 'No longer takes applications' }}</em>
+                      </span>
+                      <span class="material-icons" aria-hidden="true">open_in_new</span>
+                    </a>
+                  }
+                </div>
+                <span class="ms-meta">
+                  {{ when(m.createdAt) }}
+                  @if (isLastMine(c, m) && seen(c)) { · <span class="ms-seen">Seen</span> }
+                </span>
+              </div>
+            } @empty {
+              <div class="ms-start">
+                <span class="material-icons" aria-hidden="true">waving_hand</span>
+                <p>Say hello to {{ otherName(c) }}@if (c.postingTitle) { about <strong>{{ c.postingTitle }}</strong> }.</p>
+              </div>
+            }
+          </div>
+
+          @if (blockedForMe) {
+            <div class="ms-blocked-note"><span class="material-icons" aria-hidden="true">block</span>This person does not take messages from your company here.</div>
+          } @else {
+            <form class="ms-compose" (ngSubmit)="send()">
+              @if (attached(); as j) {
+                <div class="ms-attached">
+                  <span class="material-icons" aria-hidden="true">work_outline</span>
+                  <span><strong>{{ j.title }}</strong> · {{ j.city }}</span>
+                  <button type="button" (click)="attached.set(null)" aria-label="Remove the job"><span class="material-icons">close</span></button>
+                </div>
+              }
+              @if (pickerOpen()) {
+                <div class="ms-picker" role="listbox" aria-label="Share a job">
+                  @if (shareable() === null) {
+                    <p class="ms-picker-note">Loading…</p>
+                  } @else {
+                    @for (j of shareable(); track j.postingId) {
+                      <button type="button" role="option" (click)="attach(j)"><strong>{{ j.title }}</strong><span>{{ j.city }}</span></button>
+                    } @empty {
+                      <p class="ms-picker-note">{{ side === 'company' ? 'Your company has no open job to share.' : 'Save a job first to share it here.' }}</p>
+                    }
+                  }
+                </div>
+              }
+              <div class="ms-compose-row">
+                <button class="ms-tool" type="button" (click)="togglePicker()" [class.on]="pickerOpen()" title="Share a job" aria-label="Share a job">
+                  <span class="material-icons">work_outline</span>
+                </button>
+                <textarea name="draft" [(ngModel)]="draft" (keydown)="onKey($event)" rows="1" maxlength="2000"
+                          placeholder="Write a message…  (Enter to send, Shift+Enter for a new line)" aria-label="Message"></textarea>
+                <button class="ms-send" type="submit" [disabled]="sending() || (!draft.trim() && !attached())" aria-label="Send">
+                  <span class="material-icons">send</span>
+                </button>
+              </div>
+              @if (sendError()) { <div class="jp-error">{{ sendError() }}</div> }
+            </form>
+          }
+        } @else if (openLoading()) {
+          <div class="jp-state"><span class="jp-spinner" aria-hidden="true"></span></div>
+        } @else {
+          <div class="ms-empty-pane">
+            <span class="material-icons" aria-hidden="true">chat_bubble_outline</span>
+            <p>Choose a conversation.</p>
+          </div>
+        }
+      </section>
+    </div>
+  }
+
+  @if (toast(); as t) {
+    <div class="jp-toast" [class.bad]="!t.ok" role="status">
+      <span class="material-icons">{{ t.ok ? 'check_circle' : 'error_outline' }}</span>{{ t.text }}
+    </div>
+  }
+</app-personal-shell>

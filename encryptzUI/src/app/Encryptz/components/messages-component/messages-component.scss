@@ -1,0 +1,416 @@
+/* Messages: the conversations on the left, the open one on the right. Colours of the Job Portal pages. */
+
+$display: 'Outfit', 'DM Sans', sans-serif;
+$ink: #141b34;
+$text: #3b4357;
+$muted: #6b7489;
+$faint: #9aa3b5;
+$line: #e4e8f0;
+$hair: #eef1f6;
+$accent: #2563eb;
+$navy: #1d4ed8;
+$tint: #eef4ff;
+
+.ms {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  height: calc(100vh - 128px);
+  min-height: 480px;
+  border: 1px solid #edf0f6;
+  border-radius: 18px;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(20, 40, 90, 0.04), 0 10px 28px rgba(20, 40, 90, 0.06);
+}
+
+/* ── conversations ── */
+.ms-list { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid $line; }
+
+.ms-list-head {
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid $hair;
+
+  h1 { margin: 0 0 10px; font-family: $display; font-size: 19px; font-weight: 600; color: $ink; }
+}
+
+.ms-filter {
+  position: relative;
+  display: block;
+
+  .material-icons { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 17px; color: $faint; pointer-events: none; }
+  input {
+    width: 100%;
+    height: 36px;
+    padding: 0 10px 0 34px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: #f3f5f9;
+    font: inherit;
+    font-size: 13px;
+    box-sizing: border-box;
+
+    &:focus { outline: none; background: #fff; border-color: #c9d8f5; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
+  }
+}
+
+.ms-items { flex: 1 1 auto; overflow-y: auto; }
+
+.ms-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-bottom: 1px solid $hair;
+  border-left: 3px solid transparent;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover { background: #f8faff; }
+  &.on { background: $tint; border-left-color: $accent; }
+  &.unread .ms-name, &.unread .ms-last { font-weight: 700; color: $ink; }
+  &:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.4); outline-offset: -2px; }
+}
+
+.ms-avatar {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e7f0ff 0%, #eee9ff 100%);
+  font-family: $display;
+  font-size: 16px;
+  font-weight: 600;
+  color: $navy;
+
+  &.lg { width: 44px; height: 44px; flex-basis: 44px; }
+}
+
+.ms-item-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ms-item-top { display: flex; align-items: baseline; gap: 8px; }
+
+.ms-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  color: $ink;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ms-time { flex: 0 0 auto; font-size: 11.5px; color: $faint; }
+.ms-about { font-size: 11.5px; font-weight: 600; color: $accent; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ms-last { font-size: 12.5px; color: $muted; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ms-you { color: $faint; }
+
+.ms-badge {
+  position: absolute;
+  right: 14px;
+  bottom: 13px;
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: $accent;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.ms-blocked { position: absolute; right: 14px; bottom: 12px; font-size: 16px; color: $faint; }
+
+.ms-none {
+  padding: 36px 20px;
+  text-align: center;
+  color: $muted;
+
+  > .material-icons { font-size: 34px; color: #c3cfe6; }
+  p { margin: 8px auto 14px; max-width: 32ch; font-size: 13px; line-height: 1.55; color: $text; }
+  .jp-btn { text-decoration: none; }
+}
+
+/* ── one conversation ── */
+.ms-thread-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #fbfcfe; }
+
+.ms-thread-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid $line;
+  background: #fff;
+
+  .jp-btn { flex: 0 0 auto; text-decoration: none; }
+}
+
+.ms-back { display: none; }
+
+.ms-thread-who {
+  flex: 1 1 auto;
+  min-width: 0;
+
+  h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-family: $display; font-size: 16px; font-weight: 600; color: $ink; }
+  p { margin: 2px 0 0; font-size: 12.5px; color: $muted; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; strong { color: $text; } }
+}
+
+.ms-thread {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 18px 20px 10px;
+}
+
+.ms-day {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0;
+
+  span { padding: 2px 10px; border-radius: 999px; background: #eef1f6; font-size: 11px; font-weight: 600; color: $muted; }
+}
+
+.ms-msg {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 10px;
+
+  &.mine { align-items: flex-end; }
+}
+
+.ms-sender { margin: 0 0 3px 4px; font-size: 11.5px; font-weight: 600; color: $muted; }
+
+.ms-bubble {
+  max-width: min(560px, 82%);
+  padding: 9px 13px;
+  border: 1px solid #e8ecf3;
+  border-radius: 16px 16px 16px 5px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(20, 40, 90, 0.04);
+
+  p { margin: 0; font-size: 14px; line-height: 1.5; color: $ink; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  .mine & {
+    border-color: transparent;
+    border-radius: 16px 16px 5px 16px;
+    background: linear-gradient(135deg, #2f6df0 0%, $navy 100%);
+
+    p { color: #fff; }
+  }
+}
+
+.ms-job {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1px solid #dfe7f6;
+  border-radius: 12px;
+  background: #f6f9ff;
+  text-decoration: none;
+  color: inherit;
+
+  &:first-child { margin-top: 0; }
+  &:hover { border-color: #c9d8f5; background: #eef4ff; }
+  > .material-icons { font-size: 16px; color: $faint; }
+
+  .mine & { border-color: rgba(255, 255, 255, 0.35); background: rgba(255, 255, 255, 0.95); }
+}
+
+.ms-job-logo {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #e7f0ff 0%, #eee9ff 100%);
+  font-weight: 700;
+  color: $navy;
+}
+
+.ms-job-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  strong { font-size: 13.5px; color: $ink; overflow-wrap: anywhere; }
+  span { font-size: 12px; color: $muted; }
+  em { font-style: normal; font-size: 11.5px; font-weight: 600; color: $accent; }
+}
+
+.ms-meta { margin: 3px 4px 0; font-size: 11px; color: $faint; }
+.ms-seen { font-weight: 600; color: $accent; }
+
+.ms-start {
+  margin: 40px auto;
+  text-align: center;
+  color: $muted;
+
+  .material-icons { font-size: 30px; color: #f5b74e; }
+  p { margin: 6px 0 0; font-size: 13.5px; }
+}
+
+/* ── writing ── */
+.ms-compose {
+  position: relative;
+  padding: 10px 14px 12px;
+  border-top: 1px solid $line;
+  background: #fff;
+
+  .jp-error { margin-top: 8px; }
+}
+
+.ms-compose-row { display: flex; align-items: flex-end; gap: 8px; }
+
+.ms-compose textarea {
+  flex: 1 1 auto;
+  min-height: 40px;
+  max-height: 140px;
+  padding: 10px 12px;
+  border: 1px solid $line;
+  border-radius: 12px;
+  background: #f8f9fc;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  resize: none;
+  field-sizing: content;
+  box-sizing: border-box;
+
+  &:focus { outline: none; background: #fff; border-color: #c9d8f5; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
+}
+
+.ms-tool, .ms-send {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid $line;
+  border-radius: 12px;
+  background: #fff;
+  color: $muted;
+  cursor: pointer;
+
+  .material-icons { font-size: 19px; }
+  &:hover { color: $accent; border-color: #c9d8f5; }
+  &.on { background: $tint; color: $navy; border-color: #c9d8f5; }
+  &:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.4); outline-offset: 1px; }
+}
+
+.ms-send {
+  border-color: $accent;
+  background: $accent;
+  color: #fff;
+
+  &:hover:not(:disabled) { background: $navy; color: #fff; }
+  &:disabled { opacity: 0.45; cursor: default; }
+}
+
+.ms-attached {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 7px 8px 7px 10px;
+  border: 1px solid #d6e3fd;
+  border-radius: 10px;
+  background: $tint;
+  font-size: 12.5px;
+  color: $text;
+
+  > .material-icons { font-size: 16px; color: $accent; }
+  > span:not(.material-icons) { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  button { display: inline-flex; padding: 2px; border: none; background: none; color: $muted; cursor: pointer; .material-icons { font-size: 16px; } }
+}
+
+.ms-picker {
+  position: absolute;
+  left: 14px;
+  bottom: calc(100% - 4px);
+  z-index: 5;
+  width: min(360px, calc(100% - 28px));
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid $line;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(20, 40, 90, 0.16);
+
+  button {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    strong { font-size: 13px; color: $ink; }
+    span { font-size: 11.5px; color: $muted; }
+    &:hover { background: $tint; }
+  }
+}
+
+.ms-picker-note { margin: 0; padding: 10px; font-size: 12.5px; color: $muted; }
+
+.ms-blocked-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border-top: 1px solid $line;
+  background: #fff7ed;
+  font-size: 13px;
+  color: #9a3412;
+
+  .material-icons { font-size: 18px; }
+}
+
+.ms-empty-pane {
+  margin: auto;
+  text-align: center;
+  color: $faint;
+
+  .material-icons { font-size: 42px; color: #d2dbea; }
+  p { margin: 6px 0 0; font-size: 13.5px; }
+}
+
+/* ── a phone: one pane at a time ── */
+@media (max-width: 900px) {
+  .ms { grid-template-columns: minmax(0, 1fr); height: calc(100vh - 110px); }
+  .ms-thread-pane { display: none; }
+  .ms.has-open .ms-list { display: none; }
+  .ms.has-open .ms-thread-pane { display: flex; }
+
+  .ms-back {
+    display: inline-flex;
+    padding: 4px;
+    border: none;
+    background: none;
+    color: $muted;
+    cursor: pointer;
+  }
+
+  .ms-hide-sm { display: none; }
+  .ms-bubble { max-width: 88%; }
+}

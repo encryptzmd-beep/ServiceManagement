@@ -4,6 +4,7 @@ import { PersonalMenuItem } from './personal-shell-component';
 export const CONSULTANCY_MENU: PersonalMenuItem[] = [
   { label: 'Job postings', icon: 'work_outline', route: '/consultancy/postings' },
   { label: 'Candidates', icon: 'groups', route: '/consultancy/candidates' },
+  { label: 'Messages', icon: 'chat_bubble_outline', route: '/consultancy/messages' },
   { label: 'Clients', icon: 'handshake', route: '/consultancy/clients' },
   { label: 'Placements', icon: 'verified', route: '/consultancy/placements' },
 ];

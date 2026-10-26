@@ -11,7 +11,7 @@ export function safeNextUrl(value: string | null | undefined): string | null {
   return next;
 }
 
-/** The Job Portal page that opens one job (and its Apply button) after signing in. */
+/** The Job Portal page of one job, with the application open, after signing in. */
 export function applyUrl(postingId: number): string {
-  return `/apps/jobs/search?posting=${postingId}`;
+  return `/apps/jobs/job/${postingId}?apply=1`;
 }

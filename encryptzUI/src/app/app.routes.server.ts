@@ -9,5 +9,7 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'jobs', renderMode: RenderMode.Server },
   { path: 'jobs/:id', renderMode: RenderMode.Server },
   { path: 'jobs/:id/:slug', renderMode: RenderMode.Server },
+  // a shared profile: rendered so that a link preview shows the name (the page says noindex)
+  { path: 'p/:code', renderMode: RenderMode.Server },
   { path: '**', renderMode: RenderMode.Client },
 ];

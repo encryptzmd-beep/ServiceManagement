@@ -7,6 +7,7 @@ export function jobsMenu(unread = 0): PersonalMenuItem[] {
     { label: 'Search jobs', icon: 'search', route: '/apps/jobs/search' },
     { label: 'My applications', icon: 'assignment_turned_in', route: '/apps/jobs/applications' },
     { label: 'Saved jobs', icon: 'bookmark_border', route: '/apps/jobs/saved' },
+    { label: 'Messages', icon: 'chat_bubble_outline', route: '/apps/jobs/messages' },
     { label: 'Notifications', icon: 'notifications_none', route: '/apps/jobs/notifications', badge: unread },
   ];
 }

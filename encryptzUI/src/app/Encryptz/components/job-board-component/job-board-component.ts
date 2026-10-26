@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import {
   JOB_EMPLOYMENT_TYPES,
   JOB_WORK_MODES,
@@ -34,6 +34,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 export class JobBoardComponent implements OnInit {
   private api = inject(JobsService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   private alerts = inject(JobAlertsService);
   readonly menu = computed(() => jobsMenu(this.alerts.unread()));
@@ -54,9 +55,6 @@ export class JobBoardComponent implements OnInit {
   /** What is typed in the search bar; sent when Search is pressed. */
   filter: JobSearchFilter = { q: '', city: '', type: '', mode: '', page: 1, sort: 'match' };
 
-  /** The job that is open with its description. */
-  opened = signal<JobPostingView | null>(null);
-  opening = signal(false);
 
   /** The job the apply dialog is for. */
   applyFor = signal<JobPostingView | null>(null);
@@ -67,12 +65,15 @@ export class JobBoardComponent implements OnInit {
   toast = signal<{ text: string; ok: boolean } | null>(null);
 
   ngOnInit(): void {
+    // an invitation links to one job (?posting=, notifications written before the job page): its page
+    const invited = Number(this.route.snapshot.queryParamMap?.get('posting'));
+    if (Number.isInteger(invited) && invited > 0) {
+      this.router.navigate(['/apps/jobs/job', invited], { replaceUrl: true });
+      return;
+    }
+
     this.mode.set((this.route.snapshot.data['mode'] as JobBoardMode) ?? 'search');
     this.load();
-
-    // an invitation links to one job: it opens at once
-    const invited = Number(this.route.snapshot.queryParamMap?.get('posting'));
-    if (invited > 0) this.open(invited);
     this.alerts.refresh();
   }
 
@@ -168,23 +169,6 @@ export class JobBoardComponent implements OnInit {
 
   // ── one job ───────────────────────────────────────────────────────────────
 
-  open(postingId: number): void {
-    if (this.opening()) return;
-    this.opening.set(true);
-    this.api.getPosting(postingId).subscribe({
-      next: res => {
-        this.opening.set(false);
-        if (res.success && res.data) this.opened.set(res.data);
-        else this.notify(res.message === 'Not found' ? 'This job is no longer available' : res.message, false);
-      },
-      error: () => { this.opening.set(false); this.notify('The job could not be opened. Please try again', false); },
-    });
-  }
-
-  closeOpened(): void {
-    this.opened.set(null);
-  }
-
   toggleSave(posting: JobPostingView): void {
     const saved = !posting.isSaved;
     this.api.setSaved(posting.postingId, saved).subscribe({
@@ -202,10 +186,9 @@ export class JobBoardComponent implements OnInit {
     });
   }
 
-  /** Puts a change into the list and into the open job. */
+  /** Puts a change into the list. */
   private change(postingId: number, patch: Partial<JobPostingView>): void {
     this.postings.update(list => list.map(p => (p.postingId === postingId ? { ...p, ...patch } : p)));
-    this.opened.update(p => (p && p.postingId === postingId ? { ...p, ...patch } : p));
   }
 
   // ── applying ──────────────────────────────────────────────────────────────

@@ -748,6 +748,38 @@ namespace EncryptzBL.Infrastructure.Jobs
 
         // ── files ─────────────────────────────────────────────────────────────
 
+        // ── the shareable link (script PersonalDB/19) ─────────────────────────
+
+        public Task<ApiResponse<JobProfileShareDto>> GetShare(int userId)
+            => Guarded(userId, "reading the profile link", async () => ApiResponse<JobProfileShareDto>.Ok(await ReadShare(userId)));
+
+        public Task<ApiResponse<JobProfileShareDto>> SetShare(int userId, bool on)
+            => Guarded(userId, "switching the profile link", async () =>
+            {
+                var answer = Answer(await GetDataTableAsync("jobs.sp_Profile_Share_Set", new[]
+                {
+                    In("@UserId", userId),
+                    In("@On", on)
+                }));
+
+                return answer.Success
+                    ? ApiResponse<JobProfileShareDto>.Ok(await ReadShare(userId), answer.Message)
+                    : ApiResponse<JobProfileShareDto>.Fail(answer.Message);
+            });
+
+        private async Task<JobProfileShareDto> ReadShare(int userId)
+        {
+            var dt = await GetDataTableAsync("jobs.sp_Profile_Share_Get", new[] { In("@UserId", userId) });
+            if (dt == null || dt.Rows.Count == 0)
+                return new JobProfileShareDto();
+
+            return new JobProfileShareDto
+            {
+                IsOn = Convert.ToBoolean(dt.Rows[0]["ShareOn"]),
+                Code = dt.Rows[0]["ShareCode"]?.ToString() ?? ""
+            };
+        }
+
         public Task<ApiResponse<JobFileContent>> GetFile(int userId, int fileId)
             => Guarded(userId, "reading a file", async () =>
             {

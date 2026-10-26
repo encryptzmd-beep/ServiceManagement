@@ -130,6 +130,47 @@ namespace EncryptzBL.DTO_s
         public string Url { get; set; } = "";
     }
 
+    /// <summary>The person's shareable profile link (script 19): on or off, and its code ('' before it was first switched on).</summary>
+    public class JobProfileShareDto
+    {
+        public bool IsOn { get; set; }
+        public string Code { get; set; } = "";
+    }
+
+    public class SetJobProfileShareRequest
+    {
+        public bool On { get; set; }
+    }
+
+    /// <summary>A certificate on the public profile: its title and whether it was checked, never the file.</summary>
+    public class PublicCertificateDto
+    {
+        public string Title { get; set; } = "";
+        public string Issuer { get; set; } = "";
+        public DateTime? IssuedOn { get; set; }
+        /// <summary>Uploaded, Verified or Rejected.</summary>
+        public string Status { get; set; } = "";
+    }
+
+    /// <summary>
+    /// The public page of a shared profile (/p/code). Never the email, the phone, the date of
+    /// birth, the resume, a file, the preferences or a user id.
+    /// </summary>
+    public class PublicProfileDto
+    {
+        public string FullName { get; set; } = "";
+        public string Headline { get; set; } = "";
+        public string Summary { get; set; } = "";
+        public string City { get; set; } = "";
+        public bool IsVerified { get; set; }
+        public bool HasPhoto { get; set; }
+        public List<JobExperienceDto> Experience { get; set; } = new();
+        public List<JobEducationDto> Education { get; set; } = new();
+        public List<JobSkillDto> Skills { get; set; } = new();
+        public List<PublicCertificateDto> Certificates { get; set; } = new();
+        public List<JobSocialLinkDto> SocialLinks { get; set; } = new();
+    }
+
     public class SaveJobSocialLinksRequest
     {
         public List<JobSocialLinkDto> Links { get; set; } = new();

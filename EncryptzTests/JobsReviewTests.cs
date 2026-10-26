@@ -95,6 +95,9 @@ namespace EncryptzTests
             public int AskedBy = -1, AskedFor = -1;
             public JobFileContent? File;
 
+            public Task<ApiResponse<JobProfileShareDto>> GetShare(int userId) => throw new NotSupportedException();
+            public Task<ApiResponse<JobProfileShareDto>> SetShare(int userId, bool on) => throw new NotSupportedException();
+
             public Task<ApiResponse<JobFileContent>> GetFile(int userId, int fileId)
             {
                 AskedBy = userId;

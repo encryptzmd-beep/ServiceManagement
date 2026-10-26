@@ -179,6 +179,16 @@ namespace EncryptzAPI.Controllers
             return File(result.Data.Content, type);
         }
 
+        // ── the shareable link of the profile ─────────────────────────────────
+
+        [HttpGet("profile/share")]
+        public async Task<IActionResult> GetShare()
+            => Ok(await _jobs.GetShare(Caller()));
+
+        [HttpPost("profile/share")]
+        public async Task<IActionResult> SetShare([FromBody] SetJobProfileShareRequest? req)
+            => Ok(await _jobs.SetShare(Caller(), req?.On ?? false));
+
         // ── files ─────────────────────────────────────────────────────────────
 
         /// <summary>One file of the caller. A file of somebody else is "not found", like a file that does not exist.</summary>

@@ -55,6 +55,8 @@ describe('JobProfileComponent', () => {
       getPage: () => { calls.push(['getPage']); return of({ success: true, message: '', data: page() }); },
       saveProfile: (p: any) => { calls.push(['saveProfile', p]); return ok(); },
       setVisible: (on: boolean) => { calls.push(['setVisible', on]); return ok(true, 'Employers can find your profile'); },
+      getShare: () => { calls.push(['getShare']); return ok({ isOn: false, code: '' }); },
+      setShare: (on: boolean) => { calls.push(['setShare', on]); return ok({ isOn: on, code: 'abcdefghij' }, on ? 'Your profile link is on' : 'The link is off'); },
       saveExperience: (e: any) => { calls.push(['saveExperience', e]); return ok(1); },
       deleteExperience: (id: number) => { calls.push(['deleteExperience', id]); return ok(); },
       saveEducation: (e: any) => { calls.push(['saveEducation', e]); return ok(2); },
@@ -487,9 +489,9 @@ describe('JobProfileComponent', () => {
     const items = Array.from(fixture.nativeElement.querySelectorAll('.ps-nav-item')) as HTMLElement[];
     const label = (e: HTMLElement) => e.querySelector('.ps-nav-label')!.textContent!.trim();
 
-    expect(items.map(label)).toEqual(['My profile', 'Search jobs', 'My applications', 'Saved jobs', 'Notifications']);
+    expect(items.map(label)).toEqual(['My profile', 'Search jobs', 'My applications', 'Saved jobs', 'Messages', 'Notifications']);
     expect(items.map(e => e.getAttribute('href')))
-      .toEqual(['/apps/jobs', '/apps/jobs/search', '/apps/jobs/applications', '/apps/jobs/saved', '/apps/jobs/notifications']);
+      .toEqual(['/apps/jobs', '/apps/jobs/search', '/apps/jobs/applications', '/apps/jobs/saved', '/apps/jobs/messages', '/apps/jobs/notifications']);
     expect(fixture.nativeElement.textContent).not.toContain('Soon');
   });
 
@@ -846,7 +848,7 @@ describe('JobProfileComponent', () => {
     box.dispatchEvent(new Event('change'));
     fixture.detectChanges();
 
-    expect(calls.map(x => x[0]).sort()).toEqual(['getPage', 'getPhoto', 'getProfileViews']);   // only the first reads: setVisible is replaced above
+    expect(calls.map(x => x[0]).sort()).toEqual(['getPage', 'getPhoto', 'getProfileViews', 'getShare']);   // only the first reads: setVisible is replaced above
     expect(box.checked).toBe(false);
     expect(text(fixture)).toContain('Add your name and a headline before you switch this on');
   });

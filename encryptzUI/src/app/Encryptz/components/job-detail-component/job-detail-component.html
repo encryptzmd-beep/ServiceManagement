@@ -1,0 +1,194 @@
+<app-personal-shell appName="Job Portal" icon="badge" [menu]="menu()">
+  @if (loading()) {
+    <div class="jp-state"><span class="jp-spinner" aria-hidden="true"></span><p>Loading the job…</p></div>
+  } @else if (problem()) {
+    <div class="jp-card jb-empty pd-gone">
+      <span class="material-icons">work_off</span>
+      <p>{{ problem() }}</p>
+      <a class="jp-btn primary" routerLink="/apps/jobs/search">Search jobs</a>
+    </div>
+  } @else if (job(); as p) {
+
+    <nav class="pd-crumbs" aria-label="Breadcrumb">
+      <a routerLink="/apps/jobs/search">Search jobs</a>
+      <span aria-hidden="true">›</span>
+      <span aria-current="page">{{ p.title }}</span>
+    </nav>
+
+    <div class="pd-layout">
+      <article class="pd-main">
+        <!-- ═══════════ THE JOB ═══════════ -->
+        <header class="jp-card pd-head">
+          <div class="jb-logo pd-logo" aria-hidden="true">{{ initial(p.companyName) }}</div>
+          <div class="pd-head-text">
+            <h1>{{ p.title }}</h1>
+            <div class="pd-company">
+              <span class="jb-company">{{ p.companyName }}</span>
+              @if (p.isVerified) { <app-verified-badge label="Verified job" hint="Encryptz checked this job before it was published" /> }
+            </div>
+            <div class="jb-meta">
+              <span><span class="material-icons" aria-hidden="true">place</span>{{ p.city }}</span>
+              <span><span class="material-icons" aria-hidden="true">schedule</span>{{ p.employmentType }}</span>
+              <span><span class="material-icons" aria-hidden="true">apartment</span>{{ p.workMode }}</span>
+              @if (experienceLabel(p); as exp) { <span><span class="material-icons" aria-hidden="true">work_outline</span>{{ exp }}</span> }
+              @if (salaryLabel(p); as pay) { <span><span class="material-icons" aria-hidden="true">payments</span>{{ pay }}</span> }
+            </div>
+            <div class="pd-dates">
+              @if (p.publishedAt) { <span>Posted {{ dayLabel(p.publishedAt) }}</span> }
+              @if (!p.isOpen) { <span><strong>No longer takes applications</strong></span> }
+              @else if (p.closesOn) { <span>Apply by <strong>{{ dayLabel(p.closesOn) }}</strong></span> }
+            </div>
+          </div>
+        </header>
+
+        <section class="jp-card pd-section" aria-labelledby="jd">
+          <h2 id="jd">Job description</h2>
+          <div class="pd-description">{{ p.description }}</div>
+        </section>
+
+        @if (skillList(p.skills, 30).length) {
+          <section class="jp-card pd-section" aria-labelledby="skills">
+            <h2 id="skills">Skills needed</h2>
+            <div class="jb-skills">@for (s of skillList(p.skills, 30); track s) { <span class="jp-chip">{{ s }}</span> }</div>
+          </section>
+        }
+
+        <section class="jp-card pd-section" aria-labelledby="details">
+          <h2 id="details">Job details</h2>
+          <dl class="pd-facts">
+            <div><dt>Company</dt><dd>{{ p.companyName }}</dd></div>
+            <div><dt>Location</dt><dd>{{ p.city }}</dd></div>
+            <div><dt>Job type</dt><dd>{{ p.employmentType }}</dd></div>
+            <div><dt>Work mode</dt><dd>{{ p.workMode }}</dd></div>
+            @if (experienceLabel(p); as exp) { <div><dt>Experience</dt><dd>{{ exp }}</dd></div> }
+            @if (salaryLabel(p); as pay) { <div><dt>Salary</dt><dd>{{ pay }}</dd></div> }
+            @if (p.publishedAt) { <div><dt>Posted</dt><dd>{{ dayLabel(p.publishedAt) }}</dd></div> }
+            @if (p.closesOn) { <div><dt>Apply by</dt><dd>{{ dayLabel(p.closesOn) }}</dd></div> }
+          </dl>
+        </section>
+
+        @if (related().length) {
+          <!-- ═══════════ SIMILAR JOBS ═══════════ -->
+          <section class="pd-related" aria-labelledby="related">
+            <div class="pd-related-head">
+              <h2 id="related">Similar jobs</h2>
+              <a routerLink="/apps/jobs/search">All jobs<span class="material-icons" aria-hidden="true">arrow_forward</span></a>
+            </div>
+            <div class="pd-related-grid">
+              @for (r of related(); track r.postingId) {
+                <a class="jp-card pd-rel" [routerLink]="['/apps/jobs/job', r.postingId]">
+                  <div class="pd-rel-top">
+                    <div class="jb-logo pd-rel-logo" aria-hidden="true">{{ initial(r.companyName) }}</div>
+                    <div class="pd-rel-text">
+                      <h3>{{ r.title }}@if (r.isVerified) { <app-verified-badge [compact]="true" hint="Job verified by Encryptz" /> }</h3>
+                      <div class="pd-rel-company">{{ r.companyName }}</div>
+                    </div>
+                  </div>
+                  <div class="pd-rel-meta">
+                    <span><span class="material-icons" aria-hidden="true">place</span>{{ r.city }}</span>
+                    <span>{{ r.employmentType }} · {{ r.workMode }}</span>
+                  </div>
+                  @if (salaryLabel(r); as pay) { <div class="pd-rel-pay">{{ pay }}</div> }
+                </a>
+              }
+            </div>
+          </section>
+        }
+      </article>
+
+      <!-- ═══════════ APPLY / SAVE ═══════════ -->
+      <aside class="pd-side" aria-label="Apply">
+        <div class="jp-card pd-apply">
+          @if (p.myStatus && p.myStatus !== 'Withdrawn') {
+            <h2>Your application</h2>
+            <p class="jd-status-line"><span [class]="statusClass(p.myStatus)">{{ p.myStatus }}</span></p>
+            @if (application(); as a) {
+              <dl class="jd-dates">
+                <div><dt><span class="material-icons" aria-hidden="true">event_available</span>Applied on</dt><dd>{{ dayLabel(a.appliedAt) }}</dd></div>
+                @if (a.status !== 'Applied') {
+                  <div><dt><span class="material-icons" aria-hidden="true">update</span>{{ a.status }} since</dt><dd>{{ dayLabel(a.statusAt) }}</dd></div>
+                }
+              </dl>
+            }
+            <a class="jp-btn pd-apply-btn" routerLink="/apps/jobs/applications">See my applications</a>
+          } @else if (p.isOpen) {
+            <h2>Apply for this job</h2>
+            <p>The company sees your Job Portal profile when you apply. You can withdraw any time.</p>
+            <button class="jp-btn primary pd-apply-btn" type="button" (click)="startApply()">Apply now<span class="material-icons" aria-hidden="true">arrow_forward</span></button>
+          } @else {
+            <h2>Applications closed</h2>
+            <p>This job no longer takes applications. Similar jobs are below.</p>
+          }
+          @if (p.isOpen) {
+            <button class="jp-btn pd-apply-btn" type="button" (click)="toggleSave(p)" [disabled]="saving()" [attr.aria-pressed]="p.isSaved">
+              <span class="material-icons" aria-hidden="true">{{ p.isSaved ? 'bookmark' : 'bookmark_border' }}</span>{{ p.isSaved ? 'Saved' : 'Save job' }}
+            </button>
+          }
+        </div>
+        <div class="jd-actions">
+          <button class="jp-btn" type="button" (click)="messageCompany(p)" [disabled]="messaging()">
+            <span class="material-icons" aria-hidden="true">chat_bubble_outline</span>Message the company
+          </button>
+          <button class="jp-btn ghost" type="button" (click)="shareJob(p)" title="Copy the public link of this job">
+            <span class="material-icons" aria-hidden="true">share</span>Share
+          </button>
+        </div>
+        @if (p.isVerified) {
+          <div class="pd-trust">
+            <span class="material-icons" aria-hidden="true">verified_user</span>
+            <p>Encryptz checked this job before it was published.</p>
+          </div>
+        }
+        <a class="pd-back" routerLink="/apps/jobs/search"><span class="material-icons" aria-hidden="true">arrow_back</span>Search jobs</a>
+      </aside>
+    </div>
+
+    @if (canApply(p)) {
+      <div class="pd-mobile-bar">
+        <button class="jp-btn primary" type="button" (click)="startApply()">Apply now</button>
+      </div>
+    }
+  }
+
+  @if (toast(); as t) {
+    <div class="jp-toast" [class.bad]="!t.ok" role="status">
+      <span class="material-icons">{{ t.ok ? 'check_circle' : 'error_outline' }}</span>{{ t.text }}
+    </div>
+  }
+</app-personal-shell>
+
+<!-- ═══════════ APPLY ═══════════ -->
+@if (applyOpen() && job(); as p) {
+  <div class="jp-overlay">
+    <div class="jp-dialog" role="dialog" aria-modal="true">
+      <div class="jp-dialog-head">
+        <h3>Apply: {{ p.title }}</h3>
+        <button class="jp-close" (click)="cancelApply()" aria-label="Close"><span class="material-icons">close</span></button>
+      </div>
+      <div class="jp-dialog-body">
+        <div class="jb-consent">
+          <span class="material-icons" aria-hidden="true">visibility</span>
+          <p>
+            When you apply, <strong>{{ p.companyName }}</strong> can see your profile: your details, experience,
+            education, skills, the titles of your certificates and your resume. Other companies cannot.
+            It ends when you withdraw the application.
+          </p>
+        </div>
+        <label>A note to the company (optional)
+          <textarea class="jp-input" name="applyNote" rows="4" maxlength="1000" [(ngModel)]="applyNote"
+                    placeholder="Why this job suits you, when you can start…"></textarea>
+        </label>
+        @if (applyError()) {
+          <div class="jp-error">
+            {{ applyError() }}
+            @if (applyNeedsProfile) { <a class="jb-link" routerLink="/apps/jobs">Open my profile</a> }
+          </div>
+        }
+      </div>
+      <div class="jp-dialog-foot">
+        <button class="jp-btn ghost" (click)="cancelApply()" [disabled]="applying()">Cancel</button>
+        <button class="jp-btn primary" (click)="sendApply()" [disabled]="applying()">{{ applying() ? 'Sending…' : 'Send application' }}</button>
+      </div>
+    </div>
+  </div>
+}

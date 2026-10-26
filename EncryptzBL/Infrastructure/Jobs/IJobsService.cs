@@ -42,5 +42,10 @@ namespace EncryptzBL.Infrastructure.Jobs
         Task<ApiResponse<JobFileContent>> GetPhoto(int userId);
 
         Task<ApiResponse<JobFileContent>> GetFile(int userId, int fileId);
+
+        /// <summary>The shareable link of the profile: on or off, and its code.</summary>
+        Task<ApiResponse<JobProfileShareDto>> GetShare(int userId);
+        /// <summary>Switches the link on (the code is made once and kept) or off.</summary>
+        Task<ApiResponse<JobProfileShareDto>> SetShare(int userId, bool on);
     }
 }

@@ -16,7 +16,7 @@ export class AppTitleStrategy extends TitleStrategy {
 
   override updateTitle(snapshot: RouterStateSnapshot): void {
     // the public job pages write their own title (SeoService), for search engines
-    if (snapshot.url === '/jobs' || snapshot.url.startsWith('/jobs/') || snapshot.url.startsWith('/jobs?')) return;
+    if (snapshot.url === '/jobs' || snapshot.url.startsWith('/jobs/') || snapshot.url.startsWith('/jobs?') || snapshot.url.startsWith('/p/')) return;
 
     const page = this.buildTitle(snapshot);
     if (!page) {

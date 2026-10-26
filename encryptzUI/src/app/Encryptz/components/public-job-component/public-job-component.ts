@@ -10,6 +10,7 @@ import { SITE_NAME, SeoService } from '../../Services/seo-service';
 import { dayLabel, experienceLabel, initial, salaryLabel, skillList } from '../../Services/job-labels';
 import { PublicJobsShellComponent } from '../public-jobs-shell-component/public-jobs-shell-component';
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
+import { shareLink } from '../../Services/share-link';
 
 /** schema.org names of the employment types (Google for Jobs). */
 const EMPLOYMENT_TYPE: Record<string, string> = {
@@ -123,6 +124,13 @@ export class PublicJobComponent implements OnDestroy {
     }
     this.router.navigate(['/login'], { queryParams: { next: target } });
   }
+
+  /** The address of this page: the phone's share sheet, else copied. */
+  share(job: JobPostingView): void {
+    shareLink(this.seo.url(jobPath(job)), job.title, ok => { this.copied.set(ok ? 'Link copied' : 'Copy the address of the page'); setTimeout(() => this.copied.set(''), 3000); });
+  }
+
+  copied = signal('');
 
   registerQuery(job: JobPostingView): Record<string, string> {
     return { next: applyUrl(job.postingId) };

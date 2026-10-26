@@ -1,0 +1,108 @@
+<app-public-jobs-shell>
+  <div class="pp-wrap">
+    @if (loading()) {
+      <div class="jp-state"><span class="jp-spinner" aria-hidden="true"></span><p>Loading the profile…</p></div>
+    } @else if (missing()) {
+      <div class="jp-card jb-empty pp-gone">
+        <span class="material-icons">person_off</span>
+        <h1>This profile is not shared</h1>
+        <p>The link was switched off, or it is not right. Ask the person for a new link.</p>
+        <a class="jp-btn primary" routerLink="/jobs">Search jobs</a>
+      </div>
+    } @else if (profile(); as p) {
+
+      <!-- ═══════════ THE PERSON ═══════════ -->
+      <header class="jp-card pp-hero">
+        <div class="pp-avatar" aria-hidden="true">
+          @if (photoUrl()) { <img [src]="photoUrl()" alt="" /> } @else { {{ initial(p.fullName) }} }
+        </div>
+        <div class="pp-hero-text">
+          <h1>{{ p.fullName }}@if (p.isVerified) { <app-verified-badge label="Verified" hint="Encryptz verified this person" /> }</h1>
+          <p class="pp-headline">{{ p.headline }}</p>
+          @if (p.city) { <p class="pp-city"><span class="material-icons" aria-hidden="true">place</span>{{ p.city }}</p> }
+          @if (p.socialLinks.length) {
+            <div class="pp-links">
+              @for (l of p.socialLinks; track l.url) {
+                <a [href]="l.url" target="_blank" rel="noopener noreferrer nofollow"><span class="material-icons" aria-hidden="true">link</span>{{ l.platform }}</a>
+              }
+            </div>
+          }
+        </div>
+      </header>
+
+      <div class="pp-layout">
+        <div class="pp-main">
+          @if (p.summary) {
+            <section class="jp-card pp-section"><h2>About</h2><p class="pp-summary">{{ p.summary }}</p></section>
+          }
+
+          @if (p.experience.length) {
+            <section class="jp-card pp-section">
+              <h2>Experience</h2>
+              @for (e of p.experience; track e.experienceId) {
+                <div class="pp-item">
+                  <strong>{{ e.title }}</strong>
+                  <div class="pp-sub">{{ e.organisation }} · {{ period(e) }}</div>
+                  @if (e.description) { <p class="pp-text">{{ e.description }}</p> }
+                </div>
+              }
+            </section>
+          }
+
+          @if (p.education.length) {
+            <section class="jp-card pp-section">
+              <h2>Education</h2>
+              @for (d of p.education; track d.educationId) {
+                <div class="pp-item">
+                  <strong>{{ d.course }}@if (d.fieldOfStudy) { , {{ d.fieldOfStudy }} }</strong>
+                  <div class="pp-sub">{{ d.institution }}@if (years(d)) { · {{ years(d) }} }</div>
+                </div>
+              }
+            </section>
+          }
+        </div>
+
+        <aside class="pp-side">
+          @if (p.skills.length) {
+            <section class="jp-card pp-section">
+              <h2>Skills</h2>
+              @for (s of p.skills; track s.skillId) {
+                <div class="pp-skill">
+                  <div class="pp-skill-row">
+                    <span>{{ s.skillName }}</span>
+                    <span class="pp-stars" [attr.aria-label]="(s.overall || s.rating) + ' of 5'">
+                      @for (on of stars(s.overall || s.rating); track $index) { <span class="pp-star" [class.on]="on"></span> }
+                    </span>
+                  </div>
+                  @if (s.subSkills.length) { <small>{{ subSkills(s) }}</small> }
+                </div>
+              }
+            </section>
+          }
+
+          @if (p.certificates.length) {
+            <section class="jp-card pp-section">
+              <h2>Certificates</h2>
+              @for (c of p.certificates; track $index) {
+                <div class="pp-item">
+                  <strong>{{ c.title }}</strong>
+                  <div class="pp-sub">
+                    @if (c.issuer) { {{ c.issuer }} }
+                    @if (c.status === 'Verified') { <span class="pp-cert-ok"><span class="material-icons" aria-hidden="true">verified</span>Checked by Encryptz</span> }
+                  </div>
+                </div>
+              }
+            </section>
+          }
+
+          <div class="jp-card pp-cta">
+            <span class="material-icons" aria-hidden="true">badge</span>
+            <strong>Your profile, one link</strong>
+            <p>Create a free profile on Encryptz Jobs, apply to jobs and share it like this.</p>
+            <a class="jp-btn primary" routerLink="/register" rel="nofollow">Create free profile</a>
+          </div>
+        </aside>
+      </div>
+    }
+  </div>
+</app-public-jobs-shell>

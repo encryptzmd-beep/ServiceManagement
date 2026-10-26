@@ -276,3 +276,5 @@ $tint: #eef4ff;
 @media (prefers-reduced-motion: reduce) {
   .pd-rel:hover { transform: none; }
 }
+
+.pd-share { width: 100%; justify-content: center; margin-top: 12px; box-sizing: border-box; .material-icons { font-size: 16px; } }
