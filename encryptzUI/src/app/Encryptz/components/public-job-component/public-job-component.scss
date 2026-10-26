@@ -1,0 +1,188 @@
+/* One public job. Cards, chips and buttons come from the profile and the job pages. */
+
+$display: 'Outfit', 'DM Sans', sans-serif;
+$ink: #141b34;
+$text: #3b4357;
+$muted: #6b7489;
+$faint: #9aa3b5;
+$line: #e4e8f0;
+$accent: #2563eb;
+$tint: #eef4ff;
+
+.pd-wrap { width: 100%; max-width: 1180px; margin: 0 auto; padding: 20px 20px 0; box-sizing: border-box; }
+
+.pd-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+  font-size: 12.5px;
+  color: $faint;
+
+  a { color: $muted; text-decoration: none; &:hover { color: $accent; } }
+  [aria-current] { color: $text; font-weight: 500; overflow-wrap: anywhere; }
+}
+
+.pd-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+  align-items: start;
+}
+
+.pd-head {
+  display: flex;
+  gap: 16px;
+  padding: 22px;
+  margin-bottom: 14px;
+
+  h1 { margin: 0; font-family: $display; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; color: $ink; overflow-wrap: anywhere; }
+}
+
+.pd-logo { width: 56px; height: 56px; flex-basis: 56px; border-radius: 16px; font-size: 22px; }
+.pd-head-text { flex: 1 1 auto; min-width: 0; }
+
+.pd-company {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+
+  .jb-company { margin: 0; font-size: 14px; }
+}
+
+.pd-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: $muted;
+
+  strong { color: $ink; font-weight: 600; }
+}
+
+.pd-apply-top { align-self: flex-start; flex: 0 0 auto; }
+
+.pd-section {
+  padding: 20px 22px;
+  margin-bottom: 14px;
+
+  h2 { margin: 0 0 12px; font-family: $display; font-size: 17px; font-weight: 600; color: $ink; }
+  .jb-skills { margin-top: 0; }
+}
+
+.pd-description {
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: $text;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.pd-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 20px;
+  margin: 0;
+
+  dt { font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: $faint; }
+  dd { margin: 3px 0 0; font-size: 14px; font-weight: 500; color: $ink; overflow-wrap: anywhere; }
+}
+
+.pd-side { position: sticky; top: 80px; }
+
+.pd-apply {
+  padding: 20px;
+  border-color: #d6e3fd;
+  background: linear-gradient(170deg, #f3f7ff 0%, #fff 60%);
+
+  h2 { margin: 0; font-family: $display; font-size: 17px; font-weight: 600; color: $ink; }
+  p { margin: 6px 0 14px; font-size: 13px; line-height: 1.55; color: $text; }
+}
+
+.pd-apply-btn {
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+  text-decoration: none;
+
+  .material-icons { font-size: 17px; }
+}
+
+.pd-steps {
+  margin: 10px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px dashed $line;
+  list-style: none;
+
+  li { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12.5px; color: $text; }
+  .material-icons { font-size: 16px; color: $accent; }
+}
+
+.pd-trust {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #cfe0ff;
+  border-radius: 14px;
+  background: $tint;
+
+  .material-icons { font-size: 20px; color: $accent; }
+  p { margin: 0; font-size: 12.5px; line-height: 1.5; color: #1e3a8a; }
+}
+
+.pd-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: $muted;
+  text-decoration: none;
+
+  .material-icons { font-size: 16px; }
+  &:hover { color: $accent; }
+}
+
+.pd-gone {
+  max-width: 560px;
+  margin: 30px auto;
+
+  h1 { margin: 12px 0 0; font-family: $display; font-size: 22px; color: $ink; }
+  .jp-btn { text-decoration: none; }
+}
+
+.pd-mobile-bar { display: none; }
+
+@media (max-width: 960px) {
+  .pd-layout { grid-template-columns: minmax(0, 1fr); }
+  .pd-side { position: static; }
+}
+
+@media (max-width: 640px) {
+  .pd-wrap { padding: 14px 16px 76px; }
+  .pd-head { flex-wrap: wrap; padding: 16px; h1 { font-size: 22px; } }
+  .pd-apply-top { display: none; }
+  .pd-section { padding: 16px; }
+  .pd-facts { grid-template-columns: minmax(0, 1fr); }
+
+  .pd-mobile-bar {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid $line;
+    background: rgba(255, 255, 255, 0.96);
+
+    .jp-btn { width: 100%; justify-content: center; height: 44px; }
+  }
+}

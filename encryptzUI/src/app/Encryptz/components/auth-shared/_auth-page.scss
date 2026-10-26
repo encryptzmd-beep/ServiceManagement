@@ -324,6 +324,9 @@ input:not([type="checkbox"]) {
   font-weight: 500;
 
   .material-icons { font-size: 18px; color: #B07A00; }
+
+  /* came from a public job page to apply: a note, not a warning */
+  &.next-msg { background: #EEF4FF; border-color: #CFE0FF; color: #1E3A8A; .material-icons { color: #2563EB; } }
 }
 
 /* ── Responsive ── */

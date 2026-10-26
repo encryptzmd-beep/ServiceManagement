@@ -90,6 +90,16 @@ namespace EncryptzBL.Infrastructure.Jobs
             if (userId <= 0)
                 return ApiResponse<T>.Fail("Please log in again");
 
+            return await Shielded(userId, what, work, personal);
+        }
+
+        /// <summary>
+        /// Guarded without the login: the Personal DB, the release of Job Portal and the errors
+        /// as Guarded checks them. Only the public job pages come in here (JobsService.Public.cs),
+        /// with <paramref name="userId"/> 0.
+        /// </summary>
+        private async Task<ApiResponse<T>> Shielded<T>(int userId, string what, Func<Task<ApiResponse<T>>> work, bool personal = true)
+        {
             if (!_personal.IsConfigured)
                 return ApiResponse<T>.Fail(PersonalDbHelper.NotAvailable);
 

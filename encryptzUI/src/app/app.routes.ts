@@ -25,6 +25,17 @@ export const routes: Routes = [
         (m) => m.RegisterComponent,
       ),
   },
+  // The public job pages: no login, rendered on the server for search engines (app.routes.server.ts)
+  {
+    path: 'jobs',
+    loadComponent: () => import('./Encryptz/components/public-jobs-component/public-jobs-component')
+      .then(m => m.PublicJobsComponent),
+  },
+  ...['jobs/:id', 'jobs/:id/:slug'].map(path => ({
+    path,
+    loadComponent: () => import('./Encryptz/components/public-job-component/public-job-component')
+      .then(m => m.PublicJobComponent),
+  })),
      {
     path: 'customer',
     children: CUSTOMER_ROUTES

@@ -1,0 +1,30 @@
+<div class="ps">
+  <header class="ps-head">
+    <div class="ps-wrap ps-head-row">
+      <a class="ps-brand" routerLink="/jobs" aria-label="Encryptz Jobs, all jobs">
+        <img src="/logo.png" alt="" width="30" height="30" />
+        <span>Encryptz <strong>Jobs</strong></span>
+      </a>
+      <nav class="ps-nav" aria-label="Site">
+        <a routerLink="/jobs" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: false }">Find jobs</a>
+        <a routerLink="/login" rel="nofollow">Sign in</a>
+        <a class="ps-cta" routerLink="/register" rel="nofollow">Create free profile</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="ps-main">
+    <ng-content />
+  </main>
+
+  <footer class="ps-foot">
+    <div class="ps-wrap ps-foot-row">
+      <span>© {{ year }} Encryptz. Find a job and apply with one profile.</span>
+      <nav aria-label="Footer">
+        <a routerLink="/jobs">All jobs</a>
+        <a routerLink="/register" rel="nofollow">Create a profile</a>
+        <a routerLink="/login" rel="nofollow">Sign in</a>
+      </nav>
+    </div>
+  </footer>
+</div>

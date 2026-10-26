@@ -25,8 +25,15 @@
 
       <div class="tabs">
         <span class="tab active">Login</span>
-        <a class="tab" routerLink="/register">Create Account</a>
+        <a class="tab" routerLink="/register" queryParamsHandling="preserve">Create Account</a>
       </div>
+
+      @if (next) {
+        <div class="location-logout-msg next-msg">
+          <span class="material-icons">work_outline</span>
+          <span>Sign in to apply. You come back to the job right after. New here? Create an account first.</span>
+        </div>
+      }
 
       @if (locationLogoutMsg()) {
         <div class="location-logout-msg">
@@ -95,7 +102,7 @@
       </form>
 
       <div class="signup">
-        New to ENCRYPTZ? <a routerLink="/register">Create an account</a>
+        New to ENCRYPTZ? <a routerLink="/register" queryParamsHandling="preserve">Create an account</a>
       </div>
     </div>
   </div>

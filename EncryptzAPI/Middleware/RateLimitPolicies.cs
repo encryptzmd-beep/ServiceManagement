@@ -13,6 +13,12 @@ namespace EncryptzAPI.Middleware
         public const string PublicLookup = "public-lookup";
 
         /// <summary>
+        /// The public job pages (search, one job, sitemap): 120 per minute per client IP, 1200
+        /// for the shared bucket (the server that renders the pages calls from one address).
+        /// </summary>
+        public const string PublicJobs = "public-jobs";
+
+        /// <summary>
         /// Creating a company or retrying its set-up starts a database build: 5 per hour per
         /// logged-in user, whatever address the calls come from (see <see cref="CompanyCreationKey"/>).
         /// The limiter runs after authentication in Program.cs, so the policy sees the user;

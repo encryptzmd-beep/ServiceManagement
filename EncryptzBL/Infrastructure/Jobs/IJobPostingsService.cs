@@ -23,6 +23,20 @@ namespace EncryptzBL.Infrastructure.Jobs
     }
 
     /// <summary>
+    /// Job Portal, the public job pages: the open jobs for anybody, without an account
+    /// (search engines included). Applying needs a login (IJobPostingsService).
+    /// </summary>
+    public interface IPublicJobsService
+    {
+        Task<ApiResponse<JobPostingSearchResultDto>> SearchPublicPostings(string? query, string? city, string? employmentType, string? workMode, int? page);
+        Task<ApiResponse<JobPostingViewDto>> GetPublicPosting(int postingId);
+        /// <summary>The open jobs most like one job (title, skills, city, type, mode), never the job itself.</summary>
+        Task<ApiResponse<List<JobPostingViewDto>>> GetRelatedPublicPostings(int postingId);
+        /// <summary>Every job people can find now, for the sitemap.</summary>
+        Task<ApiResponse<List<PublicPostingLinkDto>>> GetPublicSitemap();
+    }
+
+    /// <summary>
     /// What the platform administrator checks: certificates people uploaded and jobs companies
     /// want to publish. Every method takes the user first (the platform administrator who is
     /// logged in); the API lets nobody else in.

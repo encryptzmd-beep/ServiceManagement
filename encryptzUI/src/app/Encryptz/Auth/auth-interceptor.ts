@@ -1,5 +1,6 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
-import { inject } from '@angular/core';
+import { PLATFORM_ID, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { AuthService } from './auth-service';
@@ -32,6 +33,9 @@ function customerProjectKey(): string {
 }
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  // the server renders only the public job pages: no login, no storage, no window there
+  if (!isPlatformBrowser(inject(PLATFORM_ID))) return next(req);
+
   const auth = inject(AuthService);
   const router = inject(Router);
   const isTenantResolverRequest = req.url.toLowerCase().includes('/api/auth/customer/resolve-tenant');

@@ -69,7 +69,8 @@ export class RegisterComponent {
         this.loading.set(false);
         if (res.success) {
           this.success.set(res.message || 'Registration successful! Redirecting to login...');
-          setTimeout(() => this.router.navigate(['/login']), 3000);
+          // back to the job the person wanted to apply for, if they came from one (?next= stays)
+          setTimeout(() => this.router.navigate(['/login'], { queryParamsHandling: 'preserve' }), 3000);
         } else {
           this.error.set(res.message || 'Registration failed');
         }

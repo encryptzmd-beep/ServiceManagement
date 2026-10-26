@@ -81,6 +81,22 @@ builder.Services.AddRateLimiter(options =>
             });
     });
 
+    // The public job pages: browsing is many calls, so the window is wider than a lookup.
+    options.AddPolicy(RateLimitPolicies.PublicJobs, context =>
+    {
+        var ip = context.Connection.RemoteIpAddress;
+        var sharedBucket = ip == null || IPAddress.IsLoopback(ip);
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            ip?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = sharedBucket ? 1200 : 120,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            });
+    });
+
     // Each permitted call can start a database build: per logged-in user, else per IP.
     // The user is known here because UseRateLimiter() comes after UseAuthentication() below.
     options.AddPolicy(RateLimitPolicies.CompanyCreation, context =>

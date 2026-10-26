@@ -98,7 +98,8 @@ namespace EncryptzTests
             {
                 "AuthController", "CompanyController", "PlatformController", "WeatherForecastController",
                 "JobsController", "JobPostingsController", "CompanyJobsController", "VerificationController", "ConsultancyController", "NotificationsController",
-                "LoginAdsController"   // the sign-in page, before anyone has a company
+                "LoginAdsController",  // the sign-in page, before anyone has a company
+                "PublicJobsController" // the public job pages: no login, no company
             };
 
             var untagged = typeof(AuthController).Assembly.GetTypes()

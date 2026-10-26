@@ -2,8 +2,9 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule, Router } from '@angular/router';
+import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
+import { safeNextUrl } from '../../Auth/return-url';
 import { LoginBrandPanelComponent } from '../login-brand-panel/login-brand-panel';
 
 @Component({
@@ -16,6 +17,9 @@ import { LoginBrandPanelComponent } from '../login-brand-panel/login-brand-panel
 export class LoginComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
+
+  /** A Job Portal page to come back to (the public job pages send people here to apply). */
+  readonly next = safeNextUrl(inject(ActivatedRoute).snapshot.queryParamMap.get('next'));
 
   mode = signal<'email' | 'otp'>('email');
   loading = signal(false);
@@ -91,9 +95,7 @@ export class LoginComponent {
         return;
       }
 
-      // The company list is always shown (also with no company): it is where a
-      // user creates or joins a company.
-      this.router.navigate(['/select-company']);
+      this.goOn();
     },
     error: () => {
       this.loading.set(false);
@@ -155,17 +157,23 @@ export class LoginComponent {
   }
 
 private handlePostLogin(data: any): void {
-
-
-  // The company list is always shown (also with no company): it is where a
-  // user creates or joins a company.
-  this.router.navigate(['/select-company']);
+  this.goOn();
 }
+
+  /**
+   * After signing in: back to the job the person wanted to apply for, else the company list.
+   * The company list is always shown (also with no company): it is where a user creates or
+   * joins a company.
+   */
+  private goOn(): void {
+    if (this.next) this.router.navigateByUrl(this.next);
+    else this.router.navigate(['/select-company']);
+  }
 
   private handlePostLoginWithData(userData: any, companies: any[]): void {
     // The company list is always shown, also for a single company (it is where a
     // user creates or joins a company); the module and branch steps follow it.
-    this.router.navigate(['/select-company']);
+    this.goOn();
   }
 
   // ============================================

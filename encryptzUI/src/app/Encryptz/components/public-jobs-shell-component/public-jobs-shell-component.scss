@@ -1,0 +1,102 @@
+/* The frame of the public job pages. Colours of the Job Portal pages. */
+
+$display: 'Outfit', 'DM Sans', sans-serif;
+$ink: #141b34;
+$muted: #6b7489;
+$line: #e4e8f0;
+$accent: #2563eb;
+
+:host { display: block; }
+
+.ps {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f6f8fc;
+  font-family: 'DM Sans', 'Inter', sans-serif;
+  color: $ink;
+}
+
+.ps-wrap { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 20px; box-sizing: border-box; }
+
+.ps-head {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid $line;
+}
+
+.ps-head-row { display: flex; align-items: center; gap: 16px; height: 62px; }
+
+.ps-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+  font-family: $display;
+  font-size: 18px;
+  font-weight: 500;
+  color: $ink;
+
+  img { border-radius: 8px; }
+  strong { font-weight: 700; color: $accent; }
+}
+
+.ps-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+
+  a {
+    padding: 8px 12px;
+    border-radius: 9px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #3b4357;
+    text-decoration: none;
+    white-space: nowrap;
+
+    &:hover { background: #f0f4ff; color: $accent; }
+    &.on { color: $accent; font-weight: 600; }
+  }
+
+  .ps-cta {
+    background: $accent;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+
+    &:hover { background: #1d4ed8; color: #fff; }
+  }
+}
+
+.ps-main { flex: 1 1 auto; }
+
+.ps-foot {
+  margin-top: 48px;
+  padding: 22px 0;
+  border-top: 1px solid $line;
+  background: #fff;
+  font-size: 12.5px;
+  color: $muted;
+}
+
+.ps-foot-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+
+  nav { display: flex; gap: 16px; margin-left: auto; }
+  a { color: $muted; text-decoration: none; &:hover { color: $accent; } }
+}
+
+@media (max-width: 640px) {
+  .ps-wrap { padding: 0 16px; }
+  .ps-brand span { display: none; }
+  .ps-nav a:not(.ps-cta):first-child { display: none; }
+  .ps-foot-row nav { margin-left: 0; }
+}

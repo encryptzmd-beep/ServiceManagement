@@ -46,6 +46,7 @@ namespace EncryptzAPI.SrvInjection
             services.AddScoped<IJobPostingsService, JobsService>();                 // Job Portal: jobs as a person uses them
             services.AddScoped<ICompanyJobsService, JobsService>();                 // Job Portal: the jobs and applicants of a company
             services.AddScoped<IVerificationService, JobsService>();                // Job Portal: what the platform administrator checks
+            services.AddScoped<IPublicJobsService, JobsService>();                  // Job Portal: the public job pages, no login
             services.AddScoped<IConsultancyService, JobsService>();                 // Job Consultancy: candidates, clients, placements
             services.AddScoped<ITenantUserSyncService, TenantUserSyncService>();    // MainDB users -> project DB mirror
 

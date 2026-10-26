@@ -68,6 +68,15 @@ namespace EncryptzBL.DTO_s
         public int MatchScore { get; set; }
     }
 
+    /// <summary>An open job in the sitemap of the public job pages.</summary>
+    public class PublicPostingLinkDto
+    {
+        public int PostingId { get; set; }
+        public string Title { get; set; } = "";
+        public string City { get; set; } = "";
+        public DateTime UpdatedAt { get; set; }
+    }
+
     /// <summary>A company looked at the person's profile or resume for one of its jobs.</summary>
     public class JobProfileViewDto
     {
