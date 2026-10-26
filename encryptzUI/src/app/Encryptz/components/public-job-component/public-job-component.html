@@ -78,6 +78,34 @@
               @if (p.closesOn) { <div><dt>Apply by</dt><dd>{{ dayLabel(p.closesOn) }}</dd></div> }
             </dl>
           </section>
+
+          @if (related().length) {
+            <!-- ═══════════ SIMILAR JOBS ═══════════ -->
+            <section class="pd-related" aria-labelledby="related">
+              <div class="pd-related-head">
+                <h2 id="related">Similar jobs</h2>
+                <a routerLink="/jobs" [queryParams]="p.city ? { city: p.city } : {}">More jobs{{ p.city ? ' in ' + p.city : '' }}<span class="material-icons" aria-hidden="true">arrow_forward</span></a>
+              </div>
+              <div class="pd-related-grid">
+                @for (r of related(); track r.postingId) {
+                  <a class="jp-card pd-rel" [routerLink]="path(r)">
+                    <div class="pd-rel-top">
+                      <div class="jb-logo pd-rel-logo" aria-hidden="true">{{ initial(r.companyName) }}</div>
+                      <div class="pd-rel-text">
+                        <h3>{{ r.title }}@if (r.isVerified) { <app-verified-badge [compact]="true" hint="Job verified by Encryptz" /> }</h3>
+                        <div class="pd-rel-company">{{ r.companyName }}</div>
+                      </div>
+                    </div>
+                    <div class="pd-rel-meta">
+                      <span><span class="material-icons" aria-hidden="true">place</span>{{ r.city }}</span>
+                      <span>{{ r.employmentType }} · {{ r.workMode }}</span>
+                    </div>
+                    @if (salaryLabel(r); as pay) { <div class="pd-rel-pay">{{ pay }}</div> }
+                  </a>
+                }
+              </div>
+            </section>
+          }
         </article>
 
         <!-- ═══════════ APPLY ═══════════ -->

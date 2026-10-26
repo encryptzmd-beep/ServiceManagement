@@ -45,6 +45,9 @@ export class PublicJobComponent implements OnDestroy {
   job = signal<JobPostingView | null>(null);
   missing = signal(false);
   error = signal('');
+  /** "Similar jobs": links to the jobs most like this one (for people, and for search engines to follow). */
+  related = signal<JobPostingView[]>([]);
+  readonly path = jobPath;
 
   readonly dayLabel = dayLabel;
   readonly experienceLabel = experienceLabel;
@@ -75,6 +78,7 @@ export class PublicJobComponent implements OnDestroy {
         if (!res.success || !res.data) { this.notFound(); return; }
         this.job.set(res.data);
         this.describe(res.data);
+        this.loadRelated(id);
       },
       error: err => {
         this.loading.set(false);
@@ -84,10 +88,20 @@ export class PublicJobComponent implements OnDestroy {
     });
   }
 
+  /** A page without similar jobs is still a whole page: a failure only leaves the list empty. */
+  private loadRelated(id: number): void {
+    this.related.set([]);
+    this.api.related(id).subscribe({
+      next: res => this.related.set(res.success ? (res.data ?? []).filter(p => p.postingId !== id) : []),
+      error: () => this.related.set([]),
+    });
+  }
+
   /** A closed or unknown job: a real 404, so search engines drop the page. */
   private notFound(): void {
     this.loading.set(false);
     this.job.set(null);
+    this.related.set([]);
     this.missing.set(true);
     if (this.response) this.response.status = 404;
     this.seo.set({

@@ -45,6 +45,11 @@ export class PublicJobsService {
   get(postingId: number): Observable<ApiResponse<JobPostingView>> {
     return this.http.get<ApiResponse<JobPostingView>>(`${this.api}/${postingId}`);
   }
+
+  /** The open jobs most like one job (title, skills, city, type, mode); never the job itself. */
+  related(postingId: number): Observable<ApiResponse<JobPostingView[]>> {
+    return this.http.get<ApiResponse<JobPostingView[]>>(`${this.api}/${postingId}/related`);
+  }
 }
 
 /** The readable part of a job's address: "accountant-ernakulam". Only for people and search engines; the id finds the job. */
