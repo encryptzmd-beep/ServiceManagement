@@ -13,6 +13,27 @@ namespace EncryptzBL.Common.Jobs
         public static readonly string[] Stages = { "New", "Contacted", "Interview", "Placed", "NotSuitable" };
         public static readonly string[] FeeStatuses = { "Pending", "Invoiced", "Paid" };
 
+        /// <summary>The years of experience a candidate can be filtered by (script PersonalDB/21); "none" = not added (script 23).</summary>
+        public static readonly string[] ExperienceBands = { "none", "0-1", "1-3", "3-5", "5-10", "10+" };
+
+        /// <summary>
+        /// A list filter of the candidate search as the JSON array the database takes: trimmed, without
+        /// blanks and repeats, at most 20 values of at most 100 characters; with <paramref name="allowed"/>
+        /// only those (in their spelling). Null when nothing is left: no filter.
+        /// </summary>
+        public static string? FilterList(IEnumerable<string>? values, IReadOnlyCollection<string>? allowed = null)
+        {
+            var list = (values ?? Enumerable.Empty<string>())
+                .Select(v => (v ?? "").Trim())
+                .Where(v => v.Length > 0 && v.Length <= 100)
+                .Select(v => allowed == null ? v : allowed.FirstOrDefault(a => string.Equals(a, v, StringComparison.OrdinalIgnoreCase)))
+                .Where(v => v != null)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(20)
+                .ToList();
+            return list.Count == 0 ? null : System.Text.Json.JsonSerializer.Serialize(list);
+        }
+
         private const int MaxAmount = 1_000_000_000;
 
         private static readonly Regex Email = new(@"^[^\s@<>""']+@[^\s@<>""']+\.[^\s@<>""'.]{2,}\z", RegexOptions.CultureInvariant);

@@ -12,32 +12,102 @@
     </div>
   </div>
 
-  <form class="jp-card jb-search" (ngSubmit)="search()">
-    <label class="jb-search-main">
-      <span class="jp-sr">Skill, job or name</span>
+  <form class="jp-card cd-search" (ngSubmit)="search()" role="search">
+    <label class="jb-search-main cd-search-main">
+      <span class="jp-sr">Skills, job titles, names or companies</span>
       <span class="material-icons" aria-hidden="true">search</span>
-      <input class="jp-input" name="q" [(ngModel)]="filter.q" maxlength="100" placeholder="Skill, job or name" />
+      <input class="jp-input" name="q" [(ngModel)]="filter.q" maxlength="100" placeholder="Skills, job titles, names or companies, e.g. Tally GST accountant" />
     </label>
-    <label>
-      <span class="jp-sr">City</span>
-      <input class="jp-input" name="city" [(ngModel)]="filter.city" maxlength="100" placeholder="City" />
-    </label>
-    <label>
-      <span class="jp-sr">Experience</span>
-      <select class="jp-input" name="years" [(ngModel)]="filter.years">
-        <option [ngValue]="null">Any experience</option>
-        @for (y of yearOptions; track y) { <option [ngValue]="y">{{ y }}+ years</option> }
-      </select>
-    </label>
-    <label>
-      <span class="jp-sr">Working mode</span>
-      <select class="jp-input" name="mode" [(ngModel)]="filter.mode">
-        <option value="">Any mode</option>
-        @for (m of workModes; track m) { <option [value]="m">{{ m }}</option> }
-      </select>
-    </label>
+    <div class="cd-seg" role="group" aria-label="Which words must be found">
+      <button type="button" [class.on]="filter.matchAll" (click)="setFlag('matchAll', true)" title="Every word must be found">All words</button>
+      <button type="button" [class.on]="!filter.matchAll" (click)="setFlag('matchAll', false)" title="Any word is enough">Any word</button>
+    </div>
     <button class="jp-btn primary" type="submit"><span class="material-icons" aria-hidden="true">search</span>Search</button>
   </form>
+
+  <div class="cd-layout">
+    <!-- ═══════════ FILTERS ═══════════ -->
+    <aside class="cd-filters" [class.open]="filtersOpen()" aria-label="Filters">
+      <button class="cd-filters-toggle" type="button" (click)="filtersOpen.set(!filtersOpen())" [attr.aria-expanded]="filtersOpen()">
+        <span class="material-icons" aria-hidden="true">tune</span>Filters
+        @if (activeFilters) { <span class="cd-count">{{ activeFilters }}</span> }
+      </button>
+
+      <div class="cd-filters-body">
+        <div class="cd-filters-head">
+          <strong>Filters</strong>
+          @if (activeFilters) { <button type="button" class="cd-link" (click)="clearFilters()">Clear</button> }
+        </div>
+
+        <fieldset class="cd-group">
+          <legend>Profile</legend>
+          <label class="cd-check"><input type="checkbox" [checked]="filter.verifiedOnly" (change)="setFlag('verifiedOnly', $any($event.target).checked)" /><span>Verified by Encryptz</span></label>
+          <label class="cd-check"><input type="checkbox" [checked]="filter.withResume" (change)="setFlag('withResume', $any($event.target).checked)" /><span>Has a resume</span></label>
+        </fieldset>
+
+        <fieldset class="cd-group">
+          <legend>Skills</legend>
+          @for (o of choices('Skill', filter.skills); track o.value) {
+            <label class="cd-check"><input type="checkbox" [checked]="isTicked(filter.skills, o.value)" (change)="toggle('skills', o.value)" /><span>{{ o.value }}</span>@if (o.people !== null) { <em>{{ o.people }}</em> }</label>
+          } @empty { <p class="cd-none">Search to see the skills of the people found.</p> }
+          <div class="cd-add">
+            <input class="jp-input" [(ngModel)]="addSkill" name="addSkill" maxlength="100" placeholder="Add a skill" (keydown.enter)="$event.preventDefault(); addTyped('skills')" aria-label="Add a skill to filter by" />
+            <button type="button" class="jp-btn" (click)="addTyped('skills')" aria-label="Add the skill"><span class="material-icons">add</span></button>
+          </div>
+          @if (filter.skills.length > 1) {
+            <div class="cd-seg sm" role="group" aria-label="Which skills">
+              <button type="button" [class.on]="!filter.skillsAll" (click)="setFlag('skillsAll', false)">Any skill</button>
+              <button type="button" [class.on]="filter.skillsAll" (click)="setFlag('skillsAll', true)">All skills</button>
+            </div>
+          }
+        </fieldset>
+
+        <fieldset class="cd-group">
+          <legend>Experience</legend>
+          @for (b of bands; track b.value) {
+            <label class="cd-check"><input type="checkbox" [checked]="isTicked(filter.bands, b.value)" (change)="toggle('bands', b.value)" /><span>{{ b.label }}</span>@if (countOf('Band', b.value); as n) { <em>{{ n }}</em> }</label>
+          }
+        </fieldset>
+
+        <fieldset class="cd-group">
+          <legend>City</legend>
+          @for (o of choices('City', filter.cities); track o.value) {
+            <label class="cd-check"><input type="checkbox" [checked]="isTicked(filter.cities, o.value)" (change)="toggle('cities', o.value)" /><span>{{ o.value }}</span>@if (o.people !== null) { <em>{{ o.people }}</em> }</label>
+          } @empty { <p class="cd-none">No city yet.</p> }
+          <div class="cd-add">
+            <input class="jp-input" [(ngModel)]="addCity" name="addCity" maxlength="100" placeholder="Add a city" (keydown.enter)="$event.preventDefault(); addTyped('cities')" aria-label="Add a city to filter by" />
+            <button type="button" class="jp-btn" (click)="addTyped('cities')" aria-label="Add the city"><span class="material-icons">add</span></button>
+          </div>
+        </fieldset>
+
+        <fieldset class="cd-group">
+          <legend>Work mode</legend>
+          @for (m of workModes; track m) {
+            <label class="cd-check"><input type="checkbox" [checked]="isTicked(filter.modes, m)" (change)="toggle('modes', m)" /><span>{{ m }}</span>@if (countOf('Mode', m); as n) { <em>{{ n }}</em> }</label>
+          }
+        </fieldset>
+      </div>
+    </aside>
+
+    <div class="cd-results" [class.busy]="searching() && !loading()">
+      @if (!serverFilters() && !loading() && (activeFilters || filter.q.trim())) {
+        <div class="cd-outdated" role="alert">
+          <span class="material-icons" aria-hidden="true">sync_problem</span>
+          <span>The server does not apply these filters yet, so the list below is not filtered. It needs the latest update
+            (PersonalDB script 21 and a restart of the API).</span>
+        </div>
+      }
+      @if (activeFilters) {
+        <div class="cd-active" aria-label="Filters in use">
+          @if (filter.verifiedOnly) { <button type="button" (click)="setFlag('verifiedOnly', false)">Verified<span class="material-icons" aria-label="Remove">close</span></button> }
+          @if (filter.withResume) { <button type="button" (click)="setFlag('withResume', false)">Has a resume<span class="material-icons" aria-label="Remove">close</span></button> }
+          @for (v of filter.skills; track v) { <button type="button" (click)="toggle('skills', v)">{{ v }}<span class="material-icons" aria-label="Remove">close</span></button> }
+          @for (v of filter.bands; track v) { <button type="button" (click)="toggle('bands', v)">{{ bandLabel(v) }}<span class="material-icons" aria-label="Remove">close</span></button> }
+          @for (v of filter.cities; track v) { <button type="button" (click)="toggle('cities', v)">{{ v }}<span class="material-icons" aria-label="Remove">close</span></button> }
+          @for (v of filter.modes; track v) { <button type="button" (click)="toggle('modes', v)">{{ v }}<span class="material-icons" aria-label="Remove">close</span></button> }
+        </div>
+      }
+
 
   @if (loading()) {
     <div class="jp-state"><span class="jp-spinner" aria-hidden="true"></span><p>Loading…</p></div>
@@ -57,7 +127,13 @@
           <div class="jb-company">{{ c.headline }}</div>
           <div class="jb-meta">
             @if (c.city) { <span><span class="material-icons">place</span>{{ c.city }}</span> }
-            <span><span class="material-icons">work_outline</span>{{ c.experienceYears }} {{ c.experienceYears === 1 ? 'year' : 'years' }}</span>
+            @if (c.experienceSource === 'None') {
+              <span class="cd-exp-none" title="This person did not add their experience"><span class="material-icons">work_outline</span>Experience not added</span>
+            } @else {
+              <span [attr.title]="c.experienceSource === 'Headline' ? 'Read from the headline: no experience entered' : null">
+                <span class="material-icons">work_outline</span>{{ experienceLabel(c) }}
+              </span>
+            }
             @if (c.workModes) { <span><span class="material-icons">apartment</span>{{ c.workModes }}</span> }
             <span class="cd-resume" [class.on]="c.hasResume"><span class="material-icons">{{ c.hasResume ? 'task' : 'description' }}</span>{{ c.hasResume ? 'Resume' : 'No resume' }}</span>
           </div>
@@ -78,7 +154,8 @@
           <p>Your pool is empty. Open a candidate and save them to your pool.</p>
           <button class="jp-btn" (click)="setPool(false)">Search all candidates</button>
         } @else {
-          <p>No candidate matches. Fewer filters find more people.</p>
+          <p>No candidate matches. Try <strong>Any word</strong>, fewer filters, or a shorter word (for example "account" finds accountant and accounts).</p>
+          @if (activeFilters || filter.q) { <button class="jp-btn" (click)="clearAll()">Clear the search</button> }
         }
       </div>
     }
@@ -91,6 +168,8 @@
       </nav>
     }
   }
+    </div>
+  </div>
 
   @if (toast(); as t) {
     <div class="jp-toast" [class.bad]="!t.ok" role="status">

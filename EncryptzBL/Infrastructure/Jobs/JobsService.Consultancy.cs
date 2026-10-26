@@ -25,7 +25,7 @@ namespace EncryptzBL.Infrastructure.Jobs
         Task<ApiResponse<List<PostingClientDto>>> GetPostingClients(int userId, int companyId);
         Task<ApiResponse<bool>> SetPostingClient(int userId, int companyId, int postingId, int? clientId);
 
-        Task<ApiResponse<CandidateSearchResultDto>> SearchCandidates(int userId, int companyId, string? query, string? city, int? minYears, string? workMode, bool poolOnly, int? page);
+        Task<ApiResponse<CandidateSearchResultDto>> SearchCandidates(int userId, int companyId, CandidateSearchRequest req);
         Task<ApiResponse<CandidatePageDto>> GetCandidate(int userId, int companyId, Guid candidateKey);
         Task<ApiResponse<JobFileContent>> GetCandidateResume(int userId, int companyId, Guid candidateKey);
         Task<ApiResponse<bool>> SaveTalent(int userId, int companyId, Guid candidateKey, TalentSaveRequest req);
@@ -184,28 +184,46 @@ namespace EncryptzBL.Infrastructure.Jobs
             return dt.Rows.Cast<DataRow>().ToDictionary(r => (Guid)r["CandidateKey"], r => (Text(r, "Stage"), Text(r, "Note")));
         }
 
-        public Task<ApiResponse<CandidateSearchResultDto>> SearchCandidates(int userId, int companyId, string? query, string? city, int? minYears,
-            string? workMode, bool poolOnly, int? page)
+        public Task<ApiResponse<CandidateSearchResultDto>> SearchCandidates(int userId, int companyId, CandidateSearchRequest req)
             => GuardedTenant(userId, companyId, "searching candidates", async (_, tenant) =>
             {
+                req ??= new CandidateSearchRequest();
                 var pool = await PoolOf(tenant, companyId);
-                var pageNumber = JobPostingRules.Page(page);
+                var pageNumber = JobPostingRules.Page(req.Page);
                 var result = new CandidateSearchResultDto { Page = pageNumber, PageSize = JobPostingRules.PageSize };
 
-                if (poolOnly && pool.Count == 0)
+                if (req.Pool && pool.Count == 0)
                     return ApiResponse<CandidateSearchResultDto>.Ok(result);
 
-                var dt = await GetDataTableAsync("jobs.sp_Candidate_Search", new[]
+                var ds = await GetDataSetAsync("jobs.sp_Candidate_Search", new[]
                 {
                     In("@CompanyId", companyId),
-                    In("@Query", JobPostingRules.SearchText(query)),
-                    In("@City", JobPostingRules.SearchText(city)),
-                    In("@MinYears", minYears is >= 0 and <= 60 ? minYears : null),
-                    In("@WorkMode", JobPostingRules.InList(JobsRules.WorkModes, workMode) ?? ""),
-                    In("@Keys", poolOnly ? JsonSerializer.Serialize(pool.Keys) : null),
+                    In("@Query", JobPostingRules.SearchText(req.Q)),
+                    In("@City", JobPostingRules.SearchText(req.City)),
+                    In("@MinYears", req.Years is >= 0 and <= 60 ? req.Years : null),
+                    In("@WorkMode", JobPostingRules.InList(JobsRules.WorkModes, req.Mode) ?? ""),
+                    In("@Keys", req.Pool ? JsonSerializer.Serialize(pool.Keys) : null),
                     In("@Page", pageNumber),
-                    In("@PageSize", JobPostingRules.PageSize)
+                    In("@PageSize", JobPostingRules.PageSize),
+                    In("@MatchAll", req.MatchAll),
+                    In("@Cities", ConsultancyRules.FilterList(req.Cities)),
+                    In("@Bands", ConsultancyRules.FilterList(req.Bands, ConsultancyRules.ExperienceBands)),
+                    In("@Modes", ConsultancyRules.FilterList(req.Modes, JobsRules.WorkModes)),
+                    In("@Skills", ConsultancyRules.FilterList(req.Skills)),
+                    In("@SkillsAll", req.SkillsAll),
+                    In("@VerifiedOnly", req.VerifiedOnly),
+                    In("@WithResume", req.WithResume)
                 });
+                var dt = ds != null && ds.Tables.Count > 0 ? ds.Tables[0] : null;
+
+                // the choices of the filters come with script 21
+                if (ds != null && ds.Tables.Count > 1 && ds.Tables[1].Columns.Contains("Kind"))
+                    result.Facets = ds.Tables[1].Rows.Cast<DataRow>().Select(f => new CandidateFacetDto
+                    {
+                        Kind = Text(f, "Kind"),
+                        Value = Text(f, "Value"),
+                        People = Convert.ToInt32(f["People"])
+                    }).ToList();
 
                 if (dt != null && dt.Rows.Count > 0)
                 {
@@ -220,11 +238,13 @@ namespace EncryptzBL.Infrastructure.Jobs
                             Headline = Text(r, "Headline"),
                             City = Text(r, "City"),
                             ExperienceYears = Convert.ToInt32(r["ExperienceYears"]),
+                            ExperienceSource = Text(r, "ExperienceSource"),
                             Skills = Text(r, "Skills"),
                             PreferredJobs = Text(r, "PreferredJobs"),
                             WorkModes = Text(r, "WorkModes"),
                             HasResume = Convert.ToBoolean(r["HasResume"]),
                             IsVerified = FlagOrFalse(r, "IsVerified"),
+                            MatchScore = r.Table.Columns.Contains("MatchScore") && r["MatchScore"] != DBNull.Value ? Convert.ToInt32(r["MatchScore"]) : 0,
                             InPool = inPool,
                             Stage = inPool ? p.Stage : ""
                         };

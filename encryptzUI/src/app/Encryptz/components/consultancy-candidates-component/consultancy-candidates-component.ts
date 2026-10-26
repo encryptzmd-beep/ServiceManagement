@@ -8,7 +8,9 @@ import {
   Candidate,
   CandidatePage,
   CandidateSearch,
+  CandidateFacet,
   ConsultancyService,
+  EXPERIENCE_BANDS,
   TALENT_STAGES,
   TalentStage,
 } from '../../Services/consultancy-service';
@@ -47,7 +49,7 @@ export class ConsultancyCandidatesComponent implements OnInit {
   readonly menu = CONSULTANCY_MENU;
   readonly stages = TALENT_STAGES;
   readonly workModes = JOB_WORK_MODES;
-  readonly yearOptions = [1, 2, 3, 5, 8, 10];
+  readonly bands = EXPERIENCE_BANDS;
 
   loading = signal(true);
   unavailable = signal('');
@@ -55,7 +57,22 @@ export class ConsultancyCandidatesComponent implements OnInit {
   total = signal(0);
   pageSize = signal(20);
 
-  filter: CandidateSearch = { q: '', city: '', years: null, mode: '', pool: false, page: 1 };
+  filter: CandidateSearch = {
+    q: '', matchAll: true, cities: [], bands: [], modes: [], skills: [], skillsAll: false,
+    verifiedOnly: false, withResume: false, pool: false, page: 1,
+  };
+
+  /** The choices of the filters with how many people have each (from the last search). */
+  facets = signal<CandidateFacet[]>([]);
+  /** A search is on its way: the list stays, a little faded. */
+  searching = signal(false);
+  filtersOpen = signal(false);
+  /** The server knows the filters (it answers their choices): false = it is older than the page. */
+  serverFilters = signal(true);
+  /** A city or skill typed to tick, when it is not among the choices. */
+  addCity = '';
+  addSkill = '';
+  private asked = 0;
 
   /** The candidate who is open, and what is typed for the pool. */
   open = signal<CandidatePage | null>(null);
@@ -82,18 +99,28 @@ export class ConsultancyCandidatesComponent implements OnInit {
   }
 
   load(): void {
+    // only the answer to the last search is shown: a tick can be quicker than the answer before it
+    const ask = ++this.asked;
+    this.searching.set(true);
     this.api.searchCandidates(this.filter).subscribe({
       next: res => {
+        if (ask !== this.asked) return;
         this.loading.set(false);
+        this.searching.set(false);
         if (res.success && res.data) {
           this.unavailable.set('');
           this.items.set(res.data.items ?? []);
           this.total.set(res.data.total);
           this.pageSize.set(res.data.pageSize || 20);
+          this.facets.set(res.data.facets ?? []);
+          // a server from before the filters answers no choices at all (not even an empty list)
+          this.serverFilters.set(Array.isArray(res.data.facets));
         } else this.unavailable.set(res.message || 'This application is not available right now');
       },
       error: err => {
+        if (ask !== this.asked) return;
         this.loading.set(false);
+        this.searching.set(false);
         this.unavailable.set(err?.status === 403 ? (err.error?.message || "You don't have access to Job Consultancy. Ask your administrator") : 'The candidates could not be loaded. Please try again.');
       },
     });
@@ -102,6 +129,73 @@ export class ConsultancyCandidatesComponent implements OnInit {
   search(): void {
     this.filter.page = 1;
     this.load();
+  }
+
+  // ── the filters ───────────────────────────────────────────────────────────
+
+  /** The values of a list filter to show: the choices of the last search, and what is ticked. */
+  choices(kind: 'City' | 'Skill', ticked: string[]): { value: string; people: number | null }[] {
+    const found = this.facets().filter(f => f.kind === kind).map(f => ({ value: f.value, people: f.people as number | null }));
+    const extra = ticked.filter(t => !found.some(f => f.value.toLowerCase() === t.toLowerCase())).map(t => ({ value: t, people: null }));
+    return [...extra, ...found];
+  }
+
+  /** How many of the people the words found have a working mode or a band. */
+  countOf(kind: 'Mode' | 'Band', value: string): number | null {
+    return this.facets().find(f => f.kind === kind && f.value === value)?.people ?? null;
+  }
+
+  isTicked(list: string[], value: string): boolean {
+    return list.some(v => v.toLowerCase() === value.toLowerCase());
+  }
+
+  /** Ticks or unticks a value of a list filter, and searches again at once. */
+  toggle(key: 'cities' | 'bands' | 'modes' | 'skills', value: string): void {
+    const list = this.filter[key];
+    this.filter[key] = this.isTicked(list, value) ? list.filter(v => v.toLowerCase() !== value.toLowerCase()) : [...list, value];
+    this.search();
+  }
+
+  setFlag(key: 'matchAll' | 'skillsAll' | 'verifiedOnly' | 'withResume', on: boolean): void {
+    if (this.filter[key] === on) return;
+    this.filter[key] = on;
+    // "all words" changes nothing without words, "all skills" nothing without skills
+    if ((key === 'matchAll' && !this.filter.q.trim()) || (key === 'skillsAll' && this.filter.skills.length < 2)) return;
+    this.search();
+  }
+
+  addTyped(key: 'cities' | 'skills'): void {
+    const field = key === 'cities' ? 'addCity' : 'addSkill';
+    const value = this[field].trim().slice(0, 100);
+    this[field] = '';
+    if (!value || this.isTicked(this.filter[key], value)) return;
+    this.filter[key] = [...this.filter[key], value];
+    this.search();
+  }
+
+  get activeFilters(): number {
+    const f = this.filter;
+    return f.cities.length + f.bands.length + f.modes.length + f.skills.length + (f.verifiedOnly ? 1 : 0) + (f.withResume ? 1 : 0);
+  }
+
+  /** "6 years", "6 years (from headline)" when the person entered no experience but wrote it there. */
+  experienceLabel(c: Candidate): string {
+    const years = `${c.experienceYears} ${c.experienceYears === 1 ? 'year' : 'years'}`;
+    return c.experienceSource === 'Headline' ? `${years} (from headline)` : years;
+  }
+
+  bandLabel(value: string): string {
+    return EXPERIENCE_BANDS.find(b => b.value === value)?.label ?? value;
+  }
+
+  clearFilters(): void {
+    this.filter = { ...this.filter, cities: [], bands: [], modes: [], skills: [], verifiedOnly: false, withResume: false };
+    this.search();
+  }
+
+  clearAll(): void {
+    this.filter = { ...this.filter, q: '', cities: [], bands: [], modes: [], skills: [], verifiedOnly: false, withResume: false };
+    this.search();
   }
 
   setPool(pool: boolean): void {

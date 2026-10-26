@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment.development';
 import { ApiResponse } from '../Models/ApiModels';
@@ -44,6 +44,8 @@ export interface Candidate {
   headline: string;
   city: string;
   experienceYears: number;
+  /** Where the years come from: the experience entered, the headline, or nowhere. '' from a server before script 23. */
+  experienceSource?: 'Entries' | 'Headline' | 'None' | '';
   skills: string;
   preferredJobs: string;
   workModes: string;
@@ -54,17 +56,46 @@ export interface Candidate {
   stage: TalentStage | '';
 }
 
+/** Years of experience a candidate can be filtered by. */
+export const EXPERIENCE_BANDS: { value: string; label: string }[] = [
+  { value: '0-1', label: 'Under 1 year' },
+  { value: '1-3', label: '1 – 3 years' },
+  { value: '3-5', label: '3 – 5 years' },
+  { value: '5-10', label: '5 – 10 years' },
+  { value: '10+', label: '10+ years' },
+  { value: 'none', label: 'Experience not added' },
+];
+
+/**
+ * What candidates are searched by. The words are looked for in the name, headline, skills,
+ * experience, education and preferences; every list takes any of its values (none = no filter).
+ */
 export interface CandidateSearch {
   q: string;
-  city: string;
-  years: number | null;
-  mode: string;
+  /** true: every word must be found; false: any word. */
+  matchAll: boolean;
+  cities: string[];
+  bands: string[];
+  modes: string[];
+  skills: string[];
+  /** true: every skill ticked; false: any of them. */
+  skillsAll: boolean;
+  verifiedOnly: boolean;
+  withResume: boolean;
   pool: boolean;
   page: number;
 }
 
+/** A choice of a filter and how many of the people the words found have it. */
+export interface CandidateFacet {
+  kind: 'City' | 'Skill' | 'Mode' | 'Band';
+  value: string;
+  people: number;
+}
+
 export interface CandidateSearchResult {
   items: Candidate[];
+  facets?: CandidateFacet[];
   total: number;
   page: number;
   pageSize: number;
@@ -144,11 +175,16 @@ export class ConsultancyService {
   // ── candidates ──
 
   searchCandidates(s: CandidateSearch): Observable<ApiResponse<CandidateSearchResult>> {
-    const params: Record<string, string> = { page: String(s.page), pool: String(s.pool) };
-    if (s.q.trim()) params['q'] = s.q.trim();
-    if (s.city.trim()) params['city'] = s.city.trim();
-    if (s.years != null) params['years'] = String(s.years);
-    if (s.mode) params['mode'] = s.mode;
+    let params = new HttpParams().set('page', s.page).set('pool', s.pool);
+    if (s.q.trim()) params = params.set('q', s.q.trim()).set('matchAll', s.matchAll);
+    // a list goes as the same name once per value: ?cities=Kochi&cities=Thrissur
+    for (const v of s.cities) params = params.append('cities', v);
+    for (const v of s.bands) params = params.append('bands', v);
+    for (const v of s.modes) params = params.append('modes', v);
+    for (const v of s.skills) params = params.append('skills', v);
+    if (s.skills.length) params = params.set('skillsAll', s.skillsAll);
+    if (s.verifiedOnly) params = params.set('verifiedOnly', true);
+    if (s.withResume) params = params.set('withResume', true);
     return this.http.get<ApiResponse<CandidateSearchResult>>(`${this.api}/candidates`, { params });
   }
 

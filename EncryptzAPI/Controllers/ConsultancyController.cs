@@ -59,9 +59,8 @@ namespace EncryptzAPI.Controllers
         // ── candidates ────────────────────────────────────────────────────────
 
         [HttpGet("candidates")]
-        public async Task<IActionResult> SearchCandidates([FromQuery] string? q, [FromQuery] string? city, [FromQuery] int? years,
-            [FromQuery] string? mode, [FromQuery] bool pool, [FromQuery] int? page)
-            => Answer(await _consultancy.SearchCandidates(Caller(), Company(), q, city, years, mode, pool, page));
+        public async Task<IActionResult> SearchCandidates([FromQuery] CandidateSearchRequest? req)
+            => Answer(await _consultancy.SearchCandidates(Caller(), Company(), req ?? new CandidateSearchRequest()));
 
         [HttpGet("candidates/{key:guid}")]
         public async Task<IActionResult> GetCandidate(Guid key)

@@ -43,21 +43,65 @@ namespace EncryptzBL.DTO_s
         public string Headline { get; set; } = "";
         public string City { get; set; } = "";
         public int ExperienceYears { get; set; }
+        /// <summary>Where the years come from (script 23): Entries (the experience entered), Headline (the years written there) or None.</summary>
+        public string ExperienceSource { get; set; } = "";
         public string Skills { get; set; } = "";
         public string PreferredJobs { get; set; } = "";
         public string WorkModes { get; set; } = "";
         public bool HasResume { get; set; }
         /// <summary>The platform administrator verified the person.</summary>
         public bool IsVerified { get; set; }
+        /// <summary>How well the words matched (0 without words).</summary>
+        public int MatchScore { get; set; }
         /// <summary>In this company's pool.</summary>
         public bool InPool { get; set; }
         /// <summary>The stage in the pool ('' when not in it).</summary>
         public string Stage { get; set; } = "";
     }
 
+    /// <summary>
+    /// What the company searches candidates by (script PersonalDB/21). The words are looked for in the
+    /// name, headline, skills, experience, education and preferences; every list filter takes any of
+    /// its values. The query names of the first search (q, city, years, mode, pool, page) still work.
+    /// </summary>
+    public class CandidateSearchRequest
+    {
+        public string? Q { get; set; }
+        /// <summary>true (the default): every word must be found; false: any word.</summary>
+        public bool MatchAll { get; set; } = true;
+        public List<string>? Cities { get; set; }
+        /// <summary>Years of experience: none (not added), 0-1, 1-3, 3-5, 5-10, 10+.</summary>
+        public List<string>? Bands { get; set; }
+        public List<string>? Modes { get; set; }
+        public List<string>? Skills { get; set; }
+        /// <summary>true: every skill ticked; false (the default): any of them.</summary>
+        public bool SkillsAll { get; set; }
+        public bool VerifiedOnly { get; set; }
+        public bool WithResume { get; set; }
+        /// <summary>Only the pool of the company.</summary>
+        public bool Pool { get; set; }
+        public int? Page { get; set; }
+
+        // the search of before script 21
+        public string? City { get; set; }
+        public int? Years { get; set; }
+        public string? Mode { get; set; }
+    }
+
+    /// <summary>A choice of a filter and how many of the people the words found have it.</summary>
+    public class CandidateFacetDto
+    {
+        /// <summary>City, Skill, Mode or Band.</summary>
+        public string Kind { get; set; } = "";
+        public string Value { get; set; } = "";
+        public int People { get; set; }
+    }
+
     public class CandidateSearchResultDto
     {
         public List<CandidateDto> Items { get; set; } = new();
+        /// <summary>The choices of the filters (script 21; empty before it).</summary>
+        public List<CandidateFacetDto> Facets { get; set; } = new();
         public int Total { get; set; }
         public int Page { get; set; }
         public int PageSize { get; set; }

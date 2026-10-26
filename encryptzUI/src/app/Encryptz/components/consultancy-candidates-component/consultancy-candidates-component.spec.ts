@@ -73,12 +73,99 @@ describe('ConsultancyCandidatesComponent', () => {
     const fixture = create();
     const c = fixture.componentInstance;
 
-    Object.assign(c.filter, { q: 'tally', city: 'Kochi', years: 3, mode: 'Remote', page: 3 });
+    Object.assign(c.filter, { q: 'tally gst', page: 3 });
     c.search();
-    expect(calls.at(-1)).toEqual(['searchCandidates', { q: 'tally', city: 'Kochi', years: 3, mode: 'Remote', pool: false, page: 1 }]);
+    expect(calls.at(-1)![1]).toEqual(expect.objectContaining({ q: 'tally gst', matchAll: true, page: 1, pool: false }));
 
     c.setPool(true);
     expect(calls.at(-1)![1].pool).toBe(true);
+  });
+
+  it('ticks more than one value of a filter, searches at once, and unticks it again', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+
+    c.toggle('cities', 'Kochi');
+    c.toggle('cities', 'Thrissur');
+    c.toggle('bands', '3-5');
+    c.toggle('modes', 'Remote');
+    expect(calls.at(-1)![1]).toEqual(expect.objectContaining({ cities: ['Kochi', 'Thrissur'], bands: ['3-5'], modes: ['Remote'], page: 1 }));
+    expect(c.activeFilters).toBe(4);
+
+    c.toggle('cities', 'kochi');
+    expect(calls.at(-1)![1].cities).toEqual(['Thrissur']);
+
+    c.clearFilters();
+    expect(calls.at(-1)![1]).toEqual(expect.objectContaining({ cities: [], bands: [], modes: [], skills: [] }));
+  });
+
+  it('any or all words, and any or all skills', () => {
+    const fixture = create();
+    const c = fixture.componentInstance;
+    const before = calls.length;
+
+    // without words "any word" changes nothing: no search
+    c.setFlag('matchAll', false);
+    expect(calls.length).toBe(before);
+
+    c.filter.q = 'site supervisor';
+    c.setFlag('matchAll', true);
+    expect(calls.at(-1)![1]).toEqual(expect.objectContaining({ q: 'site supervisor', matchAll: true }));
+
+    c.toggle('skills', 'AutoCAD');
+    c.toggle('skills', 'BOQ Preparation');
+    c.setFlag('skillsAll', true);
+    expect(calls.at(-1)![1]).toEqual(expect.objectContaining({ skills: ['AutoCAD', 'BOQ Preparation'], skillsAll: true }));
+  });
+
+  it('shows where the years come from, and says when experience was not added', () => {
+    api.searchCandidates = () => ok({ items: [
+      candidate({ candidateKey: 'a', experienceYears: 3, experienceSource: 'Entries' }),
+      candidate({ candidateKey: 'b', experienceYears: 6, experienceSource: 'Headline' }),
+      candidate({ candidateKey: 'c', experienceYears: 0, experienceSource: 'None' }),
+    ], total: 3, page: 1, pageSize: 20, facets: [{ kind: 'Band', value: 'none', people: 1 }] });
+    const fixture = create();
+    const cards = [...fixture.nativeElement.querySelectorAll('.cd-card .jb-meta')].map((m: any) => m.textContent.replace(/\s+/g, ' '));
+
+    expect(cards[0]).toContain('3 years');
+    expect(cards[0]).not.toContain('from headline');
+    expect(cards[1]).toContain('6 years (from headline)');
+    expect(cards[2]).toContain('Experience not added');
+    expect(fixture.componentInstance.bands.map(b => b.value)).toContain('none');
+    expect(fixture.componentInstance.countOf('Band', 'none')).toBe(1);
+  });
+
+  it('says so when the server is older than the filters, instead of showing an unfiltered list as filtered', () => {
+    // the answer of a server from before the filters: no choices at all
+    const fixture = create();
+    fixture.componentInstance.toggle('bands', '0-1');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.serverFilters()).toBe(false);
+    expect(fixture.nativeElement.querySelector('.cd-outdated')).not.toBeNull();
+
+    api.searchCandidates = () => ok({ items: [], total: 0, page: 1, pageSize: 20, facets: [] });
+    fixture.componentInstance.search();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.cd-outdated')).toBeNull();
+  });
+
+  it('shows the choices with how many people have each, and keeps a ticked value that is not among them', () => {
+    api.searchCandidates = (s: any) => { calls.push(['searchCandidates', { ...s }]); return ok({ items: [candidate()], total: 1, page: 1, pageSize: 20,
+      facets: [{ kind: 'City', value: 'Kochi', people: 12 }, { kind: 'Skill', value: 'Tally', people: 7 }, { kind: 'Band', value: '1-3', people: 4 }] }); };
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.addSkill = ' Payroll ';
+    c.addTyped('skills');
+    fixture.detectChanges();
+
+    expect(c.choices('City', c.filter.cities)).toEqual([{ value: 'Kochi', people: 12 }]);
+    expect(c.choices('Skill', c.filter.skills)).toEqual([{ value: 'Payroll', people: null }, { value: 'Tally', people: 7 }]);
+    expect(c.countOf('Band', '1-3')).toBe(4);
+    const labels = [...fixture.nativeElement.querySelectorAll('.cd-check')].map((l: any) =>
+      [l.querySelector('span').textContent.trim(), l.querySelector('em')?.textContent.trim() ?? '']);
+    expect(labels).toContainEqual(['Kochi', '12']);
+    expect(labels).toContainEqual(['Payroll', '']);
   });
 
   it('opens a candidate with what they look for, and never turns a link that is not https into a link', () => {

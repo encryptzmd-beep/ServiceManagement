@@ -121,7 +121,7 @@ namespace EncryptzTests
             var jobs = new JobsService(new PersonalDbHelper(config), NullLogger<JobsService>.Instance);
 
             Assert.Equal("Please log in again", (await jobs.GetClients(0, 2)).Message);
-            Assert.Equal(PersonalDbHelper.NotAvailable, (await jobs.SearchCandidates(11, 2, null, null, null, null, false, 1)).Message);
+            Assert.Equal(PersonalDbHelper.NotAvailable, (await jobs.SearchCandidates(11, 2, new CandidateSearchRequest { Page = 1 })).Message);
         }
 
         [Fact]
@@ -304,7 +304,7 @@ namespace EncryptzTests
             public Task<ApiResponse<bool>> DeleteClient(int userId, int companyId, int clientId) => Seen(userId, companyId, true);
             public Task<ApiResponse<List<PostingClientDto>>> GetPostingClients(int userId, int companyId) => Seen(userId, companyId, new List<PostingClientDto>());
             public Task<ApiResponse<bool>> SetPostingClient(int userId, int companyId, int postingId, int? clientId) => Seen(userId, companyId, true);
-            public Task<ApiResponse<CandidateSearchResultDto>> SearchCandidates(int userId, int companyId, string? query, string? city, int? minYears, string? workMode, bool poolOnly, int? page) => Seen(userId, companyId, new CandidateSearchResultDto());
+            public Task<ApiResponse<CandidateSearchResultDto>> SearchCandidates(int userId, int companyId, CandidateSearchRequest req) => Seen(userId, companyId, new CandidateSearchResultDto());
             public Task<ApiResponse<CandidatePageDto>> GetCandidate(int userId, int companyId, Guid candidateKey) => Seen(userId, companyId, new CandidatePageDto());
             public Task<ApiResponse<JobFileContent>> GetCandidateResume(int userId, int companyId, Guid candidateKey) => Seen(userId, companyId, new JobFileContent("cv.pdf", "application/pdf", new byte[] { 1 }));
             public Task<ApiResponse<bool>> SaveTalent(int userId, int companyId, Guid candidateKey, TalentSaveRequest req) => Seen(userId, companyId, true);
