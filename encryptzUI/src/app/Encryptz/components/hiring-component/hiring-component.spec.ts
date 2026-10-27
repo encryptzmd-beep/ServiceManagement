@@ -382,14 +382,14 @@ describe('HiringComponent', () => {
     expect(fixture.nativeElement.querySelector('.hr-invited').textContent).toContain('Invited');
   });
 
-  it('opens the whole profile of a suitable candidate in Candidates', () => {
+  it('opens the whole profile of a suitable candidate on its own page, in a new tab', () => {
     consultancy.getPostingMatches = () => ok([match()]);
     const fixture = create();
     const c = fixture.componentInstance;
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
     c.showMatches(c.postings()[0]);
 
     c.viewMatch(c.matches()[0]);
-    expect(navigate).toHaveBeenCalledWith(['/consultancy/candidates'], { queryParams: { candidate: '11111111-2222-3333-4444-555555555555' } });
+    expect(open).toHaveBeenCalledWith('/consultancy/candidates/11111111-2222-3333-4444-555555555555', '_blank', 'noopener');
   });
 });

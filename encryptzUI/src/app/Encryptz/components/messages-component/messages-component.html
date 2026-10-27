@@ -74,7 +74,7 @@
               </p>
             </div>
             @if (side === 'company' && c.candidateKey) {
-              <a class="jp-btn" routerLink="/consultancy/candidates" title="Find this person in Candidates"><span class="material-icons">person_search</span><span class="ms-hide-sm">Candidates</span></a>
+              <a class="jp-btn" [routerLink]="['/consultancy/candidates', c.candidateKey]" target="_blank" rel="noopener" title="Opens the profile in a new tab"><span class="material-icons">open_in_new</span><span class="ms-hide-sm">View profile</span></a>
             }
             @if (side === 'person') {
               <button class="jp-btn ghost" type="button" (click)="toggleBlock()" [title]="c.blockedByPerson ? 'Let this company write to you again' : 'Stop this company writing to you'">

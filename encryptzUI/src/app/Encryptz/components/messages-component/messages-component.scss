@@ -14,7 +14,8 @@ $tint: #eef4ff;
 .ms {
   display: grid;
   grid-template-columns: 340px minmax(0, 1fr);
-  height: calc(100vh - 128px);
+  /* the window less the bar (59px) and the space above and below the page (22 + 48): no page scroll */
+  height: calc(100vh - 135px);
   min-height: 480px;
   border: 1px solid #edf0f6;
   border-radius: 18px;

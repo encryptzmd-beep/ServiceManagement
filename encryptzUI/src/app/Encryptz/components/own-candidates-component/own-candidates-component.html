@@ -1,0 +1,172 @@
+<app-personal-shell appName="Job Consultancy" icon="work" subtitle="Commercial application" [menu]="menu"
+                    backLabel="Back to modules" backRoute="/select-module">
+
+  <div class="jb-head oc-head">
+    <div class="jb-head-text">
+      <h1>Our candidates @if (!loading() && !unavailable()) { <span class="jp-count">{{ total() }}</span> }</h1>
+      <p>People you met outside Job Portal: walk-ins, referrals, CVs by e-mail. Only your company sees them; they are never public.</p>
+    </div>
+    <div class="oc-tabs" role="navigation" aria-label="Candidates">
+      <a routerLink="/consultancy/candidates"><span class="material-icons" aria-hidden="true">travel_explore</span>Search all</a>
+      <a routerLink="/consultancy/candidates" [queryParams]="{ pool: 1 }"><span class="material-icons" aria-hidden="true">bookmarks</span>My pool</a>
+      <a class="on" aria-current="page"><span class="material-icons" aria-hidden="true">badge</span>Our candidates</a>
+    </div>
+  </div>
+
+  <form class="jp-card oc-search" (ngSubmit)="search()" role="search">
+    <label class="oc-search-main">
+      <span class="material-icons" aria-hidden="true">search</span>
+      <span class="jp-sr">Search your candidates</span>
+      <input class="jp-input" name="q" [(ngModel)]="query" maxlength="100" placeholder="Name, phone, e-mail, skill, city…" />
+    </label>
+    <button class="jp-btn" type="submit">Search</button>
+    <button class="jp-btn primary" type="button" (click)="openNew()"><span class="material-icons">person_add</span>Add candidate</button>
+  </form>
+
+  @if (loading()) {
+    <div class="jp-state"><span class="jp-spinner" aria-hidden="true"></span><p>Loading…</p></div>
+  } @else if (unavailable()) {
+    <div class="jp-state">
+      <span class="material-icons">lock_outline</span>
+      <p>{{ unavailable() }}</p>
+      <button class="jp-btn primary" (click)="load()">Try again</button>
+    </div>
+  } @else {
+    @for (c of items(); track c.candidateId) {
+      <article class="jp-card jb-card oc-card">
+        <div class="oc-avatar" aria-hidden="true">{{ initials(c.fullName) || '?' }}</div>
+        <div class="jb-card-main">
+          <h2><button class="jb-title" (click)="openEdit(c)">{{ c.fullName }}</button></h2>
+          @if (c.headline) { <div class="jb-company oc-headline">{{ c.headline }}</div> }
+          <div class="jb-meta">
+            @if (c.phone) { <span><span class="material-icons">call</span>{{ c.phone }}</span> }
+            @if (c.email) { <span><span class="material-icons">mail_outline</span>{{ c.email }}</span> }
+            @if (c.city) { <span><span class="material-icons">place</span>{{ c.city }}</span> }
+            <span [class.oc-none]="c.experienceYears == null"><span class="material-icons">work_outline</span>{{ experienceLabel(c.experienceYears) }}</span>
+            @if (c.source) { <span><span class="material-icons">input</span>{{ c.source }}</span> }
+          </div>
+          @if (skillList(c.skills).length) {
+            <div class="jb-skills">@for (s of skillList(c.skills); track s) { <span class="jp-chip">{{ s }}</span> }</div>
+          }
+          @if (c.preferredJobs) { <div class="jb-foot oc-looking"><span class="material-icons" aria-hidden="true">flag</span>Looking for <strong>{{ c.preferredJobs }}</strong></div> }
+        </div>
+        <div class="jb-card-side">
+          <span [class]="stageClass(c.stage)">{{ stageLabel(c.stage) }}</span>
+          <div class="oc-actions">
+            @if (c.hasResume) {
+              <button class="jp-btn" (click)="downloadResume(c)" title="Download the resume"><span class="material-icons">description</span></button>
+            }
+            <button class="jp-btn" (click)="openEdit(c)">Edit</button>
+            <button class="jp-btn ghost" (click)="remove(c)" title="Remove" aria-label="Remove"><span class="material-icons">delete_outline</span></button>
+          </div>
+        </div>
+      </article>
+    } @empty {
+      <div class="jp-card jb-empty">
+        <span class="material-icons">badge</span>
+        @if (query) {
+          <p>None of your candidates matches.</p>
+          <button class="jp-btn" (click)="query = ''; search()">Show all</button>
+        } @else {
+          <p>No candidates of your own yet. Add the people you meet outside Job Portal; only your company sees them.</p>
+          <button class="jp-btn primary" (click)="openNew()">Add candidate</button>
+        }
+      </div>
+    }
+
+    @if (lastPage > 1) {
+      <nav class="jb-pages" aria-label="Pages">
+        <button class="jp-btn" (click)="goToPage(page - 1)" [disabled]="page <= 1">Previous</button>
+        <span>Page {{ page }} of {{ lastPage }}</span>
+        <button class="jp-btn" (click)="goToPage(page + 1)" [disabled]="page >= lastPage">Next</button>
+      </nav>
+    }
+  }
+
+  @if (toast(); as t) {
+    <div class="jp-toast" [class.bad]="!t.ok" role="status">
+      <span class="material-icons">{{ t.ok ? 'check_circle' : 'error_outline' }}</span>{{ t.text }}
+    </div>
+  }
+</app-personal-shell>
+
+<!-- ═══════════ A CANDIDATE, WRITTEN ═══════════ -->
+@if (form(); as f) {
+  <div class="jp-overlay">
+    <div class="jp-dialog oc-dialog" role="dialog" aria-modal="true">
+      <div class="jp-dialog-head">
+        <h3>{{ f.candidateId ? 'Edit candidate' : 'Add candidate' }}</h3>
+        <button class="jp-close" (click)="closeForm()" aria-label="Close"><span class="material-icons">close</span></button>
+      </div>
+      <form class="jp-dialog-body" (ngSubmit)="save()">
+        <p class="oc-private"><span class="material-icons" aria-hidden="true">lock</span>Only your company sees this candidate. It is never on Job Portal.</p>
+
+        <label>Full name *
+          <input class="jp-input" name="fullName" [(ngModel)]="f.fullName" maxlength="200" autocomplete="off" />
+        </label>
+        <label>Headline
+          <input class="jp-input" name="headline" [(ngModel)]="f.headline" maxlength="200" placeholder="Accountant, 5 years" />
+        </label>
+        <div class="jp-two">
+          <label>Phone
+            <input class="jp-input" name="phone" [(ngModel)]="f.phone" maxlength="30" inputmode="tel" (blur)="checkDuplicates()" />
+          </label>
+          <label>E-mail
+            <input class="jp-input" name="email" type="email" [(ngModel)]="f.email" maxlength="256" (blur)="checkDuplicates()" />
+          </label>
+        </div>
+        <small class="oc-hint">An e-mail or a phone is needed. Each can belong to one candidate only.</small>
+
+        @for (d of duplicates(); track d.candidateId) {
+          <div class="oc-duplicate" role="alert">
+            <span class="material-icons" aria-hidden="true">content_copy</span>
+            <span>{{ duplicateText(d) }}.</span>
+            <button type="button" class="jb-link" (click)="showDuplicate(d)">Show {{ d.fullName }}</button>
+          </div>
+        }
+
+        <div class="jp-two">
+          <label>City
+            <input class="jp-input" name="city" [(ngModel)]="f.city" maxlength="100" />
+          </label>
+          <label>Experience (years)
+            <input class="jp-input" name="experience" [(ngModel)]="f.experience" inputmode="decimal" placeholder="e.g. 3.5" />
+          </label>
+        </div>
+        <label>Skills
+          <input class="jp-input" name="skills" [(ngModel)]="f.skills" maxlength="1000" placeholder="Tally, GST, TDS (comma separated)" />
+        </label>
+        <label>Looking for
+          <input class="jp-input" name="preferredJobs" [(ngModel)]="f.preferredJobs" maxlength="500" placeholder="Accountant, Accounts executive" />
+        </label>
+        <div class="jp-two">
+          <label>Where you met them
+            <select class="jp-input" name="source" [(ngModel)]="f.source">
+              <option value="">Not said</option>
+              @for (s of sources; track s) { <option [value]="s">{{ s }}</option> }
+            </select>
+          </label>
+          <label>Stage
+            <select class="jp-input" name="stage" [(ngModel)]="f.stage">
+              @for (s of stages; track s) { <option [value]="s">{{ stageLabel(s) }}</option> }
+            </select>
+          </label>
+        </div>
+        <label>Notes (only your company sees them)
+          <textarea class="jp-input" name="notes" rows="3" [(ngModel)]="f.notes" maxlength="2000" placeholder="Called on Monday, interview on Friday…"></textarea>
+        </label>
+        <label>Resume (PDF or Word, up to 5 MB)
+          <input class="jp-input oc-file" type="file" name="resume" accept=".pdf,.doc,.docx" (change)="onResumePicked($event)" />
+          @if (f.hasResume && f.resumeName) { <small>Now: {{ f.resumeName }}. A new file replaces it.</small> }
+        </label>
+
+        @if (formError()) { <div class="jp-error">{{ formError() }}</div> }
+
+        <div class="jp-dialog-foot oc-foot">
+          <button class="jp-btn ghost" type="button" (click)="closeForm()" [disabled]="saving()">Cancel</button>
+          <button class="jp-btn primary" type="submit" [disabled]="saving()">{{ saving() ? 'Saving…' : (f.candidateId ? 'Save' : 'Add candidate') }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

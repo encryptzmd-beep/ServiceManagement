@@ -1,5 +1,5 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { CommonModule, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
@@ -19,6 +19,7 @@ import { MessagesService } from '../../Services/messages-service';
 import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
+import { AutocompleteComponent, AutocompleteOption } from '../autocomplete-component/autocomplete-component';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -39,7 +40,7 @@ export function takesApplications(p: { status: string; closesOn?: string | null 
 @Component({
   selector: 'app-consultancy-candidates-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent],
+  imports: [CommonModule, NgTemplateOutlet, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent, AutocompleteComponent],
   templateUrl: './consultancy-candidates-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',
@@ -91,6 +92,9 @@ export class ConsultancyCandidatesComponent implements OnInit {
 
   /** The open jobs of the company, for an invitation. */
   openJobs = signal<CompanyPosting[]>([]);
+  /** The open jobs as choices: searched by title, city and type. */
+  readonly jobOptions = computed<AutocompleteOption<number>[]>(() =>
+    this.openJobs().map(j => ({ value: j.postingId!, label: j.title, sub: [j.city, j.employmentType, j.workMode].filter(Boolean).join(' · ') })));
   invitePostingId: number | null = null;
   inviteMessage = '';
   inviting = signal(false);
@@ -100,9 +104,22 @@ export class ConsultancyCandidatesComponent implements OnInit {
   panelError = signal('');
   toast = signal<{ text: string; ok: boolean } | null>(null);
 
+  /** /consultancy/candidates/:key: one candidate on a page of its own (the list opens it in a new tab). */
+  readonly pageMode = this.route.snapshot.data['page'] === true;
+  /** Why the page of one candidate cannot be shown ('' while it loads or when it can). */
+  pageMissing = signal('');
+
   ngOnInit(): void {
     if (!this.auth.scopeState().companyId) { this.router.navigate(['/select-company']); return; }
-    this.load();
+    if (this.pageMode) {
+      const key = this.route.snapshot.paramMap.get('key') ?? '';
+      if (/^[0-9a-f-]{36}$/i.test(key)) this.openCandidate({ candidateKey: key } as Candidate);
+      else this.pageMissing.set('This candidate can no longer be found');
+    } else {
+      // My pool opened from a link (the tabs of Our candidates)
+      if (this.route.snapshot.queryParamMap.get('pool') === '1') this.filter.pool = true;
+      this.load();
+    }
     // a candidate named in the address (a suitable candidate of a job): opened at once
     const named = this.route.snapshot.queryParamMap.get('candidate');
     if (named && /^[0-9a-f-]{36}$/i.test(named)) this.openCandidate({ candidateKey: named } as Candidate);
@@ -235,7 +252,9 @@ export class ConsultancyCandidatesComponent implements OnInit {
     this.api.getCandidate(c.candidateKey).subscribe({
       next: res => {
         if (!res.success || !res.data) {
-          this.notify(res.message === 'Not found' ? 'This candidate can no longer be found' : res.message, false);
+          const why = res.message === 'Not found' ? 'This candidate can no longer be found' : res.message;
+          if (this.pageMode) { this.pageMissing.set(why || 'This candidate could not be opened'); return; }
+          this.notify(why, false);
           if (res.message === 'Not found') this.load();
           return;
         }
@@ -247,7 +266,7 @@ export class ConsultancyCandidatesComponent implements OnInit {
         this.invited.set([]);
         this.open.set(res.data);
       },
-      error: () => this.notify('The candidate could not be opened. Please try again', false),
+      error: () => (this.pageMode ? this.pageMissing.set('The candidate could not be opened. Please try again') : this.notify('The candidate could not be opened. Please try again', false)),
     });
   }
 

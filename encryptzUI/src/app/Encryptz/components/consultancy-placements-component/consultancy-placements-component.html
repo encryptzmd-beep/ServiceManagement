@@ -96,16 +96,12 @@
         </label>
         <div class="jp-two">
           <label>Client
-            <select class="jp-input" name="clientId" [(ngModel)]="f.clientId">
-              <option [ngValue]="null">No client</option>
-              @for (c of clients(); track c.clientId) { <option [ngValue]="c.clientId">{{ c.name }}</option> }
-            </select>
+            <app-autocomplete name="clientId" [(ngModel)]="f.clientId" [options]="clientOptions()" noneLabel="No client"
+                              placeholder="Type a client name" emptyText="No client matches" />
           </label>
           <label>Job posting
-            <select class="jp-input" name="postingId" [(ngModel)]="f.postingId" (ngModelChange)="onPostingChosen(f)">
-              <option [ngValue]="null">None</option>
-              @for (j of postings(); track j.postingId) { <option [ngValue]="j.postingId">{{ j.title }} · {{ j.city }}</option> }
-            </select>
+            <app-autocomplete name="postingId" [(ngModel)]="f.postingId" (ngModelChange)="onPostingChosen(f)" [options]="postingOptions()"
+                              noneLabel="None" placeholder="Type a job title or a city" emptyText="No job matches" />
           </label>
         </div>
         <div class="jp-two">

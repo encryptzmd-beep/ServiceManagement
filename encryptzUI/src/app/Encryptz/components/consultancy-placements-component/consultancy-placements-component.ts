@@ -15,6 +15,7 @@ import {
 } from '../../Services/consultancy-service';
 import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
+import { AutocompleteComponent, AutocompleteOption } from '../autocomplete-component/autocomplete-component';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -32,7 +33,7 @@ interface PlacementForm extends PlacementSave {
 @Component({
   selector: 'app-consultancy-placements-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, AutocompleteComponent],
   templateUrl: './consultancy-placements-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',
@@ -54,6 +55,12 @@ export class ConsultancyPlacementsComponent implements OnInit {
   unavailable = signal('');
   data = signal<PlacementList>({ items: [], thisMonth: 0, total: 0, feeOutstanding: 0, feePaidThisYear: 0 });
   clients = signal<ConsultClient[]>([]);
+
+  /** The clients and the jobs as choices: searched by name, title and city. */
+  readonly clientOptions = computed<AutocompleteOption<number>[]>(() =>
+    this.clients().map(c => ({ value: c.clientId, label: c.name, sub: [c.city, c.industry].filter(Boolean).join(' · ') })));
+  readonly postingOptions = computed<AutocompleteOption<number>[]>(() =>
+    this.postings().map(j => ({ value: j.postingId!, label: j.title, sub: [j.city, j.status].filter(Boolean).join(' · ') })));
   postings = signal<CompanyPosting[]>([]);
   feeFilter = signal<FeeStatus | ''>('');
 

@@ -16,6 +16,21 @@ $green: #0e8a5f;
 .jb-head { flex-wrap: wrap; }
 .jb-head-text { flex: 1 1 320px; }
 
+.cd-tabs a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  color: $muted;
+  text-decoration: none;
+
+  .material-icons { font-size: 16px; }
+  &:hover { color: $ink; }
+}
+
 .cd-tabs {
   display: inline-flex;
   gap: 4px;
@@ -406,3 +421,32 @@ $green: #0e8a5f;
 
   .material-icons { font-size: 16px; color: #0e8a5f; }
 }
+
+/* ── one candidate on a page of its own ── */
+.cd-page-crumbs {
+  margin-bottom: 12px;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    color: $muted;
+    text-decoration: none;
+
+    .material-icons { font-size: 16px; }
+    &:hover { color: $accent; }
+  }
+}
+
+.cd-page {
+  max-width: 900px;
+  padding: 0;
+  overflow: visible;
+
+  .jp-dialog-head { padding: 22px 24px; }
+  .jp-dialog-body { overflow: visible; }
+}
+
+.cd-card .jb-card-side a.jp-btn, .cd-card h2 a.jb-title { text-decoration: none; }

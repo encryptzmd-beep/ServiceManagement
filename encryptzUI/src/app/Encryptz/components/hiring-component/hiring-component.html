@@ -171,6 +171,10 @@
           <div class="hr-actions">
             @if (p.status === 'Draft') { <button class="jp-btn primary" (click)="publish(p)">Send for review</button> }
             @if (p.status === 'Closed') { <button class="jp-btn" (click)="publish(p)">Reopen</button> }
+            @if (p.status === 'Open') {
+              <button class="jp-btn" (click)="shareJob(p)" title="Copy the public link of this job"><span class="material-icons">share</span>Share</button>
+              <a class="jp-btn" [routerLink]="['/jobs', p.postingId]" target="_blank" rel="noopener" title="See the job as people see it"><span class="material-icons">open_in_new</span></a>
+            }
             @if (p.status === 'Open' || p.status === 'InReview') { <button class="jp-btn" (click)="close(p)">Close</button> }
             <button class="jp-btn" (click)="openEdit(p)">Edit</button>
             @if (applicantCount(p) === 0) { <button class="jp-btn ghost" (click)="remove(p)">Remove</button> }
@@ -243,10 +247,8 @@
         </div>
         @if (clients().length) {
           <label>For client
-            <select class="jp-input" name="clientId" [(ngModel)]="f.clientId">
-              <option [ngValue]="null">No client (your own job)</option>
-              @for (c of clients(); track c.clientId) { <option [ngValue]="c.clientId">{{ c.name }}</option> }
-            </select>
+            <app-autocomplete name="clientId" [(ngModel)]="f.clientId" [options]="clientOptions()" noneLabel="No client (your own job)"
+                              placeholder="Type a client name" emptyText="No client matches" />
             <small>Only your company sees the client. People see your company's name.</small>
           </label>
         }

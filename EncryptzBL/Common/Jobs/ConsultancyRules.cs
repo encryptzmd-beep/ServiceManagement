@@ -77,6 +77,53 @@ namespace EncryptzBL.Common.Jobs
             return t.Note.Length > 1000 ? "The note can have at most 1000 characters" : null;
         }
 
+        public static readonly string[] CandidateSources = { "Walk-in", "Referral", "Job board", "Social media", "E-mail", "Other" };
+
+        /// <summary>An e-mail as a key for duplicates: trimmed, lower case ('' when none).</summary>
+        public static string EmailKey(string? email) => (email ?? "").Trim().ToLowerInvariant();
+
+        /// <summary>
+        /// A phone as a key for duplicates: its digits, the last 10 of them, so that "+91 98470 12345",
+        /// "098470-12345" and "9847012345" are the same number ('' when there are fewer than 6 digits).
+        /// </summary>
+        public static string PhoneKey(string? phone)
+        {
+            var digits = new string((phone ?? "").Where(char.IsAsciiDigit).ToArray());
+            if (digits.Length < 6) return "";
+            return digits.Length > 10 ? digits.Substring(digits.Length - 10) : digits;
+        }
+
+        /// <summary>What is wrong with a candidate the company adds (null when nothing). The text is tidied.</summary>
+        public static string? OwnCandidateProblem(OwnCandidateDto? c)
+        {
+            if (c == null) return "Nothing to save";
+
+            c.FullName = (c.FullName ?? "").Trim();
+            c.Headline = (c.Headline ?? "").Trim();
+            c.Email = (c.Email ?? "").Trim();
+            c.Phone = (c.Phone ?? "").Trim();
+            c.City = (c.City ?? "").Trim();
+            c.Skills = string.Join(", ", (c.Skills ?? "").Split(',').Select(s => s.Trim()).Where(s => s.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase));
+            c.PreferredJobs = (c.PreferredJobs ?? "").Trim();
+            c.Source = (c.Source ?? "").Trim();
+            c.Notes = (c.Notes ?? "").Trim();
+            c.Stage = Stages.FirstOrDefault(s => string.Equals(s, c.Stage, StringComparison.OrdinalIgnoreCase)) ?? "New";
+
+            if (c.FullName.Length == 0) return "Enter the name of the candidate";
+            if (c.FullName.Length > 200 || c.Headline.Length > 200) return "The name or the headline is too long";
+            if (c.Email.Length == 0 && c.Phone.Length == 0) return "Enter an e-mail or a phone number";
+            if (c.Email.Length > 0 && (c.Email.Length > 256 || !Email.IsMatch(c.Email))) return "Enter a valid e-mail address";
+            if (c.Phone.Length > 0 && (!Phone.IsMatch(c.Phone) || PhoneKey(c.Phone).Length == 0)) return "Enter a valid phone number";
+            if (c.City.Length > 100) return "The city is too long";
+            if (c.ExperienceYears is < 0 or > 60) return "Experience is from 0 to 60 years";
+            if (c.Skills.Length > 1000) return "The skills are too long";
+            if (c.PreferredJobs.Length > 500) return "The jobs looked for are too long";
+            if (c.Source.Length > 0 && !CandidateSources.Contains(c.Source)) return "Choose where you met the candidate";
+            if (c.Notes.Length > 2000) return "The notes can have at most 2000 characters";
+            if (c.ExperienceYears.HasValue) c.ExperienceYears = Math.Round(c.ExperienceYears.Value, 1);
+            return null;
+        }
+
         public static string? InviteProblem(CandidateInviteRequest? i)
         {
             if (i == null || i.PostingId <= 0) return "Choose one of your open jobs";

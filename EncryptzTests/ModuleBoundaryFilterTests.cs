@@ -101,7 +101,8 @@ namespace EncryptzTests
                 "LoginAdsController",  // the sign-in page, before anyone has a company
                 "PublicJobsController", // the public job pages: no login, no company
                 "PublicProfilesController", // a profile a person shared: no login, no company
-                "MessagesController"   // a person and a company: the Personal DB, HiringAccess on the company side
+                "MessagesController",  // a person and a company: the Personal DB, HiringAccess on the company side
+                "OwnCandidatesController" // Job Consultancy: HiringAccess on every call, as ConsultancyController
             };
 
             var untagged = typeof(AuthController).Assembly.GetTypes()

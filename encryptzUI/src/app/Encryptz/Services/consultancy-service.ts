@@ -56,6 +56,49 @@ export interface Candidate {
   stage: TalentStage | '';
 }
 
+/** Where a company met a candidate it adds itself. */
+export const CANDIDATE_SOURCES = ['Walk-in', 'Referral', 'Job board', 'Social media', 'E-mail', 'Other'];
+
+/**
+ * A candidate the company added itself: not on Job Portal, only the company sees them.
+ * An e-mail or a phone is needed; no two of a company share either.
+ */
+export interface OwnCandidate {
+  candidateId: number;
+  fullName: string;
+  headline: string;
+  email: string;
+  phone: string;
+  city: string;
+  experienceYears: number | null;
+  /** Comma separated. */
+  skills: string;
+  preferredJobs: string;
+  source: string;
+  stage: TalentStage;
+  notes: string;
+  hasResume?: boolean;
+  resumeName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface OwnCandidateList {
+  items: OwnCandidate[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** A candidate of the company with the same e-mail or phone as the one being typed. */
+export interface OwnCandidateDuplicate {
+  candidateId: number;
+  fullName: string;
+  email: string;
+  phone: string;
+  sameAs: 'Email' | 'Phone';
+}
+
 /** A person who fits one job of the company, and why (best first). */
 export interface CandidateMatch {
   candidateKey: string;
@@ -225,6 +268,41 @@ export class ConsultancyService {
   /** How many suitable people each open job of the company has. */
   getPostingMatchCounts(): Observable<ApiResponse<PostingMatchCount[]>> {
     return this.http.get<ApiResponse<PostingMatchCount[]>>(`${this.api}/postings/match-counts`);
+  }
+
+  // ── the company's own candidates ──
+
+  getOwnCandidates(q: string, page: number): Observable<ApiResponse<OwnCandidateList>> {
+    let params = new HttpParams().set('page', page);
+    if (q.trim()) params = params.set('q', q.trim());
+    return this.http.get<ApiResponse<OwnCandidateList>>(`${this.api}/own-candidates`, { params });
+  }
+
+  findOwnDuplicates(id: number, email: string, phone: string): Observable<ApiResponse<OwnCandidateDuplicate[]>> {
+    const params = new HttpParams().set('id', id).set('email', email.trim()).set('phone', phone.trim());
+    return this.http.get<ApiResponse<OwnCandidateDuplicate[]>>(`${this.api}/own-candidates/duplicates`, { params });
+  }
+
+  saveOwnCandidate(c: OwnCandidate): Observable<ApiResponse<number>> {
+    return this.http.post<ApiResponse<number>>(`${this.api}/own-candidates`, c);
+  }
+
+  deleteOwnCandidate(id: number): Observable<ApiResponse<boolean>> {
+    return this.http.delete<ApiResponse<boolean>>(`${this.api}/own-candidates/${id}`);
+  }
+
+  saveOwnCandidateResume(id: number, file: File): Observable<ApiResponse<number>> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.http.post<ApiResponse<number>>(`${this.api}/own-candidates/${id}/resume`, form);
+  }
+
+  deleteOwnCandidateResume(id: number): Observable<ApiResponse<number>> {
+    return this.http.delete<ApiResponse<number>>(`${this.api}/own-candidates/${id}/resume`);
+  }
+
+  downloadOwnCandidateResume(id: number): Observable<Blob> {
+    return this.http.get(`${this.api}/own-candidates/${id}/resume`, { responseType: 'blob' });
   }
 
   getCandidate(key: string): Observable<ApiResponse<CandidatePage>> {

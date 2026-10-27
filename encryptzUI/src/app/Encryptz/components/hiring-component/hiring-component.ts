@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -17,6 +17,9 @@ import { VerifiedBadgeComponent } from '../verified-badge-component/verified-bad
 import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
 import { CandidateMatch, ConsultClient, ConsultancyService, PostingClient } from '../../Services/consultancy-service';
 import { MessagesService } from '../../Services/messages-service';
+import { AutocompleteComponent, AutocompleteOption } from '../autocomplete-component/autocomplete-component';
+import { jobPath } from '../../Services/public-jobs-service';
+import { shareLink } from '../../Services/share-link';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const REFUSED = "You don't have access to Job Consultancy. Ask your administrator";
@@ -30,7 +33,7 @@ const REFUSED = "You don't have access to Job Consultancy. Ask your administrato
 @Component({
   selector: 'app-hiring-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent, AutocompleteComponent],
   templateUrl: './hiring-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',
@@ -49,6 +52,9 @@ export class HiringComponent implements OnInit {
 
   /** The clients of the consultancy, and which job is for which (known to the company only). */
   clients = signal<ConsultClient[]>([]);
+  /** The clients as choices: searched by name, city and industry. */
+  readonly clientOptions = computed<AutocompleteOption<number>[]>(() =>
+    this.clients().map(c => ({ value: c.clientId, label: c.name, sub: [c.city, c.industry].filter(Boolean).join(' · ') })));
   clientOf = signal<Record<number, PostingClient>>({});
 
   readonly employmentTypes = JOB_EMPLOYMENT_TYPES;
@@ -317,9 +323,15 @@ export class HiringComponent implements OnInit {
     });
   }
 
-  /** The whole profile, in Candidates (the person sees which company opened it). */
+  /** The public address of an open job: the phone's share sheet, else copied (WhatsApp, LinkedIn, e-mail...). */
+  shareJob(p: CompanyPosting): void {
+    const url = `${location.origin}${jobPath({ postingId: p.postingId!, title: p.title, city: p.city })}`;
+    shareLink(url, p.title, ok => this.notify(ok ? 'Link copied. Paste it anywhere to share the job' : 'The link could not be copied', ok));
+  }
+
+  /** The whole profile, on its own page in a new tab (the person sees which company opened it). */
   viewMatch(m: CandidateMatch): void {
-    this.router.navigate(['/consultancy/candidates'], { queryParams: { candidate: m.candidateKey } });
+    window.open(this.router.serializeUrl(this.router.createUrlTree(['/consultancy/candidates', m.candidateKey])), '_blank', 'noopener');
   }
 
   matchSkills(m: CandidateMatch): string[] {

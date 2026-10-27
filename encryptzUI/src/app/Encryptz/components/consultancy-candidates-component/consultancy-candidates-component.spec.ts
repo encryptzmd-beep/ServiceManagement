@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { AuthService } from '../../Auth/auth-service';
 import { CompanyJobsService } from '../../Services/company-jobs-service';
@@ -25,12 +25,14 @@ describe('ConsultancyCandidatesComponent', () => {
   let api: any;
   let calls: any[][];
 
-  const create = () => {
+  /** `key`: the page of one candidate (/consultancy/candidates/:key), else the list. */
+  const create = (key?: string) => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [ConsultancyCandidatesComponent],
       providers: [
         provideRouter([]),
+        ...(key ? [{ provide: ActivatedRoute, useValue: { snapshot: { data: { page: true }, paramMap: convertToParamMap({ key }), queryParamMap: convertToParamMap({}) } } }] : []),
         { provide: ConsultancyService, useValue: api },
         { provide: CompanyJobsService, useValue: { getPostings: () => of({ success: true, message: '', data: [
           { postingId: 7, title: 'Accountant', city: 'Kochi', status: 'Open' }, { postingId: 8, title: 'Draft job', city: 'Kochi', status: 'Draft' },
@@ -247,5 +249,41 @@ describe('ConsultancyCandidatesComponent', () => {
 
     expect(c.open()).toBeNull();
     expect(c.toast()!.text).toBe('This candidate can no longer be found');
+  });
+
+  // ── one candidate on a page of its own ────────────────────────────────────
+
+  it('opens a profile from the list in a new tab, not in a popup', () => {
+    const fixture = create();
+    const card = fixture.nativeElement.querySelector('.cd-card');
+    const links = [...card.querySelectorAll('a[target="_blank"]')] as HTMLAnchorElement[];
+
+    expect(links.map(a => a.getAttribute('href'))).toEqual([`/consultancy/candidates/${key}`, `/consultancy/candidates/${key}`]);
+    expect(links.every(a => (a.getAttribute('rel') ?? '').includes('noopener'))).toBe(true);
+    expect(fixture.nativeElement.querySelector('.jp-overlay')).toBeNull();
+  });
+
+  it('shows one candidate as a page: the profile, the pool, the invitation, and no list', () => {
+    const fixture = create(key);
+    fixture.detectChanges();
+
+    expect(calls.some(x => x[0] === 'searchCandidates')).toBe(false);
+    expect(fixture.nativeElement.querySelector('.jp-overlay')).toBeNull();
+    const page = fixture.nativeElement.querySelector('.cd-page');
+    expect(page).not.toBeNull();
+    expect(page.querySelector('.cd-pool')).not.toBeNull();
+    expect(page.querySelector('.cd-invite')).not.toBeNull();
+    // a page has no Close
+    expect(page.querySelector('.jp-close')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.cd-search')).toBeNull();
+  });
+
+  it('says so on the page when the candidate can no longer be found', () => {
+    api.getCandidate = () => of({ success: false, message: 'Not found', data: null });
+    const fixture = create(key);
+    fixture.detectChanges();
+
+    expect(text(fixture)).toContain('This candidate can no longer be found');
+    expect(fixture.nativeElement.querySelector('.cd-page')).toBeNull();
   });
 });

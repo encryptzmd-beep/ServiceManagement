@@ -159,6 +159,52 @@ namespace EncryptzBL.DTO_s
         public int Suitable { get; set; }
     }
 
+    /// <summary>
+    /// A candidate the company added itself (ProjectDB/12): not on Job Portal, only the company sees
+    /// them. An e-mail or a phone is needed; no two of a company share either.
+    /// </summary>
+    public class OwnCandidateDto
+    {
+        public int CandidateId { get; set; }
+        public string FullName { get; set; } = "";
+        public string Headline { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Phone { get; set; } = "";
+        public string City { get; set; } = "";
+        public decimal? ExperienceYears { get; set; }
+        /// <summary>Comma separated.</summary>
+        public string Skills { get; set; } = "";
+        public string PreferredJobs { get; set; } = "";
+        /// <summary>Where the company met them: Walk-in, Referral, Job board, Social media, E-mail, Other.</summary>
+        public string Source { get; set; } = "";
+        /// <summary>New, Contacted, Interview, Placed or NotSuitable (as the pool).</summary>
+        public string Stage { get; set; } = "New";
+        public string Notes { get; set; } = "";
+        public bool HasResume { get; set; }
+        public string ResumeName { get; set; } = "";
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+    }
+
+    public class OwnCandidateListDto
+    {
+        public List<OwnCandidateDto> Items { get; set; } = new();
+        public int Total { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+    }
+
+    /// <summary>A candidate of the company with the same e-mail or phone as the one being saved.</summary>
+    public class OwnCandidateDuplicateDto
+    {
+        public int CandidateId { get; set; }
+        public string FullName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Phone { get; set; } = "";
+        /// <summary>Email or Phone.</summary>
+        public string SameAs { get; set; } = "";
+    }
+
     public class CandidateInviteRequest
     {
         public int PostingId { get; set; }

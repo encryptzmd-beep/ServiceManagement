@@ -108,6 +108,20 @@ export const routes: Routes = [
     data: { title: 'Job Consultancy' },
   })),
   {
+    path: 'consultancy/our-candidates',
+    loadComponent: () => import('./Encryptz/components/own-candidates-component/own-candidates-component')
+      .then(m => m.OwnCandidatesComponent),
+    canActivate: [authGuard],
+    data: { title: 'Job Consultancy' },
+  },
+  {
+    path: 'consultancy/candidates/:key',
+    loadComponent: () => import('./Encryptz/components/consultancy-candidates-component/consultancy-candidates-component')
+      .then(m => m.ConsultancyCandidatesComponent),
+    canActivate: [authGuard],
+    data: { title: 'Job Consultancy', page: true },
+  },
+  {
     path: 'consultancy/postings',
     loadComponent: () => import('./Encryptz/components/hiring-component/hiring-component')
       .then(m => m.HiringComponent),
