@@ -100,10 +100,18 @@
               <span><span class="material-icons">description</span>{{ a.hasResume ? 'Resume attached' : 'No resume' }}</span>
             </div>
             @if (a.note) { <p class="hr-note">"{{ a.note }}"</p> }
+            @if (a.interviewAt && canInterview(a.status)) {
+              <p class="hr-interview"><span class="material-icons" aria-hidden="true">event_available</span>
+                Interview {{ interviewLabel(a.interviewAt) }} · {{ a.interviewMode }}@if (a.interviewPlace) { · {{ a.interviewPlace }} }</p>
+            }
+            @if (a.status === 'Rejected' && a.rejectReason) { <p class="hr-reason"><strong>Reason:</strong> {{ a.rejectReason }}</p> }
           </div>
           <div class="jb-card-side">
             <span [class]="statusClass(a.status)">{{ a.status }}</span>
             <button class="jp-btn" (click)="openApplicant(a)">View profile</button>
+            @if (canInterview(a.status)) {
+              <button class="jp-btn" (click)="openInterview(a.applicationId)"><span class="material-icons">event</span>{{ a.interviewAt ? 'Change interview' : 'Schedule interview' }}</button>
+            }
           </div>
         </article>
       } @empty {
@@ -363,6 +371,9 @@
       <div class="jp-dialog-foot hr-status-foot">
         <span [class]="statusClass(a.status)">{{ a.status }}</span>
         <button class="jp-btn" (click)="messageApplicant(a)" [disabled]="messaging()"><span class="material-icons">chat_bubble_outline</span>Message</button>
+        @if (canInterview(a.status)) {
+          <button class="jp-btn" (click)="openInterview(a.applicationId)"><span class="material-icons">event</span>Interview</button>
+        }
         @if (a.status === 'Hired') {
           <button class="jp-btn" (click)="recordPlacement(a)"><span class="material-icons">verified</span>Record placement</button>
         }
@@ -375,6 +386,73 @@
             </button>
           }
         }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══════════ A REJECTION: WHY ═══════════ -->
+@if (rejecting(); as r) {
+  <div class="jp-overlay hr-top">
+    <div class="jp-dialog hr-small" role="dialog" aria-modal="true" aria-labelledby="hr-reject-title">
+      <div class="jp-dialog-head">
+        <h3 id="hr-reject-title">Reject {{ r.name || 'this applicant' }}</h3>
+        <button class="jp-close" (click)="rejecting.set(null)" aria-label="Close"><span class="material-icons">close</span></button>
+      </div>
+      <div class="jp-dialog-body">
+        <p class="hr-help">Say why. The candidate reads this with the application, so keep it clear and kind.</p>
+        <label>Reason *
+          <textarea class="jp-input" name="rejectReason" rows="4" maxlength="1000" [(ngModel)]="rejectReason"
+                    placeholder="For example: the job needs 3 years of GST filing; your profile shows 1 year."></textarea>
+        </label>
+        <div class="hr-count" [class.ok]="!rejectShort()">
+          {{ rejectShort() ? rejectShort() + ' more characters needed' : 'Enough said' }} · {{ rejectReason.trim().length }}/1000
+        </div>
+      </div>
+      <div class="jp-dialog-foot">
+        <button class="jp-btn ghost" (click)="rejecting.set(null)" [disabled]="statusBusy()">Cancel</button>
+        <button class="jp-btn danger" (click)="confirmReject()" [disabled]="statusBusy() || rejectShort() > 0">{{ statusBusy() ? 'Saving…' : 'Reject' }}</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══════════ AN INTERVIEW ═══════════ -->
+@if (interviewFor(); as iv) {
+  <div class="jp-overlay hr-top">
+    <div class="jp-dialog hr-small" role="dialog" aria-modal="true" aria-labelledby="hr-interview-title">
+      <div class="jp-dialog-head">
+        <h3 id="hr-interview-title">{{ iv.isSet ? 'Change the interview' : 'Schedule an interview' }}@if (iv.name) { with {{ iv.name }} }</h3>
+        <button class="jp-close" (click)="interviewFor.set(null)" aria-label="Close"><span class="material-icons">close</span></button>
+      </div>
+      <div class="jp-dialog-body">
+        <div class="jp-two">
+          <label>Date *
+            <input class="jp-input" name="ivDate" type="date" [(ngModel)]="interview.date" />
+          </label>
+          <label>Time *
+            <input class="jp-input" name="ivTime" type="time" [(ngModel)]="interview.time" />
+          </label>
+        </div>
+        <label>How *
+          <select class="jp-input" name="ivMode" [(ngModel)]="interview.mode">
+            @for (m of interviewModes; track m) { <option [value]="m">{{ m }}</option> }
+          </select>
+        </label>
+        <label>{{ interview.mode === 'In person' ? 'Address' : interview.mode === 'Video' ? 'Link of the call' : 'Phone number' }}
+          <input class="jp-input" name="ivPlace" [(ngModel)]="interview.place" maxlength="300" />
+        </label>
+        <label>Note for the candidate
+          <textarea class="jp-input" name="ivNote" rows="3" maxlength="500" [(ngModel)]="interview.note" placeholder="Bring your certificates; ask for Anu at the reception."></textarea>
+        </label>
+        <p class="hr-help">The candidate is told at once, and sees it on the Job Portal dashboard. A new application is shortlisted.</p>
+        @if (interviewError()) { <div class="jp-error">{{ interviewError() }}</div> }
+      </div>
+      <div class="jp-dialog-foot">
+        @if (iv.isSet) { <button class="jp-btn ghost hr-calloff" (click)="callOffInterview()" [disabled]="interviewBusy()">Call off</button> }
+        <span class="jb-grow"></span>
+        <button class="jp-btn ghost" (click)="interviewFor.set(null)" [disabled]="interviewBusy()">Cancel</button>
+        <button class="jp-btn primary" (click)="saveInterview()" [disabled]="interviewBusy()">{{ interviewBusy() ? 'Saving…' : (iv.isSet ? 'Save' : 'Schedule') }}</button>
       </div>
     </div>
   </div>

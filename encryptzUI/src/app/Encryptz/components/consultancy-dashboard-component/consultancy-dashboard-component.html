@@ -1,0 +1,161 @@
+<app-personal-shell appName="Job Consultancy" icon="work_outline" [menu]="menu">
+
+  @if (unavailable()) {
+    <div class="jp-state">
+      <span class="material-icons">lock_outline</span>
+      <p>{{ unavailable() }}</p>
+    </div>
+  } @else {
+    <div class="db">
+
+      <!-- ═══════════ HELLO, AND WHAT TO DO ═══════════ -->
+      <header class="db-head">
+        <div class="db-head-text">
+          <h1>{{ greeting() }}</h1>
+          <p class="db-sub">Here is how your consultancy stands today.</p>
+        </div>
+        <div class="db-head-actions cd-actions">
+          <a class="db-btn" routerLink="/consultancy/candidates"><span class="material-icons" aria-hidden="true">search</span>Find candidates</a>
+          <a class="db-btn" routerLink="/consultancy/our-candidates" [queryParams]="{ add: 1 }"><span class="material-icons" aria-hidden="true">person_add</span>Add candidate</a>
+          <a class="db-btn primary" routerLink="/consultancy/postings" [queryParams]="{ new: 1 }"><span class="material-icons" aria-hidden="true">add</span>Post a job</a>
+        </div>
+      </header>
+
+      <!-- ═══════════ AT A GLANCE ═══════════ -->
+      <section class="db-card" aria-labelledby="cd-glance-title">
+        <div class="db-card-head">
+          <h2 id="cd-glance-title">At a glance</h2>
+        </div>
+        <div class="db-kpis four cd-kpis">
+          @for (c of cards(); track c.key) {
+            <a class="db-kpi" [attr.data-state]="c.key" [routerLink]="c.link">
+              <strong>{{ c.value }}</strong>
+              <span>{{ c.label }}</span>
+              @if (c.hint) { <small>{{ c.hint }}</small> }
+            </a>
+          }
+        </div>
+      </section>
+
+      <div class="db-layout">
+        <div class="db-main">
+
+          <!-- ═══════════ OPEN JOBS ═══════════ -->
+          <section class="db-card" aria-labelledby="cd-jobs-title">
+            <div class="db-card-head">
+              <h2 id="cd-jobs-title">Open jobs</h2>
+              <a routerLink="/consultancy/postings">Manage jobs</a>
+            </div>
+            @if (postings() === null) {
+              <div class="db-loading"><span class="jp-spinner" aria-hidden="true"></span></div>
+            } @else {
+              <ul class="db-list">
+                @for (p of busyJobs(); track p.postingId) {
+                  <li>
+                    <a class="db-item cd-job" routerLink="/consultancy/postings" [queryParams]="{ job: p.postingId }">
+                      <span class="db-item-text">
+                        <span class="db-item-title">{{ p.title }}@if (p.isVerified) { <app-verified-badge [compact]="true" hint="Job verified by Encryptz" /> }</span>
+                        <span class="db-item-meta">{{ p.city }}@if (suitable()[p.postingId]) { · <span class="cd-suitable">{{ suitable()[p.postingId] }} suitable candidates</span> }</span>
+                      </span>
+                      <span class="cd-counts">
+                        <span><b>{{ p.applied }}</b>new</span>
+                        <span><b>{{ p.shortlisted }}</b>shortlisted</span>
+                        <span><b>{{ p.hired }}</b>hired</span>
+                      </span>
+                      <span class="material-icons db-chevron" aria-hidden="true">chevron_right</span>
+                    </a>
+                  </li>
+                } @empty {
+                  <li class="db-empty">No open job. <a routerLink="/consultancy/postings" [queryParams]="{ new: 1 }">Post a job</a>: Encryptz checks it, and then it is on Job Portal.</li>
+                }
+              </ul>
+            }
+          </section>
+
+          <!-- ═══════════ LATEST APPLICANTS ═══════════ -->
+          <section class="db-card" aria-labelledby="cd-latest-title">
+            <div class="db-card-head">
+              <h2 id="cd-latest-title">Latest applicants</h2>
+              <a routerLink="/consultancy/postings">All jobs</a>
+            </div>
+            @if (board() === null) {
+              <div class="db-loading"><span class="jp-spinner" aria-hidden="true"></span></div>
+            } @else {
+              <ul class="db-list">
+                @for (a of board()!.latest; track a.applicationId) {
+                  <li>
+                    <a class="db-item cd-latest" routerLink="/consultancy/postings" [queryParams]="{ job: a.postingId }">
+                      <span class="db-logo round" aria-hidden="true">{{ initial(a.fullName) }}</span>
+                      <span class="db-item-text">
+                        <span class="db-item-title">{{ a.fullName || 'Applicant' }}@if (a.isVerified) { <app-verified-badge [compact]="true" hint="Person verified by Encryptz" /> }</span>
+                        <span class="db-item-meta">{{ a.postingTitle }} · applied {{ ago(a.appliedAt) }}</span>
+                      </span>
+                      <span [class]="statusClass(a.status)">{{ a.status === 'Rejected' ? 'Not selected' : a.status }}</span>
+                    </a>
+                  </li>
+                } @empty {
+                  <li class="db-empty">Nobody has applied yet. Share your open jobs, or <a routerLink="/consultancy/candidates">invite candidates</a> to apply.</li>
+                }
+              </ul>
+            }
+          </section>
+        </div>
+
+        <aside class="db-rail">
+          <!-- ═══════════ COMING INTERVIEWS ═══════════ -->
+          <section class="db-card" aria-labelledby="cd-iv-title">
+            <div class="db-card-head">
+              <h2 id="cd-iv-title">Upcoming interviews</h2>
+            </div>
+            @if (board() === null) {
+              <div class="db-loading"><span class="jp-spinner" aria-hidden="true"></span></div>
+            } @else {
+              <ul class="db-list compact">
+                @for (i of board()!.interviews; track i.applicationId) {
+                  @let when = interviewParts(i.interviewAt);
+                  <li>
+                    <a class="db-item db-interview cd-interview" routerLink="/consultancy/postings" [queryParams]="{ job: i.postingId }">
+                      <span class="db-date" aria-hidden="true"><span>{{ when.month }}</span><strong>{{ when.day }}</strong></span>
+                      <span class="db-item-text">
+                        <span class="db-item-title">{{ i.fullName || 'Applicant' }}</span>
+                        <span class="db-item-meta">{{ i.postingTitle }}</span>
+                        <span class="db-item-meta good">{{ when.rest }} · {{ i.interviewMode }}</span>
+                      </span>
+                    </a>
+                  </li>
+                } @empty {
+                  <li class="db-empty">No interview in the next 30 days. Open a job's applicants and choose <strong>Schedule interview</strong>.</li>
+                }
+              </ul>
+            }
+          </section>
+
+          <!-- ═══════════ THE BUSINESS ═══════════ -->
+          <section class="db-card tight" aria-label="Your business">
+            <a class="db-stat" routerLink="/consultancy/clients">
+              <span class="material-icons" aria-hidden="true">handshake</span>
+              <span class="db-stat-label">Active clients<small>The companies you hire for</small></span>
+              <strong>{{ activeClients() ?? '–' }}</strong>
+            </a>
+            <a class="db-stat" routerLink="/consultancy/our-candidates">
+              <span class="material-icons" aria-hidden="true">badge</span>
+              <span class="db-stat-label">Your own candidates<small>Only your company sees them</small></span>
+              <strong>{{ ownCandidates() ?? '–' }}</strong>
+            </a>
+            <a class="db-stat" routerLink="/consultancy/placements">
+              <span class="material-icons" aria-hidden="true">verified</span>
+              <span class="db-stat-label">Placements<small>{{ placements() ? money(placements()!.feePaidThisYear) + ' paid this year' : 'Fees and guarantees' }}</small></span>
+              <strong>{{ placements()?.total ?? '–' }}</strong>
+            </a>
+          </section>
+
+          @if (board(); as b) {
+            @if (b.rejectedThisMonth) {
+              <p class="cd-note">{{ b.rejectedThisMonth }} {{ b.rejectedThisMonth === 1 ? 'application was' : 'applications were' }} rejected this month, each with a reason the candidate can read.</p>
+            }
+          }
+        </aside>
+      </div>
+    </div>
+  }
+</app-personal-shell>

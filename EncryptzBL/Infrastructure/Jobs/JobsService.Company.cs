@@ -157,7 +157,12 @@ namespace EncryptzBL.Infrastructure.Jobs
                         AppliedAt = Convert.ToDateTime(r["AppliedAt"]),
                         StatusAt = Convert.ToDateTime(r["StatusAt"]),
                         HasResume = Convert.ToBoolean(r["HasResume"]),
-                        IsVerified = FlagOrFalse(r, "IsVerified")
+                        IsVerified = FlagOrFalse(r, "IsVerified"),
+                        InterviewAt = DateIfAny(r, "InterviewAt"),
+                        InterviewMode = Text(r, "InterviewMode"),
+                        InterviewPlace = Text(r, "InterviewPlace"),
+                        InterviewNote = Text(r, "InterviewNote"),
+                        RejectReason = Text(r, "RejectReason")
                     }).ToList();
 
                 return ApiResponse<List<JobApplicantDto>>.Ok(list);
@@ -222,19 +227,96 @@ namespace EncryptzBL.Infrastructure.Jobs
                 return ApiResponse<JobFileContent>.Ok(new JobFileContent(name, JobsRules.ContentTypeFor(name), content));
             });
 
-        public Task<ApiResponse<bool>> SetApplicantStatus(int userId, int companyId, int postingId, int applicationId, string? status)
+        public Task<ApiResponse<bool>> SetApplicantStatus(int userId, int companyId, int postingId, int applicationId, string? status, string? reason = null)
             => GuardedCompany(userId, companyId, "changing the state of an application", async _ =>
             {
                 var state = JobPostingRules.InList(JobPostingRules.ApplicantStates, status);
                 if (state == null)
                     return ApiResponse<bool>.Fail("This change is not possible");
 
+                var why = state == "Rejected" ? (reason ?? "").Trim() : "";
+                var problem = state == "Rejected" ? JobPostingRules.RejectReasonProblem(why) : null;
+                if (problem != null)
+                    return ApiResponse<bool>.Fail(problem);
+
                 return AsFlag(Answer(await Told("jobs.sp_Company_Applicant_SetStatus", new[]
                 {
                     In("@CompanyId", companyId),
                     In("@PostingId", postingId),
                     In("@ApplicationId", applicationId),
-                    In("@Status", state)
+                    In("@Status", state),
+                    In("@Reason", why)
+                })));
+            });
+
+        public Task<ApiResponse<CompanyDashboardDto>> GetCompanyDashboard(int userId, int companyId)
+            => GuardedCompany(userId, companyId, "reading the dashboard", async _ =>
+            {
+                var ds = await GetDataSetAsync("jobs.sp_Company_Dashboard", new[] { In("@CompanyId", companyId) });
+                var board = new CompanyDashboardDto();
+                if (ds == null || ds.Tables.Count < 3)
+                    return ApiResponse<CompanyDashboardDto>.Ok(board);
+
+                board.Interviews = ds.Tables[0].Rows.Cast<DataRow>().Select(r => new CompanyInterviewDto
+                {
+                    ApplicationId = Convert.ToInt32(r["ApplicationId"]),
+                    PostingId = Convert.ToInt32(r["PostingId"]),
+                    PostingTitle = Text(r, "PostingTitle"),
+                    FullName = Text(r, "FullName"),
+                    InterviewAt = Convert.ToDateTime(r["InterviewAt"]),
+                    InterviewMode = Text(r, "InterviewMode"),
+                    InterviewPlace = Text(r, "InterviewPlace")
+                }).ToList();
+
+                board.Latest = ds.Tables[1].Rows.Cast<DataRow>().Select(r => new CompanyLatestApplicantDto
+                {
+                    ApplicationId = Convert.ToInt32(r["ApplicationId"]),
+                    PostingId = Convert.ToInt32(r["PostingId"]),
+                    PostingTitle = Text(r, "PostingTitle"),
+                    FullName = Text(r, "FullName"),
+                    Headline = Text(r, "Headline"),
+                    Status = Text(r, "Status"),
+                    AppliedAt = Convert.ToDateTime(r["AppliedAt"]),
+                    IsVerified = FlagOrFalse(r, "IsVerified")
+                }).ToList();
+
+                if (ds.Tables[2].Rows.Count > 0)
+                {
+                    var c = ds.Tables[2].Rows[0];
+                    board.NewThisWeek = IntOrNull(c, "NewThisWeek") ?? 0;
+                    board.InterviewsThisWeek = IntOrNull(c, "InterviewsThisWeek") ?? 0;
+                    board.HiredThisMonth = IntOrNull(c, "HiredThisMonth") ?? 0;
+                    board.RejectedThisMonth = IntOrNull(c, "RejectedThisMonth") ?? 0;
+                }
+
+                return ApiResponse<CompanyDashboardDto>.Ok(board);
+            });
+
+        public Task<ApiResponse<bool>> SetApplicantInterview(int userId, int companyId, int postingId, int applicationId, JobInterviewRequest? req)
+            => GuardedCompany(userId, companyId, "setting an interview", async _ =>
+            {
+                var at = req?.At;
+                string? mode = null, place = null, note = null;
+                if (at != null)
+                {
+                    mode = JobPostingRules.InList(JobPostingRules.InterviewModes, req!.Mode);
+                    if (mode == null)
+                        return ApiResponse<bool>.Fail("Choose how the interview takes place");
+                    place = (req.Place ?? "").Trim();
+                    note = (req.Note ?? "").Trim();
+                    if (place.Length > 300) return ApiResponse<bool>.Fail("The place or link is too long (300 characters at most)");
+                    if (note.Length > 500) return ApiResponse<bool>.Fail("The note is too long (500 characters at most)");
+                }
+
+                return AsFlag(Answer(await Told("jobs.sp_Company_Applicant_Interview", new[]
+                {
+                    In("@CompanyId", companyId),
+                    In("@PostingId", postingId),
+                    In("@ApplicationId", applicationId),
+                    In("@At", at),
+                    In("@Mode", mode),
+                    In("@Place", place),
+                    In("@Note", note)
                 })));
             });
     }

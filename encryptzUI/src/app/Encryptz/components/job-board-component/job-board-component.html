@@ -59,7 +59,7 @@
       <p class="jb-hint">
         <span class="material-icons" aria-hidden="true">tips_and_updates</span>
         Add the jobs, places and working modes you prefer to your profile, and the jobs that fit them come first.
-        <a routerLink="/apps/jobs">Open my profile</a>
+        <a routerLink="/apps/jobs/profile">Open my profile</a>
       </p>
     }
   }
@@ -89,6 +89,19 @@
             <span><span class="material-icons">schedule</span>{{ a.employmentType }}</span>
             <span><span class="material-icons">apartment</span>{{ a.workMode }}</span>
           </div>
+          @if (hasInterview(a)) {
+            <div class="jb-interview">
+              <span class="material-icons" aria-hidden="true">event_available</span>
+              <div>
+                <strong>Interview · {{ interviewLabel(a.interviewAt) }}</strong>
+                <span>{{ a.interviewMode }}@if (a.interviewPlace) { · @if (isWebLink(a.interviewPlace)) { <a [href]="a.interviewPlace" target="_blank" rel="noopener noreferrer">Join the call</a> } @else { {{ a.interviewPlace }} } }</span>
+                @if (a.interviewNote) { <em>{{ a.interviewNote }}</em> }
+              </div>
+            </div>
+          }
+          @if (a.status === 'Rejected' && a.rejectReason) {
+            <div class="jb-reason"><strong>Why the company did not go ahead</strong>{{ a.rejectReason }}</div>
+          }
           <div class="jb-foot">Applied {{ dayLabel(a.appliedAt) }}@if (a.status !== 'Applied') { · {{ a.status }} since {{ dayLabel(a.statusAt) }} }</div>
         </div>
         <div class="jb-card-side">
@@ -199,7 +212,7 @@
         @if (applyError()) {
           <div class="jp-error">
             {{ applyError() }}
-            @if (applyNeedsProfile) { <a class="jb-link" routerLink="/apps/jobs">Open my profile</a> }
+            @if (applyNeedsProfile) { <a class="jb-link" routerLink="/apps/jobs/profile">Open my profile</a> }
           </div>
         }
       </div>

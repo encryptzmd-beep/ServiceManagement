@@ -138,4 +138,29 @@ describe('VerificationPanelComponent', () => {
     api.getVerificationQueue = () => throwError(() => ({ status: 403 }));
     expect(text(create())).toContain('The list could not be loaded');
   });
+
+  it('lists the rejections with the skills the job asked for and the reason, and searches them', () => {
+    api.getRejections = (q: string, page: number) => {
+      calls.push(['getRejections', q, page]);
+      return of({ success: true, message: '', data: { total: 1, page: 1, pageSize: 20, items: [{
+        rejectionId: 4, rejectedAt: '2026-10-20T10:00:00', companyName: 'Acme Placements', jobTitle: 'Accountant', skills: 'Tally, GST; Excel',
+        reason: 'The job needs three years of GST filing', candidateName: 'Leo Joseph', candidateHeadline: 'Clerk' }] } });
+    };
+    const fixture = create();
+    fixture.componentInstance.showFilter('rejections');
+    fixture.detectChanges();
+
+    expect(calls).toContainEqual(['getRejections', '', 1]);
+    const card = fixture.nativeElement.querySelector('.vp-rejection') as HTMLElement;
+    expect(card.querySelector('h3')!.textContent).toContain('Accountant');
+    expect(card.textContent).toContain('Acme Placements');
+    expect(card.textContent).toContain('Leo Joseph');
+    expect((Array.from(card.querySelectorAll('.vp-skill')) as HTMLElement[]).map(e => e.textContent!.trim())).toEqual(['Tally', 'GST', 'Excel']);
+    expect(card.querySelector('.vp-reason')!.textContent).toContain('three years of GST filing');
+    expect(text(fixture)).toContain('1 rejection');
+
+    fixture.componentInstance.rejectionsQuery = ' GST ';
+    fixture.componentInstance.loadRejections(1);
+    expect(calls).toContainEqual(['getRejections', 'GST', 1]);
+  });
 });

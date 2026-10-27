@@ -53,6 +53,13 @@ export const routes: Routes = [
   // Personal applications: a login is enough, no company, no layout of a company
   {
     path: 'apps/jobs',
+    loadComponent: () => import('./Encryptz/components/job-dashboard-component/job-dashboard-component')
+      .then(m => m.JobDashboardComponent),
+    canActivate: [authGuard],
+    data: { title: 'Job Portal' },
+  },
+  {
+    path: 'apps/jobs/profile',
     loadComponent: () => import('./Encryptz/components/job-profile-component/job-profile-component')
       .then(m => m.JobProfileComponent),
     canActivate: [authGuard],
@@ -96,7 +103,14 @@ export const routes: Routes = [
   // Job Consultancy (commercial application). Its pages work on the shared Personal DB with
   // the company that was chosen, so they need no branch and no layout of a company database;
   // the API checks on every call that the company has the application and the person may use it
-  { path: 'consultancy', redirectTo: 'consultancy/postings', pathMatch: 'full' },
+  { path: 'consultancy', redirectTo: 'consultancy/dashboard', pathMatch: 'full' },
+  {
+    path: 'consultancy/dashboard',
+    loadComponent: () => import('./Encryptz/components/consultancy-dashboard-component/consultancy-dashboard-component')
+      .then(m => m.ConsultancyDashboardComponent),
+    canActivate: [authGuard],
+    data: { title: 'Job Consultancy' },
+  },
   ...([
     ['candidates', () => import('./Encryptz/components/consultancy-candidates-component/consultancy-candidates-component').then(m => m.ConsultancyCandidatesComponent)],
     ['clients', () => import('./Encryptz/components/consultancy-clients-component/consultancy-clients-component').then(m => m.ConsultancyClientsComponent)],

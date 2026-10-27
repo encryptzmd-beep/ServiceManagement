@@ -66,6 +66,11 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetPeople([FromQuery] string? q, [FromQuery] string? show, [FromQuery] int? page)
             => Admin() == 0 ? NotAdmin() : Ok(await _verification.GetPeopleForReview(Admin(), q, show, page));
 
+        /// <summary>The rejections companies made: the job, the skills it asked for and the reason.</summary>
+        [HttpGet("rejections")]
+        public async Task<IActionResult> GetRejections([FromQuery] string? q, [FromQuery] int? page)
+            => Admin() == 0 ? NotAdmin() : Ok(await _verification.GetRejections(Admin(), q, page));
+
         /// <summary>Approve = verify the person; otherwise the tick is taken away (a note is needed).</summary>
         [HttpPost("people/{key:guid}")]
         public async Task<IActionResult> DecidePerson(Guid key, [FromBody] VerificationDecisionRequest? req)

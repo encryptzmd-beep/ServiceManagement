@@ -142,6 +142,8 @@ export interface JobCertificateFields {
 
 export type JobEmploymentType = 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
 export type JobApplicationStatus = 'Applied' | 'Shortlisted' | 'Rejected' | 'Hired' | 'Withdrawn';
+export type InterviewMode = 'In person' | 'Video' | 'Phone';
+export const INTERVIEW_MODES: InterviewMode[] = ['In person', 'Video', 'Phone'];
 
 export const JOB_EMPLOYMENT_TYPES: JobEmploymentType[] = ['Full-time', 'Part-time', 'Contract', 'Internship'];
 export const JOB_WORK_MODES: JobWorkMode[] = ['On-site', 'Remote', 'Hybrid'];
@@ -213,6 +215,13 @@ export interface JobApplication {
   appliedAt: string;
   statusAt: string;
   isOpen: boolean;
+  /** The interview the company set (null = none): when, how, where, a note. */
+  interviewAt?: string | null;
+  interviewMode?: InterviewMode | '';
+  interviewPlace?: string;
+  interviewNote?: string;
+  /** Why the company rejected the application ('' unless it is rejected). */
+  rejectReason?: string;
 }
 
 @Injectable({ providedIn: 'root' })

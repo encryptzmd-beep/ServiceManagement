@@ -11,6 +11,7 @@ import {
   JobsService,
 } from '../../Services/jobs-service';
 import { JobAlertsService } from '../../Services/job-alerts-service';
+import { interviewLabel, interviewTime, isWebLink } from '../../Services/job-labels';
 import { jobsMenu } from '../personal-shell-component/jobs-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
@@ -40,6 +41,13 @@ export class JobBoardComponent implements OnInit {
   readonly menu = computed(() => jobsMenu(this.alerts.unread()));
   readonly employmentTypes = JOB_EMPLOYMENT_TYPES;
   readonly workModes = JOB_WORK_MODES;
+  readonly interviewLabel = interviewLabel;
+  readonly isWebLink = isWebLink;
+
+  /** An interview that is set and still to come (an open application only). */
+  hasInterview(a: JobApplication): boolean {
+    return (a.status === 'Applied' || a.status === 'Shortlisted') && interviewTime(a.interviewAt) > Date.now() - 2 * 3_600_000;
+  }
 
   mode = signal<JobBoardMode>('search');
 

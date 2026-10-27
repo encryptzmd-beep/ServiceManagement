@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
 import {
   ApplicantStatus,
@@ -10,8 +10,9 @@ import {
   CompanyPostingFields,
   JobApplicant,
   JobApplicantPage,
+  REJECT_REASON_MIN,
 } from '../../Services/company-jobs-service';
-import { JOB_EMPLOYMENT_TYPES, JOB_WORK_MODES, JobEducation, JobSkill } from '../../Services/jobs-service';
+import { INTERVIEW_MODES, InterviewMode, JOB_EMPLOYMENT_TYPES, JOB_WORK_MODES, JobEducation, JobSkill } from '../../Services/jobs-service';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
 import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
@@ -20,6 +21,7 @@ import { MessagesService } from '../../Services/messages-service';
 import { AutocompleteComponent, AutocompleteOption } from '../autocomplete-component/autocomplete-component';
 import { jobPath } from '../../Services/public-jobs-service';
 import { shareLink } from '../../Services/share-link';
+import { interviewLabel } from '../../Services/job-labels';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const REFUSED = "You don't have access to Job Consultancy. Ask your administrator";
@@ -45,6 +47,9 @@ export class HiringComponent implements OnInit {
   private api = inject(CompanyJobsService);
   private auth = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  /** The address asks for something once (from the dashboard): ?job=ID opens its applicants, ?new=1 a new job. */
+  private asked = false;
   private consultancy = inject(ConsultancyService);
   private messages = inject(MessagesService);
 
@@ -87,6 +92,18 @@ export class HiringComponent implements OnInit {
   /** The applicant who is open with their profile. */
   applicant = signal<JobApplicantPage | null>(null);
   statusBusy = signal(false);
+
+  /** The applicant being rejected: the company says why (the person reads it). */
+  rejecting = signal<{ applicationId: number; name: string } | null>(null);
+  rejectReason = '';
+  readonly rejectMin = REJECT_REASON_MIN;
+
+  /** The applicant whose interview is being set (null = no dialog). */
+  interviewFor = signal<{ applicationId: number; name: string; isSet: boolean } | null>(null);
+  interview = { date: '', time: '', mode: 'In person' as InterviewMode, place: '', note: '' };
+  interviewError = signal('');
+  interviewBusy = signal(false);
+  readonly interviewModes = INTERVIEW_MODES;
 
   toast = signal<{ text: string; ok: boolean } | null>(null);
 
@@ -131,7 +148,7 @@ export class HiringComponent implements OnInit {
     this.api.getPostings().subscribe({
       next: res => {
         this.loading.set(false);
-        if (res.success) { this.unavailable.set(''); this.postings.set(res.data ?? []); }
+        if (res.success) { this.unavailable.set(''); this.postings.set(res.data ?? []); this.followAddress(); }
         else { this.postings.set([]); this.unavailable.set(res.message || 'This application is not available right now'); }
       },
       error: err => {
@@ -140,6 +157,15 @@ export class HiringComponent implements OnInit {
         this.unavailable.set(err?.status === 403 ? (err.error?.message || REFUSED) : 'The jobs could not be loaded. Please try again.');
       },
     });
+  }
+
+  private followAddress(): void {
+    if (this.asked) return;
+    this.asked = true;
+    const query = this.route.snapshot.queryParamMap;
+    const job = this.postings().find(p => p.postingId === Number(query.get('job')));
+    if (job) this.showApplicants(job);
+    else if (query.get('new') === '1') this.openNew();
   }
 
   openNew(): void {
@@ -392,14 +418,23 @@ export class HiringComponent implements OnInit {
     this.applicant.set(null);
   }
 
-  setApplicantStatus(applicationId: number, status: ApplicantStatus): void {
+  setApplicantStatus(applicationId: number, status: ApplicantStatus, reason = ''): void {
     const posting = this.selected();
     if (!posting || this.statusBusy()) return;
 
+    // a rejection is never a single click: the company says why first
+    if (status === 'Rejected' && reason.trim().length < REJECT_REASON_MIN) {
+      const name = this.applicant()?.profile.profile.fullName || this.applicants().find(a => a.applicationId === applicationId)?.fullName || '';
+      this.rejectReason = reason;
+      this.rejecting.set({ applicationId, name });
+      return;
+    }
+
     this.statusBusy.set(true);
-    this.api.setApplicantStatus(posting.postingId, applicationId, status).subscribe({
+    this.api.setApplicantStatus(posting.postingId, applicationId, status, status === 'Rejected' ? reason.trim() : '').subscribe({
       next: res => {
         this.statusBusy.set(false);
+        if (res.success) this.rejecting.set(null);
         this.notify(res.message === 'Not found' ? 'This application was withdrawn' : res.message, res.success);
         if (res.success) this.applicant.update(p => (p && p.applicationId === applicationId ? { ...p, status } : p));
         else this.applicant.set(null);
@@ -407,6 +442,69 @@ export class HiringComponent implements OnInit {
       },
       error: () => { this.statusBusy.set(false); this.notify('Could not change it. Please try again', false); },
     });
+  }
+
+  /** How many characters the reason still needs (0 = enough). */
+  rejectShort(): number {
+    return Math.max(0, REJECT_REASON_MIN - this.rejectReason.trim().length);
+  }
+
+  confirmReject(): void {
+    const r = this.rejecting();
+    if (r && !this.rejectShort()) this.setApplicantStatus(r.applicationId, 'Rejected', this.rejectReason);
+  }
+
+  // ── interviews ────────────────────────────────────────────────────────────
+
+  openInterview(applicationId: number): void {
+    const row = this.applicants().find(a => a.applicationId === applicationId);
+    const name = row?.fullName || this.applicant()?.profile.profile.fullName || '';
+    // the time as the company typed it: "2026-10-28T10:30:00", never shifted by a time zone
+    const at = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(row?.interviewAt ?? '');
+    this.interview = at
+      ? { date: at[1], time: at[2], mode: (row?.interviewMode || 'In person') as InterviewMode, place: row?.interviewPlace ?? '', note: row?.interviewNote ?? '' }
+      : { date: '', time: '10:00', mode: 'In person', place: '', note: '' };
+    this.interviewError.set('');
+    this.interviewFor.set({ applicationId, name, isSet: !!at });
+  }
+
+  saveInterview(): void {
+    const target = this.interviewFor();
+    if (!target) return;
+    const { date, time, mode, place, note } = this.interview;
+    if (!date || !time) { this.interviewError.set('Choose the date and the time'); return; }
+    if (new Date(`${date}T${time}`).getTime() < Date.now()) { this.interviewError.set('Choose a time that is still to come'); return; }
+    this.sendInterview(target.applicationId, { at: `${date}T${time}`, mode, place: place.trim(), note: note.trim() });
+  }
+
+  callOffInterview(): void {
+    const target = this.interviewFor();
+    if (target) this.sendInterview(target.applicationId, { at: null, mode: '', place: '', note: '' });
+  }
+
+  private sendInterview(applicationId: number, body: { at: string | null; mode: InterviewMode | ''; place: string; note: string }): void {
+    const posting = this.selected();
+    if (!posting || this.interviewBusy()) return;
+    this.interviewBusy.set(true);
+    this.interviewError.set('');
+    this.api.setApplicantInterview(posting.postingId, applicationId, body).subscribe({
+      next: res => {
+        this.interviewBusy.set(false);
+        if (!res.success) { this.interviewError.set(res.message === 'Not found' ? 'This application was withdrawn' : res.message); return; }
+        this.interviewFor.set(null);
+        this.notify(res.message, true);
+        // setting an interview shortlists a new application
+        if (body.at) this.applicant.update(p => (p && p.applicationId === applicationId && p.status === 'Applied' ? { ...p, status: 'Shortlisted' } : p));
+        this.loadApplicants();
+      },
+      error: () => { this.interviewBusy.set(false); this.interviewError.set('Could not save it. Please try again'); },
+    });
+  }
+
+  readonly interviewLabel = interviewLabel;
+
+  canInterview(status: string): boolean {
+    return status === 'Applied' || status === 'Shortlisted';
   }
 
   messaging = signal(false);

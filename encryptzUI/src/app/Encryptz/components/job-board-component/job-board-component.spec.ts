@@ -120,7 +120,7 @@ describe('JobBoardComponent', () => {
 
     api.searchPostings = () => ok({ items: [posting()], total: 1, page: 1, pageSize: 20 });
     fixture = create('search');
-    expect(fixture.nativeElement.querySelector('.jb-hint a').getAttribute('href')).toBe('/apps/jobs');
+    expect(fixture.nativeElement.querySelector('.jb-hint a').getAttribute('href')).toBe('/apps/jobs/profile');
   });
 
   it('moves between the pages and not beyond them', () => {
@@ -202,7 +202,7 @@ describe('JobBoardComponent', () => {
 
     expect(c.applyFor()).not.toBeNull();
     expect(text(fixture)).toContain('Add your name and a headline to your profile before you apply');
-    expect(fixture.nativeElement.querySelector('a.jb-link').getAttribute('href')).toBe('/apps/jobs');
+    expect(fixture.nativeElement.querySelector('a.jb-link').getAttribute('href')).toBe('/apps/jobs/profile');
     expect(c.postings()[0].myStatus).toBe('');
   });
 

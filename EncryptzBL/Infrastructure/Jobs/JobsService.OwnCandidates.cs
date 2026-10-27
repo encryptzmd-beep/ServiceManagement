@@ -14,6 +14,8 @@ namespace EncryptzBL.Infrastructure.Jobs
     public interface IOwnCandidatesService
     {
         Task<ApiResponse<OwnCandidateListDto>> GetOwnCandidates(int userId, int companyId, string? query, int? page);
+        /// <summary>One candidate of the company. "Not found" for a candidate of another company.</summary>
+        Task<ApiResponse<OwnCandidateDto>> GetOwnCandidate(int userId, int companyId, int candidateId);
         /// <summary>The company's candidates who already have this e-mail or phone (another than <paramref name="candidateId"/>).</summary>
         Task<ApiResponse<List<OwnCandidateDuplicateDto>>> FindDuplicates(int userId, int companyId, int candidateId, string? email, string? phone);
         Task<ApiResponse<int>> SaveOwnCandidate(int userId, int companyId, OwnCandidateDto dto);
@@ -25,6 +27,37 @@ namespace EncryptzBL.Infrastructure.Jobs
 
     public sealed partial class JobsService : IOwnCandidatesService
     {
+        private static OwnCandidateDto OwnCandidateRow(DataRow r) => new()
+        {
+            CandidateId = Convert.ToInt32(r["CandidateId"]),
+            FullName = Text(r, "FullName"),
+            Headline = Text(r, "Headline"),
+            Email = Text(r, "Email"),
+            Phone = Text(r, "Phone"),
+            City = Text(r, "City"),
+            ExperienceYears = r["ExperienceYears"] == DBNull.Value ? null : Convert.ToDecimal(r["ExperienceYears"]),
+            Skills = Text(r, "Skills"),
+            PreferredJobs = Text(r, "PreferredJobs"),
+            Source = Text(r, "Source"),
+            Stage = Text(r, "Stage"),
+            Notes = Text(r, "Notes"),
+            HasResume = Convert.ToBoolean(r["HasResume"]),
+            ResumeName = Text(r, "ResumeName"),
+            CreatedAt = Convert.ToDateTime(r["CreatedAt"]),
+            UpdatedAt = Convert.ToDateTime(r["UpdatedAt"]),
+            MatchScore = r.Table.Columns.Contains("MatchScore") && r["MatchScore"] != DBNull.Value ? Convert.ToInt32(r["MatchScore"]) : 0
+        };
+
+        public Task<ApiResponse<OwnCandidateDto>> GetOwnCandidate(int userId, int companyId, int candidateId)
+            => GuardedTenant(userId, companyId, "reading a candidate of the company", async (_, tenant) =>
+            {
+                var dt = await tenant.ExecuteDataTableAsync("consult.sp_OwnCandidate_Get", new[]
+                {
+                    In("@CompanyId", companyId),
+                    In("@CandidateId", candidateId)
+                });
+                return dt.Rows.Count == 0 ? ApiResponse<OwnCandidateDto>.Fail(NotFound) : ApiResponse<OwnCandidateDto>.Ok(OwnCandidateRow(dt.Rows[0]));
+            });
         public Task<ApiResponse<OwnCandidateListDto>> GetOwnCandidates(int userId, int companyId, string? query, int? page)
             => GuardedTenant(userId, companyId, "reading the company's candidates", async (_, tenant) =>
             {
@@ -40,25 +73,7 @@ namespace EncryptzBL.Infrastructure.Jobs
                 var result = new OwnCandidateListDto { Page = pageNumber, PageSize = JobPostingRules.PageSize };
                 if (dt.Rows.Count > 0)
                 {
-                    result.Items = dt.Rows.Cast<DataRow>().Select(r => new OwnCandidateDto
-                    {
-                        CandidateId = Convert.ToInt32(r["CandidateId"]),
-                        FullName = Text(r, "FullName"),
-                        Headline = Text(r, "Headline"),
-                        Email = Text(r, "Email"),
-                        Phone = Text(r, "Phone"),
-                        City = Text(r, "City"),
-                        ExperienceYears = r["ExperienceYears"] == DBNull.Value ? null : Convert.ToDecimal(r["ExperienceYears"]),
-                        Skills = Text(r, "Skills"),
-                        PreferredJobs = Text(r, "PreferredJobs"),
-                        Source = Text(r, "Source"),
-                        Stage = Text(r, "Stage"),
-                        Notes = Text(r, "Notes"),
-                        HasResume = Convert.ToBoolean(r["HasResume"]),
-                        ResumeName = Text(r, "ResumeName"),
-                        CreatedAt = Convert.ToDateTime(r["CreatedAt"]),
-                        UpdatedAt = Convert.ToDateTime(r["UpdatedAt"])
-                    }).ToList();
+                    result.Items = dt.Rows.Cast<DataRow>().Select(OwnCandidateRow).ToList();
                     result.Total = Convert.ToInt32(dt.Rows[0]["TotalCount"]);
                 }
 

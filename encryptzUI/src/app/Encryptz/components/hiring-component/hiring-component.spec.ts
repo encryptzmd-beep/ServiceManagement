@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { AuthService } from '../../Auth/auth-service';
 import { CompanyJobsService } from '../../Services/company-jobs-service';
@@ -98,8 +98,8 @@ describe('HiringComponent', () => {
     const items = Array.from(fixture.nativeElement.querySelectorAll('.ps-nav-item')) as HTMLElement[];
 
     expect(text(fixture)).toContain('Job Consultancy');
-    expect(items.map(e => e.querySelector('.ps-nav-label')!.textContent!.trim())).toEqual(['Job postings', 'Candidates', 'Messages', 'Clients', 'Placements']);
-    expect(items.map(e => e.getAttribute('href'))).toEqual(['/consultancy/postings', '/consultancy/candidates', '/consultancy/messages', '/consultancy/clients', '/consultancy/placements']);
+    expect(items.map(e => e.querySelector('.ps-nav-label')!.textContent!.trim())).toEqual(['Dashboard', 'Job postings', 'Candidates', 'Messages', 'Clients', 'Placements']);
+    expect(items.map(e => e.getAttribute('href'))).toEqual(['/consultancy/dashboard', '/consultancy/postings', '/consultancy/candidates', '/consultancy/messages', '/consultancy/clients', '/consultancy/placements']);
     expect(fixture.nativeElement.querySelector('.ps-back').getAttribute('href')).toBe('/select-module');
   });
 
@@ -312,6 +312,126 @@ describe('HiringComponent', () => {
     expect(calls).toContainEqual(['setApplicantStatus', 7, 31, 'Shortlisted']);
     expect(c.applicant()!.status).toBe('Shortlisted');
     expect(calls.filter(x => x[0] === 'getApplicants').length).toBe(2);
+  });
+
+  // ── rejections need a reason, interviews ──────────────────────────────────
+
+  it('does not reject without a reason: it asks why, and sends only a reason of 20 characters or more', () => {
+    api.setApplicantStatus = (id: number, applicationId: number, status: string, reason: string) => {
+      calls.push(['setApplicantStatus', id, applicationId, status, reason]); return ok(true, 'Marked as rejected');
+    };
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.showApplicants(c.postings()[0]);
+    c.openApplicant(c.applicants()[0]);
+
+    c.setApplicantStatus(31, 'Rejected');
+    fixture.detectChanges();
+    expect(calls.some(x => x[0] === 'setApplicantStatus')).toBe(false);
+    const dialog = fixture.nativeElement.querySelector('[aria-labelledby="hr-reject-title"]') as HTMLElement;
+    expect(dialog.textContent).toContain('Reject Leo Joseph');
+    expect(dialog.textContent).toContain('20 more characters needed');
+
+    const reason = dialog.querySelector('textarea') as HTMLTextAreaElement;
+    // typed, as a person would: the field takes the text at once
+    const type = (value: string) => { reason.value = value; reason.dispatchEvent(new Event('input')); fixture.detectChanges(); };
+    type('Too short');
+    c.confirmReject();
+    fixture.detectChanges();
+    expect(calls.some(x => x[0] === 'setApplicantStatus')).toBe(false);
+    expect((Array.from(dialog.querySelectorAll('button')) as HTMLButtonElement[]).find(b => b.textContent!.trim() === 'Reject')!.disabled).toBe(true);
+
+    type('  The job needs three years of GST filing  ');
+    c.confirmReject();
+    fixture.detectChanges();
+    expect(calls).toContainEqual(['setApplicantStatus', 7, 31, 'Rejected', 'The job needs three years of GST filing']);
+    expect(c.rejecting()).toBeNull();
+  });
+
+  it('shows the interview and the reason of a rejection on the applicants', () => {
+    api.getApplicants = () => ok([
+      applicantRow({ status: 'Shortlisted', interviewAt: '2026-11-03T15:00:00', interviewMode: 'In person', interviewPlace: 'MG Road, Kochi' }),
+      applicantRow({ applicationId: 32, fullName: 'Anu Thomas', status: 'Rejected', rejectReason: 'The job needs three years of GST filing' }),
+    ]);
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.showApplicants(c.postings()[0]);
+    fixture.detectChanges();
+
+    const cards = fixture.nativeElement.querySelectorAll('.jb-card');
+    expect(cards[0].querySelector('.hr-interview').textContent).toContain('Tue, 3 Nov 2026 · 3:00 PM');
+    expect(cards[0].querySelector('.hr-interview').textContent).toContain('MG Road, Kochi');
+    expect(labels(cards[0]).some(l => l.endsWith('Change interview'))).toBe(true);
+    expect(cards[1].querySelector('.hr-reason').textContent).toContain('three years of GST filing');
+    expect(labels(cards[1]).some(l => l.includes('interview'))).toBe(false);
+  });
+
+  it('schedules an interview, as the company typed the time, and reads the applicants again', () => {
+    api.setApplicantInterview = (id: number, applicationId: number, body: any) => { calls.push(['setApplicantInterview', id, applicationId, body]); return ok(true, 'Interview set for 3 Nov 2099, 3:00 PM'); };
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.showApplicants(c.postings()[0]);
+
+    c.openInterview(31);
+    expect(c.interviewFor()).toEqual({ applicationId: 31, name: 'Leo Joseph', isSet: false });
+    c.saveInterview();
+    expect(c.interviewError()).toBe('Choose the date and the time');
+
+    c.interview = { date: '2020-01-01', time: '10:00', mode: 'Video', place: '', note: '' };
+    c.saveInterview();
+    expect(c.interviewError()).toBe('Choose a time that is still to come');
+
+    c.interview = { date: '2099-11-03', time: '15:00', mode: 'Video', place: ' https://meet.example.com/x ', note: ' Bring your certificates ' };
+    c.saveInterview();
+    expect(calls).toContainEqual(['setApplicantInterview', 7, 31, { at: '2099-11-03T15:00', mode: 'Video', place: 'https://meet.example.com/x', note: 'Bring your certificates' }]);
+    expect(c.interviewFor()).toBeNull();
+    expect(calls.filter(x => x[0] === 'getApplicants').length).toBe(2);
+  });
+
+  it('opens a set interview with its values, and calls it off', () => {
+    api.getApplicants = () => ok([applicantRow({ status: 'Shortlisted', interviewAt: '2099-11-03T15:00:00', interviewMode: 'Phone', interviewPlace: '98460 11111', interviewNote: 'n' })]);
+    api.setApplicantInterview = (id: number, applicationId: number, body: any) => { calls.push(['setApplicantInterview', id, applicationId, body]); return ok(true, 'The interview is called off'); };
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.showApplicants(c.postings()[0]);
+
+    c.openInterview(31);
+    expect(c.interview).toEqual({ date: '2099-11-03', time: '15:00', mode: 'Phone', place: '98460 11111', note: 'n' });
+    expect(c.interviewFor()!.isSet).toBe(true);
+    c.callOffInterview();
+    expect(calls).toContainEqual(['setApplicantInterview', 7, 31, { at: null, mode: '', place: '', note: '' }]);
+  });
+
+  it('keeps the interview dialog open with the reason when it is refused', () => {
+    api.setApplicantInterview = () => refused('An interview can be set only for an open application');
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.showApplicants(c.postings()[0]);
+    c.openInterview(31);
+    c.interview = { date: '2099-11-03', time: '15:00', mode: 'In person', place: '', note: '' };
+    c.saveInterview();
+    expect(c.interviewFor()).not.toBeNull();
+    expect(c.interviewError()).toBe('An interview can be set only for an open application');
+  });
+
+  it('opens the applicants of the job the address names (from the dashboard)', () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [HiringComponent],
+      providers: [
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({ job: '7' }) } } },
+        { provide: CompanyJobsService, useValue: api },
+        { provide: ConsultancyService, useValue: consultancy },
+        { provide: AuthService, useValue: {
+          userName: () => 'Admin Person', currentUser: () => ({ userId: 5 }), scopeState: () => ({ loggedIn: true, companyId, moduleKey: null, locationId: null }),
+        } },
+      ],
+    });
+    const fixture = TestBed.createComponent(HiringComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.selected()?.postingId).toBe(7);
+    expect(calls).toContainEqual(['getApplicants', 7]);
   });
 
   it('closes the applicant and reads the list again when the person withdrew in the meantime', () => {

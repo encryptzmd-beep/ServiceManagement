@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
 import {
   CANDIDATE_SOURCES,
@@ -41,6 +41,7 @@ export class OwnCandidatesComponent implements OnInit {
   private api = inject(ConsultancyService);
   private auth = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   readonly menu = CONSULTANCY_MENU;
   readonly stages = TALENT_STAGES;
@@ -66,7 +67,19 @@ export class OwnCandidatesComponent implements OnInit {
 
   ngOnInit(): void {
     if (!this.auth.scopeState().companyId) { this.router.navigate(['/select-company']); return; }
+    const params = this.route.snapshot.queryParamMap;
+    this.query = (params.get('q') ?? '').slice(0, 100);
     this.load();
+    // "Add candidate" on the Candidates page: the form opens at once
+    if (params.get('add') === '1') this.openNew();
+    // a candidate of the company opened from the candidate search
+    const edit = Number(params.get('edit'));
+    if (Number.isInteger(edit) && edit > 0) {
+      this.api.getOwnCandidate(edit).subscribe({
+        next: res => (res.success && res.data ? this.openEdit(res.data) : this.notify(res.message === 'Not found' ? 'This candidate is no longer there' : res.message, false)),
+        error: () => this.notify('The candidate could not be opened', false),
+      });
+    }
   }
 
   load(): void {

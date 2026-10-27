@@ -39,6 +39,10 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetAll([FromQuery] string? q, [FromQuery] int? page)
             => Answer(await _candidates.GetOwnCandidates(Caller(), Company(), q, page));
 
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetOne(int id)
+            => Answer(await _candidates.GetOwnCandidate(Caller(), Company(), id));
+
         /// <summary>The company's candidates who already have this e-mail or phone: the form warns before saving.</summary>
         [HttpGet("duplicates")]
         public async Task<IActionResult> GetDuplicates([FromQuery] int? id, [FromQuery] string? email, [FromQuery] string? phone)

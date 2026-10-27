@@ -10,6 +10,7 @@ import {
   CandidateSearch,
   CandidateFacet,
   ConsultancyService,
+  OwnCandidate,
   EXPERIENCE_BANDS,
   TALENT_STAGES,
   TalentStage,
@@ -64,6 +65,9 @@ export class ConsultancyCandidatesComponent implements OnInit {
   loading = signal(true);
   unavailable = signal('');
   items = signal<Candidate[]>([]);
+  /** The company's own candidates that match the search: only this company sees them. */
+  ownItems = signal<OwnCandidate[]>([]);
+  ownTotal = signal(0);
   total = signal(0);
   pageSize = signal(20);
 
@@ -143,6 +147,8 @@ export class ConsultancyCandidatesComponent implements OnInit {
           this.unavailable.set('');
           this.items.set(res.data.items ?? []);
           this.total.set(res.data.total);
+          this.ownItems.set(res.data.ownItems ?? []);
+          this.ownTotal.set(res.data.ownTotal ?? 0);
           this.pageSize.set(res.data.pageSize || 20);
           this.facets.set(res.data.facets ?? []);
           // a server from before the filters answers no choices at all (not even an empty list)
@@ -214,6 +220,11 @@ export class ConsultancyCandidatesComponent implements OnInit {
   experienceLabel(c: Candidate): string {
     const years = `${c.experienceYears} ${c.experienceYears === 1 ? 'year' : 'years'}`;
     return c.experienceSource === 'Headline' ? `${years} (from headline)` : years;
+  }
+
+  ownExperience(years: number | null): string {
+    if (years == null) return 'Experience not added';
+    return `${years} ${years === 1 ? 'year' : 'years'}`;
   }
 
   bandLabel(value: string): string {

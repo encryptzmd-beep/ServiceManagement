@@ -2,6 +2,7 @@ import { PersonalMenuItem } from './personal-shell-component';
 
 /** The side menu of Job Consultancy, the same on each of its pages. */
 export const CONSULTANCY_MENU: PersonalMenuItem[] = [
+  { label: 'Dashboard', icon: 'dashboard', route: '/consultancy/dashboard' },
   { label: 'Job postings', icon: 'work_outline', route: '/consultancy/postings' },
   { label: 'Candidates', icon: 'groups', route: '/consultancy/candidates' },
   { label: 'Messages', icon: 'chat_bubble_outline', route: '/consultancy/messages' },

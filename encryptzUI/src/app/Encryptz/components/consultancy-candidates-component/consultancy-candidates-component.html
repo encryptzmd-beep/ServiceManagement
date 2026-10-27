@@ -25,7 +25,7 @@
 
   <div class="jb-head">
     <div class="jb-head-text">
-      <h1>Candidates @if (!loading() && !unavailable()) { <span class="jp-count">{{ total() }}</span> }</h1>
+      <h1>Candidates @if (!loading() && !unavailable()) { <span class="jp-count">{{ total() + ownTotal() }}</span> }</h1>
       <p>People on Job Portal who chose to be found by employers. They see which company opened their profile.</p>
     </div>
     <div class="cd-tabs" role="group" aria-label="Show">
@@ -33,6 +33,8 @@
       <button type="button" [class.on]="filter.pool" (click)="setPool(true)"><span class="material-icons" aria-hidden="true">bookmarks</span>My pool</button>
       <a routerLink="/consultancy/our-candidates" title="People you added yourself: only your company sees them"><span class="material-icons" aria-hidden="true">badge</span>Our candidates</a>
     </div>
+    <a class="jp-btn primary cd-add-candidate" routerLink="/consultancy/our-candidates" [queryParams]="{ add: 1 }"
+       title="Add a person you met outside Job Portal: only your company sees them"><span class="material-icons" aria-hidden="true">person_add</span>Add candidate</a>
   </div>
 
   <form class="jp-card cd-search" (ngSubmit)="search()" role="search">
@@ -142,6 +144,45 @@
       <a class="jp-link" routerLink="/select-module">Back to modules</a>
     </div>
   } @else {
+    @if (ownItems().length && !filter.pool) {
+      <!-- ═══════════ THE COMPANY'S OWN CANDIDATES THAT MATCH ═══════════ -->
+      <div class="cd-own-head">
+        <span class="material-icons" aria-hidden="true">lock</span>
+        <strong>Added by your company</strong>
+        <span class="cd-own-count">{{ ownTotal() }}</span>
+        <span class="cd-own-note">Only your company sees them.</span>
+        @if (ownTotal() > ownItems().length) { <a routerLink="/consultancy/our-candidates" [queryParams]="{ q: filter.q || null }">See all {{ ownTotal() }}</a> }
+      </div>
+      @for (o of ownItems(); track o.candidateId) {
+        <article class="jp-card jb-card cd-card cd-own">
+          <div class="cd-avatar cd-own-avatar" aria-hidden="true">{{ initials(o.fullName) || '?' }}</div>
+          <div class="jb-card-main">
+            <h2><a class="jb-title" routerLink="/consultancy/our-candidates" [queryParams]="{ edit: o.candidateId }" target="_blank" rel="noopener">{{ o.fullName }}</a>
+              <span class="cd-own-badge" title="You added this candidate. Only your company sees them"><span class="material-icons" aria-hidden="true">lock</span>Your candidate</span>
+            </h2>
+            @if (o.headline) { <div class="jb-company">{{ o.headline }}</div> }
+            <div class="jb-meta">
+              @if (o.city) { <span><span class="material-icons">place</span>{{ o.city }}</span> }
+              <span [class.cd-exp-none]="o.experienceYears == null"><span class="material-icons">work_outline</span>{{ ownExperience(o.experienceYears) }}</span>
+              @if (o.phone) { <span><span class="material-icons">call</span>{{ o.phone }}</span> }
+              <span class="cd-resume" [class.on]="o.hasResume"><span class="material-icons">{{ o.hasResume ? 'task' : 'description' }}</span>{{ o.hasResume ? 'Resume' : 'No resume' }}</span>
+            </div>
+            @if (list(o.skills).length) {
+              <div class="jb-skills">@for (s of list(o.skills); track s) { <span class="jp-chip">{{ s }}</span> }</div>
+            }
+            @if (o.preferredJobs) { <div class="jb-foot cd-looking"><span class="material-icons" aria-hidden="true">flag</span><span>Looking for <strong>{{ o.preferredJobs }}</strong></span></div> }
+          </div>
+          <div class="jb-card-side">
+            <span [class]="stageClass(o.stage)">{{ stageLabel(o.stage) }}</span>
+            <a class="jp-btn" routerLink="/consultancy/our-candidates" [queryParams]="{ edit: o.candidateId }" target="_blank" rel="noopener" title="Opens the candidate in a new tab">Open<span class="material-icons" aria-hidden="true">open_in_new</span></a>
+          </div>
+        </article>
+      }
+      @if (items().length) {
+        <div class="cd-own-head cd-portal-head"><span class="material-icons" aria-hidden="true">public</span><strong>On Job Portal</strong><span class="cd-own-count">{{ total() }}</span></div>
+      }
+    }
+
     @for (c of items(); track c.candidateKey) {
       <article class="jp-card jb-card cd-card">
         <div class="cd-avatar" [attr.data-tone]="tone(c.fullName)" aria-hidden="true">{{ initials(c.fullName) || '?' }}</div>
@@ -171,6 +212,7 @@
         </div>
       </article>
     } @empty {
+      @if (!ownItems().length || filter.pool) {
       <div class="jp-card jb-empty">
         <span class="material-icons">groups</span>
         @if (filter.pool) {
@@ -181,6 +223,7 @@
           @if (activeFilters || filter.q) { <button class="jp-btn" (click)="clearAll()">Clear the search</button> }
         }
       </div>
+      }
     }
 
     @if (lastPage > 1) {

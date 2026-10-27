@@ -1,10 +1,10 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CertificateReview, PersonReview, PersonReviewShow, PlatformService, PostingReview } from '../../Services/platform-service';
+import { CertificateReview, PersonReview, PersonReviewShow, PlatformService, PostingReview, RejectionReview } from '../../Services/platform-service';
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
 
-type Filter = 'all' | 'certificates' | 'postings' | 'people';
+type Filter = 'all' | 'certificates' | 'postings' | 'people' | 'rejections';
 
 /** One thing that waits: a certificate or a job, in one list. */
 export type ReviewItem =
@@ -17,6 +17,8 @@ export type ReviewItem =
  * Approving needs one click; refusing needs a reason, which the person or the company reads.
  * People are a list of their own (they do not wait): the administrator verifies a person,
  * which gives the Verified tick, or takes the tick away with a reason the person reads.
+ * Rejections are a list to read: every application a company rejected, with the skills the
+ * job asked for and the reason the company gave.
  */
 @Component({
   selector: 'app-verification-panel',
@@ -44,7 +46,7 @@ export class VerificationPanelComponent implements OnInit {
   readonly items = computed<ReviewItem[]>(() => {
     const certificates: ReviewItem[] = this.certificates().map(c => ({ kind: 'certificate', key: `c${c.certificateId}`, at: c.submittedAt, item: c }));
     const postings: ReviewItem[] = this.postings().map(p => ({ kind: 'posting', key: `p${p.postingId}`, at: p.submittedAt, item: p }));
-    if (this.filter() === 'people') return [];
+    if (this.filter() === 'people' || this.filter() === 'rejections') return [];
     const shown = this.filter() === 'certificates' ? certificates : this.filter() === 'postings' ? postings : [...certificates, ...postings];
     return shown.sort((a, b) => a.at.localeCompare(b.at));
   });
@@ -60,6 +62,20 @@ export class VerificationPanelComponent implements OnInit {
   peopleQuery = '';
   private peopleLoaded = false;
 
+  /** The rejections companies made: the page shown and what is searched. */
+  rejections = signal<RejectionReview[]>([]);
+  rejectionsTotal = signal(0);
+  rejectionsLoading = signal(false);
+  rejectionsError = signal('');
+  rejectionsPage = signal(1);
+  rejectionsPageSize = signal(20);
+  rejectionsQuery = '';
+  private rejectionsLoaded = false;
+
+  get rejectionsLastPage(): number {
+    return Math.max(1, Math.ceil(this.rejectionsTotal() / this.rejectionsPageSize()));
+  }
+
   get peopleLastPage(): number {
     return Math.max(1, Math.ceil(this.peopleTotal() / this.peoplePageSize()));
   }
@@ -72,11 +88,35 @@ export class VerificationPanelComponent implements OnInit {
     this.filter.set(filter);
     this.cancelRefusal();
     if (filter === 'people' && !this.peopleLoaded) this.loadPeople(1);
+    if (filter === 'rejections' && !this.rejectionsLoaded) this.loadRejections(1);
   }
 
   refresh(): void {
     if (this.filter() === 'people') this.loadPeople(this.peoplePage());
+    else if (this.filter() === 'rejections') this.loadRejections(this.rejectionsPage());
     else this.load();
+  }
+
+  loadRejections(page: number): void {
+    this.rejectionsLoaded = true;
+    this.rejectionsLoading.set(true);
+    this.api.getRejections(this.rejectionsQuery.trim(), page).subscribe({
+      next: res => {
+        this.rejectionsLoading.set(false);
+        if (!res.success || !res.data) { this.rejectionsError.set(res.message || 'The list could not be loaded'); return; }
+        this.rejectionsError.set('');
+        this.rejections.set(res.data.items ?? []);
+        this.rejectionsTotal.set(res.data.total ?? 0);
+        this.rejectionsPage.set(res.data.page || page);
+        this.rejectionsPageSize.set(res.data.pageSize || 20);
+      },
+      error: () => { this.rejectionsLoading.set(false); this.rejectionsError.set('The list could not be loaded. Please try again.'); },
+    });
+  }
+
+  /** The skills of a job as separate words. */
+  skillList(skills: string): string[] {
+    return (skills ?? '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean).slice(0, 12);
   }
 
   loadPeople(page: number): void {

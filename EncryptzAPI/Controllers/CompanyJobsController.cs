@@ -85,6 +85,16 @@ namespace EncryptzAPI.Controllers
 
         [HttpPost("postings/{id:int}/applicants/{applicationId:int}/status")]
         public async Task<IActionResult> SetApplicantStatus(int id, int applicationId, [FromBody] SetJobStatusRequest? req)
-            => Answer(await _jobs.SetApplicantStatus(Caller(), Company(), id, applicationId, req?.Status));
+            => Answer(await _jobs.SetApplicantStatus(Caller(), Company(), id, applicationId, req?.Status, req?.Reason));
+
+        /// <summary>The dashboard: coming interviews, the latest applicants and the counts of the week and month.</summary>
+        [HttpGet("dashboard")]
+        public async Task<IActionResult> GetDashboard()
+            => Answer(await _jobs.GetCompanyDashboard(Caller(), Company()));
+
+        /// <summary>Sets, changes or (with no time) calls off the interview of an applicant; the person is told.</summary>
+        [HttpPost("postings/{id:int}/applicants/{applicationId:int}/interview")]
+        public async Task<IActionResult> SetApplicantInterview(int id, int applicationId, [FromBody] JobInterviewRequest? req)
+            => Answer(await _jobs.SetApplicantInterview(Caller(), Company(), id, applicationId, req));
     }
 }

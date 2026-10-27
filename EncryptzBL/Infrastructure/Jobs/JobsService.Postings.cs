@@ -17,6 +17,10 @@ namespace EncryptzBL.Infrastructure.Jobs
         private static bool FlagOrFalse(DataRow r, string column)
             => r.Table.Columns.Contains(column) && r[column] != DBNull.Value && Convert.ToBoolean(r[column]);
 
+        /// <summary>A date a procedure may not answer yet (a database without the script that added it): null then.</summary>
+        private static DateTime? DateIfAny(DataRow r, string column)
+            => r.Table.Columns.Contains(column) ? DateOrNull(r, column) : null;
+
         private static JobPostingViewDto PostingView(DataRow r) => new()
         {
             PostingId = Convert.ToInt32(r["PostingId"]),
@@ -127,7 +131,12 @@ namespace EncryptzBL.Infrastructure.Jobs
                         Note = r["Note"]?.ToString() ?? "",
                         AppliedAt = Convert.ToDateTime(r["AppliedAt"]),
                         StatusAt = Convert.ToDateTime(r["StatusAt"]),
-                        IsOpen = Convert.ToBoolean(r["IsOpen"])
+                        IsOpen = Convert.ToBoolean(r["IsOpen"]),
+                        InterviewAt = DateIfAny(r, "InterviewAt"),
+                        InterviewMode = Text(r, "InterviewMode"),
+                        InterviewPlace = Text(r, "InterviewPlace"),
+                        InterviewNote = Text(r, "InterviewNote"),
+                        RejectReason = Text(r, "RejectReason")
                     }).ToList();
 
                 return ApiResponse<List<JobApplicationDto>>.Ok(list);

@@ -168,6 +168,9 @@ export interface CandidateFacet {
 export interface CandidateSearchResult {
   items: Candidate[];
   facets?: CandidateFacet[];
+  /** The candidates the company added itself that match: only this company sees them. */
+  ownItems?: OwnCandidate[];
+  ownTotal?: number;
   total: number;
   page: number;
   pageSize: number;
@@ -276,6 +279,10 @@ export class ConsultancyService {
     let params = new HttpParams().set('page', page);
     if (q.trim()) params = params.set('q', q.trim());
     return this.http.get<ApiResponse<OwnCandidateList>>(`${this.api}/own-candidates`, { params });
+  }
+
+  getOwnCandidate(id: number): Observable<ApiResponse<OwnCandidate>> {
+    return this.http.get<ApiResponse<OwnCandidate>>(`${this.api}/own-candidates/${id}`);
   }
 
   findOwnDuplicates(id: number, email: string, phone: string): Observable<ApiResponse<OwnCandidateDuplicate[]>> {

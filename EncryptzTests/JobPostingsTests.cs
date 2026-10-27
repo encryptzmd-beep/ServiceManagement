@@ -337,6 +337,8 @@ namespace EncryptzTests
         [InlineData(typeof(CompanyJobsController), "GetApplicant", "GET", "postings/{id:int}/applicants/{applicationId:int}")]
         [InlineData(typeof(CompanyJobsController), "GetApplicantResume", "GET", "postings/{id:int}/applicants/{applicationId:int}/resume")]
         [InlineData(typeof(CompanyJobsController), "SetApplicantStatus", "POST", "postings/{id:int}/applicants/{applicationId:int}/status")]
+        [InlineData(typeof(CompanyJobsController), "GetDashboard", "GET", "dashboard")]
+        [InlineData(typeof(CompanyJobsController), "SetApplicantInterview", "POST", "postings/{id:int}/applicants/{applicationId:int}/interview")]
         public void The_endpoints_exist_with_their_routes(Type controller, string action, string verb, string template)
         {
             var method = controller.GetMethod(action) ?? throw new Xunit.Sdk.XunitException($"{controller.Name}.{action} does not exist");
@@ -403,7 +405,9 @@ namespace EncryptzTests
             public Task<ApiResponse<JobApplicantPageDto>> GetApplicant(int userId, int companyId, int postingId, int applicationId) => Seen(userId, companyId, new JobApplicantPageDto());
             public Task<ApiResponse<JobFileContent>> GetApplicantResume(int userId, int companyId, int postingId, int applicationId)
                 => Seen(userId, companyId, new JobFileContent("cv.pdf", "application/pdf", new byte[] { 1, 2 }));
-            public Task<ApiResponse<bool>> SetApplicantStatus(int userId, int companyId, int postingId, int applicationId, string? status) => Seen(userId, companyId, true);
+            public Task<ApiResponse<bool>> SetApplicantStatus(int userId, int companyId, int postingId, int applicationId, string? status, string? reason = null) => Seen(userId, companyId, true);
+            public Task<ApiResponse<CompanyDashboardDto>> GetCompanyDashboard(int userId, int companyId) => Seen(userId, companyId, new CompanyDashboardDto());
+            public Task<ApiResponse<bool>> SetApplicantInterview(int userId, int companyId, int postingId, int applicationId, JobInterviewRequest? req) => Seen(userId, companyId, true);
         }
 
         private static CompanyJobsController Controller(FakeCompanyJobs jobs, params Claim[] claims)

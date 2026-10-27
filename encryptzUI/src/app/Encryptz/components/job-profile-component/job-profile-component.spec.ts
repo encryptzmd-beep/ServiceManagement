@@ -489,9 +489,9 @@ describe('JobProfileComponent', () => {
     const items = Array.from(fixture.nativeElement.querySelectorAll('.ps-nav-item')) as HTMLElement[];
     const label = (e: HTMLElement) => e.querySelector('.ps-nav-label')!.textContent!.trim();
 
-    expect(items.map(label)).toEqual(['My profile', 'Search jobs', 'My applications', 'Saved jobs', 'Messages', 'Notifications']);
+    expect(items.map(label)).toEqual(['Dashboard', 'My profile', 'Search jobs', 'My applications', 'Saved jobs', 'Messages', 'Notifications']);
     expect(items.map(e => e.getAttribute('href')))
-      .toEqual(['/apps/jobs', '/apps/jobs/search', '/apps/jobs/applications', '/apps/jobs/saved', '/apps/jobs/messages', '/apps/jobs/notifications']);
+      .toEqual(['/apps/jobs', '/apps/jobs/profile', '/apps/jobs/search', '/apps/jobs/applications', '/apps/jobs/saved', '/apps/jobs/messages', '/apps/jobs/notifications']);
     expect(fixture.nativeElement.textContent).not.toContain('Soon');
   });
 

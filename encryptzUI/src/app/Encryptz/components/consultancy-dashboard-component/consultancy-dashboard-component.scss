@@ -1,0 +1,29 @@
+/* Job Consultancy, the dashboard. The cards, figures and lists come from the Job Portal dashboard. */
+
+$ink: #0f172a;
+$muted: #64748b;
+$line: #e2e8f0;
+
+/* eight figures: two rows of four */
+.cd-kpis .db-kpi:nth-child(5) { border-left: none; }
+.cd-kpis .db-kpi:nth-child(n + 5) { border-top: 1px solid $line; }
+
+.cd-counts {
+  display: flex;
+  gap: 18px;
+  flex: 0 0 auto;
+
+  > span { display: flex; flex-direction: column; align-items: flex-end; min-width: 52px; font-size: 11.5px; color: $muted; }
+  b { font-size: 15px; font-weight: 600; color: $ink; font-variant-numeric: tabular-nums; }
+}
+
+.cd-suitable { font-weight: 600; color: #047857; }
+
+.cd-note { margin: 0; padding: 0 4px; font-size: 12.5px; line-height: 1.5; color: $muted; }
+
+@media (max-width: 760px) {
+  .cd-counts { gap: 10px; > span { min-width: 0; } }
+  .cd-kpis .db-kpi:nth-child(n) { border-top: 1px solid $line; border-left: 1px solid $line; }
+  .cd-kpis .db-kpi:nth-child(odd) { border-left: none; }
+  .cd-kpis .db-kpi:nth-child(-n + 2) { border-top: none; }
+}

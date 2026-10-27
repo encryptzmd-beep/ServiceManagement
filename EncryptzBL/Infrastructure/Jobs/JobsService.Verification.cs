@@ -144,6 +144,39 @@ namespace EncryptzBL.Infrastructure.Jobs
                 return ApiResponse<PersonReviewPageDto>.Ok(result);
             }, personal: false);
 
+        // ── rejections (script PersonalDB/26) ─────────────────────────────────
+
+        public Task<ApiResponse<RejectionReviewPageDto>> GetRejections(int userId, string? query, int? page)
+            => Guarded(userId, "reading the rejections", async () =>
+            {
+                var pageNumber = JobPostingRules.Page(page);
+                var dt = await GetDataTableAsync("jobs.sp_Admin_Rejection_List", new[]
+                {
+                    In("@Query", JobPostingRules.SearchText(query)),
+                    In("@Page", pageNumber),
+                    In("@PageSize", PeoplePageSize)
+                });
+
+                var result = new RejectionReviewPageDto { Page = pageNumber, PageSize = PeoplePageSize };
+                if (dt != null && dt.Rows.Count > 0)
+                {
+                    result.Items = dt.Rows.Cast<DataRow>().Select(r => new RejectionReviewDto
+                    {
+                        RejectionId = Convert.ToInt32(r["RejectionId"]),
+                        RejectedAt = Convert.ToDateTime(r["RejectedAt"]),
+                        CompanyName = r["CompanyName"]?.ToString() ?? "",
+                        JobTitle = r["JobTitle"]?.ToString() ?? "",
+                        Skills = r["Skills"]?.ToString() ?? "",
+                        Reason = r["Reason"]?.ToString() ?? "",
+                        CandidateName = r["CandidateName"]?.ToString() ?? "",
+                        CandidateHeadline = r["CandidateHeadline"]?.ToString() ?? ""
+                    }).ToList();
+                    result.Total = Convert.ToInt32(dt.Rows[0]["TotalCount"]);
+                }
+
+                return ApiResponse<RejectionReviewPageDto>.Ok(result);
+            }, personal: false);
+
         public Task<ApiResponse<bool>> DecidePerson(int userId, Guid candidateKey, bool verified, string? note, string adminName)
             => Guarded(userId, "deciding on a person", async () =>
             {

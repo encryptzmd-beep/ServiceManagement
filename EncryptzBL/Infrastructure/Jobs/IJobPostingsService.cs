@@ -56,6 +56,7 @@ namespace EncryptzBL.Infrastructure.Jobs
         Task<ApiResponse<PersonReviewPageDto>> GetPeopleForReview(int userId, string? query, string? show, int? page);
         /// <summary>Verifies a person, or takes the tick away (that needs a reason the person reads).</summary>
         Task<ApiResponse<bool>> DecidePerson(int userId, Guid candidateKey, bool verified, string? note, string adminName);
+        Task<ApiResponse<RejectionReviewPageDto>> GetRejections(int userId, string? query, int? page);
     }
 
     /// <summary>
@@ -75,6 +76,8 @@ namespace EncryptzBL.Infrastructure.Jobs
         Task<ApiResponse<List<JobApplicantDto>>> GetApplicants(int userId, int companyId, int postingId);
         Task<ApiResponse<JobApplicantPageDto>> GetApplicant(int userId, int companyId, int postingId, int applicationId);
         Task<ApiResponse<JobFileContent>> GetApplicantResume(int userId, int companyId, int postingId, int applicationId);
-        Task<ApiResponse<bool>> SetApplicantStatus(int userId, int companyId, int postingId, int applicationId, string? status);
+        Task<ApiResponse<bool>> SetApplicantStatus(int userId, int companyId, int postingId, int applicationId, string? status, string? reason = null);
+        Task<ApiResponse<CompanyDashboardDto>> GetCompanyDashboard(int userId, int companyId);
+        Task<ApiResponse<bool>> SetApplicantInterview(int userId, int companyId, int postingId, int applicationId, JobInterviewRequest? req);
     }
 }

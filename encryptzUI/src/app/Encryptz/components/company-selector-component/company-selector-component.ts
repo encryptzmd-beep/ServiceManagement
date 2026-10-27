@@ -23,7 +23,7 @@ const SEARCH_ABOVE = 6;
  * of the company): opening one goes straight to its first page.
  */
 const MODULE_HOME: Record<string, string> = {
-  JOBCONSULTANCY: '/consultancy/postings',
+  JOBCONSULTANCY: '/consultancy/dashboard',
 };
 
 @Component({

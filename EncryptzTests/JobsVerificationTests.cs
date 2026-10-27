@@ -158,6 +158,8 @@ namespace EncryptzTests
             { Calls++; return Task.FromResult(ApiResponse<PersonReviewPageDto>.Ok(new PersonReviewPageDto())); }
             public Task<ApiResponse<bool>> DecidePerson(int userId, Guid candidateKey, bool verified, string? note, string adminName)
             { Calls++; LastAdmin = adminName; return Task.FromResult(ApiResponse<bool>.Ok(true)); }
+            public Task<ApiResponse<RejectionReviewPageDto>> GetRejections(int userId, string? query, int? page)
+            { Calls++; return Task.FromResult(ApiResponse<RejectionReviewPageDto>.Ok(new RejectionReviewPageDto())); }
         }
 
         private static VerificationController Controller(FakeVerification fake, bool platformAdmin)

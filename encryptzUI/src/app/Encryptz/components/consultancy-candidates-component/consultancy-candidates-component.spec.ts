@@ -286,4 +286,38 @@ describe('ConsultancyCandidatesComponent', () => {
     expect(text(fixture)).toContain('This candidate can no longer be found');
     expect(fixture.nativeElement.querySelector('.cd-page')).toBeNull();
   });
+
+  // ── the company's own candidates in the search ───────────────────────────
+
+  it('lists the company\'s own matching candidates with the others, marked as only theirs', () => {
+    api.searchCandidates = (f: any) => { calls.push(['searchCandidates', { ...f }]); return of({ success: true, message: '', data: {
+      items: [candidate()], total: 1, page: 1, pageSize: 20, facets: [],
+      ownItems: [{ candidateId: 12, fullName: 'Ravi Kumar', headline: 'Accountant', email: '', phone: '98460 11111', city: 'Kochi',
+                   experienceYears: null, skills: 'Tally', preferredJobs: '', source: 'Walk-in', stage: 'New', notes: '', hasResume: false }],
+      ownTotal: 1,
+    } }); };
+    const fixture = create();
+
+    const own = fixture.nativeElement.querySelector('.cd-own');
+    expect(own.textContent).toContain('Ravi Kumar');
+    expect(own.querySelector('.cd-own-badge').textContent).toContain('Your candidate');
+    expect(own.querySelector('a.jb-title').getAttribute('href')).toBe('/consultancy/our-candidates?edit=12');
+    expect(text(fixture)).toContain('Only your company sees them');
+    // both lists, counted together
+    expect(fixture.nativeElement.querySelectorAll('.cd-card').length).toBe(2);
+    expect(fixture.nativeElement.querySelector('h1 .jp-count').textContent.trim()).toBe('2');
+  });
+
+  it('does not say "no candidate" when only the company\'s own candidates match', () => {
+    api.searchCandidates = () => of({ success: true, message: '', data: {
+      items: [], total: 0, page: 1, pageSize: 20, facets: [],
+      ownItems: [{ candidateId: 12, fullName: 'Ravi Kumar', headline: '', email: '', phone: '98460 11111', city: '', experienceYears: 2,
+                   skills: '', preferredJobs: '', source: '', stage: 'New', notes: '', hasResume: false }],
+      ownTotal: 1,
+    } });
+    const fixture = create();
+
+    expect(fixture.nativeElement.querySelector('.cd-own')).not.toBeNull();
+    expect(text(fixture)).not.toContain('No candidate matches');
+  });
 });

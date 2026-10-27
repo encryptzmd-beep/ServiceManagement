@@ -242,3 +242,36 @@ $hair: #f0f1f3;
 
   .material-icons { font-size: 16px; }
 }
+
+/* ── interviews and rejections ── */
+.hr-interview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 6px 10px;
+  border: 1px solid #c4ecd9;
+  border-radius: 10px;
+  background: #ecfbf4;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0e6b4a;
+
+  .material-icons { font-size: 16px; }
+}
+
+.hr-reason {
+  margin: 8px 0 0;
+  padding: 6px 10px;
+  border-left: 3px solid #f9a8b4;
+  background: #fff5f6;
+  font-size: 12.5px;
+  color: #7f1d2d;
+}
+
+.hr-top { z-index: 1100; }
+.hr-small { max-width: 480px; }
+.hr-help { margin: 0 0 10px; font-size: 13px; color: #6b7489; }
+.hr-count { margin-top: 4px; font-size: 12px; color: #b45309; text-align: right; &.ok { color: #0e8a5f; } }
+.hr-calloff { color: #be123c; }
+

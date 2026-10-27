@@ -4,7 +4,7 @@
       <h2>Verification</h2>
       <p>Certificates people uploaded and jobs companies want to publish. Nothing here is visible to others until it is approved. Verified people and approved jobs carry the Verified tick.</p>
     </div>
-    <button class="vp-btn" (click)="refresh()" [disabled]="loading() || peopleLoading()"><span class="material-icons">refresh</span>Refresh</button>
+    <button class="vp-btn" (click)="refresh()" [disabled]="loading() || peopleLoading() || rejectionsLoading()"><span class="material-icons">refresh</span>Refresh</button>
   </div>
 
   <div class="vp-filters" role="group" aria-label="Show">
@@ -12,6 +12,7 @@
     <button [class.on]="filter() === 'certificates'" (click)="showFilter('certificates')">Certificates <span>{{ certificates().length }}</span></button>
     <button [class.on]="filter() === 'postings'" (click)="showFilter('postings')">Job postings <span>{{ postings().length }}</span></button>
     <button [class.on]="filter() === 'people'" (click)="showFilter('people')"><i class="material-icons vp-ic" aria-hidden="true">verified</i>People</button>
+    <button [class.on]="filter() === 'rejections'" (click)="showFilter('rejections')"><i class="material-icons vp-ic" aria-hidden="true">do_not_disturb_on</i>Rejections</button>
   </div>
 
   @if (filter() === 'people') {
@@ -108,6 +109,55 @@
           <button class="vp-btn" (click)="loadPeople(peoplePage() - 1)" [disabled]="peoplePage() <= 1">Previous</button>
           <span>Page {{ peoplePage() }} of {{ peopleLastPage }}</span>
           <button class="vp-btn" (click)="loadPeople(peoplePage() + 1)" [disabled]="peoplePage() >= peopleLastPage">Next</button>
+        </nav>
+      }
+    }
+
+  } @else if (filter() === 'rejections') {
+
+    <!-- ═══════════ REJECTIONS: what companies turned down, and why ═══════════ -->
+    <form class="vp-tools" (ngSubmit)="loadRejections(1)">
+      <label class="vp-search">
+        <span class="material-icons" aria-hidden="true">search</span>
+        <input name="rejectionsQuery" [(ngModel)]="rejectionsQuery" maxlength="100" placeholder="Company, job, skill, reason or candidate" aria-label="Search rejections" />
+      </label>
+      <button class="vp-btn" type="submit">Search</button>
+    </form>
+
+    @if (rejectionsLoading()) {
+      <div class="vp-state"><span class="vp-spinner" aria-hidden="true"></span> Loading…</div>
+    } @else if (rejectionsError()) {
+      <div class="vp-state bad">{{ rejectionsError() }} <button class="vp-btn" (click)="loadRejections(rejectionsPage())">Try again</button></div>
+    } @else {
+      <p class="vp-count">{{ rejectionsTotal() }} {{ rejectionsTotal() === 1 ? 'rejection' : 'rejections' }}</p>
+      @for (r of rejections(); track r.rejectionId) {
+        <article class="vp-card vp-rejection">
+          <div class="vp-rejection-top">
+            <div>
+              <h3>{{ r.jobTitle }}</h3>
+              <div class="vp-meta"><span><span class="material-icons">apartment</span>{{ r.companyName }}</span>
+                <span><span class="material-icons">person_outline</span>{{ r.candidateName || 'Candidate' }}@if (r.candidateHeadline) { · {{ r.candidateHeadline }} }</span></div>
+            </div>
+            <span class="vp-when">{{ dayLabel(r.rejectedAt) }}</span>
+          </div>
+          <div class="vp-skills" aria-label="Skills the job asked for">
+            <span class="vp-skills-label">Skills asked for</span>
+            @for (s of skillList(r.skills); track s) { <span class="vp-skill">{{ s }}</span> } @empty { <span class="vp-none">None given</span> }
+          </div>
+          <blockquote class="vp-reason">{{ r.reason }}</blockquote>
+        </article>
+      } @empty {
+        <div class="vp-empty">
+          <span class="material-icons">inbox</span>
+          <p>{{ rejectionsQuery.trim() ? 'Nothing matches.' : 'No company has rejected an application yet.' }}</p>
+        </div>
+      }
+
+      @if (rejectionsLastPage > 1) {
+        <nav class="vp-pages" aria-label="Pages">
+          <button class="vp-btn" (click)="loadRejections(rejectionsPage() - 1)" [disabled]="rejectionsPage() <= 1">Previous</button>
+          <span>Page {{ rejectionsPage() }} of {{ rejectionsLastPage }}</span>
+          <button class="vp-btn" (click)="loadRejections(rejectionsPage() + 1)" [disabled]="rejectionsPage() >= rejectionsLastPage">Next</button>
         </nav>
       }
     }

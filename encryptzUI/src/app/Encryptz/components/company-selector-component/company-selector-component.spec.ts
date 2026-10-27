@@ -402,7 +402,7 @@ describe('CompanySelectorComponent', () => {
     expect(navigated.length).toBe(0);
 
     fixture.componentInstance.openModule({ moduleKey: 'JOBCONSULTANCY', state: 'Available' } as any);
-    expect(navigated.at(-1)![0]).toEqual(['/consultancy/postings']);
+    expect(navigated.at(-1)![0]).toEqual(['/consultancy/dashboard']);
   });
 
   it('shows the Individual ID of the user on the company step', () => {

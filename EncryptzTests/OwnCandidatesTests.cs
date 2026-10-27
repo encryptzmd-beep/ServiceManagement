@@ -109,7 +109,41 @@ namespace EncryptzTests
             Assert.NotEmpty(EncryptzBL.Common.Provisioning.TenantScript.ParseFollowUp("12_Consultancy_Candidates.sql", Script).Batches);
         }
 
+        private static readonly string Search = File.ReadAllText(Path.Combine(Root(), "EncryptzAPI", "Database", "ProjectDB", "13_Consultancy_Candidate_Search.sql"));
+
+        [Fact]
+        public void In_the_candidate_search_only_the_company_that_added_them_sees_them()
+        {
+            foreach (var name in new[] { "sp_OwnCandidate_Search", "sp_OwnCandidate_Get" })
+            {
+                var body = Regex.Match(Search, $@"CREATE OR ALTER PROCEDURE consult\.{name}\b(.*?)\nGO", RegexOptions.Singleline).Groups[1].Value;
+                Assert.StartsWith("@CompanyId", body.Trim());
+                Assert.Contains("c.CompanyId = @CompanyId AND ISNULL(@CompanyId, 0) <> 0", body);
+                Assert.DoesNotMatch(@"c\.Resume\s*,|c\.Resume AS", body);
+            }
+            Assert.Contains(@"Database\ProjectDB\13_Consultancy_Candidate_Search.sql", File.ReadAllText(Path.Combine(Root(), "EncryptzAPI", "EncryptzAPI.csproj")));
+            Assert.NotEmpty(EncryptzBL.Common.Provisioning.TenantScript.ParseFollowUp("13_Consultancy_Candidate_Search.sql", Search).Batches);
+        }
+
+        [Fact]
+        public void The_search_of_the_company_takes_the_words_and_filters_of_the_candidate_search()
+        {
+            Assert.Contains("CASE WHEN @MatchAll = 1 THEN @WordCount ELSE 1 END", Search);
+            Assert.Contains("c.City LIKE l.Pat", Search);
+            Assert.Contains("b.Band IN (SELECT Value FROM @BandList)", Search);
+            Assert.Contains("c.Skills NOT LIKE k.Pat", Search);
+            Assert.Contains("@WithResume = 0 OR c.Resume IS NOT NULL", Search);
+        }
+
+        [Fact]
+        public void A_company_database_without_the_script_still_shows_the_people_of_Job_Portal()
+        {
+            var service = File.ReadAllText(Path.Combine(Root(), "EncryptzBL", "Infrastructure", "Jobs", "JobsService.Consultancy.cs"));
+            Assert.Contains("catch (SqlException ex) when (ex.Number == 2812 || ex.Number == 208)", service.Substring(service.IndexOf("AddOwnCandidates(SqlDbHelper", StringComparison.Ordinal)));
+        }
+
         [Theory]
+        [InlineData("GetOne", "GET", "{id:int}")]
         [InlineData("GetAll", "GET", null)]
         [InlineData("GetDuplicates", "GET", "duplicates")]
         [InlineData("Save", "POST", null)]

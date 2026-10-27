@@ -257,8 +257,46 @@ namespace EncryptzBL.Infrastructure.Jobs
                     result.Total = Convert.ToInt32(dt.Rows[0]["TotalCount"]);
                 }
 
+                await AddOwnCandidates(tenant, companyId, req, result);
                 return ApiResponse<CandidateSearchResultDto>.Ok(result);
             });
+
+        private const int OwnShownInSearch = 50;
+
+        /// <summary>
+        /// The candidates the company added itself that match the search, from its own database (ProjectDB/13).
+        /// Not in the pool, nor with "verified only" or a work mode: they are neither verified nor say a mode.
+        /// A company database without the script leaves the list of Job Portal as it is.
+        /// </summary>
+        private static async Task AddOwnCandidates(SqlDbHelper tenant, int companyId, CandidateSearchRequest req, CandidateSearchResultDto result)
+        {
+            if (req.Pool || req.VerifiedOnly || ConsultancyRules.FilterList(req.Modes, JobsRules.WorkModes) != null
+                || !string.IsNullOrWhiteSpace(req.Mode) || req.Years.HasValue || !string.IsNullOrWhiteSpace(req.City))
+                return;
+
+            try
+            {
+                var dt = await tenant.ExecuteDataTableAsync("consult.sp_OwnCandidate_Search", new[]
+                {
+                    In("@CompanyId", companyId),
+                    In("@Query", JobPostingRules.SearchText(req.Q)),
+                    In("@MatchAll", req.MatchAll),
+                    In("@Cities", ConsultancyRules.FilterList(req.Cities)),
+                    In("@Bands", ConsultancyRules.FilterList(req.Bands, ConsultancyRules.ExperienceBands)),
+                    In("@Skills", ConsultancyRules.FilterList(req.Skills)),
+                    In("@SkillsAll", req.SkillsAll),
+                    In("@WithResume", req.WithResume),
+                    In("@Count", OwnShownInSearch)
+                });
+
+                result.OwnItems = dt.Rows.Cast<DataRow>().Select(OwnCandidateRow).ToList();
+                result.OwnTotal = dt.Rows.Count > 0 ? Convert.ToInt32(dt.Rows[0]["TotalCount"]) : 0;
+            }
+            catch (SqlException ex) when (ex.Number == 2812 || ex.Number == 208)
+            {
+                // ProjectDB/13 (or 12) not run in this company database yet: Job Portal only
+            }
+        }
 
         public Task<ApiResponse<CandidatePageDto>> GetCandidate(int userId, int companyId, Guid candidateKey)
             => GuardedTenant(userId, companyId, "reading a candidate", async (companyName, tenant) =>

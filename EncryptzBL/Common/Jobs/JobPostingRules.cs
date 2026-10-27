@@ -16,6 +16,21 @@ namespace EncryptzBL.Common.Jobs
 
         /// <summary>The states a company can give an application. Withdrawn is the person's own.</summary>
         public static readonly string[] ApplicantStates = { "Applied", "Shortlisted", "Rejected", "Hired" };
+        public static readonly string[] InterviewModes = { "In person", "Video", "Phone" };
+
+        public const int RejectReasonMinLength = 20;
+        public const int RejectReasonMaxLength = 1000;
+
+        /// <summary>What is wrong with the reason of a rejection (the person reads it), or null.</summary>
+        public static string? RejectReasonProblem(string? reason)
+        {
+            var text = (reason ?? "").Trim();
+            if (text.Length < RejectReasonMinLength)
+                return $"Say why the application is rejected ({RejectReasonMinLength} characters at least)";
+            if (text.Length > RejectReasonMaxLength)
+                return $"The reason is too long ({RejectReasonMaxLength} characters at most)";
+            return null;
+        }
 
         public const int PageSize = 20;
 

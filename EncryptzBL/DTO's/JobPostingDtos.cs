@@ -111,6 +111,13 @@ namespace EncryptzBL.DTO_s
         public DateTime AppliedAt { get; set; }
         public DateTime StatusAt { get; set; }
         public bool IsOpen { get; set; }
+        /// <summary>The interview the company set (none: null), with how, where and a note.</summary>
+        public DateTime? InterviewAt { get; set; }
+        public string InterviewMode { get; set; } = "";
+        public string InterviewPlace { get; set; } = "";
+        public string InterviewNote { get; set; } = "";
+        /// <summary>Why the company rejected the application ('' unless it is rejected).</summary>
+        public string RejectReason { get; set; } = "";
     }
 
     public class JobApplyRequest
@@ -132,6 +139,13 @@ namespace EncryptzBL.DTO_s
         public bool HasResume { get; set; }
         /// <summary>The platform administrator verified the person.</summary>
         public bool IsVerified { get; set; }
+        /// <summary>The interview the company set (none: null), with how, where and a note.</summary>
+        public DateTime? InterviewAt { get; set; }
+        public string InterviewMode { get; set; } = "";
+        public string InterviewPlace { get; set; } = "";
+        public string InterviewNote { get; set; } = "";
+        /// <summary>Why the company rejected the application ('' unless it is rejected).</summary>
+        public string RejectReason { get; set; } = "";
     }
 
     /// <summary>One applicant opened by the company: the application and the person's profile as it is now.</summary>
@@ -213,5 +227,73 @@ namespace EncryptzBL.DTO_s
     public class SetJobStatusRequest
     {
         public string? Status { get; set; }
+        /// <summary>For a rejected application: why (needed, the person reads it).</summary>
+        public string? Reason { get; set; }
+    }
+
+    /// <summary>The company's dashboard of Job Consultancy: what is coming and what came in.</summary>
+    public class CompanyDashboardDto
+    {
+        public List<CompanyInterviewDto> Interviews { get; set; } = new();
+        public List<CompanyLatestApplicantDto> Latest { get; set; } = new();
+        public int NewThisWeek { get; set; }
+        public int InterviewsThisWeek { get; set; }
+        public int HiredThisMonth { get; set; }
+        public int RejectedThisMonth { get; set; }
+    }
+
+    public class CompanyInterviewDto
+    {
+        public int ApplicationId { get; set; }
+        public int PostingId { get; set; }
+        public string PostingTitle { get; set; } = "";
+        public string FullName { get; set; } = "";
+        public DateTime InterviewAt { get; set; }
+        public string InterviewMode { get; set; } = "";
+        public string InterviewPlace { get; set; } = "";
+    }
+
+    public class CompanyLatestApplicantDto
+    {
+        public int ApplicationId { get; set; }
+        public int PostingId { get; set; }
+        public string PostingTitle { get; set; } = "";
+        public string FullName { get; set; } = "";
+        public string Headline { get; set; } = "";
+        public string Status { get; set; } = "";
+        public DateTime AppliedAt { get; set; }
+        public bool IsVerified { get; set; }
+    }
+
+    /// <summary>Platform Admin: one rejection, with the skills the job asked for and the reason.</summary>
+    public class RejectionReviewDto
+    {
+        public int RejectionId { get; set; }
+        public DateTime RejectedAt { get; set; }
+        public string CompanyName { get; set; } = "";
+        public string JobTitle { get; set; } = "";
+        public string Skills { get; set; } = "";
+        public string Reason { get; set; } = "";
+        public string CandidateName { get; set; } = "";
+        public string CandidateHeadline { get; set; } = "";
+    }
+
+    public class RejectionReviewPageDto
+    {
+        public List<RejectionReviewDto> Items { get; set; } = new();
+        public int Total { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+    }
+
+    /// <summary>The interview of an applicant; no time = call it off.</summary>
+    public class JobInterviewRequest
+    {
+        public DateTime? At { get; set; }
+        /// <summary>In person, Video or Phone.</summary>
+        public string? Mode { get; set; }
+        /// <summary>The address, or the link of the call.</summary>
+        public string? Place { get; set; }
+        public string? Note { get; set; }
     }
 }

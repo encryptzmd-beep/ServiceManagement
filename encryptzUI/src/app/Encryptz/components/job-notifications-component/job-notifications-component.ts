@@ -81,6 +81,7 @@ export class JobNotificationsComponent implements OnInit {
       case 'NewApplicant': return 'person_add_alt';
       case 'Withdrawn': return 'person_remove';
       case 'Shortlisted': return 'star_outline';
+      case 'Interview': return 'event_available';
       case 'Hired': return 'celebration';
       case 'Rejected': return 'do_not_disturb_on';
       case 'JobClosed': return 'event_busy';

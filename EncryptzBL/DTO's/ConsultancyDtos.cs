@@ -102,6 +102,12 @@ namespace EncryptzBL.DTO_s
         public List<CandidateDto> Items { get; set; } = new();
         /// <summary>The choices of the filters (script 21; empty before it).</summary>
         public List<CandidateFacetDto> Facets { get; set; } = new();
+        /// <summary>
+        /// The candidates the company added itself that match the search (ProjectDB/13), best first: only this
+        /// company ever sees them. Empty in the pool, with "verified only" or a work mode (they have neither).
+        /// </summary>
+        public List<OwnCandidateDto> OwnItems { get; set; } = new();
+        public int OwnTotal { get; set; }
         public int Total { get; set; }
         public int Page { get; set; }
         public int PageSize { get; set; }
@@ -184,6 +190,8 @@ namespace EncryptzBL.DTO_s
         public string ResumeName { get; set; } = "";
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        /// <summary>How well the words of a search matched (0 outside a search).</summary>
+        public int MatchScore { get; set; }
     }
 
     public class OwnCandidateListDto

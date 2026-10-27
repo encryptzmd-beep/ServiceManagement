@@ -246,6 +246,25 @@ export interface PersonReviewPage {
   pageSize: number;
 }
 
+/** A rejection a company made: the job, the skills it asked for and the reason. */
+export interface RejectionReview {
+  rejectionId: number;
+  rejectedAt: string;
+  companyName: string;
+  jobTitle: string;
+  skills: string;
+  reason: string;
+  candidateName: string;
+  candidateHeadline: string;
+}
+
+export interface RejectionReviewPage {
+  items: RejectionReview[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface VerificationQueue {
   certificates: CertificateReview[];
   postings: PostingReview[];
@@ -297,6 +316,11 @@ export class PlatformService {
   getPeopleForReview(q: string, show: PersonReviewShow, page: number): Observable<ApiResponse<PersonReviewPage>> {
     const params = new HttpParams().set('q', q).set('show', show).set('page', page);
     return this.http.get<ApiResponse<PersonReviewPage>>(`${this.api}/verification/people`, { headers: this.headers, params });
+  }
+
+  getRejections(q: string, page: number): Observable<ApiResponse<RejectionReviewPage>> {
+    const params = new HttpParams().set('q', q).set('page', page);
+    return this.http.get<ApiResponse<RejectionReviewPage>>(`${this.api}/verification/rejections`, { headers: this.headers, params });
   }
 
   decidePerson(candidateKey: string, approve: boolean, note: string): Observable<ApiResponse<boolean>> {
