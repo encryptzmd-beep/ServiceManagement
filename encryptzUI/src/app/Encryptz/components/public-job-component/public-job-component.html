@@ -50,7 +50,7 @@
                 @if (p.closesOn) { <span>Apply by <strong>{{ dayLabel(p.closesOn) }}</strong></span> }
               </div>
             </div>
-            <button class="jp-btn primary pd-apply-top" type="button" (click)="apply(p)">Apply now</button>
+            <button class="jp-btn primary pd-apply-top" type="button" (click)="apply(p)">{{ applied() ? 'Applied: see your application' : 'Apply now' }}</button>
           </header>
 
           <section class="jp-card pd-section" aria-labelledby="jd">
@@ -113,8 +113,8 @@
           <div class="jp-card pd-apply">
             <h2>Apply for this job</h2>
             <p>Apply with your Encryptz profile. Create it once, for free, and use it for every job.</p>
-            <button class="jp-btn primary pd-apply-btn" type="button" (click)="apply(p)">Apply now<span class="material-icons" aria-hidden="true">arrow_forward</span></button>
-            <a class="jp-btn pd-apply-btn" routerLink="/register" [queryParams]="registerQuery(p)" rel="nofollow">Create free profile</a>
+            <button class="jp-btn primary pd-apply-btn" type="button" (click)="apply(p)">{{ applied() ? 'Applied: see your application' : 'Apply now' }}<span class="material-icons" aria-hidden="true">arrow_forward</span></button>
+            @if (!signedIn()) { <a class="jp-btn pd-apply-btn" routerLink="/register" [queryParams]="registerQuery(p)" rel="nofollow">Create free profile</a> }
             <ul class="pd-steps">
               <li><span class="material-icons" aria-hidden="true">person_add</span>Create your account</li>
               <li><span class="material-icons" aria-hidden="true">badge</span>Add your name, headline and date of birth</li>
@@ -134,7 +134,7 @@
 
       <!-- on a phone the button stays in reach -->
       <div class="pd-mobile-bar">
-        <button class="jp-btn primary" type="button" (click)="apply(p)">Apply now</button>
+        <button class="jp-btn primary" type="button" (click)="apply(p)">{{ applied() ? 'Applied: see your application' : 'Apply now' }}</button>
       </div>
     }
   </div>

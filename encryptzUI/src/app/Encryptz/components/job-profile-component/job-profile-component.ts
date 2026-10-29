@@ -23,6 +23,8 @@ import { jobsMenu } from '../personal-shell-component/jobs-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
 import { SOCIAL_PLATFORMS, SocialPlatform, platformOf } from './social-platforms';
+import { ScrollIntoViewOn } from '../shared/scroll-into-view';
+import { EscapeClose } from '../shared/escape-close';
 
 type DialogKind = 'profile' | 'preferences' | 'interests' | 'social' | 'experience' | 'education' | 'skill' | 'certificate';
 /** The lists of words typed into a box and shown as chips. */
@@ -66,7 +68,7 @@ const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 @Component({
   selector: 'app-job-profile-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent, ScrollIntoViewOn, EscapeClose],
   templateUrl: './job-profile-component.html',
   styleUrl: './job-profile-component.scss',
 })
@@ -532,6 +534,8 @@ export class JobProfileComponent implements OnInit, OnDestroy {
     switch (d.kind) {
       case 'profile':
         if (!t(m.dateOfBirth)) return 'Enter your date of birth';
+        // as the API (JobsRules.MinimumAge): the form says it before the save
+        if (t(m.dateOfBirth) > this.latestBirthDate) return 'You must be at least 14 years old to use Job Portal';
         // isVisible is not sent from here: the switch is the only way to change it
         return this.api.saveProfile({
           fullName: t(m.fullName), headline: t(m.headline), summary: t(m.summary), city: t(m.city),
@@ -855,6 +859,9 @@ export class JobProfileComponent implements OnInit, OnDestroy {
     const [year, m, d] = day.split('-').map(Number);
     return `${d} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m - 1]} ${year}`;
   }
+
+  /** The latest date of birth a profile takes (14 years ago today, yyyy-MM-dd): JobsRules.MinimumAge. */
+  readonly latestBirthDate = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 14); return d.toLocaleDateString('en-CA'); })();
 
   /** Full years since the date of birth; null without one (or one in the future). */
   ageOf(dateOfBirth: string | null | undefined, today = new Date()): number | null {

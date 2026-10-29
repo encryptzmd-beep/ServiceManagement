@@ -162,9 +162,9 @@
             </h2>
             @if (o.headline) { <div class="jb-company">{{ o.headline }}</div> }
             <div class="jb-meta">
-              @if (o.city) { <span><span class="material-icons">place</span>{{ o.city }}</span> }
-              <span [class.cd-exp-none]="o.experienceYears == null"><span class="material-icons">work_outline</span>{{ ownExperience(o.experienceYears) }}</span>
-              @if (o.phone) { <span><span class="material-icons">call</span>{{ o.phone }}</span> }
+              @if (o.city) { <span><span class="material-icons" aria-hidden="true">place</span>{{ o.city }}</span> }
+              <span [class.cd-exp-none]="o.experienceYears == null"><span class="material-icons" aria-hidden="true">work_outline</span>{{ ownExperience(o.experienceYears) }}</span>
+              @if (o.phone) { <span><span class="material-icons" aria-hidden="true">call</span>{{ o.phone }}</span> }
               <span class="cd-resume" [class.on]="o.hasResume"><span class="material-icons">{{ o.hasResume ? 'task' : 'description' }}</span>{{ o.hasResume ? 'Resume' : 'No resume' }}</span>
             </div>
             @if (list(o.skills).length) {
@@ -190,15 +190,15 @@
           <h2><a class="jb-title" [routerLink]="['/consultancy/candidates', c.candidateKey]" target="_blank" rel="noopener" title="Opens the profile in a new tab">{{ c.fullName }}</a>@if (c.isVerified) { <app-verified-badge hint="Person verified by Encryptz" /> }</h2>
           <div class="jb-company">{{ c.headline }}</div>
           <div class="jb-meta">
-            @if (c.city) { <span><span class="material-icons">place</span>{{ c.city }}</span> }
+            @if (c.city) { <span><span class="material-icons" aria-hidden="true">place</span>{{ c.city }}</span> }
             @if (c.experienceSource === 'None') {
-              <span class="cd-exp-none" title="This person did not add their experience"><span class="material-icons">work_outline</span>Experience not added</span>
+              <span class="cd-exp-none" title="This person did not add their experience"><span class="material-icons" aria-hidden="true">work_outline</span>Experience not added</span>
             } @else {
               <span [attr.title]="c.experienceSource === 'Headline' ? 'Read from the headline: no experience entered' : null">
-                <span class="material-icons">work_outline</span>{{ experienceLabel(c) }}
+                <span class="material-icons" aria-hidden="true">work_outline</span>{{ experienceLabel(c) }}
               </span>
             }
-            @if (c.workModes) { <span><span class="material-icons">apartment</span>{{ c.workModes }}</span> }
+            @if (c.workModes) { <span><span class="material-icons" aria-hidden="true">apartment</span>{{ c.workModes }}</span> }
             <span class="cd-resume" [class.on]="c.hasResume"><span class="material-icons">{{ c.hasResume ? 'task' : 'description' }}</span>{{ c.hasResume ? 'Resume' : 'No resume' }}</span>
           </div>
           @if (list(c.skills).length) {
@@ -262,9 +262,9 @@
   <div class="jp-dialog-body cd-body">
     <div>
       <div class="jb-meta cd-contact">
-        @if (pg.profile.city) { <span><span class="material-icons">place</span>{{ pg.profile.city }}</span> }
-        @if (pg.profile.contactEmail) { <span><span class="material-icons">mail_outline</span>{{ pg.profile.contactEmail }}</span> }
-        @if (pg.profile.contactPhone) { <span><span class="material-icons">call</span>{{ pg.profile.contactPhone }}</span> }
+        @if (pg.profile.city) { <span><span class="material-icons" aria-hidden="true">place</span>{{ pg.profile.city }}</span> }
+        @if (pg.profile.contactEmail) { <span><span class="material-icons" aria-hidden="true">mail_outline</span>{{ pg.profile.contactEmail }}</span> }
+        @if (pg.profile.contactPhone) { <span><span class="material-icons" aria-hidden="true">call</span>{{ pg.profile.contactPhone }}</span> }
       </div>
     </div>
 
@@ -305,7 +305,7 @@
           </label>
         </div>
         <div class="cd-pool-actions">
-          <button class="jp-btn" (click)="invite()" [disabled]="inviting()"><span class="material-icons">send</span>{{ inviting() ? 'Sending…' : 'Send invitation' }}</button>
+          <button class="jp-btn" (click)="invite()" [disabled]="inviting()"><span class="material-icons" aria-hidden="true">send</span>{{ inviting() ? 'Sending…' : 'Send invitation' }}</button>
         </div>
         @for (t of invited(); track $index) {
           <p class="cd-invited"><span class="material-icons" aria-hidden="true">check_circle</span>Invitation sent for <strong>{{ t }}</strong>. {{ pg.profile.fullName }} is told now.</p>
@@ -322,7 +322,7 @@
         <h4>Looking for</h4>
         <div class="jb-skills">
           @for (j of c.preferredJobs; track j) { <span class="jp-chip">{{ j }}</span> }
-          @for (l of c.preferredLocations; track l) { <span class="jp-chip"><span class="material-icons cd-ic">place</span>{{ l }}</span> }
+          @for (l of c.preferredLocations; track l) { <span class="jp-chip"><span class="material-icons cd-ic" aria-hidden="true">place</span>{{ l }}</span> }
           @for (w of c.workModes; track w) { <span class="jp-chip">{{ w }}</span> }
         </div>
       </section>
@@ -384,15 +384,15 @@
     <section>
       <h4>Resume</h4>
       @if (pg.resume; as r) {
-        <button class="jp-file" (click)="downloadResume()"><span class="material-icons">description</span>{{ r.fileName }}</button>
+        <button class="jp-file" (click)="downloadResume()"><span class="material-icons" aria-hidden="true">description</span>{{ r.fileName }}</button>
       } @else {
         <p class="jp-empty">No resume uploaded.</p>
       }
     </section>
   </div>
   <div class="jp-dialog-foot">
-    <button class="jp-btn" (click)="message()" [disabled]="messaging()"><span class="material-icons">chat_bubble_outline</span>Message</button>
-    <button class="jp-btn" (click)="recordPlacement()"><span class="material-icons">verified</span>Record a placement</button>
+    <button class="jp-btn" (click)="message()" [disabled]="messaging()"><span class="material-icons" aria-hidden="true">chat_bubble_outline</span>Message</button>
+    <button class="jp-btn" (click)="recordPlacement()"><span class="material-icons" aria-hidden="true">verified</span>Record a placement</button>
     <span class="jb-grow"></span>
     @if (!pageMode) { <button class="jp-btn ghost" (click)="close()">Close</button> }
   </div>
@@ -400,7 +400,7 @@
 
 @if (!pageMode) {
   @if (open(); as c) {
-    <div class="jp-overlay">
+    <div class="jp-overlay" (escapeClose)="close()">
       <div class="jp-dialog jb-detail cd-dialog" role="dialog" aria-modal="true">
         <ng-container [ngTemplateOutlet]="profileView" [ngTemplateOutletContext]="{ $implicit: c }" />
       </div>

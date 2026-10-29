@@ -717,7 +717,10 @@ describe('PlatformAdminComponent servers, settings and database state', () => {
       companyRow(2, { databaseName: 'EncryptzTenant_000002' }),
       companyRow(3, { provisionStatus: 'Provisioning' }),
       companyRow(4, { provisionStatus: 'Failed', provisionError: 'Tenant script batch 12 of 1468 failed' }),
-      companyRow(5, { provisionStatus: 'None' }),
+      // as script 20/26 answer: no database is ProjectCount 0
+      companyRow(5, { provisionStatus: 'None', projectCount: 0 }),
+      // an older procedure sends no status, only ProjectCount (QA BUG-028)
+      companyRow(6, { provisionStatus: undefined, projectCount: 1 }),
     ] });
     const fixture = create();
 
@@ -726,6 +729,7 @@ describe('PlatformAdminComponent servers, settings and database state', () => {
     expect(text(fixture)).toContain('Setup failed');
     expect(text(fixture)).toContain('Tenant script batch 12 of 1468 failed');
     expect(text(fixture)).toContain('No database');
+    expect(text(fixture)).toContain('Database attached');
   });
 
   it('retries a failed set-up once and reloads the companies', () => {

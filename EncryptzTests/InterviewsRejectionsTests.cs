@@ -50,6 +50,17 @@ namespace EncryptzTests
         }
 
         [Fact]
+        public void An_interview_in_person_needs_an_address_and_a_video_call_a_link()
+        {
+            Assert.Equal("Enter the address of the interview", JobPostingRules.InterviewPlaceProblem("In person", "  "));
+            Assert.Equal("Enter the link of the video call", JobPostingRules.InterviewPlaceProblem("Video", ""));
+            Assert.Equal("The link of the call must start with https://", JobPostingRules.InterviewPlaceProblem("Video", "meet.google.com/abc"));
+            Assert.Null(JobPostingRules.InterviewPlaceProblem("Video", "https://meet.google.com/abc"));
+            Assert.Null(JobPostingRules.InterviewPlaceProblem("In person", "MG Road, Kochi"));
+            Assert.Null(JobPostingRules.InterviewPlaceProblem("Phone", ""));
+        }
+
+        [Fact]
         public void The_person_reads_the_reason_and_sees_the_interview()
         {
             var mine = Body("sp_Application_ListMine");

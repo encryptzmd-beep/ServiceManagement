@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CertificateReview, PersonReview, PersonReviewShow, PlatformService, PostingReview, RejectionReview } from '../../Services/platform-service';
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
+import { DialogService } from '../../Services/dialog-service';
+import { salaryLabel } from '../../Services/job-labels';
 
 type Filter = 'all' | 'certificates' | 'postings' | 'people' | 'rejections';
 
@@ -29,6 +31,7 @@ export type ReviewItem =
 })
 export class VerificationPanelComponent implements OnInit {
   private api = inject(PlatformService);
+  private dialog = inject(DialogService);
 
   loading = signal(true);
   error = signal('');
@@ -146,8 +149,19 @@ export class VerificationPanelComponent implements OnInit {
     return `u${p.candidateKey}`;
   }
 
-  verifyPerson(p: PersonReview): void {
-    this.decidePerson(p, true, '');
+  /**
+   * Asks first: the card leaves the list at once and the next one moves under the pointer,
+   * so a double click verified the wrong person (QA BUG-034).
+   */
+  async verifyPerson(p: PersonReview): Promise<void> {
+    if (this.busy()) return;
+    const ok = await this.dialog.confirm({
+      title: 'Verify this person?',
+      message: `${p.fullName || 'This person'} gets the Verified tick on the profile, in searches and on the shared link. You can take it away later.`,
+      okText: 'Verify',
+      cancelText: 'Cancel',
+    });
+    if (ok) this.decidePerson(p, true, '');
   }
 
   startPersonRefusal(p: PersonReview): void {
@@ -282,6 +296,9 @@ export class VerificationPanelComponent implements OnInit {
     const [y, m, d] = (value as string).slice(0, 10).split('-').map(Number);
     return `${d} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m - 1]} ${y}`;
   }
+
+  /** The same as on the job pages: ₹36,700 – ₹60,000 per month (QA BUG-035). */
+  readonly salaryLabel = salaryLabel;
 
   range(min: number | null | undefined, max: number | null | undefined, unit: string): string {
     if (min != null && max != null) return min === max ? `${min} ${unit}` : `${min} – ${max} ${unit}`;

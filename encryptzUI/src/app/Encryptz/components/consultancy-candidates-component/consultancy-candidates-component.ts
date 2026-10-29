@@ -21,6 +21,7 @@ import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
 import { AutocompleteComponent, AutocompleteOption } from '../autocomplete-component/autocomplete-component';
+import { EscapeClose } from '../shared/escape-close';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -41,7 +42,7 @@ export function takesApplications(p: { status: string; closesOn?: string | null 
 @Component({
   selector: 'app-consultancy-candidates-component',
   standalone: true,
-  imports: [CommonModule, NgTemplateOutlet, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent, AutocompleteComponent],
+  imports: [CommonModule, NgTemplateOutlet, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent, AutocompleteComponent, EscapeClose],
   templateUrl: './consultancy-candidates-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',

@@ -28,60 +28,73 @@
         <span class="tab active">Create Account</span>
       </div>
 
-      <form (ngSubmit)="register()" class="form">
+      <form (ngSubmit)="register()" class="form" novalidate>
+        <!-- every field is checked at once; its message sits under it and goes when the field changes -->
         <div class="form-grid">
-          <label class="field">
-            <span class="material-icons field-icon">person_outline</span>
-            <input type="text" [(ngModel)]="fullName" name="fullName" required
-                   placeholder="Full Name *" aria-label="Full Name" autocomplete="name" [disabled]="loading()" />
-          </label>
+          <div class="field-wrap">
+            <label class="field" [class.invalid]="fieldErrors()['fullName']">
+              <span class="material-icons field-icon" aria-hidden="true">person_outline</span>
+              <input type="text" [(ngModel)]="fullName" (ngModelChange)="clearError('fullName')" name="fullName" required
+                     placeholder="Full name *" aria-label="Full name" autocomplete="name" [disabled]="loading()" />
+            </label>
+            @if (fieldErrors()['fullName']) { <span class="field-error" role="alert">{{ fieldErrors()['fullName'] }}</span> }
+          </div>
 
-          <label class="field">
-            <span class="material-icons field-icon">mail_outline</span>
-            <input type="email" [(ngModel)]="email" name="email" required
-                   placeholder="Email Address *" aria-label="Email Address" autocomplete="email" [disabled]="loading()" />
-          </label>
+          <div class="field-wrap">
+            <label class="field" [class.invalid]="fieldErrors()['email']">
+              <span class="material-icons field-icon" aria-hidden="true">mail_outline</span>
+              <input type="email" [(ngModel)]="email" (ngModelChange)="clearError('email')" name="email" required
+                     placeholder="E-mail *" aria-label="E-mail address" autocomplete="email" [disabled]="loading()" />
+            </label>
+            @if (fieldErrors()['email']) { <span class="field-error" role="alert">{{ fieldErrors()['email'] }}</span> }
+          </div>
 
-          <label class="field">
-            <span class="material-icons field-icon">phone_iphone</span>
-            <input type="tel" [(ngModel)]="mobileNumber" name="mobile" required
-                   placeholder="Mobile Number *" aria-label="Mobile Number" autocomplete="tel" [disabled]="loading()" />
-          </label>
+          <div class="field-wrap">
+            <label class="field" [class.invalid]="fieldErrors()['mobileNumber']">
+              <span class="material-icons field-icon" aria-hidden="true">phone_iphone</span>
+              <input type="tel" [(ngModel)]="mobileNumber" (ngModelChange)="clearError('mobileNumber')" name="mobile" required
+                     placeholder="Mobile *" aria-label="Mobile number" autocomplete="tel" [disabled]="loading()" />
+            </label>
+            @if (fieldErrors()['mobileNumber']) { <span class="field-error" role="alert">{{ fieldErrors()['mobileNumber'] }}</span> }
+          </div>
 
-          <label class="field">
-            <span class="material-icons field-icon">badge</span>
-            <input type="text" [(ngModel)]="aadhaarNumber" name="aadhaar" maxlength="12"
-                   placeholder="Aadhaar (Optional)" aria-label="Aadhaar (Optional)" [disabled]="loading()" />
-          </label>
+          <div class="field-wrap">
+            <label class="field" [class.invalid]="fieldErrors()['aadhaarNumber']">
+              <span class="material-icons field-icon" aria-hidden="true">badge</span>
+              <input type="text" inputmode="numeric" [(ngModel)]="aadhaarNumber" (ngModelChange)="clearError('aadhaarNumber')" name="aadhaar" maxlength="12"
+                     placeholder="Aadhaar" aria-label="Aadhaar number (optional)" [disabled]="loading()" />
+            </label>
+            @if (fieldErrors()['aadhaarNumber']) { <span class="field-error" role="alert">{{ fieldErrors()['aadhaarNumber'] }}</span> }
+          </div>
 
-          <label class="field">
-            <span class="material-icons field-icon">lock_outline</span>
-            <input [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="password" name="password" required
-                   placeholder="Password *" aria-label="Password" autocomplete="new-password" [disabled]="loading()" />
-            <button type="button" class="eye" (click)="showPassword.set(!showPassword())"
-                    [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'">
-              <span class="material-icons">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
-            </button>
-          </label>
+          <div class="field-wrap">
+            <label class="field" [class.invalid]="fieldErrors()['password']">
+              <span class="material-icons field-icon" aria-hidden="true">lock_outline</span>
+              <input [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="password" (ngModelChange)="clearError('password')" name="password" required
+                     placeholder="Password *" aria-label="Password" autocomplete="new-password" [disabled]="loading()" />
+              <button type="button" class="eye" (click)="showPassword.set(!showPassword())"
+                      [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'">
+                <span class="material-icons" aria-hidden="true">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
+              </button>
+            </label>
+            @if (fieldErrors()['password']) { <span class="field-error" role="alert">{{ fieldErrors()['password'] }}</span> }
+          </div>
 
-          <label class="field">
-            <span class="material-icons field-icon">lock_outline</span>
-            <input [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="confirmPassword" name="confirmPassword" required
-                   placeholder="Confirm Password *" aria-label="Confirm Password" autocomplete="new-password" [disabled]="loading()" />
-          </label>
+          <div class="field-wrap">
+            <label class="field" [class.invalid]="fieldErrors()['confirmPassword']">
+              <span class="material-icons field-icon" aria-hidden="true">lock_outline</span>
+              <input [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="confirmPassword" (ngModelChange)="clearError('confirmPassword')" name="confirmPassword" required
+                     placeholder="Confirm *" aria-label="Confirm password" autocomplete="new-password" [disabled]="loading()" />
+            </label>
+            @if (fieldErrors()['confirmPassword']) { <span class="field-error" role="alert">{{ fieldErrors()['confirmPassword'] }}</span> }
+          </div>
         </div>
 
-        <div class="hint">Password must be at least 6 characters.</div>
+        <div class="hint">* required. Password: at least 6 characters. Aadhaar is optional.</div>
 
-        @if (passwordMismatch()) {
-          <div class="error-msg">
-            <span class="material-icons">error_outline</span>
-            Passwords do not match
-          </div>
-        }
         @if (error()) {
           <div class="error-msg">
-            <span class="material-icons">error_outline</span>
+            <span class="material-icons" aria-hidden="true">error_outline</span>
             {{ error() }}
           </div>
         }

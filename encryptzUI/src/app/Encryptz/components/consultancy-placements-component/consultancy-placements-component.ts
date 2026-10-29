@@ -16,6 +16,8 @@ import {
 import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { AutocompleteComponent, AutocompleteOption } from '../autocomplete-component/autocomplete-component';
+import { ScrollIntoViewOn } from '../shared/scroll-into-view';
+import { EscapeClose } from '../shared/escape-close';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -33,7 +35,7 @@ interface PlacementForm extends PlacementSave {
 @Component({
   selector: 'app-consultancy-placements-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, AutocompleteComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, AutocompleteComponent, ScrollIntoViewOn, EscapeClose],
   templateUrl: './consultancy-placements-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',
@@ -59,8 +61,16 @@ export class ConsultancyPlacementsComponent implements OnInit {
   /** The clients and the jobs as choices: searched by name, title and city. */
   readonly clientOptions = computed<AutocompleteOption<number>[]>(() =>
     this.clients().map(c => ({ value: c.clientId, label: c.name, sub: [c.city, c.industry].filter(Boolean).join(' · ') })));
-  readonly postingOptions = computed<AutocompleteOption<number>[]>(() =>
-    this.postings().map(j => ({ value: j.postingId!, label: j.title, sub: [j.city, j.status].filter(Boolean).join(' · ') })));
+  /**
+   * A placement is for a job that was published: open or closed ones (GAP-040, decided 28-Oct-2026).
+   * The job a placement already names stays in the list, whatever its state now.
+   */
+  readonly postingOptions = computed<AutocompleteOption<number>[]>(() => {
+    const kept = this.form()?.postingId ?? null;
+    return this.postings()
+      .filter(j => j.status === 'Open' || j.status === 'Closed' || j.postingId === kept)
+      .map(j => ({ value: j.postingId!, label: j.title, sub: [j.city, j.status].filter(Boolean).join(' · ') }));
+  });
   postings = signal<CompanyPosting[]>([]);
   feeFilter = signal<FeeStatus | ''>('');
 

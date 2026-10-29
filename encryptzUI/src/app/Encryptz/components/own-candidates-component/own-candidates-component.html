@@ -20,7 +20,7 @@
       <input class="jp-input" name="q" [(ngModel)]="query" maxlength="100" placeholder="Name, phone, e-mail, skill, city…" />
     </label>
     <button class="jp-btn" type="submit">Search</button>
-    <button class="jp-btn primary" type="button" (click)="openNew()"><span class="material-icons">person_add</span>Add candidate</button>
+    <button class="jp-btn primary" type="button" (click)="openNew()"><span class="material-icons" aria-hidden="true">person_add</span>Add candidate</button>
   </form>
 
   @if (loading()) {
@@ -39,11 +39,11 @@
           <h2><button class="jb-title" (click)="openEdit(c)">{{ c.fullName }}</button></h2>
           @if (c.headline) { <div class="jb-company oc-headline">{{ c.headline }}</div> }
           <div class="jb-meta">
-            @if (c.phone) { <span><span class="material-icons">call</span>{{ c.phone }}</span> }
-            @if (c.email) { <span><span class="material-icons">mail_outline</span>{{ c.email }}</span> }
-            @if (c.city) { <span><span class="material-icons">place</span>{{ c.city }}</span> }
-            <span [class.oc-none]="c.experienceYears == null"><span class="material-icons">work_outline</span>{{ experienceLabel(c.experienceYears) }}</span>
-            @if (c.source) { <span><span class="material-icons">input</span>{{ c.source }}</span> }
+            @if (c.phone) { <span><span class="material-icons" aria-hidden="true">call</span>{{ c.phone }}</span> }
+            @if (c.email) { <span><span class="material-icons" aria-hidden="true">mail_outline</span>{{ c.email }}</span> }
+            @if (c.city) { <span><span class="material-icons" aria-hidden="true">place</span>{{ c.city }}</span> }
+            <span [class.oc-none]="c.experienceYears == null"><span class="material-icons" aria-hidden="true">work_outline</span>{{ experienceLabel(c.experienceYears) }}</span>
+            @if (c.source) { <span><span class="material-icons" aria-hidden="true">input</span>{{ c.source }}</span> }
           </div>
           @if (skillList(c.skills).length) {
             <div class="jb-skills">@for (s of skillList(c.skills); track s) { <span class="jp-chip">{{ s }}</span> }</div>
@@ -92,7 +92,7 @@
 
 <!-- ═══════════ A CANDIDATE, WRITTEN ═══════════ -->
 @if (form(); as f) {
-  <div class="jp-overlay">
+  <div class="jp-overlay" (escapeClose)="closeForm()">
     <div class="jp-dialog oc-dialog" role="dialog" aria-modal="true">
       <div class="jp-dialog-head">
         <h3>{{ f.candidateId ? 'Edit candidate' : 'Add candidate' }}</h3>
@@ -160,7 +160,7 @@
           @if (f.hasResume && f.resumeName) { <small>Now: {{ f.resumeName }}. A new file replaces it.</small> }
         </label>
 
-        @if (formError()) { <div class="jp-error">{{ formError() }}</div> }
+        @if (formError()) { <div class="jp-error" [scrollIntoViewOn]="formError()">{{ formError() }}</div> }
 
         <div class="jp-dialog-foot oc-foot">
           <button class="jp-btn ghost" type="button" (click)="closeForm()" [disabled]="saving()">Cancel</button>

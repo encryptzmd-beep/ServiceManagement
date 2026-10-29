@@ -150,7 +150,8 @@ $navy: #1d4ed8;
   color: $ink;
 }
 
-.pp-stars { display: inline-flex; gap: 3px; flex: 0 0 auto; }
+.pp-stars { display: inline-flex; align-items: center; gap: 3px; flex: 0 0 auto; }
+.pp-rate-text { margin-left: 4px; font-size: 12px; font-weight: 600; color: #4b5568; }
 .pp-star { width: 9px; height: 9px; border-radius: 50%; background: #e4e8f0; &.on { background: $accent; } }
 
 .pp-cta {

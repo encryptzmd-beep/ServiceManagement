@@ -3,7 +3,8 @@ import { Injectable, signal } from '@angular/core';
 @Injectable({ providedIn: 'root' })
 export class DashboardStateService {
   // Sidebar open/close state
-  sidebarOpen = signal<boolean>(true);
+  // closed on a phone (768px and less): there the sidebar is a drawer over the page (QA BUG-032)
+  sidebarOpen = signal<boolean>(typeof window === 'undefined' || window.innerWidth > 768);
 
   // Active tile key — shared between dashboard and any other component
   activeTileKey = signal<string | null>(null);

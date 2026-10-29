@@ -4,6 +4,7 @@ using EncryptzBL.Common;
 using EncryptzBL.Common.Jobs;
 using EncryptzBL.DTO_s;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 
 namespace EncryptzBL.Infrastructure.Jobs
 {
@@ -424,15 +425,34 @@ namespace EncryptzBL.Infrastructure.Jobs
 
         private const int MatchesShown = 30;
 
+        /// <summary>
+        /// The company's own people (its members in the main database) are not its candidates (QA BUG-022).
+        /// A Personal DB without script 27 does not take the list: it is then called without it.
+        /// </summary>
+        private async Task<DataTable?> MatchesTable(string procedure, int companyId, params SqlParameter[] parameters)
+        {
+            var members = _users == null ? new List<int>() : await _users.GetCompanyMemberUserIds(companyId);
+            if (members.Count > 0)
+            {
+                try
+                {
+                    return await GetDataTableAsync(procedure, parameters.Append(In("@ExcludeUserIds", string.Join(",", members))).ToArray());
+                }
+                catch (SqlException ex) when (ex.Number == 8144)   // too many arguments: script 27 not run yet
+                {
+                    _logger.LogWarning("{Procedure} does not leave out the company's members: run PersonalDB/27_Jobs_Matches_Exclude_Members.sql.", procedure);
+                }
+            }
+            return await GetDataTableAsync(procedure, parameters);
+        }
+
         public Task<ApiResponse<List<CandidateMatchDto>>> GetPostingMatches(int userId, int companyId, int postingId)
             => GuardedCompany(userId, companyId, "finding candidates for a job", async _ =>
             {
-                var dt = await GetDataTableAsync("jobs.sp_Posting_Matches", new[]
-                {
+                var dt = await MatchesTable("jobs.sp_Posting_Matches", companyId,
                     In("@CompanyId", companyId),
                     In("@PostingId", postingId),
-                    In("@Count", MatchesShown)
-                });
+                    In("@Count", MatchesShown));
 
                 var list = dt == null || !dt.Columns.Contains("MatchScore")
                     ? new List<CandidateMatchDto>()
@@ -463,7 +483,7 @@ namespace EncryptzBL.Infrastructure.Jobs
         public Task<ApiResponse<List<PostingMatchCountDto>>> GetPostingMatchCounts(int userId, int companyId)
             => GuardedCompany(userId, companyId, "counting candidates for the jobs", async _ =>
             {
-                var dt = await GetDataTableAsync("jobs.sp_Posting_Match_Counts", new[] { In("@CompanyId", companyId) });
+                var dt = await MatchesTable("jobs.sp_Posting_Match_Counts", companyId, In("@CompanyId", companyId));
 
                 return ApiResponse<List<PostingMatchCountDto>>.Ok(dt == null
                     ? new List<PostingMatchCountDto>()

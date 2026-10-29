@@ -18,6 +18,24 @@ namespace EncryptzBL.Common.Jobs
         public static readonly string[] ApplicantStates = { "Applied", "Shortlisted", "Rejected", "Hired" };
         public static readonly string[] InterviewModes = { "In person", "Video", "Phone" };
 
+        /// <summary>
+        /// Where the interview is, by its mode (GAP-041, decided 28-Oct-2026): an address for
+        /// "In person", the link of the call for "Video", nothing more for "Phone". Null when fine.
+        /// </summary>
+        public static string? InterviewPlaceProblem(string? mode, string? place)
+        {
+            var text = (place ?? "").Trim();
+            if (string.Equals(mode, "In person", StringComparison.OrdinalIgnoreCase) && text.Length == 0)
+                return "Enter the address of the interview";
+            if (string.Equals(mode, "Video", StringComparison.OrdinalIgnoreCase))
+            {
+                if (text.Length == 0) return "Enter the link of the video call";
+                if (!text.StartsWith("https://", StringComparison.OrdinalIgnoreCase) && !text.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                    return "The link of the call must start with https://";
+            }
+            return null;
+        }
+
         public const int RejectReasonMinLength = 20;
         public const int RejectReasonMaxLength = 1000;
 

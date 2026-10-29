@@ -43,7 +43,8 @@ export class SeoService {
 
   set(page: SeoPage): void {
     const url = this.url(page.path);
-    const description = page.description.replace(/\s+/g, ' ').trim().slice(0, 300);
+    // text people typed may hold markup ('<b>', '<img ...>'): previews show the words only (PUB-007)
+    const description = page.description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
 
     this.title.setTitle(page.title);
     this.tag('name', 'description', description);

@@ -15,6 +15,7 @@ import { interviewLabel, interviewTime, isWebLink } from '../../Services/job-lab
 import { jobsMenu } from '../personal-shell-component/jobs-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
+import { EscapeClose } from '../shared/escape-close';
 
 export type JobBoardMode = 'search' | 'applications' | 'saved';
 
@@ -28,7 +29,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 @Component({
   selector: 'app-job-board-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent, EscapeClose],
   templateUrl: './job-board-component.html',
   styleUrls: ['../job-profile-component/job-profile-component.scss', './job-board-component.scss'],
 })

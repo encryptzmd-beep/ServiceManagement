@@ -72,7 +72,7 @@ export class ConsultancyDashboardComponent implements OnInit {
       { key: 'new', label: 'New applicants', icon: 'person_add_alt', value: n(b?.newThisWeek), link: '/consultancy/postings', hint: 'In the last 7 days' },
       { key: 'shortlisted', label: 'Shortlisted', icon: 'star_outline', value: n(posts ? posts.reduce((s, p) => s + p.shortlisted, 0) : null), link: '/consultancy/postings', hint: 'Across all jobs' },
       { key: 'interview', label: 'Interviews', icon: 'event_available', value: n(b?.interviewsThisWeek), link: '/consultancy/postings', hint: 'In the next 7 days' },
-      { key: 'hired', label: 'Hired', icon: 'emoji_events', value: n(b?.hiredThisMonth), link: '/consultancy/postings', hint: 'This month' },
+      { key: 'hired', label: 'Hired', icon: 'emoji_events', value: n(b?.hiredThisMonth), link: '/consultancy/postings', hint: 'Applicants marked hired, this month' },
       { key: 'placements', label: 'Placements', icon: 'verified', value: n(pl?.thisMonth), link: '/consultancy/placements', hint: pl ? `${pl.total} in all` : 'This month' },
       { key: 'fees', label: 'Fees due', icon: 'payments', value: pl ? this.money(pl.feeOutstanding) : '–', link: '/consultancy/placements',
         hint: pl ? `${this.money(pl.feePaidThisYear)} paid this year` : '' },

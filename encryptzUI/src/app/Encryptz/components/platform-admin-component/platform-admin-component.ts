@@ -23,9 +23,14 @@ import {
 } from '../../Services/platform-service';
 import { provisionLabel, requestErrorMessage } from '../../Auth/company-creation';
 import { PlatformNavService, PlatformTab } from '../../Services/platform-nav-service';
+import { Router } from '@angular/router';
 import { VerificationPanelComponent } from '../verification-panel-component/verification-panel-component';
+import { LoginAdsPanelComponent } from '../login-ads-panel-component/login-ads-panel-component';
+import { ScrollIntoViewOn } from '../shared/scroll-into-view';
+import { EscapeClose } from '../shared/escape-close';
 
 type Tab = PlatformTab;
+const SECTION_TABS: Tab[] = ['companies', 'applications', 'verification', 'projects', 'locations', 'branchAccess', 'access', 'menus', 'servers', 'settings', 'loginAds'];
 
 /**
  * Administration of the main database: companies and their modules, the database each
@@ -36,7 +41,7 @@ type Tab = PlatformTab;
  */
 @Component({
   selector: 'app-platform-admin-component',
-  imports: [CommonModule, FormsModule, VerificationPanelComponent],
+  imports: [CommonModule, FormsModule, VerificationPanelComponent, LoginAdsPanelComponent, ScrollIntoViewOn, EscapeClose],
   templateUrl: './platform-admin-component.html',
   styleUrl: './platform-admin-component.scss',
 })
@@ -45,6 +50,7 @@ export class PlatformAdminComponent implements OnInit {
   private auth = inject(AuthService);
 
   private nav = inject(PlatformNavService);
+  private router = inject(Router);
 
   isPlatformAdmin = computed(() => !!this.auth.currentUser()?.isPlatformAdmin);
   /** The sidebar lists the sections: the tabs of this screen are hidden. */
@@ -175,6 +181,10 @@ export class PlatformAdminComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // a section in the address (?section=servers): opened again after a refresh or from a bookmark
+    const wanted = this.router.parseUrl(this.router.url).queryParams['section'] as Tab | undefined;
+    if (wanted && SECTION_TABS.includes(wanted)) this.nav.tab.set(wanted);
+
     this.api.isUnlocked().subscribe({
       next: res => res.unlocked ? this.open() : this.unlocked.set(false),
       error: () => this.unlocked.set(false),
@@ -270,11 +280,20 @@ export class PlatformAdminComponent implements OnInit {
     return false;
   }
 
+  /** Each section has its own address, so it can be bookmarked and survives a refresh (QA BUG-032). */
+  private showSectionInUrl(tab: Tab): void {
+    const url = this.router.parseUrl(this.router.url);
+    if (url.queryParams['section'] === tab) return;
+    url.queryParams = { ...url.queryParams, section: tab };
+    this.router.navigateByUrl(url, { replaceUrl: true }).catch(() => {});
+  }
+
   setTab(tab: Tab): void {
-    if ((tab === 'servers' || tab === 'settings' || tab === 'applications' || tab === 'verification') && !this.isPlatformAdmin()) return;
+    if ((tab === 'servers' || tab === 'settings' || tab === 'applications' || tab === 'verification' || tab === 'loginAds') && !this.isPlatformAdmin()) return;
     if (tab !== this.tab()) { this.closeForms(); this.cancelServersLoad(); this.cancelSettingsLoad(); this.cancelApplicationsLoad(); }
     this.tab.set(tab);
     this.nav.tab.set(tab);
+    this.showSectionInUrl(tab);
     if (tab === 'servers') this.loadServers();
     if (tab === 'settings') this.loadSettings();
     if (tab === 'applications') this.loadApplications();
@@ -1108,7 +1127,8 @@ export class PlatformAdminComponent implements OnInit {
   companyDatabase(company: PlatformCompany): string {
     switch (company.provisionStatus) {
       case 'Ready': return 'Ready';
-      case 'None': case undefined: case '': return 'No database';
+      // an API on a main database without script 20/26 sends no status, only ProjectCount (QA BUG-028)
+      case 'None': case undefined: case '': return company.projectCount ? 'Database attached' : 'No database';
       default: return provisionLabel(company.provisionStatus) || (company.provisionStatus ?? '');
     }
   }

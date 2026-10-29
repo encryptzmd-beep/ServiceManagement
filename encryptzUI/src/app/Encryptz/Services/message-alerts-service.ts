@@ -15,6 +15,8 @@ export class MessageAlertsService {
 
   readonly unread = { person: signal(0), company: signal(0) };
   private watched = new Set<MessageSide>();
+  private reading = new Set<MessageSide>();
+  private again = new Set<MessageSide>();
 
   constructor() {
     // a new message: the sides that are shown are read again
@@ -23,7 +25,7 @@ export class MessageAlertsService {
       const now = this.notices.arrived();
       if (now === seen) return;
       seen = now;
-      if (untracked(() => this.notices.incoming())?.kind === 'Message') untracked(() => this.watched.forEach(side => this.refresh(side)));
+      if (untracked(() => this.notices.incoming())?.kind === 'Message') untracked(() => this.watched.forEach(side => this.refresh(side, true)));
     });
   }
 
@@ -33,13 +35,24 @@ export class MessageAlertsService {
     this.refresh(side);
   }
 
-  refresh(side: MessageSide): void {
+  /**
+   * Reads one side again. The menu and the dashboard both watch on opening: one read in flight
+   * is enough. When the number has changed since that read started (changed: a message arrived,
+   * a conversation was read) it is read once more when the read ends.
+   */
+  refresh(side: MessageSide, changed = false): void {
+    if (this.reading.has(side)) { if (changed) this.again.add(side); return; }
     try {
+      this.reading.add(side);
       this.injector.get(MessagesService).unread(side).subscribe({
         next: res => { if (res?.success) this.unread[side].set(res.data ?? 0); },
         error: () => { /* the number stays as it was */ },
+      }).add(() => {
+        this.reading.delete(side);
+        if (this.again.delete(side)) this.refresh(side, true);
       });
     } catch {
+      this.reading.delete(side);
       // no API here (a page tested on its own): the number stays as it was
     }
   }

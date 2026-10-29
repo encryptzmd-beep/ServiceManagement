@@ -30,6 +30,9 @@
 
 /* Table bits */
 .pa-actions { text-align: right; white-space: nowrap; }
+/* the shared .fx-action-btn is a 28px icon square: text buttons need their own width, or the
+   labels run over each other and a click on one opens the next (QA BUG-029) */
+.fx-action-btn:not(:has(> .material-icons)) { width: auto; padding: 0 10px; font-size: 12px; font-weight: 500; margin-left: 4px; }
 
 .pa-status {
   display: inline-block;

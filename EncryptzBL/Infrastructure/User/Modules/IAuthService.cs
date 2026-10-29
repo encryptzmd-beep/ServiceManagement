@@ -32,6 +32,8 @@ namespace EncryptzBL.Infrastructure.User.Modules
         Task<ApiResponse<ExtendedLoginResponseDto>> LoginWithCompanies(string email, string password);
         Task<ApiResponse<LoginResponseDto>> SelectCompany(int userId, int companyId);
         Task<ApiResponse<List<CompanyResponseDto>>> GetUserCompanies(int userId);
+        /// <summary>The user ids of the active members of a company (never shown, only used to leave them out).</summary>
+        Task<List<int>> GetCompanyMemberUserIds(int companyId);
 
         // Company -> Module -> Branch scoping
         Task<ApiResponse<List<ModuleDto>>> GetModules(int userId, int companyId);

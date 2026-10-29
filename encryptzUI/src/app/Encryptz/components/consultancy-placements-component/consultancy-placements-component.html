@@ -17,7 +17,7 @@
         <p>Who you placed where, the fee and the replacement guarantee.</p>
       </div>
       <span class="jb-grow"></span>
-      <button class="jp-btn primary" (click)="openNew()"><span class="material-icons">add</span>New placement</button>
+      <button class="jp-btn primary" (click)="openNew()"><span class="material-icons" aria-hidden="true">add</span>New placement</button>
     </div>
 
     <div class="pl-figures">
@@ -41,13 +41,13 @@
           <h2>{{ p.candidateName }}</h2>
           <div class="jb-company">{{ p.jobTitle }}@if (p.clientName) { · {{ p.clientName }} }</div>
           <div class="jb-meta">
-            <span><span class="material-icons">event</span>Joins {{ dayLabel(p.joinDate) }}</span>
-            @if (p.annualCtc) { <span><span class="material-icons">payments</span>CTC {{ money(p.annualCtc) }} a year</span> }
-            @if (p.feeAmount != null) { <span><span class="material-icons">receipt_long</span>Fee {{ money(p.feeAmount) }}</span> }
+            <span><span class="material-icons" aria-hidden="true">event</span>Joins {{ dayLabel(p.joinDate) }}</span>
+            @if (p.annualCtc) { <span><span class="material-icons" aria-hidden="true">payments</span>CTC {{ money(p.annualCtc) }} a year</span> }
+            @if (p.feeAmount != null) { <span><span class="material-icons" aria-hidden="true">receipt_long</span>Fee {{ money(p.feeAmount) }}</span> }
             @if (p.guaranteeUntil) {
-              <span><span class="material-icons">shield</span>Guarantee {{ guaranteeRunning(p) ? 'until' : 'ended' }} {{ dayLabel(p.guaranteeUntil) }}</span>
+              <span><span class="material-icons" aria-hidden="true">shield</span>Guarantee {{ guaranteeRunning(p) ? 'until' : 'ended' }} {{ dayLabel(p.guaranteeUntil) }}</span>
             }
-            @if (p.onJobPortal) { <span><span class="material-icons">badge</span>On Job Portal</span> }
+            @if (p.onJobPortal) { <span><span class="material-icons" aria-hidden="true">badge</span>On Job Portal</span> }
           </div>
           @if (p.notes) { <p class="pl-note">{{ p.notes }}</p> }
         </div>
@@ -82,7 +82,7 @@
 </app-personal-shell>
 
 @if (form(); as f) {
-  <div class="jp-overlay">
+  <div class="jp-overlay" (escapeClose)="closeForm()">
     <div class="jp-dialog jb-detail" role="dialog" aria-modal="true">
       <div class="jp-dialog-head">
         <h3>{{ f.placementId ? 'Edit placement' : 'New placement' }}</h3>
@@ -133,7 +133,7 @@
         <label>Notes
           <textarea class="jp-input" name="notes" rows="3" [(ngModel)]="f.notes" maxlength="1000"></textarea>
         </label>
-        @if (formError()) { <div class="jp-error">{{ formError() }}</div> }
+        @if (formError()) { <div class="jp-error" [scrollIntoViewOn]="formError()">{{ formError() }}</div> }
       </div>
       <div class="jp-dialog-foot">
         <button class="jp-btn ghost" (click)="closeForm()" [disabled]="saving()">Cancel</button>

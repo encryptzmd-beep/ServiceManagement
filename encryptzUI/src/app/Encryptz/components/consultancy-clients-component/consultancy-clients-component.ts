@@ -6,6 +6,8 @@ import { AuthService } from '../../Auth/auth-service';
 import { ConsultClient, ConsultancyService } from '../../Services/consultancy-service';
 import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
+import { ScrollIntoViewOn } from '../shared/scroll-into-view';
+import { EscapeClose } from '../shared/escape-close';
 
 const EMAIL = /^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"'.]{2,}$/;
 const PHONE = /^[0-9 +()\-]{6,30}$/;
@@ -17,7 +19,7 @@ const PHONE = /^[0-9 +()\-]{6,30}$/;
 @Component({
   selector: 'app-consultancy-clients-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, ScrollIntoViewOn, EscapeClose],
   templateUrl: './consultancy-clients-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',

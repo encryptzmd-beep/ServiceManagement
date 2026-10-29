@@ -69,7 +69,9 @@ export class JobDashboardComponent implements OnInit, OnDestroy {
     const tips: ProfileTip[] = [];
     if (!p.profile.fullName || !p.profile.headline) tips.push({ text: 'Add your name and a headline', icon: 'badge' });
     if (!p.resume) tips.push({ text: 'Upload your resume', icon: 'description' });
+    // the strength counts skills from three on (JobsRules.Completeness)
     if (!p.skills.length) tips.push({ text: 'Add your skills', icon: 'psychology' });
+    else if (p.skills.length < 3) tips.push({ text: `Add at least 3 skills (${p.skills.length} so far)`, icon: 'psychology' });
     if (!p.experience.length) tips.push({ text: 'Add your work experience', icon: 'work_history' });
     if (!p.profile.dateOfBirth) tips.push({ text: 'Add your date of birth (needed to apply)', icon: 'cake' });
     if (!p.education.length) tips.push({ text: 'Add your education', icon: 'school' });

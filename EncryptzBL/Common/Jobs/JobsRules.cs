@@ -62,6 +62,9 @@ namespace EncryptzBL.Common.Jobs
         /// A profile the person saves needs a date of birth. Only the profile that is started
         /// for them from the user master (which has none) is taken without it.
         /// </param>
+        /// <summary>The youngest age a Job Portal profile may have (Indian law allows non-hazardous work from 14).</summary>
+        public const int MinimumAge = 14;
+
         public static string? ProfileProblem(JobProfileDto? p, DateTime today, bool requireBirthDate = true)
         {
             if (p == null)
@@ -97,6 +100,9 @@ namespace EncryptzBL.Common.Jobs
                 p.DateOfBirth = p.DateOfBirth.Value.Date;
                 if (p.DateOfBirth.Value > today.Date || p.DateOfBirth.Value.Year < 1900)
                     return "Enter a valid date of birth";
+                // QA BUG-004: a 10-year-old could make a profile (product decision 28-Oct-2026: 14 years)
+                if (p.DateOfBirth.Value > today.Date.AddYears(-MinimumAge))
+                    return $"You must be at least {MinimumAge} years old to use Job Portal";
             }
 
             return null;

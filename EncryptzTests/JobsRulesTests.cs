@@ -95,6 +95,26 @@ namespace EncryptzTests
             Assert.Equal("Enter a valid date of birth", JobsRules.ProfileProblem(p, Today));
         }
 
+        [Theory]
+        [InlineData(2016, 1, 15)]    // 10 years old (QA BUG-004)
+        [InlineData(2012, 10, 14)]   // 14 tomorrow
+        public void A_person_younger_than_14_cannot_make_a_profile(int y, int m, int d)
+        {
+            var p = Profile();
+            p.DateOfBirth = new DateTime(y, m, d);
+
+            Assert.Equal("You must be at least 14 years old to use Job Portal", JobsRules.ProfileProblem(p, Today));
+        }
+
+        [Fact]
+        public void A_person_of_14_today_can_make_a_profile()
+        {
+            var p = Profile();
+            p.DateOfBirth = new DateTime(2012, 10, 13);
+
+            Assert.Null(JobsRules.ProfileProblem(p, Today));
+        }
+
         // ── experience ────────────────────────────────────────────────────────
 
         private static JobExperienceDto Experience() => new()

@@ -305,6 +305,8 @@ namespace EncryptzBL.Infrastructure.Jobs
                     place = (req.Place ?? "").Trim();
                     note = (req.Note ?? "").Trim();
                     if (place.Length > 300) return ApiResponse<bool>.Fail("The place or link is too long (300 characters at most)");
+                    var placeProblem = JobPostingRules.InterviewPlaceProblem(mode, place);
+                    if (placeProblem != null) return ApiResponse<bool>.Fail(placeProblem);
                     if (note.Length > 500) return ApiResponse<bool>.Fail("The note is too long (500 characters at most)");
                 }
 

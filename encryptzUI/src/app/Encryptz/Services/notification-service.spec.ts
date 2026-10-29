@@ -77,9 +77,10 @@ describe('NotificationService', () => {
     expect(appLabel('SERVICE')).toBe('Service');
   });
 
-  it('listens once, and reads the number of unread on every start', async () => {
+  it('listens once, and reads the number of unread on every start (one read at a time)', async () => {
     const s = create();
 
+    // the bell and a dashboard both start on opening: one read, not two (QA BUG-009)
     s.start();
     s.start();
     await settle();
@@ -87,9 +88,16 @@ describe('NotificationService', () => {
     expect(s.hubs.length).toBe(1);
     expect(s.hubs[0].started).toBe(1);
     const reads = http.match(r => r.url.endsWith('/api/notifications'));
-    expect(reads.length).toBe(2);
-    reads[1].flush({ success: true, message: '', data: { items: [], unread: 4 } });
+    expect(reads.length).toBe(1);
+    reads[0].flush({ success: true, message: '', data: { items: [], unread: 4 } });
     expect(s.unread()).toBe(4);
+
+    // a later start reads again
+    s.start();
+    const again = http.match(r => r.url.endsWith('/api/notifications'));
+    expect(again.length).toBe(1);
+    again[0].flush({ success: true, message: '', data: { items: [], unread: 2 } });
+    expect(s.unread()).toBe(2);
   });
 
   it('does nothing without a login', () => {

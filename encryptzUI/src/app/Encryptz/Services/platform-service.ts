@@ -6,6 +6,21 @@ import { ApiResponse } from '../Models/ApiModels';
 
 // ── Platform administration (main database): companies, projects, access, menus ──
 
+/** A slide of the sign-in page, as the platform administrator manages it (Platform Admin › Login Ads). */
+export interface PlatformLoginAd {
+  loginAdId: number;
+  sortOrder: number;
+  tag: string;
+  title: string;
+  body: string;
+  buttonText: string;
+  linkUrl: string;
+  showFrom: string | null;
+  showUntil: string | null;
+  isActive: boolean;
+  imageVersion: number;
+}
+
 export interface PlatformCompany {
   companyId: number;
   companyName: string;
@@ -293,6 +308,45 @@ export class PlatformService {
 
   lock(): void {
     sessionStorage.removeItem(PlatformService.UNLOCK_KEY);
+  }
+
+  // ── login ads (the slides of the sign-in and register pages) ──
+
+  getLoginAds(): Observable<ApiResponse<PlatformLoginAd[]>> {
+    return this.http.get<ApiResponse<PlatformLoginAd[]>>(`${this.api}/login-ads`, { headers: this.headers });
+  }
+
+  /** The image needs the headers, so it is read as a blob and shown through an object URL. */
+  loginAdImage(id: number): Observable<Blob> {
+    return this.http.get(`${this.api}/login-ads/${id}/image`, { headers: this.headers, responseType: 'blob' });
+  }
+
+  /** A form with the file: the browser sets the multipart Content-Type (the headers hold the unlock token only). */
+  saveLoginAd(ad: Partial<PlatformLoginAd>, file: File | null): Observable<ApiResponse<number>> {
+    const form = new FormData();
+    form.append('loginAdId', String(ad.loginAdId ?? 0));
+    form.append('tag', ad.tag ?? '');
+    form.append('title', ad.title ?? '');
+    form.append('body', ad.body ?? '');
+    form.append('buttonText', ad.buttonText ?? '');
+    form.append('linkUrl', ad.linkUrl ?? '');
+    if (ad.showFrom) form.append('showFrom', ad.showFrom.slice(0, 10));
+    if (ad.showUntil) form.append('showUntil', ad.showUntil.slice(0, 10));
+    form.append('isActive', String(ad.isActive ?? true));
+    if (file) form.append('file', file, file.name);
+    return this.http.post<ApiResponse<number>>(`${this.api}/login-ads/save`, form, { headers: this.headers });
+  }
+
+  setLoginAdActive(id: number, isActive: boolean): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/login-ads/${id}/active`, { isActive }, { headers: this.headers });
+  }
+
+  reorderLoginAds(ids: number[]): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/login-ads/reorder`, ids, { headers: this.headers });
+  }
+
+  deleteLoginAd(id: number): Observable<ApiResponse<boolean>> {
+    return this.http.delete<ApiResponse<boolean>>(`${this.api}/login-ads/${id}`, { headers: this.headers });
   }
 
   // ── verification (Job Portal: certificates and job postings) ──

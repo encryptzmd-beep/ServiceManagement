@@ -42,8 +42,8 @@
             @let worked = experienceLabel(pg.experience);
             @if (age != null || worked) {
               <div class="jp-badges">
-                @if (age != null) { <span class="jp-badge" data-tone="violet"><span class="material-icons">cake</span>{{ age }} years old</span> }
-                @if (worked) { <span class="jp-badge" data-tone="green"><span class="material-icons">work_history</span>{{ worked }} experience</span> }
+                @if (age != null) { <span class="jp-badge" data-tone="violet"><span class="material-icons" aria-hidden="true">cake</span>{{ age }} years old</span> }
+                @if (worked) { <span class="jp-badge" data-tone="green"><span class="material-icons" aria-hidden="true">work_history</span>{{ worked }} experience</span> }
               </div>
             }
           } @else {
@@ -53,10 +53,10 @@
         </div>
 
         <div class="jp-hero-actions">
-          <button class="jp-btn primary" (click)="downloadResume()" title="Opens the print window: choose 'Save as PDF'">
-            <span class="material-icons">download</span>Download resume
+          <button class="jp-btn primary" (click)="downloadResume()" title="A resume made from this profile. In the print window choose 'Save as PDF' to keep a file">
+            <span class="material-icons" aria-hidden="true">print</span>Print resume / PDF
           </button>
-          <button class="jp-btn" (click)="openProfile()"><span class="material-icons">edit</span>Edit profile</button>
+          <button class="jp-btn" (click)="openProfile()"><span class="material-icons" aria-hidden="true">edit</span>Edit profile</button>
         </div>
       </div>
 
@@ -106,7 +106,7 @@
           <div class="jp-section-head">
             <span class="jp-section-icon" data-tone="violet"><span class="material-icons">tune</span></span>
             <h2>Job preferences</h2>
-            <button class="jp-btn" (click)="openPreferences()"><span class="material-icons">edit</span>Edit</button>
+            <button class="jp-btn" (click)="openPreferences()"><span class="material-icons" aria-hidden="true">edit</span>Edit</button>
           </div>
           @if (hasPreferences(pf)) {
             <dl class="jp-prefs">
@@ -146,7 +146,7 @@
             <span class="jp-section-icon" data-tone="blue"><span class="material-icons">work_outline</span></span>
             <h2>Experience</h2>
             @if (pg.experience.length) { <span class="jp-count">{{ pg.experience.length }}</span> }
-            <button class="jp-btn" (click)="openExperience()"><span class="material-icons">add</span>Add</button>
+            <button class="jp-btn" (click)="openExperience()"><span class="material-icons" aria-hidden="true">add</span>Add</button>
           </div>
           @for (e of pg.experience; track e.experienceId) {
             <div class="jp-row">
@@ -171,7 +171,7 @@
             <span class="jp-section-icon" data-tone="green"><span class="material-icons">school</span></span>
             <h2>Education</h2>
             @if (pg.education.length) { <span class="jp-count">{{ pg.education.length }}</span> }
-            <button class="jp-btn" (click)="openEducation()"><span class="material-icons">add</span>Add</button>
+            <button class="jp-btn" (click)="openEducation()"><span class="material-icons" aria-hidden="true">add</span>Add</button>
           </div>
           @for (d of pg.education; track d.educationId) {
             <div class="jp-row">
@@ -195,7 +195,7 @@
             <span class="jp-section-icon" data-tone="amber"><span class="material-icons">bolt</span></span>
             <h2>Skills</h2>
             @if (pg.skills.length) { <span class="jp-count">{{ pg.skills.length }}</span> }
-            <button class="jp-btn" (click)="openSkill()"><span class="material-icons">add</span>Add</button>
+            <button class="jp-btn" (click)="openSkill()"><span class="material-icons" aria-hidden="true">add</span>Add</button>
           </div>
           @if (pg.skills.length) {
             <div class="jp-skills">
@@ -244,7 +244,7 @@
           <div class="jp-section-head">
             <span class="jp-section-icon" data-tone="pink"><span class="material-icons">interests</span></span>
             <h2>Interests &amp; hobbies</h2>
-            <button class="jp-btn" (click)="openInterests()"><span class="material-icons">edit</span>Edit</button>
+            <button class="jp-btn" (click)="openInterests()"><span class="material-icons" aria-hidden="true">edit</span>Edit</button>
           </div>
           @if (ih.interests.length || ih.hobbies.length) {
             <dl class="jp-prefs">
@@ -272,7 +272,7 @@
             <span class="jp-section-icon" data-tone="teal"><span class="material-icons">workspace_premium</span></span>
             <h2>Certificates</h2>
             @if (pg.certificates.length) { <span class="jp-count">{{ pg.certificates.length }}</span> }
-            <button class="jp-btn" (click)="openCertificate()"><span class="material-icons">add</span>Add</button>
+            <button class="jp-btn" (click)="openCertificate()"><span class="material-icons" aria-hidden="true">add</span>Add</button>
           </div>
           @for (c of pg.certificates; track c.certificateId) {
             <div class="jp-row">
@@ -281,7 +281,7 @@
                 <div class="jp-row-sub">{{ c.issuer }} @if (c.issuedOn) { · {{ dayLabel(c.issuedOn) }} }</div>
                 @if (c.fileId) {
                   <button class="jp-file" (click)="download(c.fileId, c.fileName)">
-                    <span class="material-icons">attach_file</span>{{ c.fileName }} <small>{{ sizeLabel(c.sizeBytes) }}</small>
+                    <span class="material-icons" aria-hidden="true">attach_file</span>{{ c.fileName }} <small>{{ sizeLabel(c.sizeBytes) }}</small>
                   </button>
                 }
               </div>
@@ -302,7 +302,7 @@
             <span class="jp-section-icon" data-tone="orange"><span class="material-icons">description</span></span>
             <h2>Resume</h2>
             <label class="jp-btn" [class.disabled]="resumeBusy()">
-              <span class="material-icons">upload</span>
+              <span class="material-icons" aria-hidden="true">upload</span>
               {{ resumeBusy() ? 'Uploading…' : (pg.resume ? 'Replace' : 'Upload') }}
               <input type="file" accept=".pdf,.doc,.docx" hidden [disabled]="resumeBusy()" (change)="onResumePicked($event)" />
             </label>
@@ -311,7 +311,7 @@
             <div class="jp-row">
               <div class="jp-row-main">
                 <button class="jp-file" (click)="download(r.fileId, r.fileName)">
-                  <span class="material-icons">description</span>{{ r.fileName }} <small>{{ sizeLabel(r.sizeBytes) }}</small>
+                  <span class="material-icons" aria-hidden="true">description</span>{{ r.fileName }} <small>{{ sizeLabel(r.sizeBytes) }}</small>
                 </button>
                 <div class="jp-row-sub">Uploaded {{ dayLabel(r.uploadedAt) }}</div>
               </div>
@@ -376,8 +376,8 @@
             </label>
             @if (s.isOn && shareUrl) {
               <div class="jp-share-link">
-                <input class="jp-input" [value]="shareUrl" readonly aria-label="Link to your profile" (focus)="$any($event.target).select()" />
-                <button class="jp-btn" type="button" (click)="copyShareLink()" title="Copy the link"><span class="material-icons">content_copy</span>Copy</button>
+                <input class="jp-input" [value]="shareUrl" [title]="shareUrl" readonly aria-label="Link to your profile" (focus)="$any($event.target).select()" />
+                <button class="jp-btn" type="button" (click)="copyShareLink()" title="Copy the link"><span class="material-icons" aria-hidden="true">content_copy</span>Copy</button>
                 <a class="jp-btn ghost" [href]="'/p/' + s.code" target="_blank" rel="noopener" title="See it as others do"><span class="material-icons">open_in_new</span></a>
               </div>
             }
@@ -501,7 +501,7 @@
 <!-- ═══════════ DIALOG ═══════════ -->
 @if (dialog(); as d) {
   <!-- a click beside the dialog does not close it: what is typed would be lost -->
-  <div class="jp-overlay">
+  <div class="jp-overlay" (escapeClose)="closeDialog()">
     <div class="jp-dialog" role="dialog" aria-modal="true">
       <div class="jp-dialog-head">
         <h3>{{ d.title }}</h3>
@@ -528,7 +528,8 @@
                 <input class="jp-input" name="city" [(ngModel)]="d.model.city" maxlength="100" />
               </label>
               <label>Date of birth *
-                <input class="jp-input" name="dateOfBirth" type="date" [(ngModel)]="d.model.dateOfBirth" />
+                <input class="jp-input" name="dateOfBirth" type="date" min="1900-01-01" [max]="latestBirthDate" [(ngModel)]="d.model.dateOfBirth" />
+                <small class="jp-hint">Shows your age on the profile. Never on your shared link. At least 14 years.</small>
               </label>
             </div>
             <div class="jp-two">
@@ -732,13 +733,13 @@
                   <datalist id="jp-subskill-catalog">
                     @for (name of catalogChips(d.model); track name) { <option [value]="name"></option> }
                   </datalist>
-                  <button type="button" class="jp-btn" (click)="addSubSkill(d.model, d.model.newSubSkill)"><span class="material-icons">add</span>Add</button>
+                  <button type="button" class="jp-btn" (click)="addSubSkill(d.model, d.model.newSubSkill)"><span class="material-icons" aria-hidden="true">add</span>Add</button>
                 </div>
                 @if (catalogChips(d.model).length) {
                   <small>Suggested for {{ d.model.skillName }} — click to add:</small>
                   <div class="jp-subskill-chips">
                     @for (name of catalogChips(d.model); track name) {
-                      <button type="button" class="jp-chip-btn" (click)="addSubSkill(d.model, name)"><span class="material-icons">add</span>{{ name }}</button>
+                      <button type="button" class="jp-chip-btn" (click)="addSubSkill(d.model, name)"><span class="material-icons" aria-hidden="true">add</span>{{ name }}</button>
                     }
                   </div>
                 }
@@ -792,7 +793,7 @@
           }
         }
 
-        @if (formError()) { <div class="jp-error">{{ formError() }}</div> }
+        @if (formError()) { <div class="jp-error" [scrollIntoViewOn]="formError()">{{ formError() }}</div> }
       </div>
 
       <div class="jp-dialog-foot">

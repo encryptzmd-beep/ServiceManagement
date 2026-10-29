@@ -7,8 +7,12 @@
       </a>
       <nav class="ps-nav" aria-label="Site">
         <a routerLink="/jobs" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: false }">Find jobs</a>
-        <a routerLink="/login" rel="nofollow">Sign in</a>
-        <a class="ps-cta" routerLink="/register" rel="nofollow">Create free profile</a>
+        @if (signedIn()) {
+          <a class="ps-cta" routerLink="/apps/jobs" rel="nofollow">My Job Portal</a>
+        } @else {
+          <a routerLink="/login" rel="nofollow">Sign in</a>
+          <a class="ps-cta" routerLink="/register" rel="nofollow">Create free profile</a>
+        }
       </nav>
     </div>
   </header>

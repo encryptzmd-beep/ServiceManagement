@@ -11,6 +11,7 @@ import { jobsMenu } from '../personal-shell-component/jobs-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
 import { shareLink } from '../../Services/share-link';
+import { EscapeClose } from '../shared/escape-close';
 
 /**
  * Job Portal, one job on a page of its own (/apps/jobs/job/:id): the job board opens it in a
@@ -21,7 +22,7 @@ import { shareLink } from '../../Services/share-link';
 @Component({
   selector: 'app-job-detail',
   standalone: true,
-  imports: [FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent],
+  imports: [FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent, EscapeClose],
   templateUrl: './job-detail-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',

@@ -4,7 +4,7 @@
       <h2>Verification</h2>
       <p>Certificates people uploaded and jobs companies want to publish. Nothing here is visible to others until it is approved. Verified people and approved jobs carry the Verified tick.</p>
     </div>
-    <button class="vp-btn" (click)="refresh()" [disabled]="loading() || peopleLoading() || rejectionsLoading()"><span class="material-icons">refresh</span>Refresh</button>
+    <button class="vp-btn" (click)="refresh()" [disabled]="loading() || peopleLoading() || rejectionsLoading()"><span class="material-icons" aria-hidden="true">refresh</span>Refresh</button>
   </div>
 
   <div class="vp-filters" role="group" aria-label="Show">
@@ -48,17 +48,17 @@
               <div class="vp-person-headline">{{ p.headline }}</div>
             </div>
             @if (p.verifiedAt) {
-              <span class="vp-kind ok"><span class="material-icons">verified</span>Verified</span>
+              <span class="vp-kind ok"><span class="material-icons" aria-hidden="true">verified</span>Verified</span>
             } @else {
-              <span class="vp-kind cert"><span class="material-icons">pending</span>Not verified</span>
+              <span class="vp-kind cert"><span class="material-icons" aria-hidden="true">pending</span>Not verified</span>
             }
           </div>
 
           <div class="vp-meta vp-contact">
-            @if (p.city) { <span><span class="material-icons">place</span>{{ p.city }}</span> }
-            @if (p.contactEmail) { <span><span class="material-icons">mail_outline</span>{{ p.contactEmail }}</span> }
-            @if (p.contactPhone) { <span><span class="material-icons">call</span>{{ p.contactPhone }}</span> }
-            <span><span class="material-icons">cake</span>{{ p.dateOfBirth ? dayLabel(p.dateOfBirth) : 'No date of birth' }}</span>
+            @if (p.city) { <span><span class="material-icons" aria-hidden="true">place</span>{{ p.city }}</span> }
+            @if (p.contactEmail) { <span><span class="material-icons" aria-hidden="true">mail_outline</span>{{ p.contactEmail }}</span> }
+            @if (p.contactPhone) { <span><span class="material-icons" aria-hidden="true">call</span>{{ p.contactPhone }}</span> }
+            <span><span class="material-icons" aria-hidden="true">cake</span>{{ p.dateOfBirth ? dayLabel(p.dateOfBirth) : 'No date of birth' }}</span>
           </div>
           <div class="vp-facts">
             <span>{{ p.experienceCount }} {{ p.experienceCount === 1 ? 'job' : 'jobs' }} in experience</span>
@@ -77,7 +77,7 @@
               @if (p.verifiedAt) {
                 <button class="vp-btn" (click)="startPersonRefusal(p)" [disabled]="busy() !== null">Take the tick away</button>
               } @else {
-                <button class="vp-btn primary" (click)="verifyPerson(p)" [disabled]="busy() !== null"><span class="material-icons">verified</span>Verify person</button>
+                <button class="vp-btn primary" (click)="verifyPerson(p)" [disabled]="busy() !== null"><span class="material-icons" aria-hidden="true">verified</span>Verify person</button>
               }
             }
           </div>
@@ -135,8 +135,8 @@
           <div class="vp-rejection-top">
             <div>
               <h3>{{ r.jobTitle }}</h3>
-              <div class="vp-meta"><span><span class="material-icons">apartment</span>{{ r.companyName }}</span>
-                <span><span class="material-icons">person_outline</span>{{ r.candidateName || 'Candidate' }}@if (r.candidateHeadline) { · {{ r.candidateHeadline }} }</span></div>
+              <div class="vp-meta"><span><span class="material-icons" aria-hidden="true">apartment</span>{{ r.companyName }}</span>
+                <span><span class="material-icons" aria-hidden="true">person_outline</span>{{ r.candidateName || 'Candidate' }}@if (r.candidateHeadline) { · {{ r.candidateHeadline }} }</span></div>
             </div>
             <span class="vp-when">{{ dayLabel(r.rejectedAt) }}</span>
           </div>
@@ -170,7 +170,7 @@
     @for (entry of items(); track entry.key) {
       <article class="vp-card">
         @if (entry.kind === 'certificate') {
-          <div class="vp-kind cert"><span class="material-icons">workspace_premium</span>Certificate</div>
+          <div class="vp-kind cert"><span class="material-icons" aria-hidden="true">workspace_premium</span>Certificate</div>
           <h3>{{ entry.item.title }}</h3>
           <div class="vp-meta">
             @if (entry.item.issuer) { <span>Issued by {{ entry.item.issuer }}</span> }
@@ -182,10 +182,10 @@
             @if (entry.item.personHeadline) { <span>· {{ entry.item.personHeadline }}</span> }
           </div>
           <button class="vp-file" (click)="viewFile(entry.item)">
-            <span class="material-icons">attach_file</span>{{ entry.item.fileName }}
+            <span class="material-icons" aria-hidden="true">attach_file</span>{{ entry.item.fileName }}
           </button>
         } @else {
-          <div class="vp-kind job"><span class="material-icons">work_outline</span>Job posting @if (entry.item.wasPublished) { · changed after it was public }</div>
+          <div class="vp-kind job"><span class="material-icons" aria-hidden="true">work_outline</span>Job posting @if (entry.item.wasPublished) { · changed after it was public }</div>
           <h3>{{ entry.item.title }}</h3>
           <div class="vp-meta">
             <span><strong>{{ entry.item.companyName }}</strong></span>
@@ -193,7 +193,7 @@
             <span>{{ entry.item.employmentType }}</span>
             <span>{{ entry.item.workMode }}</span>
             @if (range(entry.item.experienceMinYears, entry.item.experienceMaxYears, 'years'); as exp) { <span>{{ exp }}</span> }
-            @if (range(entry.item.salaryMin, entry.item.salaryMax, '₹ per month'); as pay) { <span>{{ pay }}</span> }
+            @if (salaryLabel(entry.item); as pay) { <span>{{ pay }}</span> }
             @if (entry.item.closesOn) { <span>closes {{ dayLabel(entry.item.closesOn) }}</span> }
           </div>
           @if (entry.item.skills) { <div class="vp-skills">Skills: {{ entry.item.skills }}</div> }
@@ -208,7 +208,7 @@
               {{ entry.kind === 'certificate' ? 'Not verified' : 'Return to company' }}
             </button>
             <button class="vp-btn primary" (click)="approve(entry)" [disabled]="busy() !== null">
-              <span class="material-icons">check</span>{{ entry.kind === 'certificate' ? 'Verify' : 'Approve' }}
+              <span class="material-icons" aria-hidden="true">check</span>{{ entry.kind === 'certificate' ? 'Verify' : 'Approve' }}
             </button>
           }
         </div>

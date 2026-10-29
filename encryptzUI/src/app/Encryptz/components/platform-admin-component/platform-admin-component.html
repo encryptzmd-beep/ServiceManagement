@@ -77,6 +77,7 @@
       <button [class.active]="tab() === 'verification'" (click)="setTab('verification')">Verification</button>
       <button [class.active]="tab() === 'servers'" (click)="setTab('servers')">Database Servers</button>
       <button [class.active]="tab() === 'settings'" (click)="setTab('settings')">Settings</button>
+      <button [class.active]="tab() === 'loginAds'" (click)="setTab('loginAds')">Login Ads</button>
       <button [class.active]="tab() === 'menus'" (click)="setTab('menus')">Menus</button>
     }
   </div>
@@ -371,6 +372,11 @@
     </div>
   }
 
+  <!-- ═══════════ LOGIN ADS (slides of the sign-in and register pages) ═══════════ -->
+  @if (tab() === 'loginAds' && isPlatformAdmin()) {
+    <app-login-ads-panel />
+  }
+
   <!-- ═══════════ SETTINGS ═══════════ -->
   @if (tab() === 'settings' && isPlatformAdmin()) {
     <div class="fx-table-wrap">
@@ -507,7 +513,7 @@
 
 <!-- ═══════════ MODULES OF A COMPANY ═══════════ -->
 @if (membersCompany(); as ac) {
-  <div class="modal-overlay" (click)="closeAdministrators()">
+  <div class="modal-overlay" (click)="closeAdministrators()" (escapeClose)="closeAdministrators()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>Administrators · {{ ac.companyName }}</h2>
@@ -549,7 +555,7 @@
           <small>The person must have registered first. Inside the company its own administrator manages the other members.</small>
         </div>
 
-        @if (memberError()) { <div class="pa-error">{{ memberError() }}</div> }
+        @if (memberError()) { <div class="pa-error" [scrollIntoViewOn]="memberError()">{{ memberError() }}</div> }
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" (click)="closeAdministrators()">Close</button>
@@ -559,7 +565,7 @@
 }
 
 @if (modulesCompany(); as mc) {
-  <div class="modal-overlay" (click)="closeModules()">
+  <div class="modal-overlay" (click)="closeModules()" (escapeClose)="closeModules()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>Modules · {{ mc.companyName }}</h2>
@@ -578,12 +584,12 @@
               <strong>{{ m.moduleName }} @if (m.isReleased === false) { <span class="soon-badge">Coming soon</span> }</strong>
               <small>{{ m.description }}</small>
             </span>
-            <span class="pa-status" [class.off]="!m.isEnabled">{{ m.isEnabled ? 'On · ' + m.userCount + ' users' : 'Off' }}</span>
+            <span class="pa-status" [class.off]="!m.isEnabled">{{ m.isEnabled ? 'On · ' + m.userCount + (m.userCount === 1 ? ' user' : ' users') : 'Off' }}</span>
           </label>
         } @empty {
           <div class="pa-hint">No modules.</div>
         }
-        @if (formError()) { <div class="pa-error">{{ formError() }}</div> }
+        @if (formError()) { <div class="pa-error" [scrollIntoViewOn]="formError()">{{ formError() }}</div> }
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" (click)="closeModules()">Close</button>
@@ -594,7 +600,7 @@
 
 <!-- ═══════════ APPLICATION DIALOG ═══════════ -->
 @if (applicationForm; as f) {
-  <div class="modal-overlay" (click)="closeForms()">
+  <div class="modal-overlay" (click)="closeForms()" (escapeClose)="closeForms()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>{{ f.moduleId ? 'Edit Application' : 'New Application' }}</h2>
@@ -653,7 +659,7 @@
           Active (clear it to hide the application from everyone)
         </label>
 
-        @if (formError()) { <div class="pa-error">{{ formError() }}</div> }
+        @if (formError()) { <div class="pa-error" [scrollIntoViewOn]="formError()">{{ formError() }}</div> }
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" (click)="closeForms()">Cancel</button>
@@ -666,7 +672,7 @@
 
 <!-- ═══════════ COMPANY DIALOG ═══════════ -->
 @if (companyForm; as f) {
-  <div class="modal-overlay" (click)="closeForms()">
+  <div class="modal-overlay" (click)="closeForms()" (escapeClose)="closeForms()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>{{ f.companyId ? 'Edit Company' : 'New Company' }}</h2>
@@ -680,7 +686,7 @@
           </div>
           <div class="form-group">
             <label>Company Code *</label>
-            <input class="form-input" [(ngModel)]="f.companyCode" placeholder="C002" />
+            <input class="form-input" [(ngModel)]="f.companyCode" placeholder="Letters and digits, e.g. ACME01" />
           </div>
           <div class="form-group">
             <label>City</label>
@@ -703,7 +709,7 @@
         @if (!f.companyId) {
           <div class="form-note">You are added to the new company as Admin so you can set it up. Next: attach its database.</div>
         }
-        @if (formError()) { <div class="pa-error">{{ formError() }}</div> }
+        @if (formError()) { <div class="pa-error" [scrollIntoViewOn]="formError()">{{ formError() }}</div> }
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" (click)="closeForms()">Cancel</button>
@@ -715,7 +721,7 @@
 
 <!-- ═══════════ PROJECT DIALOG ═══════════ -->
 @if (projectForm; as f) {
-  <div class="modal-overlay" (click)="closeForms()">
+  <div class="modal-overlay" (click)="closeForms()" (escapeClose)="closeForms()">
     <div class="modal-content wide" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>{{ f.projectId ? 'Edit Company Database' : 'Attach Company Database' }}</h2>
@@ -778,7 +784,7 @@
             {{ t.message }}
           </div>
         }
-        @if (formError()) { <div class="pa-error">{{ formError() }}</div> }
+        @if (formError()) { <div class="pa-error" [scrollIntoViewOn]="formError()">{{ formError() }}</div> }
       </div>
       <div class="modal-footer">
         <button class="btn-secondary pa-left" (click)="testProjectConnection()" [disabled]="testing()">
@@ -793,7 +799,7 @@
 
 <!-- ═══════════ LOCATION DIALOG ═══════════ -->
 @if (locationForm; as f) {
-  <div class="modal-overlay" (click)="closeForms()">
+  <div class="modal-overlay" (click)="closeForms()" (escapeClose)="closeForms()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>{{ f.locationId ? 'Edit Branch' : 'New Branch' }} · {{ selectedProject()?.companyName }}</h2>
@@ -821,7 +827,7 @@
             <input class="form-input" [(ngModel)]="f.address" />
           </div>
         </div>
-        @if (formError()) { <div class="pa-error">{{ formError() }}</div> }
+        @if (formError()) { <div class="pa-error" [scrollIntoViewOn]="formError()">{{ formError() }}</div> }
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" (click)="closeForms()">Cancel</button>
@@ -833,7 +839,7 @@
 
 <!-- ═══════════ DATABASE SERVER DIALOG ═══════════ -->
 @if (serverForm; as f) {
-  <div class="modal-overlay" (click)="closeForms()">
+  <div class="modal-overlay" (click)="closeForms()" (escapeClose)="closeForms()">
     <div class="modal-content wide" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>{{ f.dbServerId ? 'Edit Database Server' : 'New Database Server' }}</h2>
@@ -870,7 +876,7 @@
         @if (testResult(); as t) {
           <div class="pa-test" [class.ok]="t.connected && t.schemaReady" [class.warn]="t.connected && !t.schemaReady" [class.bad]="!t.connected">{{ t.message }}</div>
         }
-        @if (formError()) { <div class="pa-error">{{ formError() }}</div> }
+        @if (formError()) { <div class="pa-error" [scrollIntoViewOn]="formError()">{{ formError() }}</div> }
       </div>
       <div class="modal-footer">
         <button class="btn-secondary pa-left" (click)="testServer()" [disabled]="testing()">{{ testing() ? 'Testing…' : 'Test connection' }}</button>
@@ -883,7 +889,7 @@
 
 <!-- ═══════════ MENU DIALOG ═══════════ -->
 @if (menuForm; as f) {
-  <div class="modal-overlay" (click)="closeForms()">
+  <div class="modal-overlay" (click)="closeForms()" (escapeClose)="closeForms()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>{{ f.menuId ? 'Edit Menu' : 'New Menu' }}</h2>
@@ -925,7 +931,7 @@
           </div>
         </div>
         <div class="form-note">The path must be a page that exists in the application. A group heading has no path.</div>
-        @if (formError()) { <div class="pa-error">{{ formError() }}</div> }
+        @if (formError()) { <div class="pa-error" [scrollIntoViewOn]="formError()">{{ formError() }}</div> }
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" (click)="closeForms()">Cancel</button>

@@ -164,7 +164,7 @@ export class MessagesComponent implements OnDestroy {
         this.open.set(res.data);
         // it is read now: its unread count goes
         this.conversations.update(list => list.map(c => (c.conversationId === id ? { ...c, unread: 0 } : c)));
-        this.messageAlerts.refresh(this.side);
+        this.messageAlerts.refresh(this.side, true);
         if (grew) this.scrollDown();
       },
       error: () => { this.openLoading.set(false); if (!quiet) this.notify('The conversation could not be opened', false); },

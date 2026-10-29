@@ -17,7 +17,7 @@
         <p>The companies you recruit for. Link a job to a client on the Job postings page; people never see it.</p>
       </div>
       <span class="jb-grow"></span>
-      <button class="jp-btn primary" (click)="openNew()"><span class="material-icons">add</span>New client</button>
+      <button class="jp-btn primary" (click)="openNew()"><span class="material-icons" aria-hidden="true">add</span>New client</button>
     </div>
 
     @if (clients().length) {
@@ -37,10 +37,10 @@
           <h2>{{ c.name }}</h2>
           @if (c.industry) { <div class="jb-company">{{ c.industry }}</div> }
           <div class="jb-meta">
-            @if (c.contactPerson) { <span><span class="material-icons">person</span>{{ c.contactPerson }}</span> }
-            @if (c.phone) { <span><span class="material-icons">call</span>{{ c.phone }}</span> }
-            @if (c.email) { <span><span class="material-icons">mail_outline</span>{{ c.email }}</span> }
-            @if (c.city) { <span><span class="material-icons">place</span>{{ c.city }}</span> }
+            @if (c.contactPerson) { <span><span class="material-icons" aria-hidden="true">person</span>{{ c.contactPerson }}</span> }
+            @if (c.phone) { <span><span class="material-icons" aria-hidden="true">call</span>{{ c.phone }}</span> }
+            @if (c.email) { <span><span class="material-icons" aria-hidden="true">mail_outline</span>{{ c.email }}</span> }
+            @if (c.city) { <span><span class="material-icons" aria-hidden="true">place</span>{{ c.city }}</span> }
           </div>
           @if (c.notes) { <p class="hr-note cc-note">{{ c.notes }}</p> }
         </div>
@@ -77,7 +77,7 @@
 </app-personal-shell>
 
 @if (form(); as f) {
-  <div class="jp-overlay">
+  <div class="jp-overlay" (escapeClose)="closeForm()">
     <div class="jp-dialog" role="dialog" aria-modal="true">
       <div class="jp-dialog-head">
         <h3>{{ f.clientId ? 'Edit client' : 'New client' }}</h3>
@@ -110,7 +110,7 @@
           <textarea class="jp-input" name="notes" rows="3" [(ngModel)]="f.notes" maxlength="2000" placeholder="Terms, fee agreed, who to call…"></textarea>
         </label>
         <label class="jp-check"><input type="checkbox" name="isActive" [(ngModel)]="f.isActive" /> Active client</label>
-        @if (formError()) { <div class="jp-error">{{ formError() }}</div> }
+        @if (formError()) { <div class="jp-error" [scrollIntoViewOn]="formError()">{{ formError() }}</div> }
       </div>
       <div class="jp-dialog-foot">
         <button class="jp-btn ghost" (click)="closeForm()" [disabled]="saving()">Cancel</button>

@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
 import { applyUrl } from '../../Auth/return-url';
-import { JobPostingView } from '../../Services/jobs-service';
+import { JobPostingView, JobsService } from '../../Services/jobs-service';
 import { PublicJobsService, jobPath } from '../../Services/public-jobs-service';
 import { SITE_NAME, SeoService } from '../../Services/seo-service';
 import { dayLabel, experienceLabel, initial, salaryLabel, skillList } from '../../Services/job-labels';
@@ -48,6 +48,9 @@ export class PublicJobComponent implements OnDestroy {
   error = signal('');
   /** "Similar jobs": links to the jobs most like this one (for people, and for search engines to follow). */
   related = signal<JobPostingView[]>([]);
+  /** Signed in (known in the browser only) and whether the person applied to this job already. */
+  signedIn = signal(false);
+  applied = signal(false);
   readonly path = jobPath;
 
   readonly dayLabel = dayLabel;
@@ -80,6 +83,7 @@ export class PublicJobComponent implements OnDestroy {
         this.job.set(res.data);
         this.describe(res.data);
         this.loadRelated(id);
+        this.loadMine(id);
       },
       error: err => {
         this.loading.set(false);
@@ -95,6 +99,18 @@ export class PublicJobComponent implements OnDestroy {
     this.api.related(id).subscribe({
       next: res => this.related.set(res.success ? (res.data ?? []).filter(p => p.postingId !== id) : []),
       error: () => this.related.set([]),
+    });
+  }
+
+  /** In the browser, signed in: has the person applied already? The button then says so. */
+  private loadMine(id: number): void {
+    this.applied.set(false);
+    if (!this.browser) return;
+    try { if (!this.injector.get(AuthService).isLoggedIn()) return; } catch { return; }
+    this.signedIn.set(true);
+    this.injector.get(JobsService).getApplications().subscribe({
+      next: res => this.applied.set(res.success && (res.data ?? []).some(a => a.postingId === id && a.status !== 'Withdrawn')),
+      error: () => this.applied.set(false),
     });
   }
 
@@ -117,7 +133,8 @@ export class PublicJobComponent implements OnDestroy {
 
   /** Signed in: straight to the job in Job Portal (it opens with Apply). Else sign-in first. */
   apply(job: JobPostingView): void {
-    const target = applyUrl(job.postingId);
+    // applied already: the job in Job Portal shows the application, not a second form
+    const target = this.applied() ? `/apps/jobs/job/${job.postingId}` : applyUrl(job.postingId);
     if (this.browser && this.injector.get(AuthService).isLoggedIn()) {
       this.router.navigateByUrl(target);
       return;

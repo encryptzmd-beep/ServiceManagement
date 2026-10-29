@@ -408,10 +408,31 @@ describe('HiringComponent', () => {
     const c = fixture.componentInstance;
     c.showApplicants(c.postings()[0]);
     c.openInterview(31);
-    c.interview = { date: '2099-11-03', time: '15:00', mode: 'In person', place: '', note: '' };
+    c.interview = { date: '2099-11-03', time: '15:00', mode: 'In person', place: 'MG Road, Kochi', note: '' };
     c.saveInterview();
     expect(c.interviewFor()).not.toBeNull();
     expect(c.interviewError()).toBe('An interview can be set only for an open application');
+  });
+
+  it('needs an address in person and a link for a video call before anything is sent (GAP-041)', () => {
+    let sent = 0;
+    api.setApplicantInterview = () => { sent++; return ok(true); };
+    const fixture = create();
+    const c = fixture.componentInstance;
+    c.showApplicants(c.postings()[0]);
+    c.openInterview(31);
+
+    c.interview = { date: '2099-11-03', time: '15:00', mode: 'In person', place: ' ', note: '' };
+    c.saveInterview();
+    expect(c.interviewError()).toBe('Enter the address of the interview');
+
+    c.interview = { date: '2099-11-03', time: '15:00', mode: 'Video', place: 'meet.example.com/x', note: '' };
+    c.saveInterview();
+    expect(c.interviewError()).toBe('The link of the call must start with https://');
+
+    c.interview = { date: '2099-11-03', time: '15:00', mode: 'Phone', place: '', note: '' };
+    c.saveInterview();
+    expect(sent).toBe(1);
   });
 
   it('opens the applicants of the job the address names (from the dashboard)', () => {
@@ -420,7 +441,7 @@ describe('HiringComponent', () => {
       imports: [HiringComponent],
       providers: [
         provideRouter([]),
-        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({ job: '7' }) } } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({ job: '7' }) }, queryParamMap: of(convertToParamMap({ job: '7' })) } },
         { provide: CompanyJobsService, useValue: api },
         { provide: ConsultancyService, useValue: consultancy },
         { provide: AuthService, useValue: {

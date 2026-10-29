@@ -15,7 +15,7 @@
         <span class="ws-switch-icon" [class.is-company]="stage() !== 'company'">
           <span class="material-icons">{{ stage() === 'company' ? 'groups' : 'apartment' }}</span>
         </span>
-        <span class="ws-switch-name">{{ stage() === 'company' ? 'Personal Workspace' : currentCompanyName() }}</span>
+        <span class="ws-switch-name" [title]="stage() === 'company' ? 'Personal Workspace' : currentCompanyName()">{{ stage() === 'company' ? 'Personal Workspace' : currentCompanyName() }}</span>
         <span class="material-icons ws-chevron">expand_more</span>
       </button>
 
@@ -56,7 +56,7 @@
                   <span class="material-icons">apartment</span>
                 </span>
                 <span class="ws-item-text">
-                  <h3>{{ company.companyName }}</h3>
+                  <h3 [title]="company.companyName">{{ company.companyName }}</h3>
                   <small class="company-code">{{ company.companyCode }}</small>
                   @if (companyStatus(company)) {
                     <span class="status-badge">{{ companyStatus(company) }}</span>
@@ -75,7 +75,7 @@
               </div>
             } @empty {
               <div class="no-match">
-                <span class="material-icons">search_off</span>
+                <span class="material-icons" aria-hidden="true">search_off</span>
                 No company matches "{{ search() }}".
               </div>
             }
@@ -127,28 +127,35 @@
     <nav class="ws-nav">
       @if (stage() === 'company') {
         <button type="button" class="ws-link active" (click)="scrollToTop()">
-          <span class="material-icons">home</span>Home
+          <span class="material-icons" aria-hidden="true">home</span>Home
         </button>
         @if (personalApps().length > 0) {
           <div class="ws-section">Personal applications</div>
           @for (app of personalApps(); track app.moduleKey) {
-            <button type="button" class="ws-link" [class.soon]="!canOpenPersonalApp(app)" (click)="openPersonalApp(app)"
-                    [attr.aria-disabled]="!canOpenPersonalApp(app)">
-              <span class="material-icons">{{ app.icon || 'apps' }}</span>{{ app.moduleName }}
-            </button>
+            <!-- a real link when it can be opened (open in a new tab works); a disabled button when not (UX-033) -->
+            @if (canOpenPersonalApp(app)) {
+              <a class="ws-link" [routerLink]="app.routePath">
+                <span class="material-icons" aria-hidden="true">{{ app.icon || 'apps' }}</span>{{ app.moduleName }}
+              </a>
+            } @else {
+              <button type="button" class="ws-link soon" aria-disabled="true" [title]="app.isReleased ? '' : app.moduleName + ' is coming soon'">
+                <span class="material-icons" aria-hidden="true">{{ app.icon || 'apps' }}</span>{{ app.moduleName }}
+                @if (!app.isReleased) { <span class="ws-soon-tag">Soon</span> }
+              </button>
+            }
           }
         }
       } @else {
         <button type="button" class="ws-link" (click)="backToCompanies()">
-          <span class="material-icons">home</span>Home
+          <span class="material-icons" aria-hidden="true">home</span>Home
         </button>
         <div class="ws-section">{{ currentCompanyName() }}</div>
         <button type="button" class="ws-link" [class.active]="stage() === 'module'" (click)="backToModules()">
-          <span class="material-icons">widgets</span>Modules
+          <span class="material-icons" aria-hidden="true">widgets</span>Modules
         </button>
         @if (stage() === 'branch') {
           <button type="button" class="ws-link active">
-            <span class="material-icons">storefront</span>Branches
+            <span class="material-icons" aria-hidden="true">storefront</span>Branches
           </button>
         }
       }
@@ -156,10 +163,10 @@
 
     <div class="ws-nav ws-nav-bottom">
       <button type="button" class="ws-link" (click)="openChangePassword()">
-        <span class="material-icons">lock</span>Change Password
+        <span class="material-icons" aria-hidden="true">lock</span>Change Password
       </button>
       <button type="button" class="ws-link" (click)="logout()">
-        <span class="material-icons">logout</span>Logout
+        <span class="material-icons" aria-hidden="true">logout</span>Logout
       </button>
     </div>
   </aside>
@@ -187,8 +194,8 @@
         </button>
         @if (userMenuOpen()) {
           <div class="ws-user-menu">
-            <button type="button" (click)="openChangePassword()"><span class="material-icons">lock</span>Change Password</button>
-            <button type="button" (click)="logout()"><span class="material-icons">logout</span>Logout</button>
+            <button type="button" (click)="openChangePassword()"><span class="material-icons" aria-hidden="true">lock</span>Change Password</button>
+            <button type="button" (click)="logout()"><span class="material-icons" aria-hidden="true">logout</span>Logout</button>
           </div>
         }
       </div>
@@ -200,7 +207,7 @@
         <div class="ws-center">
           @if (error()) {
             <div class="error-msg">
-              <span class="material-icons">error_outline</span>
+              <span class="material-icons" aria-hidden="true">error_outline</span>
               {{ error() }}
               <button (click)="reload()" class="retry-btn">Refresh</button>
             </div>
@@ -212,16 +219,21 @@
               <h1>{{ greeting() }}@if (firstName()) {, {{ firstName() }}}! <span class="wave">👋</span></h1>
               <p>Manage your career, finance &amp; daily tasks<br />from one powerful workspace.</p>
               @if (individualId(); as id) {
-                <div class="individual-id" title="Your lifelong ID on this platform. It never changes.">
+                <!-- what the ID is for, and a copy button (UX-010) -->
+                <div class="individual-id" title="Your lifelong ID on this platform. It never changes. Give it to a company that wants to add you as a member or administrator.">
                   Individual ID <strong>{{ id }}</strong>
+                  <button type="button" class="id-copy" (click)="copyIndividualId(id)" [attr.aria-label]="'Copy your Individual ID ' + id">
+                    <span class="material-icons" aria-hidden="true">{{ idCopied() ? 'check' : 'content_copy' }}</span>
+                  </button>
                 </div>
+                <div class="individual-id-help">Give this ID to a company that wants to add you. It never changes.</div>
               }
               <div class="ws-hero-actions">
                 <button type="button" class="hero-btn solid" (click)="scrollTo('quick-access')">
-                  <span class="material-icons">auto_awesome</span>Quick Actions
+                  <span class="material-icons" aria-hidden="true">auto_awesome</span>Quick Actions
                 </button>
                 <button type="button" class="hero-btn ghost" (click)="scrollTo('insights')">
-                  <span class="material-icons">insights</span>View Insights
+                  <span class="material-icons" aria-hidden="true">insights</span>View Insights
                 </button>
               </div>
             </div>
@@ -263,7 +275,7 @@
                   <div class="insight-icon" [attr.data-tone]="card.tone"><span class="material-icons">{{ card.icon }}</span></div>
                   <div class="insight-title">{{ card.title }}</div>
                   <div class="insight-value">—</div>
-                  <div class="insight-foot"><span class="material-icons">schedule</span>No data yet</div>
+                  <div class="insight-foot"><span class="material-icons" aria-hidden="true">schedule</span>No data yet</div>
                 </div>
               }
             </div>
@@ -351,7 +363,7 @@
 
               <button class="btn-signin" type="submit" [disabled]="creating()">{{ creating() ? 'Creating…' : 'Create Company' }}</button>
               <button class="link-back" type="button" (click)="closeCreate()" [disabled]="creating()">
-                <span class="material-icons">chevron_left</span> Back to workspace
+                <span class="material-icons" aria-hidden="true">chevron_left</span> Back to workspace
               </button>
               <p class="small">Setting up a new company takes a few minutes. You can stay on the next screen or come back later.</p>
             </form>
@@ -372,11 +384,11 @@
               <span class="spacer"></span>
               @if (canAdminister()) {
                 <button class="link-back" (click)="openAdministration()">
-                  <span class="material-icons">admin_panel_settings</span> Administration
+                  <span class="material-icons" aria-hidden="true">admin_panel_settings</span> Administration
                 </button>
               }
               <button class="link-back" (click)="backToCompanies()">
-                <span class="material-icons">chevron_left</span> Back to workspace
+                <span class="material-icons" aria-hidden="true">chevron_left</span> Back to workspace
               </button>
             } @else {
               <div class="frame-icon"><span class="material-icons">storefront</span></div>
@@ -386,7 +398,7 @@
               </div>
               <span class="spacer"></span>
               <button class="link-back" (click)="backToModules()">
-                <span class="material-icons">chevron_left</span> Back to modules
+                <span class="material-icons" aria-hidden="true">chevron_left</span> Back to modules
               </button>
             }
           </div>
@@ -442,7 +454,7 @@
                   @if (canAdminister()) {
                     <p class="small">Add a branch in Administration.</p>
                     <button class="link-back" (click)="openAdministration()">
-                      <span class="material-icons">admin_panel_settings</span> Administration
+                      <span class="material-icons" aria-hidden="true">admin_panel_settings</span> Administration
                     </button>
                   } @else {
                     <p class="small">Ask your administrator to give you a branch.</p>
@@ -471,7 +483,7 @@
 
             @if (error()) {
               <div class="error-msg">
-                <span class="material-icons">error_outline</span>
+                <span class="material-icons" aria-hidden="true">error_outline</span>
                 {{ error() }}
                 <button (click)="reload()" class="retry-btn">Retry</button>
               </div>
@@ -542,14 +554,14 @@
 
       @if (changePasswordError()) {
         <div style="margin-top: 15px; padding: 10px; background: rgba(212, 43, 43, 0.1); border: 1px solid rgba(212, 43, 43, 0.3); border-radius: 6px; color: #ff6b6b; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
-          <span class="material-icons">error_outline</span>
+          <span class="material-icons" aria-hidden="true">error_outline</span>
           {{ changePasswordError() }}
         </div>
       }
 
       @if (changePasswordSuccess()) {
         <div style="margin-top: 15px; padding: 10px; background: rgba(50, 200, 100, 0.1); border: 1px solid rgba(50, 200, 100, 0.3); border-radius: 6px; color: #32c864; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
-          <span class="material-icons">check_circle</span>
+          <span class="material-icons" aria-hidden="true">check_circle</span>
           {{ changePasswordSuccess() }}
         </div>
       }

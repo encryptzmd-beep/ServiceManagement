@@ -132,9 +132,13 @@ export class NotificationService {
     this.arrived.update(a => a + 1);
   }
 
+  /** Reads the number again; the bell and a dashboard both ask on opening, so one read in flight is enough. */
   refresh(): void {
-    this.list().subscribe({ error: () => {} });
+    if (this.reading) return;
+    this.reading = true;
+    this.list().subscribe({ error: () => {} }).add(() => this.reading = false);
   }
+  private reading = false;
 
   list(): Observable<ApiResponse<AppNotifications>> {
     return this.http.get<ApiResponse<AppNotifications>>(this.api).pipe(

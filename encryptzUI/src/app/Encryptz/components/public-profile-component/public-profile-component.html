@@ -70,8 +70,10 @@
                 <div class="pp-skill">
                   <div class="pp-skill-row">
                     <span>{{ s.skillName }}</span>
-                    <span class="pp-stars" [attr.aria-label]="(s.overall || s.rating) + ' of 5'">
-                      @for (on of stars(s.overall || s.rating); track $index) { <span class="pp-star" [class.on]="on"></span> }
+                    <!-- the same value as the profile in Job Portal: the dots rounded, the number as kept (4.3) -->
+                    <span class="pp-stars" role="img" [attr.aria-label]="(s.overall || s.rating) + ' out of 5'">
+                      @for (on of stars(s.overall || s.rating); track $index) { <span class="pp-star" [class.on]="on" aria-hidden="true"></span> }
+                      @if (s.overall || s.rating) { <span class="pp-rate-text" aria-hidden="true">{{ s.overall || s.rating }}</span> }
                     </span>
                   </div>
                   @if (s.subSkills.length) { <small>{{ subSkills(s) }}</small> }

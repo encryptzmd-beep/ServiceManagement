@@ -1,4 +1,5 @@
-<app-personal-shell appName="Job Consultancy" icon="work_outline" [menu]="menu">
+<app-personal-shell appName="Job Consultancy" icon="work_outline" subtitle="Commercial application" [menu]="menu"
+                    backLabel="Back to modules" backRoute="/select-module">
 
   @if (unavailable()) {
     <div class="jp-state">

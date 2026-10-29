@@ -59,6 +59,17 @@ namespace EncryptzBL.Infrastructure.User.Modules
             if (!allowed)
                 return ApiResponse<int>.Fail(NotAllowed);
 
+            // a new company: the same rules as a company a user creates, since its code becomes part of
+            // the name of its database (GAP-001). Existing companies keep the code they have.
+            if (dto.CompanyId == 0)
+            {
+                var (company, error) = CompanyCreateRules.Normalize(dto.CompanyName, dto.CompanyCode, null, dto.Address, dto.City, dto.PhoneNumber);
+                if (error != null)
+                    return ApiResponse<int>.Fail(error);
+                dto.CompanyName = company!.CompanyName;
+                dto.CompanyCode = company.CompanyCode;
+            }
+
             var dt = await GetDataTableAsync("sp_Platform_SaveCompany", new[]
             {
                 SqlParameterHelper.Input("@CompanyId", dto.CompanyId),

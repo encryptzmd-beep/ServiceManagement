@@ -22,7 +22,9 @@ $line: #e2e8f0;
 .cd-note { margin: 0; padding: 0 4px; font-size: 12.5px; line-height: 1.5; color: $muted; }
 
 @media (max-width: 760px) {
-  .cd-counts { gap: 10px; > span { min-width: 0; } }
+  /* three buttons do not fit one phone row (the page scrolled sideways): Post a job takes a row of its own */
+  .cd-actions { flex-wrap: wrap; min-width: 0; .db-btn { flex: 1 1 auto; min-width: 0; } .db-btn.primary { flex-basis: 100%; } }
+  .cd-counts { gap: 10px; flex-shrink: 1; min-width: 0; > span { min-width: 0; } }
   .cd-kpis .db-kpi:nth-child(n) { border-top: 1px solid $line; border-left: 1px solid $line; }
   .cd-kpis .db-kpi:nth-child(odd) { border-left: none; }
   .cd-kpis .db-kpi:nth-child(-n + 2) { border-top: none; }

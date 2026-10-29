@@ -45,3 +45,6 @@ $ink: #111827;
 @media (max-width: 640px) {
   .cc-tools { flex-wrap: wrap; .cc-search { flex-basis: 100%; } }
 }
+
+/* the "Show inactive" switch in the toolbar: .jp-check is made for dialog fields (flex labels) */
+.jp-check { display: inline-flex; height: 34px; padding: 0 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; font-size: 13px; color: #334155; cursor: pointer; user-select: none; }

@@ -159,7 +159,7 @@
 
 <!-- ═══════════ APPLY ═══════════ -->
 @if (applyOpen() && job(); as p) {
-  <div class="jp-overlay">
+  <div class="jp-overlay" (escapeClose)="cancelApply()">
     <div class="jp-dialog" role="dialog" aria-modal="true">
       <div class="jp-dialog-head">
         <h3>Apply: {{ p.title }}</h3>

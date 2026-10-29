@@ -85,9 +85,9 @@
           <h2><a class="jb-title" [routerLink]="['/apps/jobs/job', a.postingId]" target="_blank" rel="noopener">{{ a.title }}</a></h2>
           <div class="jb-company">{{ a.companyName }}</div>
           <div class="jb-meta">
-            <span><span class="material-icons">place</span>{{ a.city }}</span>
-            <span><span class="material-icons">schedule</span>{{ a.employmentType }}</span>
-            <span><span class="material-icons">apartment</span>{{ a.workMode }}</span>
+            <span><span class="material-icons" aria-hidden="true">place</span>{{ a.city }}</span>
+            <span><span class="material-icons" aria-hidden="true">schedule</span>{{ a.employmentType }}</span>
+            <span><span class="material-icons" aria-hidden="true">apartment</span>{{ a.workMode }}</span>
           </div>
           @if (hasInterview(a)) {
             <div class="jb-interview">
@@ -132,11 +132,11 @@
           }
           <div class="jb-company">{{ p.companyName }}</div>
           <div class="jb-meta">
-            <span><span class="material-icons">place</span>{{ p.city }}</span>
-            <span><span class="material-icons">schedule</span>{{ p.employmentType }}</span>
-            <span><span class="material-icons">apartment</span>{{ p.workMode }}</span>
-            @if (experienceLabel(p); as exp) { <span><span class="material-icons">work_outline</span>{{ exp }}</span> }
-            @if (salaryLabel(p); as pay) { <span><span class="material-icons">payments</span>{{ pay }}</span> }
+            <span><span class="material-icons" aria-hidden="true">place</span>{{ p.city }}</span>
+            <span><span class="material-icons" aria-hidden="true">schedule</span>{{ p.employmentType }}</span>
+            <span><span class="material-icons" aria-hidden="true">apartment</span>{{ p.workMode }}</span>
+            @if (experienceLabel(p); as exp) { <span><span class="material-icons" aria-hidden="true">work_outline</span>{{ exp }}</span> }
+            @if (salaryLabel(p); as pay) { <span><span class="material-icons" aria-hidden="true">payments</span>{{ pay }}</span> }
           </div>
           @if (skillList(p.skills).length) {
             <div class="jb-skills">@for (s of skillList(p.skills); track s) { <span class="jp-chip">{{ s }}</span> }</div>
@@ -190,7 +190,7 @@
 
 <!-- ═══════════ APPLY ═══════════ -->
 @if (applyFor(); as p) {
-  <div class="jp-overlay jb-over">
+  <div class="jp-overlay jb-over" (escapeClose)="cancelApply()">
     <div class="jp-dialog" role="dialog" aria-modal="true">
       <div class="jp-dialog-head">
         <h3>Apply: {{ p.title }}</h3>

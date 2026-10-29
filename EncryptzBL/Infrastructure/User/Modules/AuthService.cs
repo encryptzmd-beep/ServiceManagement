@@ -563,6 +563,10 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
         public async Task<ApiResponse<ExtendedLoginResponseDto>> SelfRegister(SelfRegisterDto dto)
         {
+            var problem = RegistrationRules.Problem(dto);
+            if (problem != null)
+                return ApiResponse<ExtendedLoginResponseDto>.Fail(problem);
+
             var parameters = new[]
             {
                 SqlParameterHelper.Input("@FullName", dto.FullName),
@@ -811,6 +815,18 @@ namespace EncryptzBL.Infrastructure.User.Modules
         /// Personal applications are the same for everybody. A main database without
         /// script 21 has no such procedure: the list is then empty, not an error.
         /// </summary>
+        public async Task<List<int>> GetCompanyMemberUserIds(int companyId)
+        {
+            if (companyId <= 0)
+                return new List<int>();
+
+            var members = await GetListAsync<CompanyMemberDto>("sp_Platform_GetCompanyMembers", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId)
+            });
+            return members.Select(m => m.UserId).Distinct().ToList();
+        }
+
         public async Task<ApiResponse<List<PersonalAppDto>>> GetPersonalApps()
         {
             try
@@ -1393,7 +1409,6 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
                 new Claim(ClaimTypes.Name, fullName),
                 new Claim(ClaimTypes.Email, email ?? ""),
-                new Claim(ClaimTypes.MobilePhone, mobile ?? ""),
                 new Claim(ClaimTypes.Role, role),
                 new Claim("PlatformAdmin", role == PlatformAdminRole ? "true" : "false")
             };
@@ -1422,7 +1437,6 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
                 new Claim(ClaimTypes.Name, fullName),
                 new Claim(ClaimTypes.Email, email ?? ""),
-                new Claim(ClaimTypes.MobilePhone, mobile ?? ""),
                 new Claim(ClaimTypes.Role, role),
                 // Global role Admin = platform administrator (manages every company in MainDB)
                 new Claim("PlatformAdmin", platformAdmin ? "true" : "false")

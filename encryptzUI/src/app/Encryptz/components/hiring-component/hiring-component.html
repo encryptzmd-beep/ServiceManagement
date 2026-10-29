@@ -17,7 +17,7 @@
 
     <!-- ═══════════ APPLICANTS OF ONE JOB ═══════════ -->
     <div class="jb-head">
-      <button class="jp-btn" (click)="backToJobs()"><span class="material-icons">chevron_left</span>All jobs</button>
+      <button class="jp-btn" (click)="backToJobs()"><span class="material-icons" aria-hidden="true">chevron_left</span>All jobs</button>
       <h1>{{ job.title }}</h1>
       <span [class]="postingClass(job.status)">{{ postingLabel(job.status) }}</span>
     </div>
@@ -47,10 +47,10 @@
               <h2><button class="jb-title" (click)="viewMatch(m)">{{ m.fullName }}</button>@if (m.isVerified) { <app-verified-badge hint="Person verified by Encryptz" /> }</h2>
               <div class="jb-company">{{ m.headline }}</div>
               <div class="jb-meta">
-                @if (m.city) { <span [class.hr-hit]="m.cityMatch"><span class="material-icons">place</span>{{ m.city }}</span> }
-                <span [class.hr-hit]="m.experienceFit === 1" [class.hr-miss]="m.experienceFit === 0"><span class="material-icons">work_outline</span>{{ matchExperience(m) }}</span>
-                @if (m.modeMatch) { <span class="hr-hit"><span class="material-icons">apartment</span>{{ job.workMode }}</span> }
-                <span><span class="material-icons">description</span>{{ m.hasResume ? 'Resume' : 'No resume' }}</span>
+                @if (m.city) { <span [class.hr-hit]="m.cityMatch"><span class="material-icons" aria-hidden="true">place</span>{{ m.city }}</span> }
+                <span [class.hr-hit]="m.experienceFit === 1" [class.hr-miss]="m.experienceFit === 0"><span class="material-icons" aria-hidden="true">work_outline</span>{{ matchExperience(m) }}</span>
+                @if (m.modeMatch) { <span class="hr-hit"><span class="material-icons" aria-hidden="true">apartment</span>{{ job.workMode }}</span> }
+                <span><span class="material-icons" aria-hidden="true">description</span>{{ m.hasResume ? 'Resume' : 'No resume' }}</span>
               </div>
               @if (matchSkills(m).length) {
                 <div class="hr-why">
@@ -68,7 +68,7 @@
               } @else {
                 <button class="jp-btn primary" (click)="inviteMatch(m)" [disabled]="inviting() !== null || job.status !== 'Open'"
                         [title]="job.status === 'Open' ? 'Invite to apply for this job' : 'The job takes applications once it is approved'">
-                  <span class="material-icons">send</span>{{ inviting() === m.candidateKey ? 'Sending…' : 'Invite' }}
+                  <span class="material-icons" aria-hidden="true">send</span>{{ inviting() === m.candidateKey ? 'Sending…' : 'Invite' }}
                 </button>
               }
               <div class="hr-actions">
@@ -95,9 +95,9 @@
             <h2><button class="jb-title" (click)="openApplicant(a)">{{ a.fullName || 'No name' }}</button>@if (a.isVerified) { <app-verified-badge hint="Person verified by Encryptz" /> }</h2>
             <div class="jb-company">{{ a.headline }}</div>
             <div class="jb-meta">
-              @if (a.city) { <span><span class="material-icons">place</span>{{ a.city }}</span> }
-              <span><span class="material-icons">event</span>Applied {{ dayLabel(a.appliedAt) }}</span>
-              <span><span class="material-icons">description</span>{{ a.hasResume ? 'Resume attached' : 'No resume' }}</span>
+              @if (a.city) { <span><span class="material-icons" aria-hidden="true">place</span>{{ a.city }}</span> }
+              <span><span class="material-icons" aria-hidden="true">event</span>Applied {{ dayLabel(a.appliedAt) }}</span>
+              <span><span class="material-icons" aria-hidden="true">description</span>{{ a.hasResume ? 'Resume attached' : 'No resume' }}</span>
             </div>
             @if (a.note) { <p class="hr-note">"{{ a.note }}"</p> }
             @if (a.interviewAt && canInterview(a.status)) {
@@ -110,7 +110,7 @@
             <span [class]="statusClass(a.status)">{{ a.status }}</span>
             <button class="jp-btn" (click)="openApplicant(a)">View profile</button>
             @if (canInterview(a.status)) {
-              <button class="jp-btn" (click)="openInterview(a.applicationId)"><span class="material-icons">event</span>{{ a.interviewAt ? 'Change interview' : 'Schedule interview' }}</button>
+              <button class="jp-btn" (click)="openInterview(a.applicationId)"><span class="material-icons" aria-hidden="true">event</span>{{ a.interviewAt ? 'Change interview' : 'Schedule interview' }}</button>
             }
           </div>
         </article>
@@ -131,32 +131,44 @@
         <p>Jobs your company offers on Job Portal. People find a job once you publish it.</p>
       </div>
       <span class="jb-grow"></span>
-      <button class="jp-btn primary" (click)="openNew()"><span class="material-icons">add</span>New job</button>
+      <button class="jp-btn primary" (click)="openNew()" [disabled]="notClosed() >= maxNotClosed"
+              [title]="notClosed() >= maxNotClosed ? 'Close or remove a job first: at most ' + maxNotClosed + ' jobs that are not closed' : ''"><span class="material-icons" aria-hidden="true">add</span>New job</button>
     </div>
 
-    @for (p of postings(); track p.postingId) {
+    @if (postings().length) {
+      <div class="hr-filters" role="group" aria-label="Show jobs">
+        @for (f of statusFilters; track f) {
+          <button type="button" class="hr-filter" [class.on]="statusFilter() === f" [attr.aria-pressed]="statusFilter() === f" (click)="setStatusFilter(f)">
+            {{ f === 'All' ? 'All' : postingLabel(f) }} <span>{{ statusCounts()[f] || 0 }}</span>
+          </button>
+        }
+        <span class="hr-limit" [class.near]="notClosed() >= maxNotClosed * 0.8">{{ notClosed() }} of {{ maxNotClosed }} jobs not closed (drafts count)</span>
+      </div>
+    }
+
+    @for (p of shownPostings(); track p.postingId) {
       <article class="jp-card jb-card">
         <div class="jb-logo" aria-hidden="true"><span class="material-icons">work_outline</span></div>
         <div class="jb-card-main">
           <h2>{{ p.title }}@if (p.isVerified) { <app-verified-badge label="Verified" hint="Encryptz approved this job" /> }</h2>
           <div class="jb-meta">
-            <span><span class="material-icons">place</span>{{ p.city }}</span>
-            <span><span class="material-icons">schedule</span>{{ p.employmentType }}</span>
-            <span><span class="material-icons">apartment</span>{{ p.workMode }}</span>
-            @if (p.closesOn) { <span><span class="material-icons">event</span>Closes {{ dayLabel(p.closesOn) }}</span> }
-            @if (clientOf()[p.postingId]; as pc) { <span><span class="material-icons">handshake</span>For {{ pc.clientName }}</span> }
+            <span><span class="material-icons" aria-hidden="true">place</span>{{ p.city }}</span>
+            <span><span class="material-icons" aria-hidden="true">schedule</span>{{ p.employmentType }}</span>
+            <span><span class="material-icons" aria-hidden="true">apartment</span>{{ p.workMode }}</span>
+            @if (p.closesOn) { <span><span class="material-icons" aria-hidden="true">event</span>Closes {{ dayLabel(p.closesOn) }}</span> }
+            @if (clientOf()[p.postingId]; as pc) { <span><span class="material-icons" aria-hidden="true">handshake</span>For {{ pc.clientName }}</span> }
           </div>
           <div class="hr-counts">
             @if (p.status === 'Draft') {
               @if (p.reviewNote) {
-                <span class="hr-returned"><span class="material-icons">undo</span>Returned by Encryptz: {{ p.reviewNote }}</span>
+                <span class="hr-returned"><span class="material-icons" aria-hidden="true">undo</span>Returned by Encryptz: {{ p.reviewNote }}</span>
               } @else {
                 <span>Not published yet. Only your company sees it.</span>
               }
             } @else if (p.status === 'InReview') {
               <span>Waiting for review by Encryptz. People find it once it is approved.</span>
               @if (matchCount()[p.postingId]; as n) {
-                <button class="hr-suitable" (click)="showMatches(p)"><span class="material-icons" aria-hidden="true">auto_awesome</span>{{ n }} suitable</button>
+                <button class="hr-suitable" (click)="showMatches(p)"><span class="material-icons" aria-hidden="true">auto_awesome</span>{{ n }} suitable {{ n === 1 ? 'candidate' : 'candidates' }}</button>
               }
               @if (applicantCount(p)) {
                 <button class="jb-title" (click)="showApplicants(p)">· {{ applicantCount(p) }} {{ applicantCount(p) === 1 ? 'applicant' : 'applicants' }}</button>
@@ -180,7 +192,7 @@
             @if (p.status === 'Draft') { <button class="jp-btn primary" (click)="publish(p)">Send for review</button> }
             @if (p.status === 'Closed') { <button class="jp-btn" (click)="publish(p)">Reopen</button> }
             @if (p.status === 'Open') {
-              <button class="jp-btn" (click)="shareJob(p)" title="Copy the public link of this job"><span class="material-icons">share</span>Share</button>
+              <button class="jp-btn" (click)="shareJob(p)" title="Copy the public link of this job"><span class="material-icons" aria-hidden="true">share</span>Share</button>
               <a class="jp-btn" [routerLink]="['/jobs', p.postingId]" target="_blank" rel="noopener" title="See the job as people see it"><span class="material-icons">open_in_new</span></a>
             }
             @if (p.status === 'Open' || p.status === 'InReview') { <button class="jp-btn" (click)="close(p)">Close</button> }
@@ -190,11 +202,18 @@
         </div>
       </article>
     } @empty {
+      @if (postings().length) {
+        <div class="jp-card jb-empty"><p>No {{ postingLabel(statusFilter()).toLowerCase() }} jobs.</p></div>
+      } @else {
       <div class="jp-card jb-empty">
         <span class="material-icons">work_outline</span>
         <p>Your company has no job postings yet. A new job is saved as a draft; people find it once you publish it.</p>
         <button class="jp-btn primary" (click)="openNew()">New job</button>
       </div>
+      }
+    }
+    @if (filteredPostings().length > shownPostings().length) {
+      <button type="button" class="jp-btn hr-more" (click)="showMore()">Show more ({{ filteredPostings().length - shownPostings().length }} more)</button>
     }
   }
 
@@ -207,7 +226,7 @@
 
 <!-- ═══════════ A JOB, WRITTEN ═══════════ -->
 @if (form(); as f) {
-  <div class="jp-overlay">
+  <div class="jp-overlay" (escapeClose)="closeForm()">
     <div class="jp-dialog jb-detail" role="dialog" aria-modal="true">
       <div class="jp-dialog-head">
         <h3>{{ f.postingId ? 'Edit job' : 'New job' }}</h3>
@@ -265,13 +284,13 @@
           <small>Separate them with a comma. Leave the salary empty if you prefer not to show it.</small>
         </label>
         @if (f.postingId) {
-          <p class="hr-review-hint"><span class="material-icons">info</span>Encryptz checks every job before people see it. Saving a job that is open sends it to review again; its applications stay.</p>
+          <p class="hr-review-hint"><span class="material-icons" aria-hidden="true">info</span>Encryptz checks every job before people see it. Saving a job that is open sends it to review again; its applications stay.</p>
         }
         <label>Description *
           <textarea class="jp-input" name="description" rows="7" [(ngModel)]="f.description" maxlength="4000"
                     placeholder="What the person will do, what you expect, what you offer."></textarea>
         </label>
-        @if (formError()) { <div class="jp-error">{{ formError() }}</div> }
+        @if (formError()) { <div class="jp-error" [scrollIntoViewOn]="formError()">{{ formError() }}</div> }
       </div>
       <div class="jp-dialog-foot">
         <button class="jp-btn ghost" (click)="closeForm()" [disabled]="saving()">Cancel</button>
@@ -284,7 +303,7 @@
 <!-- ═══════════ ONE APPLICANT ═══════════ -->
 @if (applicant(); as a) {
   @let pg = a.profile;
-  <div class="jp-overlay">
+  <div class="jp-overlay" (escapeClose)="closeApplicant()">
     <div class="jp-dialog jb-detail" role="dialog" aria-modal="true">
       <div class="jp-dialog-head">
         <h3>{{ pg.profile.fullName || 'Applicant' }}@if (pg.profile.isVerified) { <app-verified-badge label="Verified" hint="Encryptz verified this person" /> }</h3>
@@ -294,10 +313,10 @@
         <div>
           <div class="jb-company">{{ pg.profile.headline }}</div>
           <div class="jb-meta">
-            @if (pg.profile.city) { <span><span class="material-icons">place</span>{{ pg.profile.city }}</span> }
-            @if (pg.profile.contactEmail) { <span><span class="material-icons">mail_outline</span>{{ pg.profile.contactEmail }}</span> }
-            @if (pg.profile.contactPhone) { <span><span class="material-icons">call</span>{{ pg.profile.contactPhone }}</span> }
-            <span><span class="material-icons">event</span>Applied {{ dayLabel(a.appliedAt) }}</span>
+            @if (pg.profile.city) { <span><span class="material-icons" aria-hidden="true">place</span>{{ pg.profile.city }}</span> }
+            @if (pg.profile.contactEmail) { <span><span class="material-icons" aria-hidden="true">mail_outline</span>{{ pg.profile.contactEmail }}</span> }
+            @if (pg.profile.contactPhone) { <span><span class="material-icons" aria-hidden="true">call</span>{{ pg.profile.contactPhone }}</span> }
+            <span><span class="material-icons" aria-hidden="true">event</span>Applied {{ dayLabel(a.appliedAt) }}</span>
           </div>
         </div>
 
@@ -361,7 +380,7 @@
           <h4>Resume</h4>
           @if (pg.resume; as r) {
             <button class="jp-file" (click)="downloadResume(a.applicationId, r.fileName)">
-              <span class="material-icons">description</span>{{ r.fileName }}
+              <span class="material-icons" aria-hidden="true">description</span>{{ r.fileName }}
             </button>
           } @else {
             <p class="jp-empty">No resume uploaded.</p>
@@ -370,12 +389,12 @@
       </div>
       <div class="jp-dialog-foot hr-status-foot">
         <span [class]="statusClass(a.status)">{{ a.status }}</span>
-        <button class="jp-btn" (click)="messageApplicant(a)" [disabled]="messaging()"><span class="material-icons">chat_bubble_outline</span>Message</button>
+        <button class="jp-btn" (click)="messageApplicant(a)" [disabled]="messaging()"><span class="material-icons" aria-hidden="true">chat_bubble_outline</span>Message</button>
         @if (canInterview(a.status)) {
-          <button class="jp-btn" (click)="openInterview(a.applicationId)"><span class="material-icons">event</span>Interview</button>
+          <button class="jp-btn" (click)="openInterview(a.applicationId)"><span class="material-icons" aria-hidden="true">event</span>Interview</button>
         }
         @if (a.status === 'Hired') {
-          <button class="jp-btn" (click)="recordPlacement(a)"><span class="material-icons">verified</span>Record placement</button>
+          <button class="jp-btn" (click)="recordPlacement(a)"><span class="material-icons" aria-hidden="true">verified</span>Record placement</button>
         }
         <span class="jb-grow"></span>
         @for (state of applicantStates; track state) {
@@ -393,7 +412,7 @@
 
 <!-- ═══════════ A REJECTION: WHY ═══════════ -->
 @if (rejecting(); as r) {
-  <div class="jp-overlay hr-top">
+  <div class="jp-overlay hr-top" (escapeClose)="rejecting.set(null)">
     <div class="jp-dialog hr-small" role="dialog" aria-modal="true" aria-labelledby="hr-reject-title">
       <div class="jp-dialog-head">
         <h3 id="hr-reject-title">Reject {{ r.name || 'this applicant' }}</h3>
@@ -406,7 +425,7 @@
                     placeholder="For example: the job needs 3 years of GST filing; your profile shows 1 year."></textarea>
         </label>
         <div class="hr-count" [class.ok]="!rejectShort()">
-          {{ rejectShort() ? rejectShort() + ' more characters needed' : 'Enough said' }} · {{ rejectReason.trim().length }}/1000
+          {{ rejectShort() ? rejectShort() + (rejectShort() === 1 ? ' more character needed' : ' more characters needed') : 'Enough said' }} · {{ rejectReason.trim().length }}/1000
         </div>
       </div>
       <div class="jp-dialog-foot">
@@ -419,7 +438,7 @@
 
 <!-- ═══════════ AN INTERVIEW ═══════════ -->
 @if (interviewFor(); as iv) {
-  <div class="jp-overlay hr-top">
+  <div class="jp-overlay hr-top" (escapeClose)="interviewFor.set(null)">
     <div class="jp-dialog hr-small" role="dialog" aria-modal="true" aria-labelledby="hr-interview-title">
       <div class="jp-dialog-head">
         <h3 id="hr-interview-title">{{ iv.isSet ? 'Change the interview' : 'Schedule an interview' }}@if (iv.name) { with {{ iv.name }} }</h3>
@@ -439,14 +458,14 @@
             @for (m of interviewModes; track m) { <option [value]="m">{{ m }}</option> }
           </select>
         </label>
-        <label>{{ interview.mode === 'In person' ? 'Address' : interview.mode === 'Video' ? 'Link of the call' : 'Phone number' }}
+        <label>{{ interview.mode === 'In person' ? 'Address *' : interview.mode === 'Video' ? 'Link of the call *' : 'Phone number' }}
           <input class="jp-input" name="ivPlace" [(ngModel)]="interview.place" maxlength="300" />
         </label>
         <label>Note for the candidate
           <textarea class="jp-input" name="ivNote" rows="3" maxlength="500" [(ngModel)]="interview.note" placeholder="Bring your certificates; ask for Anu at the reception."></textarea>
         </label>
         <p class="hr-help">The candidate is told at once, and sees it on the Job Portal dashboard. A new application is shortlisted.</p>
-        @if (interviewError()) { <div class="jp-error">{{ interviewError() }}</div> }
+        @if (interviewError()) { <div class="jp-error" [scrollIntoViewOn]="interviewError()">{{ interviewError() }}</div> }
       </div>
       <div class="jp-dialog-foot">
         @if (iv.isSet) { <button class="jp-btn ghost hr-calloff" (click)="callOffInterview()" [disabled]="interviewBusy()">Call off</button> }

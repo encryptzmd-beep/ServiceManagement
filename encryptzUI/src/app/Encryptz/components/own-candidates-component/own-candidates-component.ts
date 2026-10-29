@@ -12,6 +12,8 @@ import {
 } from '../../Services/consultancy-service';
 import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
+import { ScrollIntoViewOn } from '../shared/scroll-into-view';
+import { EscapeClose } from '../shared/escape-close';
 
 const REFUSED = "You don't have access to Job Consultancy. Ask your administrator";
 
@@ -29,7 +31,7 @@ interface CandidateForm extends Omit<OwnCandidate, 'experienceYears'> {
 @Component({
   selector: 'app-own-candidates',
   standalone: true,
-  imports: [FormsModule, RouterModule, PersonalShellComponent],
+  imports: [FormsModule, RouterModule, PersonalShellComponent, ScrollIntoViewOn, EscapeClose],
   templateUrl: './own-candidates-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',

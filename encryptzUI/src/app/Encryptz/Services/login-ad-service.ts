@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, shareReplay } from 'rxjs';
 import { environment } from '../../../environments/environment.development';
 import { ApiResponse } from '../Models/ApiModels';
 
@@ -28,9 +28,21 @@ export class LoginAdService {
   private http = inject(HttpClient);
   private api = `${environment.apiUrl}/api/loginads`;
 
-  /** The slides shown today. */
+  private cached: Observable<ApiResponse<LoginAd[]>> | null = null;
+  private cachedAt = 0;
+
+  /**
+   * The slides shown today. Login and register each show the slider and the person moves
+   * between them: the list is read once and kept for five minutes (QA BUG-009: read 3 times).
+   */
   list(): Observable<ApiResponse<LoginAd[]>> {
-    return this.http.get<ApiResponse<LoginAd[]>>(this.api);
+    if (!this.cached || Date.now() - this.cachedAt > 5 * 60_000) {
+      this.cachedAt = Date.now();
+      this.cached = this.http.get<ApiResponse<LoginAd[]>>(this.api).pipe(shareReplay({ bufferSize: 1, refCount: false }));
+      // a failed read is not kept
+      this.cached.subscribe({ error: () => { this.cached = null; } });
+    }
+    return this.cached;
   }
 
   imageUrl(ad: LoginAd): string {

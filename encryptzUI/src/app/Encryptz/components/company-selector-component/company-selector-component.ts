@@ -1,7 +1,7 @@
 import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
 import { NotificationBellComponent } from '../notification-bell-component/notification-bell-component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Subscription, finalize, interval, timeout } from 'rxjs';
 import { AuthService, Company } from '../../Auth/auth-service';
 import { CommonModule } from '@angular/common';
@@ -28,7 +28,7 @@ const MODULE_HOME: Record<string, string> = {
 
 @Component({
   selector: 'app-company-selector-component',
-  imports: [CommonModule, FormsModule, NotificationBellComponent],
+  imports: [CommonModule, FormsModule, RouterModule, NotificationBellComponent],
   templateUrl: './company-selector-component.html',
   styleUrl: './company-selector-component.scss',
 })
@@ -376,6 +376,16 @@ export class CompanySelectorComponent {
   }
 
   /** The user's lifelong ID as it is shown ('' when the account has none yet). */
+  /** The ID was copied a moment ago: the copy button shows a tick. */
+  idCopied = signal(false);
+
+  copyIndividualId(id: string): void {
+    navigator.clipboard?.writeText(id).then(() => {
+      this.idCopied.set(true);
+      setTimeout(() => this.idCopied.set(false), 2000);
+    }, () => { /* the browser refused: the ID stays readable */ });
+  }
+
   individualId(): string {
     return this.auth.currentUser()?.individualId || '';
   }

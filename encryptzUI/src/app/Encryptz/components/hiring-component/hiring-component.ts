@@ -1,7 +1,8 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../Auth/auth-service';
 import {
   ApplicantStatus,
@@ -22,6 +23,12 @@ import { AutocompleteComponent, AutocompleteOption } from '../autocomplete-compo
 import { jobPath } from '../../Services/public-jobs-service';
 import { shareLink } from '../../Services/share-link';
 import { interviewLabel } from '../../Services/job-labels';
+import { ScrollIntoViewOn } from '../shared/scroll-into-view';
+import { EscapeClose } from '../shared/escape-close';
+
+/** The API keeps at most this many jobs that are not closed per company (PersonalDB/12). */
+const MAX_NOT_CLOSED = 100;
+const PAGE_SIZE = 20;
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const REFUSED = "You don't have access to Job Consultancy. Ask your administrator";
@@ -35,7 +42,7 @@ const REFUSED = "You don't have access to Job Consultancy. Ask your administrato
 @Component({
   selector: 'app-hiring-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent, AutocompleteComponent],
+  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent, AutocompleteComponent, ScrollIntoViewOn, EscapeClose],
   templateUrl: './hiring-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',
@@ -48,6 +55,7 @@ export class HiringComponent implements OnInit {
   private auth = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
   /** The address asks for something once (from the dashboard): ?job=ID opens its applicants, ?new=1 a new job. */
   private asked = false;
   private consultancy = inject(ConsultancyService);
@@ -75,6 +83,36 @@ export class HiringComponent implements OnInit {
   form = signal<(CompanyPostingFields & { experienceMin: any; experienceMax: any; salaryLow: any; salaryHigh: any; clientId: number | null }) | null>(null);
   formError = signal('');
   saving = signal(false);
+
+  /** What the form held when it opened: Cancel asks before throwing typed work away (QA BUG-020). */
+  private formStart = '';
+
+  // ── the list of jobs: by state, a page at a time (QA BUG-020: 100 cards on one page) ──
+  readonly maxNotClosed = MAX_NOT_CLOSED;
+  readonly statusFilters = ['All', 'Open', 'InReview', 'Draft', 'Closed'] as const;
+  statusFilter = signal<'All' | 'Open' | 'InReview' | 'Draft' | 'Closed'>('All');
+  shownCount = signal(PAGE_SIZE);
+  readonly statusCounts = computed(() => {
+    const counts: Record<string, number> = { All: 0, Open: 0, InReview: 0, Draft: 0, Closed: 0 };
+    for (const p of this.postings()) { counts['All']++; counts[p.status] = (counts[p.status] ?? 0) + 1; }
+    return counts;
+  });
+  /** Jobs that are not closed count towards the limit of the API (100 per company). */
+  readonly notClosed = computed(() => this.postings().filter(p => p.status !== 'Closed').length);
+  readonly filteredPostings = computed(() => {
+    const f = this.statusFilter();
+    return f === 'All' ? this.postings() : this.postings().filter(p => p.status === f);
+  });
+  readonly shownPostings = computed(() => this.filteredPostings().slice(0, this.shownCount()));
+
+  setStatusFilter(f: 'All' | 'Open' | 'InReview' | 'Draft' | 'Closed'): void {
+    this.statusFilter.set(f);
+    this.shownCount.set(PAGE_SIZE);
+  }
+
+  showMore(): void {
+    this.shownCount.update(n => n + PAGE_SIZE);
+  }
 
   /** The job whose applicants are shown (null = the list of jobs). */
   selected = signal<CompanyPosting | null>(null);
@@ -164,11 +202,38 @@ export class HiringComponent implements OnInit {
     this.asked = true;
     const query = this.route.snapshot.queryParamMap;
     const job = this.postings().find(p => p.postingId === Number(query.get('job')));
-    if (job) this.showApplicants(job);
+    if (job) { this.showApplicants(job); if (query.get('view') === 'matches') this.setView('matches'); }
     else if (query.get('new') === '1') this.openNew();
+
+    // Back and Forward of the browser: the address says which job is open
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(q => {
+      const id = Number(q.get('job')) || 0;
+      if (!id && this.selected()) this.backToJobs(false);
+      else if (id && this.selected()?.postingId !== id) {
+        const posting = this.postings().find(p => p.postingId === id);
+        if (posting) this.showApplicants(posting, false);
+      }
+    });
+  }
+
+  /**
+   * The open job and tab are in the address (?job=3&view=matches): a refresh, Back and a
+   * shared link keep them (QA BUG-021).
+   */
+  private showInAddress(): void {
+    const job = this.selected()?.postingId ?? null;
+    const view = job && this.view() === 'matches' ? 'matches' : null;
+    const q = this.route.snapshot.queryParamMap;
+    if ((Number(q.get('job')) || null) === job && (q.get('view') || null) === view) return;
+    this.router.navigate([], { relativeTo: this.route, queryParams: { job, view, new: null }, queryParamsHandling: 'merge' });
   }
 
   openNew(): void {
+    // said before the form is filled, not after (the API refuses the 101st)
+    if (this.notClosed() >= MAX_NOT_CLOSED) {
+      this.notify(`Your company has ${MAX_NOT_CLOSED} jobs that are not closed (drafts count too). Close or remove one first.`, false);
+      return;
+    }
     this.openForm({
       postingId: 0, title: '', city: '', employmentType: 'Full-time', workMode: 'On-site',
       experienceMinYears: null, experienceMaxYears: null, salaryMin: null, salaryMax: null, skills: '', description: '', closesOn: null,
@@ -194,10 +259,13 @@ export class HiringComponent implements OnInit {
       salaryLow: p.salaryMin ?? '', salaryHigh: p.salaryMax ?? '',
       clientId: this.clientOf()[p.postingId]?.clientId ?? null,
     });
+    this.formStart = JSON.stringify(this.form());
   }
 
   closeForm(): void {
     if (this.saving()) return;
+    const changed = this.form() && JSON.stringify(this.form()) !== this.formStart;
+    if (changed && !window.confirm('Discard this job? What you typed is not saved.')) return;
     this.form.set(null);
     this.formError.set('');
   }
@@ -285,11 +353,12 @@ export class HiringComponent implements OnInit {
 
   // ── applicants ────────────────────────────────────────────────────────────
 
-  showApplicants(posting: CompanyPosting): void {
+  showApplicants(posting: CompanyPosting, address = true): void {
     this.selected.set(posting);
     this.applicants.set([]);
     this.view.set('applicants');
     this.loadApplicants();
+    if (address) this.showInAddress();
   }
 
   // ── the people who fit a job ──────────────────────────────────────────────
@@ -302,6 +371,7 @@ export class HiringComponent implements OnInit {
   setView(view: 'applicants' | 'matches'): void {
     this.view.set(view);
     if (view === 'matches') this.loadMatches();
+    this.showInAddress();
   }
 
   private loadMatches(): void {
@@ -393,8 +463,9 @@ export class HiringComponent implements OnInit {
     });
   }
 
-  backToJobs(): void {
+  backToJobs(address = true): void {
     this.selected.set(null);
+    if (address) this.showInAddress();
     this.applicants.set([]);
     this.applicant.set(null);
     this.load();   // the counts may have changed
@@ -474,6 +545,10 @@ export class HiringComponent implements OnInit {
     const { date, time, mode, place, note } = this.interview;
     if (!date || !time) { this.interviewError.set('Choose the date and the time'); return; }
     if (new Date(`${date}T${time}`).getTime() < Date.now()) { this.interviewError.set('Choose a time that is still to come'); return; }
+    // where, by mode (GAP-041; the API checks the same: JobPostingRules.InterviewPlaceProblem)
+    if (mode === 'In person' && !place.trim()) { this.interviewError.set('Enter the address of the interview'); return; }
+    if (mode === 'Video' && !place.trim()) { this.interviewError.set('Enter the link of the video call'); return; }
+    if (mode === 'Video' && !/^https?:\/\//i.test(place.trim())) { this.interviewError.set('The link of the call must start with https://'); return; }
     this.sendInterview(target.applicationId, { at: `${date}T${time}`, mode, place: place.trim(), note: note.trim() });
   }
 

@@ -341,4 +341,6 @@ input:not([type="checkbox"]) {
   .right-panel { height: auto; min-height: 100vh; padding: 24px 16px; }
   .card { padding: 28px 20px; }
   .heading p { white-space: normal; }
+  /* 16px or more, or iOS zooms into the page when a field gets focus */
+  input:not([type="checkbox"]) { font-size: 16px; }
 }
