@@ -111,7 +111,26 @@ export class PlatformAdminComponent implements OnInit {
       label: 'Referral credits',
       help: 'Credits the inviter gets when an invited friend is onboarded (the friend gets the welcome credits). 0 = off.',
     },
+    PublicUrl: {
+      label: 'Platform address',
+      help: 'The address used in the links of mails and invite links, such as https://serviceapp.encryptz.in.',
+    },
+    SmtpHost: { label: 'Mail server', help: 'Such as smtp.gmail.com. Empty = the value in appsettings.json.' },
+    SmtpPort: { label: 'Mail server port', help: 'Usually 587. Empty = the value in appsettings.json.' },
+    SmtpEnableSsl: { label: 'Mail server SSL', help: 'true or false. Empty = the value in appsettings.json.' },
+    SmtpUserName: { label: 'Mail login', help: 'The account that sends the mails. Empty = the value in appsettings.json.' },
+    SmtpPassword: {
+      label: 'Mail password',
+      help: 'For Gmail an app password. Stored encrypted and never shown again; save it empty to use appsettings.json.',
+    },
+    SmtpFromEmail: { label: 'Mails sent from', help: 'The sender address. Empty = the value in appsettings.json.' },
+    SmtpFromName: { label: 'Sender name', help: 'Such as Encryptz Support. Empty = the value in appsettings.json.' },
   };
+
+  /** A setting the server stores encrypted: shown only as set or not, typed again to change. */
+  isSecretSetting(key: string): boolean {
+    return key === 'SmtpPassword';
+  }
 
   /** Company whose Modules dialog is open (null = closed). */
   /** Company whose members are shown in the Administrators dialog (null = closed). */
@@ -1080,7 +1099,8 @@ export class PlatformAdminComponent implements OnInit {
         this.settings.set(list);
         // what the user typed since this load started stays as typed
         this.settingDraft = Object.fromEntries(list.map(s =>
-          [s.settingKey, this.editedSettings.has(s.settingKey) ? (this.settingDraft[s.settingKey] ?? '') : (s.settingValue ?? '')]));
+          [s.settingKey, this.editedSettings.has(s.settingKey) ? (this.settingDraft[s.settingKey] ?? '')
+            : this.isSecretSetting(s.settingKey) ? '' : (s.settingValue ?? '')]));
         this.settingError.set({});
       },
       error: err => this.fail(err, 'Could not load the settings'),
@@ -1108,7 +1128,10 @@ export class PlatformAdminComponent implements OnInit {
     ).subscribe({
       next: res => {
         if (!res.success) { this.editedSettings.add(key); this.settingError.update(e => ({ ...e, [key]: res.message })); return; }
-        this.settings.update(list => list.map(s => s.settingKey === key ? { ...s, settingValue: value.trim() } : s));
+        // a secret is never kept in the page: only whether it is set
+        const shown = this.isSecretSetting(key) ? (value.trim() ? '********' : '') : value.trim();
+        this.settings.update(list => list.map(s => s.settingKey === key ? { ...s, settingValue: shown } : s));
+        if (this.isSecretSetting(key)) this.settingDraft[key] = '';
         this.notify(res.message, true);
         this.showStoredValue(key);
       },
@@ -1124,7 +1147,7 @@ export class PlatformAdminComponent implements OnInit {
         if (!stored) return;
         const value = stored.settingValue ?? '';
         this.settings.update(list => list.map(s => s.settingKey === key ? { ...s, settingValue: value } : s));
-        if (!this.editedSettings.has(key)) this.settingDraft[key] = value;
+        if (!this.editedSettings.has(key)) this.settingDraft[key] = this.isSecretSetting(key) ? '' : value;
       },
       error: () => { /* keep the typed value */ },
     }));

@@ -93,7 +93,7 @@ namespace EncryptzBL.Infrastructure.Wallet
             var token = row["Token"] == DBNull.Value ? Guid.Empty : (Guid)row["Token"];
 
             // the referral credits go to the inviter only: the mail does not promise the friend any
-            var link = $"{PublicUrl()}/register?ref={token}&email={Uri.EscapeDataString(address)}";
+            var link = $"{await PublicUrl()}/register?ref={token}&email={Uri.EscapeDataString(address)}";
             var name = WebUtility.HtmlEncode(inviter);
             var body = $"<p>{name} invited you to join Encryptz.</p><p>Encryptz is one place for your work, jobs and services.</p>"
                 + $"<p><a href=\"{WebUtility.HtmlEncode(link)}\">Join Encryptz</a></p>";
@@ -114,7 +114,7 @@ namespace EncryptzBL.Infrastructure.Wallet
             var key = dt != null && dt.Rows.Count > 0 && dt.Rows[0]["InviteKey"] != DBNull.Value ? Convert.ToString(dt.Rows[0]["InviteKey"]) : null;
             if (string.IsNullOrEmpty(key)) return ApiResponse<InviteLinkDto>.Fail("Your invite link could not be made");
 
-            return ApiResponse<InviteLinkDto>.Ok(new InviteLinkDto { Key = key, Url = $"{PublicUrl()}/register?inv={key}" });
+            return ApiResponse<InviteLinkDto>.Ok(new InviteLinkDto { Key = key, Url = $"{await PublicUrl()}/register?inv={key}" });
         }
 
         /// <summary>Sends the invite; a mail that cannot go out never loses the saved invite.</summary>
@@ -134,10 +134,26 @@ namespace EncryptzBL.Infrastructure.Wallet
             }
         }
 
-        private string PublicUrl()
+        /// <summary>The platform address for links: Platform Admin > Settings, else App:PublicUrl, else the default.</summary>
+        private async Task<string> PublicUrl()
         {
-            var url = _config["App:PublicUrl"];
-            return (string.IsNullOrWhiteSpace(url) ? DefaultPublicUrl : url.Trim()).TrimEnd('/');
+            string? setting = null;
+            try
+            {
+                var all = await GetListAsync<PlatformSettingDto>("sp_Platform_GetSettings");
+                setting = all.FirstOrDefault(s => s.SettingKey == PlatformSettingRules.PublicUrl)?.SettingValue;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("The platform address could not be read ({ExceptionType})", ex.GetType().Name);
+            }
+            return ResolvePublicUrl(setting, _config["App:PublicUrl"]);
+        }
+
+        internal static string ResolvePublicUrl(string? setting, string? config)
+        {
+            var url = !string.IsNullOrWhiteSpace(setting) ? setting : !string.IsNullOrWhiteSpace(config) ? config : DefaultPublicUrl;
+            return url.Trim().TrimEnd('/');
         }
 
         private async Task<int> ReadBalance(int userId)

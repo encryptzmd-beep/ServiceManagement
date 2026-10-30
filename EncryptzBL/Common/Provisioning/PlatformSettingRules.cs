@@ -25,6 +25,27 @@ namespace EncryptzBL.Common.Provisioning
         /// <summary>When the wallet started; set by the database script, not editable.</summary>
         public const string WalletStartedAt = "WalletStartedAt";
 
+        /// <summary>The address of the platform, used in the links of mails (invites): https://host[/path], no trailing /.</summary>
+        public const string PublicUrl = "PublicUrl";
+
+        // The mail server. An empty value means "use the Smtp section of appsettings.json".
+        public const string SmtpHost = "SmtpHost";
+        public const string SmtpPort = "SmtpPort";
+        public const string SmtpEnableSsl = "SmtpEnableSsl";
+        public const string SmtpUserName = "SmtpUserName";
+        /// <summary>Stored encrypted (ITenantSecretProtector); never shown again, only replaced.</summary>
+        public const string SmtpPassword = "SmtpPassword";
+        public const string SmtpFromEmail = "SmtpFromEmail";
+        public const string SmtpFromName = "SmtpFromName";
+
+        /// <summary>What the settings list shows instead of a stored secret.</summary>
+        public const string SecretMask = "********";
+
+        /// <summary>A setting that is stored encrypted and never shown.</summary>
+        public static bool IsSecret(string? key) => key == SmtpPassword;
+
+        private static readonly Regex HostName = new(@"^[A-Za-z0-9]([A-Za-z0-9\-\.]{0,251}[A-Za-z0-9])?\z", RegexOptions.CultureInvariant);
+
         private static readonly Regex DatabaseName = new(@"^[A-Za-z0-9_]{1,128}\z", RegexOptions.CultureInvariant);
         private static readonly string[] SystemDatabases = { "master", "model", "msdb", "tempdb" };
 
@@ -56,6 +77,55 @@ namespace EncryptzBL.Common.Provisioning
                         return (null, "Enter the plain name of a company database, or leave it empty");
 
                     return (text, null);
+
+                case PublicUrl:
+                    var url = text.TrimEnd('/');
+                    return url.Length <= 200
+                        && Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                        && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
+                        && uri.Query.Length == 0 && uri.Fragment.Length == 0 && uri.UserInfo.Length == 0
+                        ? (url, null)
+                        : (null, "Enter the address of the platform, such as https://serviceapp.encryptz.in");
+
+                case SmtpHost:
+                    return text.Length == 0 || HostName.IsMatch(text)
+                        ? (text, null)
+                        : (null, "Enter the name of the mail server, such as smtp.gmail.com, or leave it empty");
+
+                case SmtpPort:
+                    if (text.Length == 0) return ("", null);
+                    return int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var port) && port is >= 1 and <= 65535
+                        ? (port.ToString(CultureInfo.InvariantCulture), null)
+                        : (null, "Enter a port from 1 to 65535, such as 587, or leave it empty");
+
+                case SmtpEnableSsl:
+                    if (text.Length == 0) return ("", null);
+                    return bool.TryParse(text, out var ssl)
+                        ? (ssl ? "true" : "false", null)
+                        : (null, "Enter true or false, or leave it empty");
+
+                case SmtpUserName:
+                    return text.Length <= 256 && !text.Any(c => char.IsWhiteSpace(c) || char.IsControl(c))
+                        ? (text, null)
+                        : (null, "Enter the login of the mail server without spaces, or leave it empty");
+
+                case SmtpPassword:
+                    // the spaces of a Gmail app password are part of what is typed: kept as typed
+                    var secret = value ?? "";
+                    if (secret == SecretMask) return (null, "Type the new password, or leave it empty to use appsettings.json");
+                    return secret.Length <= 200 && !secret.Any(char.IsControl)
+                        ? (secret.Trim(), null)
+                        : (null, "The password is longer than 200 characters");
+
+                case SmtpFromEmail:
+                    return text.Length == 0 || RegistrationRules.IsEmail(text)
+                        ? (text, null)
+                        : (null, "Enter the e-mail address mails are sent from, or leave it empty");
+
+                case SmtpFromName:
+                    return text.Length <= 100 && !text.Any(char.IsControl)
+                        ? (text, null)
+                        : (null, "Enter a name of at most 100 characters, or leave it empty");
 
                 default:
                     return (null, "Unknown setting");

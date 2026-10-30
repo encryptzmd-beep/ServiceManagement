@@ -394,7 +394,10 @@
                 @if (settingError()[s.settingKey]) { <div class="pa-error">{{ settingError()[s.settingKey] }}</div> }
               </td>
               <td>
-                @if (settingHelp[s.settingKey]) {
+                @if (isSecretSetting(s.settingKey)) {
+                  <input class="form-input" type="password" autocomplete="new-password" [(ngModel)]="settingDraft[s.settingKey]" (ngModelChange)="markSettingEdited(s.settingKey)"
+                         [placeholder]="s.settingValue ? 'Saved - type a new one to change it' : 'Not set - appsettings.json is used'" [attr.aria-label]="settingHelp[s.settingKey].label" />
+                } @else if (settingHelp[s.settingKey]) {
                   <input class="form-input" [(ngModel)]="settingDraft[s.settingKey]" (ngModelChange)="markSettingEdited(s.settingKey)" [attr.aria-label]="settingHelp[s.settingKey].label" />
                 } @else {
                   {{ s.settingValue }}

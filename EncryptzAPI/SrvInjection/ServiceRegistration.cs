@@ -90,6 +90,7 @@ namespace EncryptzAPI.SrvInjection
             services.AddScoped<ITrackingService, TrackingService>();
             services.AddScoped<IProductMasterService, ProductMasterService>();
             services.AddScoped<IRepairPartService, RepairPartService>();
+            services.AddScoped<PlatformSettingsReader>();                           // platform settings for mail, links and credits (MainDB)
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<ISalesService, SalesService>();                      // sales order -> despatch -> warranty

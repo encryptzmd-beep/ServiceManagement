@@ -909,7 +909,11 @@ namespace EncryptzBL.Infrastructure.User.Modules
             if (!actor.IsPlatformAdmin)
                 return ApiResponse<List<PlatformSettingDto>>.Fail(NotAllowed);
 
-            return ApiResponse<List<PlatformSettingDto>>.Ok(await GetListAsync<PlatformSettingDto>("sp_Platform_GetSettings"));
+            var list = await GetListAsync<PlatformSettingDto>("sp_Platform_GetSettings");
+            // a stored secret (the mail password) never leaves the server: only whether it is set
+            foreach (var s in list.Where(s => PlatformSettingRules.IsSecret(s.SettingKey)))
+                s.SettingValue = string.IsNullOrEmpty(s.SettingValue) ? "" : PlatformSettingRules.SecretMask;
+            return ApiResponse<List<PlatformSettingDto>>.Ok(list);
         }
 
         public async Task<ApiResponse<bool>> SaveSetting(SavePlatformSettingRequest req, PlatformActor actor)
@@ -920,6 +924,10 @@ namespace EncryptzBL.Infrastructure.User.Modules
             var (value, error) = PlatformSettingRules.Validate(req?.SettingKey, req?.SettingValue);
             if (value == null)
                 return ApiResponse<bool>.Fail(error ?? "Unknown setting");
+
+            // a secret is stored encrypted; an empty one clears it (appsettings.json is used again)
+            if (PlatformSettingRules.IsSecret(req!.SettingKey) && value.Length > 0)
+                value = _protector.Protect(value);
 
             var dt = await GetDataTableAsync("sp_Platform_SaveSetting", new[]
             {
