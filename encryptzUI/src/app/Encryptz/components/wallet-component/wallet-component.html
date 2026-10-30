@@ -1,0 +1,92 @@
+<app-personal-shell appName="Wallet" icon="account_balance_wallet" [menu]="menu">
+  <div class="db wl">
+
+    <section class="db-card wl-balance">
+      <span class="material-icons" aria-hidden="true">account_balance_wallet</span>
+      <div>
+        <div class="wl-label">Your credits</div>
+        <div class="wl-amount">{{ wallet.balance() ?? '-' }}</div>
+      </div>
+    </section>
+
+    <section class="db-card">
+      <div class="db-card-head"><h2>Invite a friend</h2></div>
+      @if (referralCredits() > 0) {
+        <p class="db-muted wl-offer">You get {{ referralCredits() }} credits for each friend who joins.</p>
+      }
+      @if (link(); as url) {
+        <div class="wl-link">
+          <span class="wl-link-label">Your invite link</span>
+          <div class="wl-form">
+            <input type="text" readonly [value]="url" aria-label="Your invite link" (focus)="$any($event.target).select()" />
+            <button type="button" class="db-btn wl-copy" (click)="copyLink()">Copy</button>
+            @if (canShare) {
+              <button type="button" class="db-btn primary wl-share" (click)="shareLink()">Share</button>
+            }
+          </div>
+          @if (linkMessage()) { <p class="wl-msg" role="status">{{ linkMessage() }}</p> }
+          <p class="db-muted wl-hint">Anyone who signs up with this link counts as your friend. Or invite by e-mail:</p>
+        </div>
+      }
+      <form class="wl-form" (ngSubmit)="send()">
+        <input type="email" name="inviteEmail" [(ngModel)]="email" placeholder="Friend's e-mail" aria-label="Friend's e-mail" [disabled]="busy()" />
+        <button type="submit" class="db-btn primary wl-send" [disabled]="busy()">Send</button>
+      </form>
+      @if (inviteMessage()) {
+        <p class="wl-msg" [class.bad]="inviteFailed()" role="status">{{ inviteMessage() }}</p>
+      }
+    </section>
+
+    <section class="db-card">
+      <div class="db-card-head"><h2>My invites</h2></div>
+      @if (referrals(); as list) {
+        @if (list.length) {
+          <ul class="wl-list">
+            @for (r of list; track r.referralId) {
+              <li>
+                <div class="wl-main">
+                  <span class="wl-title">{{ r.email }}</span>
+                  <span class="db-muted">{{ r.sentAt | date: 'd MMM y' }}</span>
+                </div>
+                <span class="db-tag">{{ r.status }}</span>
+                @if (r.status === 'Sent') {
+                  <button type="button" class="db-btn small" (click)="send(r.email)" [disabled]="busy()">Resend</button>
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="db-empty">No invites yet</p>
+        }
+      }
+    </section>
+
+    <section class="db-card">
+      <div class="db-card-head"><h2>History</h2></div>
+      @if (entries(); as list) {
+        @if (list.length) {
+          <ul class="wl-list">
+            @for (e of list; track e.entryId) {
+              <li>
+                <div class="wl-main">
+                  <span class="wl-title">{{ e.note }}</span>
+                  <span class="db-muted">{{ e.createdAt | date: 'd MMM y' }}</span>
+                </div>
+                <span class="wl-delta" [class.minus]="e.amount < 0">{{ amountLabel(e.amount) }}</span>
+              </li>
+            }
+          </ul>
+          @if (hasNewer() || hasOlder()) {
+            <div class="wl-pager">
+              <button type="button" class="db-btn small" [disabled]="!hasNewer()" (click)="loadLedger(page() - 1)">Newer</button>
+              <button type="button" class="db-btn small" [disabled]="!hasOlder()" (click)="loadLedger(page() + 1)">Older</button>
+            </div>
+          }
+        } @else {
+          <p class="db-empty">No credits yet</p>
+        }
+      }
+    </section>
+
+  </div>
+</app-personal-shell>

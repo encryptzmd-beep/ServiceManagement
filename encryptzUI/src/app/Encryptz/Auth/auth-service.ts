@@ -276,6 +276,8 @@ setSession(data: any): void {
     mobileNumber: string;
     password: string;
     aadhaarNumber: string;
+    referralToken?: string;
+    inviterKey?: string;
   }): Observable<ApiResponse<{ userId: number }>> {
     return this.http.post<ApiResponse<{ userId: number }>>(`${this.apiUrl}/self-register`, data);
   }

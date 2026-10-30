@@ -59,6 +59,13 @@ export const routes: Routes = [
     data: { title: 'Job Portal' },
   },
   {
+    path: 'apps/wallet',
+    loadComponent: () => import('./Encryptz/components/wallet-component/wallet-component')
+      .then(m => m.WalletComponent),
+    canActivate: [authGuard],
+    data: { title: 'Wallet' },
+  },
+  {
     path: 'apps/jobs/profile',
     loadComponent: () => import('./Encryptz/components/job-profile-component/job-profile-component')
       .then(m => m.JobProfileComponent),

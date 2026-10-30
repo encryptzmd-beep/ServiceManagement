@@ -2,7 +2,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule, Router } from '@angular/router';
+import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
 import { ROLES } from '../../Models/ApiModels';
 import { LoginBrandPanelComponent } from '../login-brand-panel/login-brand-panel';
@@ -17,6 +17,11 @@ import { LoginBrandPanelComponent } from '../login-brand-panel/login-brand-panel
 export class RegisterComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  /** From the invite mail link (?ref=...&email=...); the server ignores a token that is not valid. */
+  private referralToken = this.route.snapshot.queryParamMap.get('ref') ?? '';
+  /** From a shared invite link (?inv=key); the server ignores a key that is not one. */
+  private inviterKey = this.route.snapshot.queryParamMap.get('inv') ?? '';
 
   loading = signal(false);
   error = signal('');
@@ -26,7 +31,7 @@ export class RegisterComponent {
   showPassword = signal(false);
 
   fullName = '';
-  email = '';
+  email = this.route.snapshot.queryParamMap.get('email') ?? '';
   mobileNumber = '';
   password = '';
   confirmPassword = '';
@@ -77,7 +82,9 @@ export class RegisterComponent {
       email: this.email.trim(),
       mobileNumber: this.mobileNumber.trim(),
       password: this.password,
-      aadhaarNumber: this.aadhaarNumber.trim()
+      aadhaarNumber: this.aadhaarNumber.trim(),
+      ...(this.referralToken ? { referralToken: this.referralToken } : {}),
+      ...(this.inviterKey ? { inviterKey: this.inviterKey } : {})
     }).subscribe({
       next: (res) => {
         this.loading.set(false);

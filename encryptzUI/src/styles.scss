@@ -250,7 +250,9 @@ input, select, textarea { font-family: inherit; }
   tbody tr:last-child td { border-bottom: none; }
   tbody tr:hover td { background: #fafbfe; }
 
-  .fx-num { color: var(--fx-text-muted); font-size: 13px; width: 40px; }
+  /* the numbers only: a header keeps the 11px of the other headers */
+  tbody .fx-num { color: var(--fx-text-secondary); font-size: 13px; width: 40px; font-variant-numeric: tabular-nums; }
+  thead .fx-num { width: 40px; }
   .fx-empty-row {
     text-align: center;
     padding: 32px 20px;

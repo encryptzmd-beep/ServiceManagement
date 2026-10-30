@@ -16,6 +16,15 @@ namespace EncryptzBL.Common.Provisioning
         /// </summary>
         public const string TenantLookupSourceDb = "TenantLookupSourceDb";
 
+        /// <summary>The credits a new individual starts with.</summary>
+        public const string WelcomeCredits = "WelcomeCredits";
+
+        /// <summary>The credits the inviter earns when an invited friend is onboarded (the friend gets the welcome credits).</summary>
+        public const string ReferralCredits = "ReferralCredits";
+
+        /// <summary>When the wallet started; set by the database script, not editable.</summary>
+        public const string WalletStartedAt = "WalletStartedAt";
+
         private static readonly Regex DatabaseName = new(@"^[A-Za-z0-9_]{1,128}\z", RegexOptions.CultureInvariant);
         private static readonly string[] SystemDatabases = { "master", "model", "msdb", "tempdb" };
 
@@ -30,6 +39,13 @@ namespace EncryptzBL.Common.Provisioning
                     return int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var n) && n <= 100
                         ? (n.ToString(CultureInfo.InvariantCulture), null)
                         : (null, "Enter a number from 0 to 100");
+
+                case WelcomeCredits:
+                case ReferralCredits:
+                    return int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var credits)
+                        && credits <= Wallet.WalletRules.MaxCredits
+                        ? (credits.ToString(CultureInfo.InvariantCulture), null)
+                        : (null, "Enter a number from 0 to 100000");
 
                 case TenantLookupSourceDb:
                     if (text.Length == 0)

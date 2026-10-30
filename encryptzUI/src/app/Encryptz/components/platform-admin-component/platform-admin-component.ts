@@ -103,6 +103,14 @@ export class PlatformAdminComponent implements OnInit {
       label: 'Lookup source database',
       help: 'Leave empty (recommended): new companies start with the built-in defaults. Never name a live company\'s database: its print header and running numbers would be copied.',
     },
+    WelcomeCredits: {
+      label: 'Welcome credits',
+      help: 'Credits a new person gets once their profile has a name and mobile number. 0 = off.',
+    },
+    ReferralCredits: {
+      label: 'Referral credits',
+      help: 'Credits the inviter gets when an invited friend is onboarded (the friend gets the welcome credits). 0 = off.',
+    },
   };
 
   /** Company whose Modules dialog is open (null = closed). */

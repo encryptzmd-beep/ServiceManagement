@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, input, untracked } from '@angular/
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
 import { NotificationBellComponent } from '../notification-bell-component/notification-bell-component';
+import { WalletChipComponent } from '../wallet-chip-component/wallet-chip-component';
 import { MessageAlertsService } from '../../Services/message-alerts-service';
 import { MessageSide } from '../../Services/messages-service';
 
@@ -29,7 +30,7 @@ export interface PersonalMenuItem {
 @Component({
   selector: 'app-personal-shell',
   standalone: true,
-  imports: [RouterModule, NotificationBellComponent],
+  imports: [RouterModule, NotificationBellComponent, WalletChipComponent],
   template: `
     <header class="ps-bar">
       <div class="ps-bar-in">
@@ -43,6 +44,7 @@ export interface PersonalMenuItem {
             <span class="ps-app-sub" [title]="companyName() ? 'You are working in ' + companyName() : ''">{{ shownSubtitle() }}</span>
           </span>
         </div>
+        <app-wallet-chip />
         <app-notification-bell />
         <div class="ps-user">
           <span class="ps-user-text">

@@ -1,6 +1,7 @@
 using EncryptzBL.Common;
 using EncryptzBL.Common.Provisioning;
 using EncryptzBL.Common.Tenant;
+using EncryptzBL.Common.Wallet;
 using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using Microsoft.Data.SqlClient;
@@ -573,7 +574,9 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 SqlParameterHelper.Input("@Email", dto.Email),
                 SqlParameterHelper.Input("@MobileNumber", dto.MobileNumber),
                 SqlParameterHelper.Input("@PasswordHash", BCrypt.Net.BCrypt.HashPassword(dto.Password)),
-                SqlParameterHelper.Input("@AadhaarNumber", (object?)dto.AadhaarNumber ?? DBNull.Value)
+                SqlParameterHelper.Input("@AadhaarNumber", (object?)dto.AadhaarNumber ?? DBNull.Value),
+                SqlParameterHelper.Input("@ReferralToken", Guid.TryParse(dto.ReferralToken, out var referral) ? (object)referral : DBNull.Value),
+                SqlParameterHelper.Input("@InviterKey", (object?)WalletRules.NormalizeInviteKey(dto.InviterKey) ?? DBNull.Value)
             };
 
             var ds = await GetDataSetAsync("sp_User_SelfRegister", parameters);

@@ -8,6 +8,7 @@ using EncryptzAPI.Hubs;
 using EncryptzBL.Infrastructure.Jobs;
 using EncryptzBL.Infrastructure.LoginAds;
 using EncryptzBL.Infrastructure.Notifications;
+using EncryptzBL.Infrastructure.Wallet;
 using EncryptzBL.Infrastructure.Complients.Modules;
 using EncryptzBL.Infrastructure.Customer.Modules;
 using EncryptzBL.Infrastructure.CustomerPortal.Modules;
@@ -73,6 +74,7 @@ namespace EncryptzAPI.SrvInjection
             services.AddScoped<ICompanyProvisioningService, CompanyProvisioningService>();
             services.AddScoped<IPlatformService, PlatformService>();                // MainDB registry administration
             services.AddScoped<IPlatformUnlockService, PlatformUnlockService>();    // e-mailed access code for Platform Admin
+            services.AddScoped<IWalletService, WalletService>();                    // credits and invites of an individual (MainDB)
             services.AddScoped<ILoginAdService, LoginAdService>();                  // login page advertisements (MainDB)
             services.AddScoped<IComplaintService, ComplaintService>();
             services.AddScoped<IDashboardService, DashboardService>();

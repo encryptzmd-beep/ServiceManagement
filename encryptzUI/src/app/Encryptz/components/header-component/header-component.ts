@@ -1,5 +1,6 @@
 import { Component, inject, output } from '@angular/core';
 import { NotificationBellComponent } from '../notification-bell-component/notification-bell-component';
+import { WalletChipComponent } from '../wallet-chip-component/wallet-chip-component';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
@@ -7,7 +8,7 @@ import { AuthService } from '../../Auth/auth-service';
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterModule, NotificationBellComponent],
+  imports: [CommonModule, RouterModule, NotificationBellComponent, WalletChipComponent],
   templateUrl: './header-component.html',
   styleUrls: ['./header-component.scss'],
 })

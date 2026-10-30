@@ -29,6 +29,8 @@
 }
 
 /* Table bits */
+/* a wide table (the action buttons of Companies) scrolls inside its card instead of being cut off */
+.fx-table-wrap { overflow-x: auto; }
 .pa-actions { text-align: right; white-space: nowrap; }
 /* the shared .fx-action-btn is a 28px icon square: text buttons need their own width, or the
    labels run over each other and a click on one opens the next (QA BUG-029) */

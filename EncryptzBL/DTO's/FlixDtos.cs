@@ -1657,6 +1657,8 @@ namespace EncryptzBL.DTO_s
             public string MobileNumber { get; set; }
             public string Password { get; set; }
             public string AadhaarNumber { get; set; }
+            public string? ReferralToken { get; set; }
+            public string? InviterKey { get; set; }
         }
 
         public class CompanyResponseDto
