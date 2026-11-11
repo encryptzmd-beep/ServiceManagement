@@ -4,7 +4,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { AuthService } from './auth-service';
-import { environment } from '../../../environments/environment.development';
+import { environment } from '../../../environments/environment';
 
 const PROJECT_KEY_STORAGE = 'customer_project_key';
 

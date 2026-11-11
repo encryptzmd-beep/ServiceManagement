@@ -4,7 +4,7 @@ import { appConfig } from './app.config';
 import { serverRoutes } from './app.routes.server';
 import { PUBLIC_API_URL } from './Encryptz/Services/public-jobs-service';
 import { SITE_URL } from './Encryptz/Services/seo-service';
-import { environment } from '../environments/environment.development';
+import { environment } from '../environments/environment';
 
 /** A setting of the page server's environment ('' when it is not set). */
 function setting(name: string): string {

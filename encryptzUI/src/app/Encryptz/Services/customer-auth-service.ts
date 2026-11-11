@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { ApiResponse, Customer, CustomerMenu, RegisterResponse, LoginResponse, LoginResponseCustomer } from '../Models/ApiModels';
-import { environment } from '../../../environments/environment.development';
+import { environment } from '../../../environments/environment';
 
 export interface CustomerTenantProject {
   companyName: string;

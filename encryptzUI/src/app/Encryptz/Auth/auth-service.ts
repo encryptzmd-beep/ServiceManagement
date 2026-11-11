@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, map, tap, timeout } from 'rxjs';
 import { ApiResponse, CompanyInfoDto, CompanyUserDetailDto, InvitationDetailDto, JoinRequestDto, LoginResponse, LocationDto, MenuItem, ModuleDto, PersonalApp, RegisterRequest } from '../Models/ApiModels';
-import {environment} from '../../../../src/environments/environment.development'
+import {environment} from '../../../../src/environments/environment'
 import { MenuAccessDto, RoleDto, UserDto } from '../components/auth-management-component/auth-management-component';
 import { LocationMonitorService } from '../Services/location-monitor-service';
 import { legacyModuleKey, ScopeState } from './scope-flow';

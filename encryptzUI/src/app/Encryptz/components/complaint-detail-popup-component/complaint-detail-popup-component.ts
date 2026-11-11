@@ -19,7 +19,7 @@ import { ApiService } from '../../Services/API/api-service';
 import { AuthService } from '../../Auth/auth-service';
 import { LeafletLoaderService } from '../../Services/leaflet-loader-service';
 import { statusIdByName } from '../../Models/ApiModels';
-import { environment } from '../../../../environments/environment.development';
+import { environment } from '../../../../environments/environment';
 import { DialogService } from '../../Services/dialog-service';
 
 declare var L: any;

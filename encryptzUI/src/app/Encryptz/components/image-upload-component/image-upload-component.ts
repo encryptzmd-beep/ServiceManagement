@@ -10,7 +10,7 @@ import { debounceTime, Subject } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../Services/API/api-service';
 import { HttpClient } from '@angular/common/http';
-import {environment} from '../../../../../src/environments/environment.development'
+import {environment} from '../../../../../src/environments/environment'
 
 
 interface UploadItem {
