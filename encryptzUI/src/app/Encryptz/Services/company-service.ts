@@ -3,7 +3,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
-import { environment } from '../../../environments/environment.development';
+import { environment } from '../../../environments/environment';
 import { AuthService } from '../Auth/auth-service';
 
 export interface CompanyUser {
@@ -43,10 +43,5 @@ export class CompanyService {
   getAvailableRoles(): Observable<string[]> {
     return this.http.get<any>(`${this.apiUrl}/available-roles`)
       .pipe(map(res => (Array.isArray(res) ? res : (res?.data ?? [])) as string[]));
-  }
-
-  // Create company (DISABLED - returns error message)
-  createCompany(data: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/create-company`, data);
   }
 }

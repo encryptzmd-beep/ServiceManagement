@@ -2,53 +2,74 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule, Router } from '@angular/router';
+import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
 import { ROLES } from '../../Models/ApiModels';
+import { LoginBrandPanelComponent } from '../login-brand-panel/login-brand-panel';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, LoginBrandPanelComponent],
   templateUrl: './register-component.html',
   styleUrls: ['./register-component.scss'],
 })
 export class RegisterComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  /** From the invite mail link (?ref=...&email=...); the server ignores a token that is not valid. */
+  private referralToken = this.route.snapshot.queryParamMap.get('ref') ?? '';
+  /** From a shared invite link (?inv=key); the server ignores a key that is not one. */
+  private inviterKey = this.route.snapshot.queryParamMap.get('inv') ?? '';
 
   loading = signal(false);
   error = signal('');
   success = signal('');
-  passwordMismatch = signal(false);
+  /** The message of each field that is wrong, shown under it; a field's message goes when it changes. */
+  fieldErrors = signal<Record<string, string>>({});
+  showPassword = signal(false);
 
   fullName = '';
-  email = '';
+  email = this.route.snapshot.queryParamMap.get('email') ?? '';
   mobileNumber = '';
   password = '';
   confirmPassword = '';
   aadhaarNumber = '';
 
+  clearError(field: string): void {
+    if (this.fieldErrors()[field]) {
+      const { [field]: _, ...rest } = this.fieldErrors();
+      this.fieldErrors.set(rest);
+    }
+    this.error.set('');
+  }
+
+  /** The same rules as the server (RegistrationRules), all fields at once. */
+  private validate(): Record<string, string> {
+    const e: Record<string, string> = {};
+    const email = this.email.trim();
+    const mobile = this.mobileNumber.trim();
+    const mobileDigits = mobile.replace(/\D/g, '').length;
+
+    if (!this.fullName.trim()) e['fullName'] = 'Enter your full name';
+    if (!email) e['email'] = 'Enter your e-mail address';
+    else if (!/^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"'.]{2,}$/.test(email)) e['email'] = 'Enter a valid e-mail address';
+    if (!mobile) e['mobileNumber'] = 'Enter your mobile number';
+    else if (!/^\+?[0-9 ()\-]+$/.test(mobile) || mobileDigits < 10 || mobileDigits > 15) e['mobileNumber'] = 'Enter a valid mobile number (10 digits)';
+    if (this.aadhaarNumber.trim() && !/^\d{12}$/.test(this.aadhaarNumber.trim())) e['aadhaarNumber'] = 'The Aadhaar number must be 12 digits';
+    if (!this.password) e['password'] = 'Enter a password';
+    else if (this.password.length < 6) e['password'] = 'At least 6 characters';
+    if (!this.confirmPassword) e['confirmPassword'] = 'Enter the password again';
+    else if (this.password !== this.confirmPassword) e['confirmPassword'] = 'The passwords do not match';
+    return e;
+  }
+
   register(): void {
-    // Validation
-    if (!this.fullName || !this.email || !this.mobileNumber || !this.password) {
-      this.error.set('Please fill all required fields');
-      return;
-    }
-
-    if (this.password !== this.confirmPassword) {
-      this.passwordMismatch.set(true);
-      return;
-    }
-    this.passwordMismatch.set(false);
-
-    if (this.password.length < 6) {
-      this.error.set('Password must be at least 6 characters');
-      return;
-    }
-
-    if (this.aadhaarNumber && !/^\d{12}$/.test(this.aadhaarNumber)) {
-      this.error.set('Aadhaar number must be 12 digits');
+    const problems = this.validate();
+    this.fieldErrors.set(problems);
+    if (Object.keys(problems).length) {
+      this.error.set('');
       return;
     }
 
@@ -57,17 +78,20 @@ export class RegisterComponent {
     this.success.set('');
 
     this.auth.selfRegister({
-      fullName: this.fullName,
-      email: this.email,
-      mobileNumber: this.mobileNumber,
+      fullName: this.fullName.trim(),
+      email: this.email.trim(),
+      mobileNumber: this.mobileNumber.trim(),
       password: this.password,
-      aadhaarNumber: this.aadhaarNumber || ""
+      aadhaarNumber: this.aadhaarNumber.trim(),
+      ...(this.referralToken ? { referralToken: this.referralToken } : {}),
+      ...(this.inviterKey ? { inviterKey: this.inviterKey } : {})
     }).subscribe({
       next: (res) => {
         this.loading.set(false);
         if (res.success) {
           this.success.set(res.message || 'Registration successful! Redirecting to login...');
-          setTimeout(() => this.router.navigate(['/login']), 3000);
+          // back to the job the person wanted to apply for, if they came from one (?next= stays)
+          setTimeout(() => this.router.navigate(['/login'], { queryParamsHandling: 'preserve' }), 3000);
         } else {
           this.error.set(res.message || 'Registration failed');
         }

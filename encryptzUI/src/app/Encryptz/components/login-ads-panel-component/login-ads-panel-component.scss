@@ -1,0 +1,74 @@
+/* Platform Admin › Login Ads. The table, dialog and form come from styles.scss and the Platform Admin styles. */
+:host { display: block; }
+
+.la-sub { display: block; margin-top: 2px; font-size: 12px; color: #6b7280; }
+.la-muted { font-size: 12px; color: #6b7280; }
+
+.la-error { margin: 10px 20px 0; color: #b42318; font-size: 13px; }
+.la-link { border: 0; background: none; padding: 0; color: #1b4a7a; text-decoration: underline; cursor: pointer; font-size: 13px; }
+
+.la-order { white-space: nowrap; }
+
+.la-icon {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #e6eaf0;
+  border-radius: 6px;
+  background: #fff;
+  color: #1b4a7a;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  .material-icons { font-size: 16px; }
+  &:disabled { opacity: 0.35; cursor: default; }
+  & + & { margin-left: 4px; }
+}
+
+.la-thumb {
+  display: block;
+  width: 72px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #eef2f7;
+}
+
+.la-link-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; color: #4b5568; }
+
+.la-pill {
+  padding: 2px 10px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &[data-status='Active'] { background: #e3f4ea; color: #1e6b3a; }
+  &[data-status='Hidden'] { background: #eef2f7; color: #4b5568; }
+  &[data-status='Ended'] { background: #fdecec; color: #b42318; }
+  &:disabled { cursor: default; opacity: 0.7; }
+}
+
+.la-actions { text-align: right; white-space: nowrap; }
+
+.la-btn {
+  height: 28px;
+  padding: 0 10px;
+  margin-left: 4px;
+  border: 1px solid #e6eaf0;
+  border-radius: 7px;
+  background: #fff;
+  color: #1b4a7a;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &.danger { color: #b42318; }
+  &:disabled { opacity: 0.5; cursor: default; }
+}
+
+.la-check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #374151; }
+.full-width { grid-column: 1 / -1; }

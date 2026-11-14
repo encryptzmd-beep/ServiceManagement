@@ -1,10 +1,25 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment.development';
+import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../Models/ApiModels';
 
 // ── Platform administration (main database): companies, projects, access, menus ──
+
+/** A slide of the sign-in page, as the platform administrator manages it (Platform Admin › Login Ads). */
+export interface PlatformLoginAd {
+  loginAdId: number;
+  sortOrder: number;
+  tag: string;
+  title: string;
+  body: string;
+  buttonText: string;
+  linkUrl: string;
+  showFrom: string | null;
+  showUntil: string | null;
+  isActive: boolean;
+  imageVersion: number;
+}
 
 export interface PlatformCompany {
   companyId: number;
@@ -17,6 +32,9 @@ export interface PlatformCompany {
   createdAt?: string;
   projectCount?: number;
   userCount?: number;
+  provisionStatus?: string;
+  provisionError?: string;
+  databaseName?: string;
 }
 
 export interface PlatformProject {
@@ -65,6 +83,111 @@ export interface ProjectAccess {
   grantedByName?: string;
 }
 
+/** One module of the catalogue as a company has it. */
+export interface CompanyModule {
+  moduleId: number;
+  moduleKey: string;
+  moduleName: string;
+  description: string;
+  icon: string;
+  sortOrder: number;
+  isEnabled: boolean;
+  /** Members who can open it now. */
+  userCount: number;
+  /** false = "Coming soon": cannot be switched on. Missing on an API without the flag. */
+  isReleased?: boolean;
+  family?: string;
+}
+
+/** An active member of a company, as the platform administrator sees them. */
+export interface CompanyMember {
+  userId: number;
+  fullName: string;
+  email: string;
+  /** As it is shown: EZ-XXXX-XXXX-XXXX ('' when the person has none). */
+  individualId: string;
+  roleInCompany: string;
+  /** The person who created the company. */
+  isCreator: boolean;
+  assignedAt?: string;
+}
+
+/** The members of a company and the roles one of them can be given. */
+export interface CompanyMembers {
+  members: CompanyMember[];
+  roles: string[];
+}
+
+/** An application of the catalogue, as the platform administrator sees it. */
+export interface PlatformApplication {
+  moduleId: number;
+  moduleKey: string;
+  moduleName: string;
+  description: string;
+  icon: string;
+  family: string;
+  appType: 'Personal' | 'Commercial';
+  /** Where the UI opens a personal application, for example /apps/jobs. */
+  routePath: string;
+  sortOrder: number;
+  /** false = "Coming soon". */
+  isReleased: boolean;
+  isActive: boolean;
+  /** Companies that have it switched on. */
+  companyCount: number;
+}
+
+/** A SQL Server that holds new company databases. The password is never returned. */
+export interface DbServer {
+  dbServerId: number;
+  serverName: string;
+  adminUser: string;
+  extraOptions: string;
+  isDefault: boolean;
+  isActive: boolean;
+  createdAt?: string;
+  hasPassword: boolean;
+  companyCount: number;
+}
+
+/** Sent when saving or testing a server. An empty adminPassword on an edit keeps the stored one. */
+export interface DbServerForm {
+  dbServerId: number;
+  serverName: string;
+  adminUser: string;
+  adminPassword: string;
+  extraOptions: string;
+  isDefault: boolean;
+  isActive: boolean;
+}
+
+export interface PlatformSetting {
+  settingKey: string;
+  settingValue: string;
+  updatedAt?: string;
+  updatedByName: string;
+}
+
+export interface Branch {
+  locationId: number;
+  locationName: string;
+  isActive: boolean;
+}
+
+export interface BranchAccessUser {
+  userId: number;
+  fullName: string;
+  email: string;
+  roleInCompany: string;
+  allBranches: boolean;
+  locationIds: number[];
+}
+
+export interface BranchAccess {
+  branches: Branch[];
+  users: BranchAccessUser[];
+}
+
 export interface PlatformMenu {
   menuId: number;
   menuName: string;
@@ -76,6 +199,90 @@ export interface PlatformMenu {
   isActive: boolean;
   module: string;
   roleCount?: number;
+}
+
+/** A certificate with a file that waits for a platform administrator. */
+export interface CertificateReview {
+  certificateId: number;
+  title: string;
+  issuer: string;
+  issuedOn?: string | null;
+  fileName: string;
+  submittedAt: string;
+  personName: string;
+  personHeadline: string;
+}
+
+/** A job a company wants to publish (or changed), waiting for a platform administrator. */
+export interface PostingReview {
+  postingId: number;
+  companyName: string;
+  title: string;
+  city: string;
+  employmentType: string;
+  workMode: string;
+  experienceMinYears?: number | null;
+  experienceMaxYears?: number | null;
+  salaryMin?: number | null;
+  salaryMax?: number | null;
+  skills: string;
+  description: string;
+  closesOn?: string | null;
+  submittedAt: string;
+  /** People saw it before: this is a change. */
+  wasPublished: boolean;
+}
+
+/** A person Encryptz can verify. Named by the key, never by a user id. */
+export interface PersonReview {
+  candidateKey: string;
+  fullName: string;
+  headline: string;
+  city: string;
+  contactEmail: string;
+  contactPhone: string;
+  dateOfBirth?: string | null;
+  /** "Employers can find me". */
+  isVisible: boolean;
+  verifiedAt?: string | null;
+  verifiedBy: string;
+  updatedAt: string;
+  experienceCount: number;
+  verifiedCertificates: number;
+  hasResume: boolean;
+}
+
+export type PersonReviewShow = 'waiting' | 'verified' | 'all';
+
+export interface PersonReviewPage {
+  items: PersonReview[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** A rejection a company made: the job, the skills it asked for and the reason. */
+export interface RejectionReview {
+  rejectionId: number;
+  rejectedAt: string;
+  companyName: string;
+  jobTitle: string;
+  skills: string;
+  reason: string;
+  candidateName: string;
+  candidateHeadline: string;
+}
+
+export interface RejectionReviewPage {
+  items: RejectionReview[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface VerificationQueue {
+  certificates: CertificateReview[];
+  postings: PostingReview[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -101,6 +308,77 @@ export class PlatformService {
 
   lock(): void {
     sessionStorage.removeItem(PlatformService.UNLOCK_KEY);
+  }
+
+  // ── login ads (the slides of the sign-in and register pages) ──
+
+  getLoginAds(): Observable<ApiResponse<PlatformLoginAd[]>> {
+    return this.http.get<ApiResponse<PlatformLoginAd[]>>(`${this.api}/login-ads`, { headers: this.headers });
+  }
+
+  /** The image needs the headers, so it is read as a blob and shown through an object URL. */
+  loginAdImage(id: number): Observable<Blob> {
+    return this.http.get(`${this.api}/login-ads/${id}/image`, { headers: this.headers, responseType: 'blob' });
+  }
+
+  /** A form with the file: the browser sets the multipart Content-Type (the headers hold the unlock token only). */
+  saveLoginAd(ad: Partial<PlatformLoginAd>, file: File | null): Observable<ApiResponse<number>> {
+    const form = new FormData();
+    form.append('loginAdId', String(ad.loginAdId ?? 0));
+    form.append('tag', ad.tag ?? '');
+    form.append('title', ad.title ?? '');
+    form.append('body', ad.body ?? '');
+    form.append('buttonText', ad.buttonText ?? '');
+    form.append('linkUrl', ad.linkUrl ?? '');
+    if (ad.showFrom) form.append('showFrom', ad.showFrom.slice(0, 10));
+    if (ad.showUntil) form.append('showUntil', ad.showUntil.slice(0, 10));
+    form.append('isActive', String(ad.isActive ?? true));
+    if (file) form.append('file', file, file.name);
+    return this.http.post<ApiResponse<number>>(`${this.api}/login-ads/save`, form, { headers: this.headers });
+  }
+
+  setLoginAdActive(id: number, isActive: boolean): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/login-ads/${id}/active`, { isActive }, { headers: this.headers });
+  }
+
+  reorderLoginAds(ids: number[]): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/login-ads/reorder`, ids, { headers: this.headers });
+  }
+
+  deleteLoginAd(id: number): Observable<ApiResponse<boolean>> {
+    return this.http.delete<ApiResponse<boolean>>(`${this.api}/login-ads/${id}`, { headers: this.headers });
+  }
+
+  // ── verification (Job Portal: certificates and job postings) ──
+
+  getVerificationQueue(): Observable<ApiResponse<VerificationQueue>> {
+    return this.http.get<ApiResponse<VerificationQueue>>(`${this.api}/verification`, { headers: this.headers });
+  }
+
+  getCertificateFileForReview(certificateId: number): Observable<Blob> {
+    return this.http.get(`${this.api}/verification/certificates/${certificateId}/file`, { headers: this.headers, responseType: 'blob' });
+  }
+
+  decideCertificate(certificateId: number, approve: boolean, note: string): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/verification/certificates/${certificateId}`, { approve, note }, { headers: this.headers });
+  }
+
+  decidePosting(postingId: number, approve: boolean, note: string): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/verification/postings/${postingId}`, { approve, note }, { headers: this.headers });
+  }
+
+  getPeopleForReview(q: string, show: PersonReviewShow, page: number): Observable<ApiResponse<PersonReviewPage>> {
+    const params = new HttpParams().set('q', q).set('show', show).set('page', page);
+    return this.http.get<ApiResponse<PersonReviewPage>>(`${this.api}/verification/people`, { headers: this.headers, params });
+  }
+
+  getRejections(q: string, page: number): Observable<ApiResponse<RejectionReviewPage>> {
+    const params = new HttpParams().set('q', q).set('page', page);
+    return this.http.get<ApiResponse<RejectionReviewPage>>(`${this.api}/verification/rejections`, { headers: this.headers, params });
+  }
+
+  decidePerson(candidateKey: string, approve: boolean, note: string): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/verification/people/${encodeURIComponent(candidateKey)}`, { approve, note }, { headers: this.headers });
   }
 
   isUnlocked(): Observable<{ success: boolean; unlocked: boolean }> {
@@ -149,6 +427,79 @@ export class PlatformService {
 
   setProjectAccess(projectId: number, userId: number, hasAccess: boolean): Observable<ApiResponse<boolean>> {
     return this.http.post<ApiResponse<boolean>>(`${this.api}/projects/${projectId}/access`, { userId, hasAccess }, { headers: this.headers });
+  }
+
+  getCompanyModules(companyId: number): Observable<ApiResponse<CompanyModule[]>> {
+    return this.http.get<ApiResponse<CompanyModule[]>>(`${this.api}/companies/${companyId}/modules`, { headers: this.headers });
+  }
+
+  setCompanyModule(companyId: number, moduleKey: string, isEnabled: boolean): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/companies/${companyId}/modules`, { moduleKey, isEnabled }, { headers: this.headers });
+  }
+
+  getModuleAccess(companyId: number, moduleKey: string): Observable<ApiResponse<ProjectAccess[]>> {
+    return this.http.get<ApiResponse<ProjectAccess[]>>(`${this.api}/companies/${companyId}/modules/${encodeURIComponent(moduleKey)}/access`, { headers: this.headers });
+  }
+
+  setModuleAccess(companyId: number, moduleKey: string, userId: number, hasAccess: boolean): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/companies/${companyId}/modules/${encodeURIComponent(moduleKey)}/access`, { userId, hasAccess }, { headers: this.headers });
+  }
+
+  // ── branch access (rows live in the company's own database) ───────────────
+
+  getBranchAccess(companyId: number): Observable<ApiResponse<BranchAccess>> {
+    return this.http.get<ApiResponse<BranchAccess>>(`${this.api}/companies/${companyId}/branch-access`, { headers: this.headers });
+  }
+
+  setBranchAccess(companyId: number, userId: number, locationId: number, hasAccess: boolean): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/companies/${companyId}/branch-access`, { userId, locationId, hasAccess }, { headers: this.headers });
+  }
+
+  // ── database servers + platform settings (platform administrators) ────────
+
+  getDbServers(): Observable<ApiResponse<DbServer[]>> {
+    return this.http.get<ApiResponse<DbServer[]>>(`${this.api}/db-servers`, { headers: this.headers });
+  }
+
+  /** An empty adminPassword on an edit keeps the stored one. */
+  saveDbServer(form: DbServerForm): Observable<ApiResponse<number>> {
+    return this.http.post<ApiResponse<number>>(`${this.api}/db-servers/save`, form, { headers: this.headers });
+  }
+
+  testDbServer(form: DbServerForm): Observable<ApiResponse<ConnectionTestResult>> {
+    return this.http.post<ApiResponse<ConnectionTestResult>>(`${this.api}/db-servers/test`, form, { headers: this.headers });
+  }
+
+  // ── members and administrators of a company (platform administrator only) ──
+
+  getCompanyMembers(companyId: number): Observable<ApiResponse<CompanyMembers>> {
+    return this.http.get<ApiResponse<CompanyMembers>>(`${this.api}/companies/${companyId}/members`, { headers: this.headers });
+  }
+
+  setCompanyMemberRole(companyId: number, memberId: number, roleName: string): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/companies/${companyId}/members/${memberId}/role`, { roleName }, { headers: this.headers });
+  }
+
+  /** @param lookup the e-mail address or the Individual ID of a registered person */
+  addCompanyMember(companyId: number, lookup: string, roleName: string): Observable<ApiResponse<number>> {
+    return this.http.post<ApiResponse<number>>(`${this.api}/companies/${companyId}/members`, { lookup, roleName }, { headers: this.headers });
+  }
+
+  getApplications(): Observable<ApiResponse<PlatformApplication[]>> {
+    return this.http.get<ApiResponse<PlatformApplication[]>>(`${this.api}/applications`, { headers: this.headers });
+  }
+
+  saveApplication(app: PlatformApplication): Observable<ApiResponse<number>> {
+    return this.http.post<ApiResponse<number>>(`${this.api}/applications/save`, app, { headers: this.headers });
+  }
+
+
+  getSettings(): Observable<ApiResponse<PlatformSetting[]>> {
+    return this.http.get<ApiResponse<PlatformSetting[]>>(`${this.api}/settings`, { headers: this.headers });
+  }
+
+  saveSetting(settingKey: string, settingValue: string): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/settings/save`, { settingKey, settingValue }, { headers: this.headers });
   }
 
   getMenus(): Observable<ApiResponse<PlatformMenu[]>> {

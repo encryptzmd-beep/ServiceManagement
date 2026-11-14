@@ -1,0 +1,8 @@
+<span class="vb" [class.compact]="compact()" [attr.title]="hint()" role="img" [attr.aria-label]="hint()">
+  <svg class="vb-tick" viewBox="0 0 24 24" aria-hidden="true">
+    <!-- a rosette with a check, like the tick of the social networks -->
+    <path class="vb-seal" d="M12 1.5l2.4 1.8 3-.2 1 2.8 2.6 1.6-.8 2.9.8 2.9-2.6 1.6-1 2.8-3-.2L12 22.5l-2.4-1.8-3 .2-1-2.8-2.6-1.6.8-2.9-.8-2.9 2.6-1.6 1-2.8 3 .2z" />
+    <path class="vb-check" d="M7.6 12.3l3 3 5.8-6.1" />
+  </svg>
+  @if (!compact()) { <span class="vb-text">{{ label() }}</span> }
+</span>

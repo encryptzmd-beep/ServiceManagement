@@ -1,0 +1,79 @@
+<div class="fx-table-wrap">
+  <div class="fx-table-toolbar">
+    <div class="fx-toolbar-left">
+      <span class="fx-table-title">Login ads</span>
+      <span class="la-sub">Slides on the sign-in and register pages, in this order. Without an active slide the pages show the brand panel.</span>
+    </div>
+    <button class="fx-btn-new" type="button" (click)="openNew()" [disabled]="busy()">Add slide</button>
+  </div>
+
+  @if (loadError()) { <div class="la-error" role="alert">{{ loadError() }} <button class="la-link" type="button" (click)="load()">Retry</button></div> }
+
+  <table class="fx-table">
+    <thead>
+      <tr><th>Order</th><th>Image</th><th>Headline</th><th>Link</th><th>Shows</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      @for (ad of ads(); track ad.loginAdId; let i = $index, first = $first, last = $last) {
+        <tr>
+          <td class="la-order">
+            <button class="la-icon" type="button" (click)="move(i, -1)" [disabled]="first || busy()" [attr.aria-label]="'Move up: ' + (ad.title || 'slide ' + (i + 1))"><span class="material-icons" aria-hidden="true">arrow_upward</span></button>
+            <button class="la-icon" type="button" (click)="move(i, 1)" [disabled]="last || busy()" [attr.aria-label]="'Move down: ' + (ad.title || 'slide ' + (i + 1))"><span class="material-icons" aria-hidden="true">arrow_downward</span></button>
+          </td>
+          <td>
+            @if (thumbs()[ad.loginAdId]; as src) { <img class="la-thumb" [src]="src" alt="" /> } @else { <span class="la-thumb la-thumb-empty" aria-hidden="true"></span> }
+          </td>
+          <td>
+            <strong>{{ ad.title || '(image only)' }}</strong>
+            @if (ad.tag) { <div class="la-muted">{{ ad.tag }}</div> }
+          </td>
+          <td class="la-link-cell">{{ ad.linkUrl || '—' }}</td>
+          <td>{{ showsText(ad) }}</td>
+          <td>
+            <button type="button" class="la-pill" [attr.data-status]="status(ad)" (click)="toggle(ad)" [disabled]="busy()"
+                    [title]="ad.isActive ? 'Click to hide this slide' : 'Click to show this slide'">{{ status(ad) }}</button>
+          </td>
+          <td class="la-actions">
+            <button class="la-btn" type="button" (click)="edit(ad)" [disabled]="busy()">Edit</button>
+            <button class="la-btn danger" type="button" (click)="remove(ad)" [disabled]="busy()">Delete</button>
+          </td>
+        </tr>
+      } @empty {
+        <tr class="fx-empty-row"><td colspan="7">{{ loading() ? 'Loading…' : 'No slides yet. The sign-in page shows the brand panel.' }}</td></tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+@if (form(); as f) {
+  <div class="modal-overlay" (click)="close()" (escapeClose)="close()">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="la-form-title" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2 id="la-form-title">{{ f.loginAdId ? 'Edit slide' : 'New slide' }}</h2>
+        <button class="modal-close" type="button" (click)="close()" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label for="la-file">Image {{ f.loginAdId ? '(choose one to replace it)' : '*' }}</label>
+            <input id="la-file" type="file" accept=".jpg,.jpeg,.png,.webp" (change)="pickFile($event)" />
+            <small class="la-muted">JPG, PNG or WebP, at most 2 MB. Wide images (about 3:2) fit best.</small>
+          </div>
+          <div class="form-group"><label for="la-tag">Tag</label><input id="la-tag" class="form-input" [(ngModel)]="f.tag" maxlength="40" placeholder="New" /></div>
+          <div class="form-group"><label for="la-btn">Button text</label><input id="la-btn" class="form-input" [(ngModel)]="f.buttonText" maxlength="30" placeholder="Learn more" /></div>
+          <div class="form-group full-width"><label for="la-title">Headline</label><input id="la-title" class="form-input" [(ngModel)]="f.title" maxlength="120" /></div>
+          <div class="form-group full-width"><label for="la-body">Short text</label><textarea id="la-body" class="form-input" rows="3" [(ngModel)]="f.body" maxlength="250"></textarea></div>
+          <div class="form-group full-width"><label for="la-link">Link</label><input id="la-link" class="form-input" [(ngModel)]="f.linkUrl" maxlength="500" placeholder="https://" /></div>
+          <div class="form-group"><label for="la-from">Show from</label><input id="la-from" class="form-input" type="date" [(ngModel)]="f.showFrom" /></div>
+          <div class="form-group"><label for="la-until">Show until</label><input id="la-until" class="form-input" type="date" [(ngModel)]="f.showUntil" /></div>
+          <label class="la-check full-width"><input type="checkbox" [(ngModel)]="f.isActive" /> Active (shown between those days)</label>
+        </div>
+        @if (formError()) { <div class="pa-error" [scrollIntoViewOn]="formError()">{{ formError() }}</div> }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" type="button" (click)="close()" [disabled]="busy()">Cancel</button>
+        <button class="fx-btn-navy" type="button" (click)="save()" [disabled]="busy()">{{ busy() ? 'Saving…' : 'Save slide' }}</button>
+      </div>
+    </div>
+  </div>
+}

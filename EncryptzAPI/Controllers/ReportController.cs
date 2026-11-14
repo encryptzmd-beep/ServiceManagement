@@ -1,4 +1,5 @@
-﻿using EncryptzBL.DTO_s;
+﻿using EncryptzAPI.Middleware;
+using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Report.Modules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -9,6 +10,7 @@ namespace EncryptzAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(Roles = "Admin,Manager")]
+    [AppModule("SERVICE")]
     public class ReportController : ControllerBase
     {
         private readonly IReportService _service;

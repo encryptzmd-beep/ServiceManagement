@@ -1,0 +1,133 @@
+<app-public-jobs-shell>
+  <!-- ═══════════ SEARCH ═══════════ -->
+  <section class="pj-hero">
+    <div class="pj-wrap">
+      <h1>{{ heading }}</h1>
+      <p class="pj-lead">Search open jobs by skill, title or city. Read the full job description, then apply with one free profile.</p>
+
+      <form class="pj-search" role="search" (ngSubmit)="search()">
+        <label class="pj-field pj-field-main">
+          <span class="material-icons" aria-hidden="true">search</span>
+          <span class="jp-sr">Skill, job title or company</span>
+          <input name="q" [(ngModel)]="typedQ" maxlength="100" placeholder="Skill, job title or company" autocomplete="off" />
+        </label>
+        <label class="pj-field">
+          <span class="material-icons" aria-hidden="true">place</span>
+          <span class="jp-sr">City</span>
+          <input name="city" [(ngModel)]="typedCity" maxlength="100" placeholder="City" autocomplete="address-level2" />
+        </label>
+        <button class="pj-search-btn" type="submit">Search jobs</button>
+      </form>
+    </div>
+  </section>
+
+  <div class="pj-wrap pj-layout">
+    <!-- ═══════════ FILTERS ═══════════ -->
+    <aside class="pj-filters" [class.open]="filtersOpen()" aria-label="Filters">
+      <button class="pj-filters-toggle" type="button" (click)="filtersOpen.set(!filtersOpen())" [attr.aria-expanded]="filtersOpen()">
+        <span class="material-icons" aria-hidden="true">tune</span>Filters
+        @if (filter.type || filter.mode) { <span class="pj-dot" aria-hidden="true"></span> }
+      </button>
+
+      <div class="pj-filters-body">
+        <div class="pj-filter">
+          <h2>Job type</h2>
+          @for (t of employmentTypes; track t) {
+            <button type="button" class="pj-opt" [class.on]="filter.type === t" [attr.aria-pressed]="filter.type === t" (click)="setType(t)">
+              <span class="pj-check" aria-hidden="true">@if (filter.type === t) { <span class="material-icons">check</span> }</span>{{ t }}
+            </button>
+          }
+        </div>
+
+        <div class="pj-filter">
+          <h2>Work mode</h2>
+          @for (m of workModes; track m) {
+            <button type="button" class="pj-opt" [class.on]="filter.mode === m" [attr.aria-pressed]="filter.mode === m" (click)="setMode(m)">
+              <span class="pj-check" aria-hidden="true">@if (filter.mode === m) { <span class="material-icons">check</span> }</span>{{ m }}
+            </button>
+          }
+        </div>
+
+        @if (hasFilter) {
+          <button type="button" class="pj-clear" (click)="clear()"><span class="material-icons" aria-hidden="true">close</span>Clear all filters</button>
+        }
+
+        <div class="pj-promo">
+          <span class="material-icons" aria-hidden="true">badge</span>
+          <strong>One profile, every job</strong>
+          <p>Create a free profile once. Apply to any job here with one click, and let employers find you.</p>
+          <a class="jp-btn primary" routerLink="/register" rel="nofollow">Create free profile</a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══════════ RESULTS ═══════════ -->
+    <section class="pj-results" aria-live="polite">
+      <div class="pj-results-head">
+        @if (!loading() && !error()) {
+          <p><strong>{{ total() }}</strong> {{ total() === 1 ? 'job' : 'jobs' }}@if (hasFilter) { found }</p>
+        }
+        @if (filter.type || filter.mode) {
+          <div class="pj-active">
+            @if (filter.type) { <button type="button" (click)="setType(filter.type)">{{ filter.type }}<span class="material-icons" aria-label="Remove">close</span></button> }
+            @if (filter.mode) { <button type="button" (click)="setMode(filter.mode)">{{ filter.mode }}<span class="material-icons" aria-label="Remove">close</span></button> }
+          </div>
+        }
+      </div>
+
+      @if (loading()) {
+        <div class="jp-state"><span class="jp-spinner" aria-hidden="true"></span><p>Loading jobs…</p></div>
+      } @else if (error()) {
+        <div class="jp-card jb-empty">
+          <span class="material-icons">cloud_off</span>
+          <p>{{ error() }}</p>
+          <button class="jp-btn" (click)="load()">Try again</button>
+        </div>
+      } @else {
+        @for (p of items(); track p.postingId) {
+          <article class="jp-card jb-card pj-card">
+            <div class="jb-logo" aria-hidden="true">{{ initial(p.companyName) }}</div>
+            <div class="jb-card-main">
+              <h2><a class="jb-title" [routerLink]="path(p)">{{ p.title }}</a>@if (p.isVerified) { <app-verified-badge hint="Job verified by Encryptz" /> }</h2>
+              <div class="jb-company">{{ p.companyName }}</div>
+              <div class="jb-meta">
+                <span><span class="material-icons" aria-hidden="true">place</span>{{ p.city }}</span>
+                <span><span class="material-icons" aria-hidden="true">schedule</span>{{ p.employmentType }}</span>
+                <span><span class="material-icons" aria-hidden="true">apartment</span>{{ p.workMode }}</span>
+                @if (experienceLabel(p); as exp) { <span><span class="material-icons" aria-hidden="true">work_outline</span>{{ exp }}</span> }
+                @if (salaryLabel(p); as pay) { <span><span class="material-icons" aria-hidden="true">payments</span>{{ pay }}</span> }
+              </div>
+              @if (skillList(p.skills, 8).length) {
+                <div class="jb-skills">@for (s of skillList(p.skills, 8); track s) { <span class="jp-chip">{{ s }}</span> }</div>
+              }
+              <div class="jb-foot">
+                @if (p.closesOn) { Apply by {{ dayLabel(p.closesOn) }} } @else if (p.publishedAt) { Posted {{ dayLabel(p.publishedAt) }} }
+              </div>
+            </div>
+            <div class="jb-card-side">
+              <a class="jp-btn primary" [routerLink]="path(p)">View job<span class="material-icons" aria-hidden="true">arrow_forward</span></a>
+            </div>
+          </article>
+        } @empty {
+          <div class="jp-card jb-empty">
+            <span class="material-icons">{{ hasFilter ? 'search_off' : 'work_outline' }}</span>
+            <p>{{ hasFilter ? 'No open job matches this search. Fewer words or another city find more.' : 'No jobs have been published yet. Please look again soon.' }}</p>
+            @if (hasFilter) { <button class="jp-btn" (click)="clear()">Show all jobs</button> }
+          </div>
+        }
+
+        @if (lastPage > 1) {
+          <nav class="jb-pages pj-pages" aria-label="Pages">
+            @if (filter.page > 1) {
+              <a class="jp-btn" routerLink="/jobs" [queryParams]="pageQuery(filter.page - 1)" rel="prev">Previous</a>
+            }
+            <span>Page {{ filter.page }} of {{ lastPage }}</span>
+            @if (filter.page < lastPage) {
+              <a class="jp-btn" routerLink="/jobs" [queryParams]="pageQuery(filter.page + 1)" rel="next">Next</a>
+            }
+          </nav>
+        }
+      }
+    </section>
+  </div>
+</app-public-jobs-shell>

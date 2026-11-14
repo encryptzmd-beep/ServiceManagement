@@ -1,0 +1,241 @@
+/* The public job list. Cards, chips and buttons come from the profile and the job pages. */
+
+$display: 'Outfit', 'DM Sans', sans-serif;
+$ink: #141b34;
+$text: #3b4357;
+$muted: #6b7489;
+$line: #e4e8f0;
+$accent: #2563eb;
+$navy: #1d4ed8;
+$tint: #eef4ff;
+
+.pj-wrap { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 20px; box-sizing: border-box; }
+
+/* ── search ── */
+.pj-hero {
+  padding: 34px 0 30px;
+  background:
+    radial-gradient(900px 260px at 85% -40%, rgba(37, 99, 235, 0.14), transparent 70%),
+    linear-gradient(180deg, #fff 0%, #f6f8fc 100%);
+  border-bottom: 1px solid $line;
+
+  h1 { margin: 0; font-family: $display; font-size: 30px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; color: $ink; }
+}
+
+.pj-lead { margin: 6px 0 18px; max-width: 62ch; font-size: 14.5px; line-height: 1.55; color: $muted; }
+
+.pj-search {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  max-width: 860px;
+  padding: 8px;
+  border: 1px solid $line;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(20, 40, 90, 0.04), 0 14px 32px rgba(20, 40, 90, 0.08);
+}
+
+.pj-field {
+  position: relative;
+  min-width: 0;
+
+  .material-icons { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 19px; color: $accent; pointer-events: none; }
+  input {
+    width: 100%;
+    height: 46px;
+    padding: 0 12px 0 40px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    background: #f6f8fc;
+    font: inherit;
+    font-size: 14.5px;
+    color: $ink;
+    box-sizing: border-box;
+
+    &:focus { outline: none; border-color: #c9d8f5; background: #fff; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
+  }
+}
+
+.pj-search-btn {
+  height: 46px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 11px;
+  background: $accent;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.25);
+
+  &:hover { background: $navy; }
+  &:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.45); outline-offset: 2px; }
+}
+
+/* ── filters and results ── */
+.pj-layout {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+  margin-top: 22px;
+}
+
+.pj-filters {
+  position: sticky;
+  top: 80px;
+}
+
+.pj-filters-toggle { display: none; }
+
+.pj-filter {
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid #edf0f6;
+  border-radius: 14px;
+  background: #fff;
+
+  h2 { margin: 0 0 8px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: $muted; }
+}
+
+.pj-opt {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  color: $text;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover { background: #f6f8fc; }
+  &.on { color: $navy; font-weight: 600; }
+  &:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.4); }
+}
+
+.pj-check {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #c8d0de;
+  border-radius: 5px;
+  background: #fff;
+
+  .on & { border-color: $accent; background: $accent; }
+  .material-icons { font-size: 14px; color: #fff; }
+}
+
+.pj-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: -4px 0 14px;
+  padding: 4px 6px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: $accent;
+  cursor: pointer;
+
+  .material-icons { font-size: 15px; }
+}
+
+.pj-promo {
+  padding: 16px;
+  border: 1px solid #d6e3fd;
+  border-radius: 14px;
+  background: linear-gradient(160deg, #f3f7ff 0%, #fff 100%);
+
+  > .material-icons { font-size: 22px; color: $accent; }
+  strong { display: block; margin-top: 6px; font-family: $display; font-size: 15px; color: $ink; }
+  p { margin: 6px 0 12px; font-size: 12.5px; line-height: 1.55; color: $text; }
+  .jp-btn { width: 100%; justify-content: center; text-decoration: none; box-sizing: border-box; }
+}
+
+.pj-results-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-height: 28px;
+  margin-bottom: 10px;
+
+  p { margin: 0; font-size: 13.5px; color: $muted; strong { color: $ink; } }
+}
+
+.pj-active {
+  display: flex;
+  gap: 6px;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 6px 3px 10px;
+    border: 1px solid #d6e3fd;
+    border-radius: 999px;
+    background: $tint;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    color: $navy;
+    cursor: pointer;
+
+    .material-icons { font-size: 14px; }
+  }
+}
+
+.pj-card {
+  .jb-title { text-decoration: none; }
+  h2 app-verified-badge { margin-left: 8px; vertical-align: 1px; }
+  .jb-card-side { align-self: center; }
+  .jb-card-side .jp-btn { text-decoration: none; .material-icons { font-size: 16px; } }
+}
+
+.pj-pages a { text-decoration: none; }
+
+@media (max-width: 900px) {
+  .pj-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .pj-filters { position: static; }
+
+  .pj-filters-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid $line;
+    border-radius: 10px;
+    background: #fff;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: $text;
+    cursor: pointer;
+
+    .material-icons { font-size: 18px; color: $accent; }
+  }
+
+  .pj-dot { width: 7px; height: 7px; border-radius: 50%; background: $accent; }
+  .pj-filters-body { display: none; margin-top: 10px; }
+  .pj-filters.open .pj-filters-body { display: block; }
+  .pj-promo { display: none; }
+}
+
+@media (max-width: 640px) {
+  .pj-wrap { padding: 0 16px; }
+  .pj-hero { padding: 24px 0 20px; h1 { font-size: 24px; } }
+  .pj-search { grid-template-columns: minmax(0, 1fr); }
+  .pj-search-btn { width: 100%; }
+}

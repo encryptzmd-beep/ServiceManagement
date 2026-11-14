@@ -1,0 +1,86 @@
+/* A choice out of a long list. It looks like the inputs of the Job Portal pages (.jp-input). */
+
+:host { display: block; min-width: 0; }
+
+.ac {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  border: 1px solid #e4e8f0;
+  border-radius: 10px;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &.open, &:focus-within { border-color: #c9d8f5; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
+  &.disabled { background: #f6f8fc; opacity: 0.7; }
+}
+
+.ac-icon { position: absolute; left: 10px; font-size: 17px; color: #9aa3b5; pointer-events: none; }
+
+.ac-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0 4px 0 34px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font: inherit;
+  font-size: 13.5px;
+  color: #141b34;
+
+  &:focus { outline: none; }
+  /* a choice is made and nothing is typed: its label reads as the value, not as a hint */
+  &::placeholder { color: #141b34; opacity: 1; }
+  .open &::placeholder { color: #9aa3b5; }
+}
+
+.ac-clear {
+  display: inline-flex;
+  padding: 3px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: #9aa3b5;
+  cursor: pointer;
+
+  .material-icons { font-size: 16px; }
+  &:hover { background: #f1f4f9; color: #3b4357; }
+}
+
+.ac-caret { margin-right: 8px; font-size: 20px; color: #9aa3b5; pointer-events: none; transition: transform 0.15s; .open & { transform: rotate(180deg); } }
+
+.ac-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 70;
+  max-height: 280px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid #e4e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(20, 40, 90, 0.16);
+
+  li {
+    display: flex;
+    flex-direction: column;
+    padding: 7px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+
+    &.active { background: #eef4ff; }
+    &.none .ac-label { color: #6b7489; font-style: italic; }
+  }
+}
+
+.ac-label { font-size: 13.5px; font-weight: 500; color: #141b34; overflow-wrap: anywhere; }
+.ac-sub { font-size: 12px; color: #6b7489; }
+
+.ac-list li.ac-empty, .ac-list li.ac-more { cursor: default; font-size: 12.5px; color: #9aa3b5; &:hover { background: none; } }
+.ac-list li.ac-more { border-top: 1px dashed #eef1f6; margin-top: 2px; }

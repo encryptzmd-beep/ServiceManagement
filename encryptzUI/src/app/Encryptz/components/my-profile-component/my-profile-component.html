@@ -22,6 +22,9 @@
         <div class="mp-role">{{ role }}</div>
 
         <dl class="mp-facts">
+          @if (p.individualId) {
+            <div><dt>Individual ID</dt><dd><span class="mp-code">{{ p.individualId }}</span></dd></div>
+          }
           <div><dt>Email (login)</dt><dd>{{ p.email }}</dd></div>
           <div><dt>Mobile</dt><dd>{{ p.mobileNumber || '—' }}</dd></div>
           @if (p.companyName) {

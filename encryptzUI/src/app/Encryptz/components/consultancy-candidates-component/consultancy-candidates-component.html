@@ -1,0 +1,409 @@
+<app-personal-shell appName="Job Consultancy" icon="work" subtitle="Commercial application" [menu]="menu"
+                    backLabel="Back to modules" backRoute="/select-module">
+
+  @if (pageMode) {
+
+    <!-- ═══════════ ONE CANDIDATE ON A PAGE OF ITS OWN (opened in a new tab) ═══════════ -->
+    <nav class="cd-page-crumbs" aria-label="Breadcrumb">
+      <a routerLink="/consultancy/candidates"><span class="material-icons" aria-hidden="true">arrow_back</span>Candidates</a>
+    </nav>
+    @if (open(); as c) {
+      <div class="jp-card cd-page">
+        <ng-container [ngTemplateOutlet]="profileView" [ngTemplateOutletContext]="{ $implicit: c }" />
+      </div>
+    } @else if (pageMissing()) {
+      <div class="jp-card jb-empty">
+        <span class="material-icons">person_off</span>
+        <p>{{ pageMissing() }}</p>
+        <a class="jp-btn" routerLink="/consultancy/candidates">Search candidates</a>
+      </div>
+    } @else {
+      <div class="jp-state"><span class="jp-spinner" aria-hidden="true"></span><p>Loading…</p></div>
+    }
+
+  } @else {
+
+  <div class="jb-head">
+    <div class="jb-head-text">
+      <h1>Candidates @if (!loading() && !unavailable()) { <span class="jp-count">{{ total() + ownTotal() }}</span> }</h1>
+      <p>People on Job Portal who chose to be found by employers. They see which company opened their profile.</p>
+    </div>
+    <div class="cd-tabs" role="group" aria-label="Show">
+      <button type="button" [class.on]="!filter.pool" (click)="setPool(false)"><span class="material-icons" aria-hidden="true">travel_explore</span>Search all</button>
+      <button type="button" [class.on]="filter.pool" (click)="setPool(true)"><span class="material-icons" aria-hidden="true">bookmarks</span>My pool</button>
+      <a routerLink="/consultancy/our-candidates" title="People you added yourself: only your company sees them"><span class="material-icons" aria-hidden="true">badge</span>Our candidates</a>
+    </div>
+    <a class="jp-btn primary cd-add-candidate" routerLink="/consultancy/our-candidates" [queryParams]="{ add: 1 }"
+       title="Add a person you met outside Job Portal: only your company sees them"><span class="material-icons" aria-hidden="true">person_add</span>Add candidate</a>
+  </div>
+
+  <form class="jp-card cd-search" (ngSubmit)="search()" role="search">
+    <label class="jb-search-main cd-search-main">
+      <span class="jp-sr">Skills, job titles, names or companies</span>
+      <span class="material-icons" aria-hidden="true">search</span>
+      <input class="jp-input" name="q" [(ngModel)]="filter.q" maxlength="100" placeholder="Skills, job titles, names or companies, e.g. Tally GST accountant" />
+    </label>
+    <div class="cd-seg" role="group" aria-label="Which words must be found">
+      <button type="button" [class.on]="filter.matchAll" (click)="setFlag('matchAll', true)" title="Every word must be found">All words</button>
+      <button type="button" [class.on]="!filter.matchAll" (click)="setFlag('matchAll', false)" title="Any word is enough">Any word</button>
+    </div>
+    <button class="jp-btn primary" type="submit"><span class="material-icons" aria-hidden="true">search</span>Search</button>
+  </form>
+
+  <div class="cd-layout">
+    <!-- ═══════════ FILTERS ═══════════ -->
+    <aside class="cd-filters" [class.open]="filtersOpen()" aria-label="Filters">
+      <button class="cd-filters-toggle" type="button" (click)="filtersOpen.set(!filtersOpen())" [attr.aria-expanded]="filtersOpen()">
+        <span class="material-icons" aria-hidden="true">tune</span>Filters
+        @if (activeFilters) { <span class="cd-count">{{ activeFilters }}</span> }
+      </button>
+
+      <div class="cd-filters-body">
+        <div class="cd-filters-head">
+          <strong>Filters</strong>
+          @if (activeFilters) { <button type="button" class="cd-link" (click)="clearFilters()">Clear</button> }
+        </div>
+
+        <fieldset class="cd-group">
+          <legend>Profile</legend>
+          <label class="cd-check"><input type="checkbox" [checked]="filter.verifiedOnly" (change)="setFlag('verifiedOnly', $any($event.target).checked)" /><span>Verified by Encryptz</span></label>
+          <label class="cd-check"><input type="checkbox" [checked]="filter.withResume" (change)="setFlag('withResume', $any($event.target).checked)" /><span>Has a resume</span></label>
+        </fieldset>
+
+        <fieldset class="cd-group">
+          <legend>Skills</legend>
+          @for (o of choices('Skill', filter.skills); track o.value) {
+            <label class="cd-check"><input type="checkbox" [checked]="isTicked(filter.skills, o.value)" (change)="toggle('skills', o.value)" /><span>{{ o.value }}</span>@if (o.people !== null) { <em>{{ o.people }}</em> }</label>
+          } @empty { <p class="cd-none">Search to see the skills of the people found.</p> }
+          <div class="cd-add">
+            <input class="jp-input" [(ngModel)]="addSkill" name="addSkill" maxlength="100" placeholder="Add a skill" (keydown.enter)="$event.preventDefault(); addTyped('skills')" aria-label="Add a skill to filter by" />
+            <button type="button" class="jp-btn" (click)="addTyped('skills')" aria-label="Add the skill"><span class="material-icons">add</span></button>
+          </div>
+          @if (filter.skills.length > 1) {
+            <div class="cd-seg sm" role="group" aria-label="Which skills">
+              <button type="button" [class.on]="!filter.skillsAll" (click)="setFlag('skillsAll', false)">Any skill</button>
+              <button type="button" [class.on]="filter.skillsAll" (click)="setFlag('skillsAll', true)">All skills</button>
+            </div>
+          }
+        </fieldset>
+
+        <fieldset class="cd-group">
+          <legend>Experience</legend>
+          @for (b of bands; track b.value) {
+            <label class="cd-check"><input type="checkbox" [checked]="isTicked(filter.bands, b.value)" (change)="toggle('bands', b.value)" /><span>{{ b.label }}</span>@if (countOf('Band', b.value); as n) { <em>{{ n }}</em> }</label>
+          }
+        </fieldset>
+
+        <fieldset class="cd-group">
+          <legend>City</legend>
+          @for (o of choices('City', filter.cities); track o.value) {
+            <label class="cd-check"><input type="checkbox" [checked]="isTicked(filter.cities, o.value)" (change)="toggle('cities', o.value)" /><span>{{ o.value }}</span>@if (o.people !== null) { <em>{{ o.people }}</em> }</label>
+          } @empty { <p class="cd-none">No city yet.</p> }
+          <div class="cd-add">
+            <input class="jp-input" [(ngModel)]="addCity" name="addCity" maxlength="100" placeholder="Add a city" (keydown.enter)="$event.preventDefault(); addTyped('cities')" aria-label="Add a city to filter by" />
+            <button type="button" class="jp-btn" (click)="addTyped('cities')" aria-label="Add the city"><span class="material-icons">add</span></button>
+          </div>
+        </fieldset>
+
+        <fieldset class="cd-group">
+          <legend>Work mode</legend>
+          @for (m of workModes; track m) {
+            <label class="cd-check"><input type="checkbox" [checked]="isTicked(filter.modes, m)" (change)="toggle('modes', m)" /><span>{{ m }}</span>@if (countOf('Mode', m); as n) { <em>{{ n }}</em> }</label>
+          }
+        </fieldset>
+      </div>
+    </aside>
+
+    <div class="cd-results" [class.busy]="searching() && !loading()">
+      @if (!serverFilters() && !loading() && (activeFilters || filter.q.trim())) {
+        <div class="cd-outdated" role="alert">
+          <span class="material-icons" aria-hidden="true">sync_problem</span>
+          <span>The server does not apply these filters yet, so the list below is not filtered. It needs the latest update
+            (PersonalDB script 21 and a restart of the API).</span>
+        </div>
+      }
+      @if (activeFilters) {
+        <div class="cd-active" aria-label="Filters in use">
+          @if (filter.verifiedOnly) { <button type="button" (click)="setFlag('verifiedOnly', false)">Verified<span class="material-icons" aria-label="Remove">close</span></button> }
+          @if (filter.withResume) { <button type="button" (click)="setFlag('withResume', false)">Has a resume<span class="material-icons" aria-label="Remove">close</span></button> }
+          @for (v of filter.skills; track v) { <button type="button" (click)="toggle('skills', v)">{{ v }}<span class="material-icons" aria-label="Remove">close</span></button> }
+          @for (v of filter.bands; track v) { <button type="button" (click)="toggle('bands', v)">{{ bandLabel(v) }}<span class="material-icons" aria-label="Remove">close</span></button> }
+          @for (v of filter.cities; track v) { <button type="button" (click)="toggle('cities', v)">{{ v }}<span class="material-icons" aria-label="Remove">close</span></button> }
+          @for (v of filter.modes; track v) { <button type="button" (click)="toggle('modes', v)">{{ v }}<span class="material-icons" aria-label="Remove">close</span></button> }
+        </div>
+      }
+
+
+  @if (loading()) {
+    <div class="jp-state"><span class="jp-spinner" aria-hidden="true"></span><p>Loading…</p></div>
+  } @else if (unavailable()) {
+    <div class="jp-state">
+      <span class="material-icons">lock_outline</span>
+      <p>{{ unavailable() }}</p>
+      <button class="jp-btn primary" (click)="load()">Try again</button>
+      <a class="jp-link" routerLink="/select-module">Back to modules</a>
+    </div>
+  } @else {
+    @if (ownItems().length && !filter.pool) {
+      <!-- ═══════════ THE COMPANY'S OWN CANDIDATES THAT MATCH ═══════════ -->
+      <div class="cd-own-head">
+        <span class="material-icons" aria-hidden="true">lock</span>
+        <strong>Added by your company</strong>
+        <span class="cd-own-count">{{ ownTotal() }}</span>
+        <span class="cd-own-note">Only your company sees them.</span>
+        @if (ownTotal() > ownItems().length) { <a routerLink="/consultancy/our-candidates" [queryParams]="{ q: filter.q || null }">See all {{ ownTotal() }}</a> }
+      </div>
+      @for (o of ownItems(); track o.candidateId) {
+        <article class="jp-card jb-card cd-card cd-own">
+          <div class="cd-avatar cd-own-avatar" aria-hidden="true">{{ initials(o.fullName) || '?' }}</div>
+          <div class="jb-card-main">
+            <h2><a class="jb-title" routerLink="/consultancy/our-candidates" [queryParams]="{ edit: o.candidateId }" target="_blank" rel="noopener">{{ o.fullName }}</a>
+              <span class="cd-own-badge" title="You added this candidate. Only your company sees them"><span class="material-icons" aria-hidden="true">lock</span>Your candidate</span>
+            </h2>
+            @if (o.headline) { <div class="jb-company">{{ o.headline }}</div> }
+            <div class="jb-meta">
+              @if (o.city) { <span><span class="material-icons" aria-hidden="true">place</span>{{ o.city }}</span> }
+              <span [class.cd-exp-none]="o.experienceYears == null"><span class="material-icons" aria-hidden="true">work_outline</span>{{ ownExperience(o.experienceYears) }}</span>
+              @if (o.phone) { <span><span class="material-icons" aria-hidden="true">call</span>{{ o.phone }}</span> }
+              <span class="cd-resume" [class.on]="o.hasResume"><span class="material-icons">{{ o.hasResume ? 'task' : 'description' }}</span>{{ o.hasResume ? 'Resume' : 'No resume' }}</span>
+            </div>
+            @if (list(o.skills).length) {
+              <div class="jb-skills">@for (s of list(o.skills); track s) { <span class="jp-chip">{{ s }}</span> }</div>
+            }
+            @if (o.preferredJobs) { <div class="jb-foot cd-looking"><span class="material-icons" aria-hidden="true">flag</span><span>Looking for <strong>{{ o.preferredJobs }}</strong></span></div> }
+          </div>
+          <div class="jb-card-side">
+            <span [class]="stageClass(o.stage)">{{ stageLabel(o.stage) }}</span>
+            <a class="jp-btn" routerLink="/consultancy/our-candidates" [queryParams]="{ edit: o.candidateId }" target="_blank" rel="noopener" title="Opens the candidate in a new tab">Open<span class="material-icons" aria-hidden="true">open_in_new</span></a>
+          </div>
+        </article>
+      }
+      @if (items().length) {
+        <div class="cd-own-head cd-portal-head"><span class="material-icons" aria-hidden="true">public</span><strong>On Job Portal</strong><span class="cd-own-count">{{ total() }}</span></div>
+      }
+    }
+
+    @for (c of items(); track c.candidateKey) {
+      <article class="jp-card jb-card cd-card">
+        <div class="cd-avatar" [attr.data-tone]="tone(c.fullName)" aria-hidden="true">{{ initials(c.fullName) || '?' }}</div>
+        <div class="jb-card-main">
+          <h2><a class="jb-title" [routerLink]="['/consultancy/candidates', c.candidateKey]" target="_blank" rel="noopener" title="Opens the profile in a new tab">{{ c.fullName }}</a>@if (c.isVerified) { <app-verified-badge hint="Person verified by Encryptz" /> }</h2>
+          <div class="jb-company">{{ c.headline }}</div>
+          <div class="jb-meta">
+            @if (c.city) { <span><span class="material-icons" aria-hidden="true">place</span>{{ c.city }}</span> }
+            @if (c.experienceSource === 'None') {
+              <span class="cd-exp-none" title="This person did not add their experience"><span class="material-icons" aria-hidden="true">work_outline</span>Experience not added</span>
+            } @else {
+              <span [attr.title]="c.experienceSource === 'Headline' ? 'Read from the headline: no experience entered' : null">
+                <span class="material-icons" aria-hidden="true">work_outline</span>{{ experienceLabel(c) }}
+              </span>
+            }
+            @if (c.workModes) { <span><span class="material-icons" aria-hidden="true">apartment</span>{{ c.workModes }}</span> }
+            <span class="cd-resume" [class.on]="c.hasResume"><span class="material-icons">{{ c.hasResume ? 'task' : 'description' }}</span>{{ c.hasResume ? 'Resume' : 'No resume' }}</span>
+          </div>
+          @if (list(c.skills).length) {
+            <div class="jb-skills">@for (s of list(c.skills); track s) { <span class="jp-chip">{{ s }}</span> }</div>
+          }
+          @if (c.preferredJobs) { <div class="jb-foot cd-looking"><span class="material-icons" aria-hidden="true">flag</span><span>Looking for <strong>{{ c.preferredJobs }}</strong></span></div> }
+        </div>
+        <div class="jb-card-side">
+          @if (c.inPool) { <span [class]="stageClass(c.stage)">{{ stageLabel(c.stage) }}</span> }
+          <a class="jp-btn" [routerLink]="['/consultancy/candidates', c.candidateKey]" target="_blank" rel="noopener" title="Opens the profile in a new tab">View profile<span class="material-icons" aria-hidden="true">open_in_new</span></a>
+        </div>
+      </article>
+    } @empty {
+      @if (!ownItems().length || filter.pool) {
+      <div class="jp-card jb-empty">
+        <span class="material-icons">groups</span>
+        @if (filter.pool) {
+          <p>Your pool is empty. Open a candidate and save them to your pool.</p>
+          <button class="jp-btn" (click)="setPool(false)">Search all candidates</button>
+        } @else {
+          <p>No candidate matches. Try <strong>Any word</strong>, fewer filters, or a shorter word (for example "account" finds accountant and accounts).</p>
+          @if (activeFilters || filter.q) { <button class="jp-btn" (click)="clearAll()">Clear the search</button> }
+        }
+      </div>
+      }
+    }
+
+    @if (lastPage > 1) {
+      <nav class="jb-pages" aria-label="Pages">
+        <button class="jp-btn" (click)="goToPage(filter.page - 1)" [disabled]="filter.page <= 1">Previous</button>
+        <span>Page {{ filter.page }} of {{ lastPage }}</span>
+        <button class="jp-btn" (click)="goToPage(filter.page + 1)" [disabled]="filter.page >= lastPage">Next</button>
+      </nav>
+    }
+  }
+    </div>
+  </div>
+
+  }
+
+  @if (toast(); as t) {
+    <div class="jp-toast" [class.bad]="!t.ok" role="status">
+      <span class="material-icons">{{ t.ok ? 'check_circle' : 'error_outline' }}</span>{{ t.text }}
+    </div>
+  }
+</app-personal-shell>
+
+<!-- ═══════════ ONE CANDIDATE: in the dialog of the list, or on its own page ═══════════ -->
+<ng-template #profileView let-c>
+  @let pg = c.profile;
+  <div class="jp-dialog-head">
+    <div class="cd-hero">
+      <div class="cd-avatar lg" [attr.data-tone]="tone(pg.profile.fullName)" aria-hidden="true">{{ initials(pg.profile.fullName) || '?' }}</div>
+      <div class="cd-hero-text">
+        <h3>{{ pg.profile.fullName }}@if (pg.profile.isVerified) { <app-verified-badge label="Verified" hint="Encryptz verified this person" /> }</h3>
+        @if (pg.profile.headline) { <div class="jb-company">{{ pg.profile.headline }}</div> }
+      </div>
+    </div>
+    @if (!pageMode) { <button class="jp-close" (click)="close()" aria-label="Close"><span class="material-icons">close</span></button> }
+  </div>
+  <div class="jp-dialog-body cd-body">
+    <div>
+      <div class="jb-meta cd-contact">
+        @if (pg.profile.city) { <span><span class="material-icons" aria-hidden="true">place</span>{{ pg.profile.city }}</span> }
+        @if (pg.profile.contactEmail) { <span><span class="material-icons" aria-hidden="true">mail_outline</span>{{ pg.profile.contactEmail }}</span> }
+        @if (pg.profile.contactPhone) { <span><span class="material-icons" aria-hidden="true">call</span>{{ pg.profile.contactPhone }}</span> }
+      </div>
+    </div>
+
+    <!-- the pool: stage and note of this company -->
+    <section class="cd-pool">
+      <h4><span class="material-icons" aria-hidden="true">bookmarks</span>My pool
+        @if (c.inPool) { <span [class]="stageClass(c.stage)">{{ stageLabel(c.stage) }}</span> }
+      </h4>
+      <div class="cd-pool-row">
+        <label>Stage
+          <select class="jp-input" name="poolStage" [(ngModel)]="poolStage">
+            @for (s of stages; track s) { <option [value]="s">{{ stageLabel(s) }}</option> }
+          </select>
+        </label>
+        <label class="cd-grow">Note (only your company sees it)
+          <input class="jp-input" name="poolNote" [(ngModel)]="poolNote" maxlength="1000" placeholder="Called on Monday, interview on Friday…" />
+        </label>
+      </div>
+      <div class="cd-pool-actions">
+        @if (c.inPool) {
+          <button class="jp-btn ghost" (click)="removeFromPool()" [disabled]="poolBusy()">Remove from pool</button>
+        }
+        <button class="jp-btn primary" (click)="saveToPool()" [disabled]="poolBusy()">{{ c.inPool ? 'Save' : 'Save to my pool' }}</button>
+      </div>
+    </section>
+
+    <!-- an invitation to one of the open jobs -->
+    <section class="cd-invite">
+      <h4><span class="material-icons" aria-hidden="true">mark_email_unread</span>Invite to a job</h4>
+      @if (openJobs().length) {
+        <div class="cd-pool-row">
+          <label>Invite to apply for
+            <app-autocomplete name="invitePosting" [(ngModel)]="invitePostingId" [options]="jobOptions()"
+                              placeholder="Type a job title or a city" emptyText="No open job matches" />
+          </label>
+          <label class="cd-grow">Message (optional)
+            <input class="jp-input" name="inviteMessage" [(ngModel)]="inviteMessage" maxlength="500" placeholder="Your profile fits this job well" />
+          </label>
+        </div>
+        <div class="cd-pool-actions">
+          <button class="jp-btn" (click)="invite()" [disabled]="inviting()"><span class="material-icons" aria-hidden="true">send</span>{{ inviting() ? 'Sending…' : 'Send invitation' }}</button>
+        </div>
+        @for (t of invited(); track $index) {
+          <p class="cd-invited"><span class="material-icons" aria-hidden="true">check_circle</span>Invitation sent for <strong>{{ t }}</strong>. {{ pg.profile.fullName }} is told now.</p>
+        }
+      } @else {
+        <p class="jp-note">You have no job that takes applications now. Publish a job (or extend its closing day) to invite candidates to it.</p>
+      }
+    </section>
+
+    @if (panelError()) { <div class="jp-error">{{ panelError() }}</div> }
+
+    @if (c.preferredJobs.length || c.preferredLocations.length || c.workModes.length) {
+      <section>
+        <h4>Looking for</h4>
+        <div class="jb-skills">
+          @for (j of c.preferredJobs; track j) { <span class="jp-chip">{{ j }}</span> }
+          @for (l of c.preferredLocations; track l) { <span class="jp-chip"><span class="material-icons cd-ic" aria-hidden="true">place</span>{{ l }}</span> }
+          @for (w of c.workModes; track w) { <span class="jp-chip">{{ w }}</span> }
+        </div>
+      </section>
+    }
+
+    @if (pg.profile.summary) { <section><h4>About</h4><p class="jb-description">{{ pg.profile.summary }}</p></section> }
+
+    @if (pg.experience.length) {
+      <section>
+        <h4>Experience</h4>
+        @for (e of pg.experience; track e.experienceId) {
+          <div class="cd-item">
+            <strong>{{ e.title }}</strong> <span class="jp-at">{{ e.organisation }}</span>
+            <div class="jp-row-sub">{{ monthLabel(e.startMonth) }} – {{ e.endMonth ? monthLabel(e.endMonth) : 'Present' }}</div>
+            @if (e.description) { <p class="jp-row-text">{{ e.description }}</p> }
+          </div>
+        }
+      </section>
+    }
+
+    @if (pg.education.length) {
+      <section>
+        <h4>Education</h4>
+        @for (d of pg.education; track d.educationId) {
+          <div class="cd-item">
+            <strong>{{ d.course }}</strong> @if (d.fieldOfStudy) { <span class="jp-at">{{ d.fieldOfStudy }}</span> }
+            <div class="jp-row-sub">{{ d.institution }} @if (years(d)) { · {{ years(d) }} }</div>
+          </div>
+        }
+      </section>
+    }
+
+    @if (pg.skills.length) {
+      <section>
+        <h4>Skills</h4>
+        <div class="jb-skills">
+          @for (s of pg.skills; track s.skillId) {
+            <span class="jp-chip">{{ s.skillName }} · {{ s.overall || s.rating }}/5
+              @if (s.subSkills.length) { <small class="jb-subskills">({{ subSkillsLine(s) }})</small> }
+              @if (safeLink(s.evidenceUrl); as link) { <a class="jp-evidence" [href]="link" target="_blank" rel="noopener noreferrer">evidence</a> }
+            </span>
+          }
+        </div>
+      </section>
+    }
+
+    @if (pg.certificates.length) {
+      <section>
+        <h4>Certificates</h4>
+        @for (cert of pg.certificates; track cert.certificateId) {
+          <div class="cd-item">
+            <strong>{{ cert.title }}</strong> @if (cert.issuer) { <span class="jp-at">{{ cert.issuer }}</span> }
+            <span class="jp-pill" [attr.data-state]="cert.status">{{ certificateLabel(cert.status) }}</span>
+          </div>
+        }
+      </section>
+    }
+
+    <section>
+      <h4>Resume</h4>
+      @if (pg.resume; as r) {
+        <button class="jp-file" (click)="downloadResume()"><span class="material-icons" aria-hidden="true">description</span>{{ r.fileName }}</button>
+      } @else {
+        <p class="jp-empty">No resume uploaded.</p>
+      }
+    </section>
+  </div>
+  <div class="jp-dialog-foot">
+    <button class="jp-btn" (click)="message()" [disabled]="messaging()"><span class="material-icons" aria-hidden="true">chat_bubble_outline</span>Message</button>
+    <button class="jp-btn" (click)="recordPlacement()"><span class="material-icons" aria-hidden="true">verified</span>Record a placement</button>
+    <span class="jb-grow"></span>
+    @if (!pageMode) { <button class="jp-btn ghost" (click)="close()">Close</button> }
+  </div>
+</ng-template>
+
+@if (!pageMode) {
+  @if (open(); as c) {
+    <div class="jp-overlay" (escapeClose)="close()">
+      <div class="jp-dialog jb-detail cd-dialog" role="dialog" aria-modal="true">
+        <ng-container [ngTemplateOutlet]="profileView" [ngTemplateOutletContext]="{ $implicit: c }" />
+      </div>
+    </div>
+  }
+}

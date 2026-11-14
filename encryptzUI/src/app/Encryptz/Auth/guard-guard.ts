@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import { CanActivateChildFn, CanActivateFn, Router } from '@angular/router';
 import { AuthService } from './auth-service';
+import { nextScopeStep, routeForStep, ScopeNeed } from './scope-flow';
 
 
 export const authGuard: CanActivateFn = (route, state) => {
@@ -20,7 +21,11 @@ export const authGuard: CanActivateFn = (route, state) => {
 };
 
 
-export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
+/**
+ * `platformAdmin: true` also lets a platform administrator in, whatever their role
+ * in the selected company is (same rule as the Administration link on the module screen).
+ */
+export const roleGuard = (allowedRoles: string[], options: { platformAdmin?: boolean } = {}): CanActivateFn => {
   return (_, state) => {
     const auth = inject(AuthService);
     const router = inject(Router);
@@ -30,6 +35,7 @@ export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
     if (auth.hasAccess(routePath)) return true;
 
     if (allowedRoles.includes(auth.userRole())) return true;
+    if (options.platformAdmin && auth.currentUser()?.isPlatformAdmin) return true;
     return router.createUrlTree(['/select-company']);
   };
 };
@@ -45,4 +51,30 @@ export const dashboardRedirectGuard: CanActivateFn = () => {
     return false;
   }
   return true; // let dashboard load for Admin/ServiceManager
+};
+
+/**
+ * Pages inside the application need a company, a module and a branch; pages marked
+ * `data: { scope: 'company' }` (administration, profile) need only a company, and pages
+ * marked `data: { scope: 'none' }` (personal applications) need only a login.
+ * A session that is not there yet is sent to the step it is missing.
+ * A platform administrator opens pages marked `data: { platformAdmin: true }` without a company,
+ * and is sent to Platform Admin from any other page that needs one.
+ */
+export const scopeGuard: CanActivateChildFn = (childRoute) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  if (childRoute.data?.['platformAdmin'] && auth.isLoggedIn() && auth.currentUser()?.isPlatformAdmin) return true;
+
+  const scope = childRoute.data?.['scope'];
+  const need: ScopeNeed = scope === 'company' || scope === 'none' ? scope : 'full';
+  const step = nextScopeStep(auth.scopeState(), need);
+  if (step === 'ready') return true;
+
+  // A platform administrator without a company lands on Platform Admin, not on the company list.
+  if (step === 'company' && auth.isLoggedIn() && auth.currentUser()?.isPlatformAdmin) {
+    return router.createUrlTree(['/settings/platform']);
+  }
+  return router.createUrlTree([routeForStep(step)]);
 };

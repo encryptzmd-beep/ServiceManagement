@@ -12,6 +12,7 @@ namespace EncryptzAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
+    [AppModule("SERVICE")]
     public class ScheduleController : ControllerBase
     {
         private readonly IScheduleService _service;

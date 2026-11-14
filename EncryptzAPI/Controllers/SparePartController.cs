@@ -14,6 +14,7 @@ using System.Security.Claims;
     [Route("api/spare-parts")]
     [ApiController]
     [Authorize]
+    [AppModule("SERVICE")]
     public class SparePartController : ControllerBase
     {
         private readonly ISparePartService _svc;

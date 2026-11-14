@@ -1,0 +1,431 @@
+/* The dashboards of Job Portal and Job Consultancy: one quiet system of cards, lists and
+   figures. Colour is kept for meaning (a state, a warning), not for decoration. */
+
+$display: 'Outfit', 'DM Sans', sans-serif;
+$ink: #0f172a;
+$text: #334155;
+$muted: #64748b;
+$faint: #94a3b8;
+$line: #e2e8f0;
+$hair: #f1f5f9;
+$accent: #2563eb;
+$accent-dark: #1d4ed8;
+$tint: #eff6ff;
+$good: #047857;
+$good-tint: #ecfdf5;
+$warn: #b45309;
+$warn-tint: #fffbeb;
+$bad: #be123c;
+$bad-tint: #fff1f2;
+$radius: 12px;
+
+:host { display: block; }
+
+.db { display: flex; flex-direction: column; gap: 16px; }
+
+/* ── cards ── */
+.db-card {
+  background: #fff;
+  border: 1px solid $line;
+  border-radius: $radius;
+  padding: 18px 20px;
+
+  &.tight { padding: 6px 8px; }
+
+  h2 { margin: 0; font-family: $display; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: $ink; }
+}
+
+.db-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  a { font-size: 13px; font-weight: 600; color: $accent; text-decoration: none; &:hover { text-decoration: underline; } }
+}
+
+.db-sub-head {
+  margin: 18px 0 4px;
+  padding-top: 14px;
+  border-top: 1px solid $hair;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: $muted;
+}
+
+.db-muted { margin: 2px 0 0; font-size: 12.5px; line-height: 1.45; color: $muted; }
+.db-loading { padding: 24px; text-align: center; }
+
+/* ── buttons ── */
+.db-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid $line;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: $text;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+
+  .material-icons { font-size: 17px; }
+  &:hover { background: #f8fafc; border-color: #cbd5e1; }
+  &:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.4); outline-offset: 2px; }
+
+  &.primary { border-color: $accent; background: $accent; color: #fff; &:hover { background: $accent-dark; border-color: $accent-dark; } }
+  &.small { height: 30px; padding: 0 10px; font-size: 12.5px; .material-icons { font-size: 15px; } }
+  &.block { display: flex; width: 100%; margin-top: 12px; }
+}
+
+/* ── the head of the page ── */
+.db-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid $line;
+  border-radius: $radius;
+  background: #fff;
+}
+
+.db-avatar {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: $tint;
+  font-family: $display;
+  font-size: 22px;
+  font-weight: 600;
+  color: $accent-dark;
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+}
+
+.db-head-text {
+  flex: 1 1 auto;
+  min-width: 0;
+
+  h1 { margin: 0; font-family: $display; font-size: 20px; font-weight: 600; letter-spacing: -0.015em; color: $ink; }
+}
+
+.db-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 3px 0 0;
+  font-size: 13.5px;
+  color: $muted;
+}
+
+.db-head-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+
+.db-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  background: $warn-tint;
+  font-size: 13px;
+  color: #78350f;
+
+  > .material-icons { font-size: 18px; color: $warn; }
+  > span:nth-child(2) { flex: 1 1 auto; }
+  a { flex: 0 0 auto; font-weight: 600; color: #92400e; white-space: nowrap; }
+}
+
+/* ── the layout: a main column and a side column ── */
+.db-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: start;
+}
+
+.db-main, .db-rail { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+/* ── figures in a row ── */
+.db-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border: 1px solid $line;
+  border-radius: 10px;
+  overflow: hidden;
+
+  &.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.db-kpi {
+  --dot: #{$accent};
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-left: 1px solid $line;
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.15s;
+
+  &:first-child { border-left: none; }
+  strong { font-family: $display; font-size: 24px; font-weight: 600; line-height: 1.15; color: $ink; font-variant-numeric: tabular-nums; }
+  span { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; color: $muted; }
+  span::before { content: ''; width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--dot); }
+  small { font-size: 11.5px; color: $faint; }
+
+  &[data-state='shortlisted'] { --dot: #f59e0b; }
+  &[data-state='interview'] { --dot: #10b981; }
+  &[data-state='hired'], &[data-state='placements'] { --dot: #8b5cf6; }
+  &[data-state='rejected'] { --dot: #f43f5e; }
+  &[data-state='fees'] { --dot: #f97316; }
+  &[data-state='messages'] { --dot: #06b6d4; }
+
+  &:hover { background: #f8fafc; }
+  &:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.4); outline-offset: -2px; }
+}
+
+/* ── lists ── */
+.db-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  > li + li { border-top: 1px solid $hair; }
+  &.compact .db-item { padding: 8px 2px; }
+}
+
+.db-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 4px;
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+
+  &[href]:hover { background: #f8fafc; }
+  &[href]:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.4); outline-offset: 0; }
+  &.unread .db-item-title { color: $accent-dark; }
+}
+
+.db-logo {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid $line;
+  border-radius: 10px;
+  background: #f8fafc;
+  font-size: 15px;
+  font-weight: 600;
+  color: $text;
+
+  &.round { width: 34px; height: 34px; flex-basis: 34px; border-radius: 50%; font-size: 13px; }
+}
+
+.db-item-text {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.db-item-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: $ink;
+  text-decoration: none;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+a.db-item-title:hover { color: $accent-dark; text-decoration: underline; }
+
+.db-item-meta {
+  display: block;
+  min-width: 0;
+  font-size: 12.5px;
+  color: $muted;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  .material-icons { margin-right: 3px; font-size: 14px; vertical-align: -2px; }
+  &.good { font-weight: 600; color: $good; }
+  &.bad { color: $bad; }
+}
+
+.db-item-note { margin-top: 2px; font-size: 12.5px; color: $text; overflow-wrap: anywhere; }
+
+.db-item-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: 0 0 auto; }
+.db-pay { font-size: 13px; font-weight: 600; color: $ink; white-space: nowrap; }
+.db-chevron { flex: 0 0 auto; font-size: 20px; color: #cbd5e1; }
+
+.db-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &.good { background: $good-tint; color: $good; }
+}
+
+.db-count { min-width: 20px; padding: 1px 7px; border-radius: 999px; background: $accent; font-size: 11px; font-weight: 700; color: #fff; text-align: center; }
+
+.db-empty { padding: 14px 4px; font-size: 13px; line-height: 1.55; color: $muted; a { font-weight: 600; color: $accent; } }
+
+/* the state of an application */
+.db-status {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: $muted;
+  white-space: nowrap;
+
+  &.applied { background: $tint; color: $accent-dark; }
+  &.shortlisted { background: $warn-tint; color: $warn; }
+  &.hired { background: $good-tint; color: $good; }
+  &.rejected { background: $bad-tint; color: $bad; }
+}
+
+/* ── an interview: its date as a tile ── */
+.db-interview { align-items: flex-start; }
+
+.db-date {
+  width: 44px;
+  flex: 0 0 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid $line;
+  border-radius: 8px;
+  text-align: center;
+
+  span { width: 100%; padding: 2px 0; background: $good; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #fff; }
+  strong { padding: 3px 0 4px; font-family: $display; font-size: 18px; font-weight: 600; color: $ink; }
+}
+
+/* ── profile strength: a ring with the figure in it ── */
+.db-strength { display: flex; align-items: center; gap: 14px; }
+
+.db-ring {
+  --pct: 0;
+  position: relative;
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* the band only: the inside is cut away, so the figure stays readable */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient($accent calc(var(--pct) * 1%), #e2e8f0 0);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+  }
+
+  span { position: relative; font-family: $display; font-size: 15px; font-weight: 600; color: $ink; }
+}
+
+.db-checklist {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+
+  li + li { border-top: 1px solid $hair; }
+  a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 2px;
+    font-size: 13px;
+    color: $text;
+    text-decoration: none;
+
+    .material-icons { font-size: 17px; color: #cbd5e1; }
+    &:hover { color: $accent-dark; .material-icons { color: $accent; } }
+  }
+}
+
+.db-done { display: flex; align-items: center; gap: 6px; margin: 12px 0 0; font-size: 13px; font-weight: 600; color: $good; .material-icons { font-size: 18px; } }
+
+/* ── figures as rows (the side column) ── */
+.db-stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+
+  & + & { border-top: 1px solid $hair; }
+  > .material-icons { font-size: 19px; color: $muted; }
+  strong { font-family: $display; font-size: 17px; font-weight: 600; color: $ink; font-variant-numeric: tabular-nums; }
+  &[href]:hover { background: #f8fafc; }
+}
+
+.db-stat-label {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: $text;
+
+  small { font-size: 11.5px; font-weight: 400; color: $faint; }
+}
+
+/* ── narrower screens ── */
+@media (max-width: 1100px) {
+  .db-layout { grid-template-columns: minmax(0, 1fr); }
+  .db-rail { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+}
+
+@media (max-width: 760px) {
+  .db-head { flex-wrap: wrap; }
+  .db-head-actions { width: 100%; .db-btn { flex: 1; } }
+  .db-rail { display: flex; }
+  .db-kpis, .db-kpis.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .db-kpi { border-top: 1px solid $line; }
+  .db-kpi:nth-child(odd) { border-left: none; }
+  .db-kpi:nth-child(-n + 2) { border-top: none; }
+  .db-item-side { display: none; }
+  .db-banner { flex-wrap: wrap; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .db-btn, .db-kpi { transition: none; }
+}

@@ -2,6 +2,7 @@ using EncryptzBL.Common;
 using EncryptzBL.Common.Tenant;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Technician.modules;
+using Microsoft.Extensions.Logging;
 using System.Data;
 using static System.Net.WebRequestMethods;
 
@@ -12,13 +13,15 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
         private readonly MainDbHelper _mainDb;
         private readonly ITenantUserSyncService _userSync;
         private readonly TenantContext _tenant;
+        private readonly ILogger<TechnicianService> _logger;
 
         // Technicians are MainDB users (company role "Technician" + project access); the
         // project DB only holds their profile/assignments, linked through Users.MainUserId.
-        public TechnicianService(DbHelper db, MainDbHelper mainDb, ITenantUserSyncService userSync) : base(db)
+        public TechnicianService(DbHelper db, MainDbHelper mainDb, ITenantUserSyncService userSync, ILogger<TechnicianService> logger) : base(db)
         {
             _mainDb = mainDb;
             _userSync = userSync;
+            _logger = logger;
             _tenant = db.Tenant;
         }
 
@@ -86,11 +89,10 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
             if (string.IsNullOrWhiteSpace(dto.Email))
                 return ApiResponse<int>.Fail("Email is required: the technician signs in with it");
 
-            // 1) The login, company role and project access live in MainDB
+            // 1) The login, company role and Service module access live in MainDB
             var main = await _mainDb.ExecuteDataTableAsync("sp_Company_CreateTechnicianUser", new[]
             {
                 SqlParameterHelper.Input("@CompanyId", CompanyId),
-                SqlParameterHelper.Input("@ProjectId", ProjectId),
                 SqlParameterHelper.Input("@FullName", dto.FullName),
                 SqlParameterHelper.Input("@Email", dto.Email.Trim()),
                 SqlParameterHelper.Input("@MobileNumber", dto.MobileNumber ?? (object)DBNull.Value),
@@ -103,14 +105,20 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
 
             var mainUserId = Convert.ToInt32(main.Rows[0]["UserId"]);
 
-            // 2) Mirror the user into this project's DB (creates the technician rows)
+            // 2) Mirror the user into this company's DB (creates the technician rows)
             try
             {
-                await _userSync.SyncProjectUsersAsync(ProjectId, LocationId);
+                await _userSync.SyncCompanyUsersAsync(CompanyId, LocationId);
+            }
+            catch (CompanyDatabaseNotReadyException ex)
+            {
+                _logger.LogWarning(ex, "Technician sync skipped for company {CompanyId}: database not ready", CompanyId);
+                return ApiResponse<int>.Fail("The user was created, but the Service module is switched off for this company or its database is not ready, so the technician profile was not saved. When it is available again, open the technician and complete the details.");
             }
             catch (Exception ex)
             {
-                return ApiResponse<int>.Fail("Technician user was created, but syncing it to this project failed: " + ex.Message);
+                _logger.LogError(ex, "Technician sync failed for company {CompanyId}", CompanyId);
+                return ApiResponse<int>.Fail("Technician user was created, but adding it to this company failed. Please try again");
             }
 
             // 3) Fill in the technician profile

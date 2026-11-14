@@ -84,10 +84,13 @@ export interface LoginResponse {
   projectId?: number;
   projectKey?: string;   // routing key -> project DB
   locationId?: number;
+  moduleKey?: string;    // module the token was issued for (empty until set-scope)
   // Name of the selected company (main database), shown in the header
   companyName?: string;
   // Global role Admin: may manage every company in Platform Admin
   isPlatformAdmin?: boolean;
+  // The user's lifelong ID as it is shown: EZ-XXXX-XXXX-XXXX ('' or missing when there is none)
+  individualId?: string;
 }
 
 // --- Multi-tenant scoping (Company -> Projects -> Locations) ---
@@ -103,6 +106,36 @@ export interface LocationDto {
   locationName: string;
   locationCode?: string;
   city?: string;
+}
+
+/** What a user sees for one module of the catalogue inside a company. */
+export type ModuleState = 'Available' | 'NotSubscribed' | 'NoAccess' | 'ComingSoon';
+
+export interface ModuleDto {
+  moduleId: number;
+  moduleKey: string;
+  moduleName: string;
+  description: string;
+  icon: string;
+  sortOrder: number;
+  state: ModuleState;
+  /** Category of the application ('' when none). Missing on an API without the field. */
+  family?: string;
+}
+
+/** A personal application: free, open to every user, without a company. */
+export interface PersonalApp {
+  moduleId: number;
+  moduleKey: string;
+  moduleName: string;
+  description: string;
+  icon: string;
+  family: string;
+  /** Where it opens ('' while it is not built). */
+  routePath: string;
+  sortOrder: number;
+  /** false = "Coming soon". */
+  isReleased: boolean;
 }
 
 export interface MenuItem {

@@ -1,0 +1,31 @@
+<div class="ac" [class.open]="open()" [class.disabled]="disabled()">
+  <span class="material-icons ac-icon" aria-hidden="true">search</span>
+  <input #field class="ac-input" type="text" role="combobox" autocomplete="off"
+         [attr.aria-label]="ariaLabel()" [attr.aria-expanded]="open()" [attr.aria-controls]="id + '-list'"
+         [attr.aria-activedescendant]="open() && rows().length ? id + '-opt-' + active() : null"
+         [value]="shownText()" [placeholder]="chosen() ? chosen()!.label : placeholder()" [disabled]="disabled()"
+         (focus)="openList()" (click)="openList()" (input)="typed($any($event.target).value)" (keydown)="onKey($event)" />
+  @if (chosen() && !disabled()) {
+    <button type="button" class="ac-clear" (mousedown)="$event.preventDefault()" (click)="clear($event)" aria-label="Clear the choice">
+      <span class="material-icons">close</span>
+    </button>
+  }
+  <span class="material-icons ac-caret" aria-hidden="true">expand_more</span>
+
+  @if (open()) {
+    <ul class="ac-list" role="listbox" [id]="id + '-list'">
+      @for (r of rows(); track $index; let i = $index) {
+        <li role="option" [id]="id + '-opt-' + i" [class.active]="i === active()" [class.none]="r.none"
+            [attr.aria-selected]="i === active()" (mousedown)="$event.preventDefault()" (click)="pick(r.value)" (mouseenter)="active.set(i)">
+          <span class="ac-label">{{ r.label }}</span>
+          @if (r.sub) { <span class="ac-sub">{{ r.sub }}</span> }
+        </li>
+      } @empty {
+        <li class="ac-empty" role="option" aria-disabled="true">{{ emptyText() }}</li>
+      }
+      @if (matches().more) {
+        <li class="ac-more" role="option" aria-disabled="true">{{ matches().more }} more. Type to narrow the list.</li>
+      }
+    </ul>
+  }
+</div>

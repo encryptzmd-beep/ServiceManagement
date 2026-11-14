@@ -1,3 +1,4 @@
+using EncryptzBL.Common.Tenant;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -36,16 +37,21 @@ namespace EncryptzBL.DTO_s
         public string Email { get; set; }
         public List<MenuDto> Menus { get; set; } = new();
 
-        // Multi-tenant scope currently baked into the token (Company -> Project -> Location)
+        // Scope currently baked into the token (Company -> Module -> Branch).
+        // ProjectId / ProjectKey are the tenant scope id and tenant key: the names are
+        // kept for the deployed UI.
         public int CompanyId { get; set; }
         public int ProjectId { get; set; }
-        public string ProjectKey { get; set; } = string.Empty;   // routing key -> project DB
+        public string ProjectKey { get; set; } = string.Empty;
+        public string ModuleKey { get; set; } = string.Empty;
 
         /// <summary>Name of the selected company (MainDB.Companies) shown in the header.</summary>
         public string CompanyName { get; set; } = string.Empty;
 
         /// <summary>Global role Admin: may open Platform Admin for every company.</summary>
         public bool IsPlatformAdmin { get; set; }
+        /// <summary>The user's lifelong ID as it is shown: EZ-XXXX-XXXX-XXXX ('' when the database has none).</summary>
+        public string IndividualId { get; set; } = "";
         public int LocationId { get; set; }
     }
 
@@ -72,10 +78,61 @@ namespace EncryptzBL.DTO_s
         public string? City { get; set; }
     }
 
+    /// <summary>One module of the catalogue as a user sees it inside a company.</summary>
+    public class ModuleDto
+    {
+        public int ModuleId { get; set; }
+        public string ModuleKey { get; set; } = string.Empty;
+        public string ModuleName { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+        public int SortOrder { get; set; }
+        /// <summary>Available | NotSubscribed | NoAccess | ComingSoon</summary>
+        public string State { get; set; } = string.Empty;
+        /// <summary>Category of the application ('' when none).</summary>
+        public string Family { get; set; } = string.Empty;
+
+        public static ModuleDto From(int moduleId, string moduleKey, string moduleName, string description,
+            string icon, int sortOrder, bool companyEnabled, bool userGranted, string? roleInCompany,
+            bool isReleased = true, string family = "")
+        {
+            return new ModuleDto
+            {
+                ModuleId = moduleId,
+                ModuleKey = moduleKey,
+                ModuleName = moduleName,
+                Description = description,
+                Icon = icon,
+                SortOrder = sortOrder,
+                Family = family,
+                State = ModuleAccess.Evaluate(companyEnabled, userGranted, roleInCompany, isReleased).ToString()
+            };
+        }
+    }
+
+    /// <summary>A personal application: open to every user, without a company.</summary>
+    public class PersonalAppDto
+    {
+        public int ModuleId { get; set; }
+        public string ModuleKey { get; set; } = string.Empty;
+        public string ModuleName { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+        public string Family { get; set; } = string.Empty;
+        /// <summary>Where the UI opens it ('' while it is not built).</summary>
+        public string RoutePath { get; set; } = string.Empty;
+        public int SortOrder { get; set; }
+        /// <summary>False = "Coming soon".</summary>
+        public bool IsReleased { get; set; }
+    }
+
     public class SetScopeRequestDto
     {
         public int UserId { get; set; }
         public int CompanyId { get; set; }
+        /// <summary>Module to open. Empty = SERVICE (the deployed UI does not send it).</summary>
+        public string ModuleKey { get; set; } = string.Empty;
+        /// <summary>Ignored: projects no longer exist. Still sent by the deployed UI.</summary>
         public int ProjectId { get; set; }
         public int LocationId { get; set; }
     }
@@ -1600,6 +1657,8 @@ namespace EncryptzBL.DTO_s
             public string MobileNumber { get; set; }
             public string Password { get; set; }
             public string AadhaarNumber { get; set; }
+            public string? ReferralToken { get; set; }
+            public string? InviterKey { get; set; }
         }
 
         public class CompanyResponseDto
@@ -1612,6 +1671,18 @@ namespace EncryptzBL.DTO_s
             public string PhoneNumber { get; set; }
             public string RoleInCompany { get; set; }
             public bool IsLinked { get; set; }
+
+            /// <summary>State of the company's database: None | Provisioning | Ready | Failed.</summary>
+            public string ProvisionStatus { get; set; } = "None";
+
+            /// <summary>The user created this company and may retry a failed set-up.</summary>
+            public bool IsCreator { get; set; }
+
+            public static string StatusFrom(object? value)
+            {
+                var text = value == null || value == DBNull.Value ? "" : value.ToString()!.Trim();
+                return text.Length == 0 ? "None" : text;
+            }
         }
 
     public class SelectCompanyRequestDto

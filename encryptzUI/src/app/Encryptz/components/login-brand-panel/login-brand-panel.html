@@ -1,0 +1,55 @@
+<!-- Encryptz/components/login-brand-panel/login-brand-panel.html -->
+<app-login-ad-slider [class.is-hidden]="!hasAds()" (loaded)="hasAds.set($event > 0)"></app-login-ad-slider>
+
+@if (!hasAds()) {
+  <div class="hero">
+    <img class="hero-photo" src="login-hero.jpg" alt="" />
+
+    <div class="hero-content">
+      <div class="brand brand-light">
+        <img class="logo-mark" src="logo.png" alt="Encryptz" />
+        <div class="brand-text">
+          <span class="brand-name">ENCRYPTZ</span>
+          <span class="brand-tag">ONE PLATFORM. EVERY OPPORTUNITY.</span>
+        </div>
+      </div>
+
+      <h2 class="hero-title">
+        Your Life.<br />
+        Your Work.<br />
+        <span>All in One Platform.</span>
+      </h2>
+
+      <p class="hero-sub">
+        Manage your learning, career, personal life, business, marketing, accounts,
+        statutory compliance and more — with automated workflows to make everything easier.
+      </p>
+
+      <div class="modules">
+        @for (m of modules; track m.title) {
+          <div class="module">
+            <div class="module-icon" [attr.data-tone]="m.tone">
+              <span class="material-icons">{{ m.icon }}</span>
+            </div>
+            <div>
+              <div class="module-title">{{ m.title }}</div>
+              <div class="module-sub">{{ m.sub }}</div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="stats">
+        @for (s of stats; track s.title) {
+          <div class="stat">
+            <span class="material-icons">{{ s.icon }}</span>
+            <div>
+              <div class="stat-title">{{ s.title }}</div>
+              <div class="stat-sub">{{ s.sub }}</div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

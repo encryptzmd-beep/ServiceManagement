@@ -2,13 +2,15 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule, Router } from '@angular/router';
+import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
+import { safeNextUrl } from '../../Auth/return-url';
+import { LoginBrandPanelComponent } from '../login-brand-panel/login-brand-panel';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, LoginBrandPanelComponent],
   templateUrl: './login-component.html',
   styleUrls: ['./login-component.scss']
 })
@@ -16,11 +18,18 @@ export class LoginComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
 
+  /** A Job Portal page to come back to (the public job pages send people here to apply). */
+  readonly next = safeNextUrl(inject(ActivatedRoute).snapshot.queryParamMap.get('next'));
+
   mode = signal<'email' | 'otp'>('email');
   loading = signal(false);
   error = signal('');
   otpSent = signal(false);
   locationLogoutMsg = signal('');
+
+  showPassword = signal(false);
+  rememberMe = true;
+  private static readonly RememberKey = 'encryptz_remember_email';
 
   // Forgot Password States
   showForgotPasswordModal = signal(false);
@@ -49,6 +58,20 @@ export class LoginComponent {
       sessionStorage.removeItem('encryptz_location_error');
       sessionStorage.removeItem('encryptz_location_logout');
     }
+
+    this.email = this.readRemembered();
+  }
+
+  /** Remember me keeps only the sign-in name on this browser, never the password. */
+  private readRemembered(): string {
+    try { return localStorage.getItem(LoginComponent.RememberKey) ?? ''; } catch { return ''; }
+  }
+
+  private saveRemembered(): void {
+    try {
+      if (this.rememberMe) localStorage.setItem(LoginComponent.RememberKey, this.email);
+      else localStorage.removeItem(LoginComponent.RememberKey);
+    } catch { /* storage blocked: nothing to remember */ }
   }
 
  loginEmail(): void {
@@ -64,14 +87,15 @@ export class LoginComponent {
         return;
       }
 
-      const companies = res.data.companies || [];
+      this.saveRemembered();
 
-      if (companies.length === 0) {
-        this.router.navigate(['/no-company']);
+      // A platform administrator manages the platform: no company to pick.
+      if (res.data.isPlatformAdmin) {
+        this.router.navigate(['/settings/platform']);
         return;
       }
 
-      this.router.navigate(['/select-company']);
+      this.goOn();
     },
     error: () => {
       this.loading.set(false);
@@ -133,43 +157,23 @@ export class LoginComponent {
   }
 
 private handlePostLogin(data: any): void {
-
-
-  const companies = data.companies || [];
-
-  if (companies.length === 0) {
-    this.router.navigate(['/no-company']);
-  } else {
-    this.router.navigate(['/select-company']);
-  }
+  this.goOn();
 }
 
-  private handlePostLoginWithData(userData: any, companies: any[]): void {
-    if (companies.length === 0) {
-      this.router.navigate(['/no-company']);
-    } else if (companies.length === 1) {
-      this.auth.selectCompany(companies[0].companyId).subscribe({
-        next: (res) => {
-          if (res.success && res.data) {
-            this.redirectByRole(res.data.role);
-          }
-        }
-      });
-    } else {
-      this.router.navigate(['/select-company']);
-    }
+  /**
+   * After signing in: back to the job the person wanted to apply for, else the company list.
+   * The company list is always shown (also with no company): it is where a user creates or
+   * joins a company.
+   */
+  private goOn(): void {
+    if (this.next) this.router.navigateByUrl(this.next);
+    else this.router.navigate(['/select-company']);
   }
 
-  private redirectByRole(role: string): void {
-    if (role === 'Technician') {
-      this.router.navigate(['/technicians/work-orders']);
-    } else if (role === 'Admin' || role === 'CompanyAdmin') {
-      this.router.navigate(['/complaints/dashboard']);
-    } else if (role === 'Storekeeper') {
-      this.router.navigate(['/store/inventory']);
-    } else {
-      this.router.navigate(['/complaints/dashboard']);
-    }
+  private handlePostLoginWithData(userData: any, companies: any[]): void {
+    // The company list is always shown, also for a single company (it is where a
+    // user creates or joins a company); the module and branch steps follow it.
+    this.goOn();
   }
 
   // ============================================

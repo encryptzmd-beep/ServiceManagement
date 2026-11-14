@@ -43,6 +43,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
         }
 
         private string OtpEmail => _config["PlatformAdmin:OtpEmail"] ?? "";
+        private bool RequireOtp => !bool.TryParse(_config["PlatformAdmin:RequireOtp"], out var required) || required;
         private int OtpMinutes => int.TryParse(_config["PlatformAdmin:OtpMinutes"], out var m) && m > 0 ? m : 5;
         private int SessionMinutes => int.TryParse(_config["PlatformAdmin:SessionMinutes"], out var m) && m > 0 ? m : 30;
 
@@ -140,7 +141,15 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
         public bool IsUnlocked(string? unlockToken, int userId)
         {
-            if (string.IsNullOrWhiteSpace(unlockToken) || userId <= 0)
+            if (userId <= 0)
+                return false;
+
+            /* PlatformAdmin:RequireOtp = false switches the access code off: the login and
+               the administrator checks of each endpoint are then the only protection. */
+            if (!RequireOtp)
+                return true;
+
+            if (string.IsNullOrWhiteSpace(unlockToken))
                 return false;
 
             try

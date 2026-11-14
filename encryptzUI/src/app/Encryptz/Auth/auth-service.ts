@@ -1,11 +1,13 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { DestroyRef, Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, map, tap, timeout } from 'rxjs';
-import { ApiResponse, CompanyInfoDto, CompanyUserDetailDto, InvitationDetailDto, JoinRequestDto, LoginResponse, LocationDto, MenuItem, ProjectDto, RegisterRequest } from '../Models/ApiModels';
-import {environment} from '../../../../src/environments/environment.development'
+import { ApiResponse, CompanyInfoDto, CompanyUserDetailDto, InvitationDetailDto, JoinRequestDto, LoginResponse, LocationDto, MenuItem, ModuleDto, PersonalApp, RegisterRequest } from '../Models/ApiModels';
+import {environment} from '../../../../src/environments/environment'
 import { MenuAccessDto, RoleDto, UserDto } from '../components/auth-management-component/auth-management-component';
 import { LocationMonitorService } from '../Services/location-monitor-service';
+import { legacyModuleKey, ScopeState } from './scope-flow';
+import { CompanyCreationState, NewCompanyForm } from './company-creation';
 
 export interface Company {
   companyId: number;
@@ -16,6 +18,10 @@ export interface Company {
   phoneNumber?: string;
   roleInCompany: string;
   isLinked: boolean;
+  /** State of the company's database: None | Provisioning | Ready | Failed. */
+  provisionStatus?: string;
+  /** The user created this company and may retry a failed set-up. */
+  isCreator?: boolean;
 }
 
 export interface MyProfile {
@@ -24,6 +30,8 @@ export interface MyProfile {
   email: string;
   mobileNumber: string;
   aadhaarNumber: string;
+  /** The lifelong ID as it is shown: EZ-XXXX-XXXX-XXXX ('' when there is none). */
+  individualId?: string;
   globalRole: string;
   roleInCompany: string;
   companyId: number;
@@ -82,21 +90,51 @@ export class AuthService {
   hasSingleCompany = computed(() => this._companies().length === 1);
   hasNoCompany = computed(() => this._companies().length === 0);
 
-  // Project -> Location scoping (within the selected company/client)
-  private _projects = signal<ProjectDto[]>([]);
-  private _locations = signal<LocationDto[]>([]);
-  private _selectedProjectId = signal<number | null>(null);
+  // Module -> Branch scoping (within the selected company)
+  private _selectedModuleKey = signal<string | null>(null);
   private _selectedLocationId = signal<number | null>(null);
+  private _selectedLocationName = signal<string>('');
+  /** Tenant scope id of the token. Still read by the invitation and platform screens. */
+  private _selectedProjectId = signal<number | null>(null);
 
-  projects = this._projects.asReadonly();
-  locations = this._locations.asReadonly();
-  selectedProjectId = this._selectedProjectId.asReadonly();
+  selectedModuleKey = this._selectedModuleKey.asReadonly();
   selectedLocationId = this._selectedLocationId.asReadonly();
-  hasScope = computed(() => !!this._selectedProjectId() && !!this._selectedLocationId());
+  selectedLocationName = this._selectedLocationName.asReadonly();
+  selectedProjectId = this._selectedProjectId.asReadonly();
+
+  /** Where this session is on the way into the application (see scope-flow.ts). */
+  scopeState(): ScopeState {
+    return {
+      loggedIn: this.isLoggedIn(),
+      companyId: this._selectedCompanyId() || null,
+      moduleKey: this._selectedModuleKey() || null,
+      locationId: this._selectedLocationId() || null,
+    };
+  }
 
   constructor(private http: HttpClient, private router: Router) {
     this.migrateStorageKeys();
     this.loadFromStorage();
+
+    // another tab changed the session this tab is really using (the token is shared): reload to show it
+    const onStorage = (event: StorageEvent) => {
+      // a tab without a session (the login page) has nothing to mislabel; a customer page uses other keys
+      if (!this.isLoggedIn() || this.currentPath().startsWith('/customer')) return;
+      const watched = ['encryptz_token', 'selected_company_id', 'selected_module_key', 'selected_location_id'];
+      if (event.key === null || (watched.includes(event.key) && event.oldValue !== event.newValue)) {
+        this.reloadPage();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    inject(DestroyRef).onDestroy(() => window.removeEventListener('storage', onStorage));
+  }
+
+  protected currentPath(): string {
+    return window.location.pathname;
+  }
+
+  protected reloadPage(): void {
+    window.location.reload();
   }
 
   /**
@@ -170,6 +208,8 @@ export class AuthService {
     localStorage.removeItem('selected_project_key');
     localStorage.removeItem('selected_project_id');
     localStorage.removeItem('selected_location_id');
+    localStorage.removeItem('selected_module_key');
+    localStorage.removeItem('selected_location_name');
     localStorage.removeItem('encryptz_menus');
     localStorage.removeItem('temp_login');
     this._currentUser.set(null);
@@ -177,10 +217,10 @@ export class AuthService {
     this._companies.set([]);
     this._selectedCompanyId.set(null);
     this._selectedCompanyRole.set(null);
-    this._projects.set([]);
-    this._locations.set([]);
+    this._selectedModuleKey.set(null);
     this._selectedProjectId.set(null);
     this._selectedLocationId.set(null);
+    this._selectedLocationName.set('');
   }
 
   getToken(): string | null {
@@ -236,6 +276,8 @@ setSession(data: any): void {
     mobileNumber: string;
     password: string;
     aadhaarNumber: string;
+    referralToken?: string;
+    inviterKey?: string;
   }): Observable<ApiResponse<{ userId: number }>> {
     return this.http.post<ApiResponse<{ userId: number }>>(`${this.apiUrl}/self-register`, data);
   }
@@ -286,8 +328,8 @@ selectCompany(companyId: number): Observable<ApiResponse<any>> {
           localStorage.setItem('selected_company_id', companyId.toString());
           localStorage.setItem('selected_company_role', data.role);
 
-          // company token has no project scope yet; project/location chosen next
-          this.persistScope(data.projectKey, data.projectId, data.locationId);
+          // a company token has no module or branch yet: forget those of the previous company
+          this.clearScope();
 
           localStorage.removeItem('temp_login');
 
@@ -311,67 +353,71 @@ selectCompany(companyId: number): Observable<ApiResponse<any>> {
 }
 
 // ============================================
-// PROJECT -> LOCATION SCOPING
+// MODULE -> BRANCH SCOPING
 // ============================================
 
-/** Projects available to the current user within a company. */
-getProjects(companyId: number): Observable<ApiResponse<ProjectDto[]>> {
-  return this.http
-    .get<ApiResponse<ProjectDto[]>>(`${this.apiUrl}/projects`, { params: { companyId } })
-    .pipe(tap(res => { if (res.success) this._projects.set(res.data || []); }));
+/** Every module of the catalogue, with whether this user can open it in the selected company. */
+getModules(): Observable<ApiResponse<ModuleDto[]>> {
+  return this.http.get<ApiResponse<ModuleDto[]>>(`${this.apiUrl}/modules`);
 }
 
-/** Locations within a project. */
-getLocations(projectId: number): Observable<ApiResponse<LocationDto[]>> {
-  return this.http
-    .get<ApiResponse<LocationDto[]>>(`${this.apiUrl}/locations`, { params: { projectId } })
-    .pipe(tap(res => { if (res.success) this._locations.set(res.data || []); }));
+/** Personal applications: the same for everybody, no company needed. */
+getPersonalApps(): Observable<ApiResponse<PersonalApp[]>> {
+  return this.http.get<ApiResponse<PersonalApp[]>>(`${this.apiUrl}/personal-apps`);
+}
+
+/** Branches of the selected company for a module. */
+getBranches(moduleKey: string): Observable<ApiResponse<LocationDto[]>> {
+  return this.http.get<ApiResponse<LocationDto[]>>(`${this.apiUrl}/locations`, { params: { moduleKey } });
 }
 
 /**
- * Set the active project + location. Re-issues a token whose claims carry the new
- * scope, so every subsequent API call is routed + filtered to it.
+ * Enter a module at a branch. The API checks the company's subscription and this user's
+ * access and re-issues the token; every later call is routed and filtered by it.
  */
-setScope(projectId: number, locationId: number): Observable<ApiResponse<LoginResponse>> {
+setScope(moduleKey: string, locationId: number, locationName = ''): Observable<ApiResponse<LoginResponse>> {
   const companyId = this._selectedCompanyId() ?? this._currentUser()?.companyId ?? 0;
   return this.http
-    .post<ApiResponse<LoginResponse>>(`${this.apiUrl}/set-scope`, {
-      companyId, projectId, locationId
-    })
+    .post<ApiResponse<LoginResponse>>(`${this.apiUrl}/set-scope`, { companyId, moduleKey, locationId })
     .pipe(timeout({ first: 45_000 }), tap(res => {
       if (res.success && res.data) {
         const data = res.data;
         localStorage.setItem('encryptz_token', data.token);
         localStorage.setItem('encryptz_user', JSON.stringify(data));
         localStorage.setItem('encryptz_menus', JSON.stringify(data.menus || []));
-        this.persistScope(data.projectKey, data.projectId, data.locationId);
         this._currentUser.set(data);
         this._menus.set(data.menus || []);
+        this.persistScope(data.moduleKey || moduleKey, data.locationId || locationId, locationName, data.projectId);
       }
     }));
 }
 
-/** Store the current project/location scope in localStorage + signals. */
-private persistScope(projectKey?: string, projectId?: number, locationId?: number): void {
-  if (projectKey) localStorage.setItem('selected_project_key', projectKey);
-  if (projectId != null) {
-    localStorage.setItem('selected_project_id', projectId.toString());
-    this._selectedProjectId.set(projectId || null);
-  }
-  if (locationId != null) {
-    localStorage.setItem('selected_location_id', locationId.toString());
-    this._selectedLocationId.set(locationId || null);
+/** Store the module and branch of the session in localStorage + signals. */
+private persistScope(moduleKey: string, locationId: number, locationName: string, scopeId?: number): void {
+  localStorage.setItem('selected_module_key', moduleKey);
+  localStorage.setItem('selected_location_id', locationId.toString());
+  localStorage.setItem('selected_location_name', locationName);
+  this._selectedModuleKey.set(moduleKey || null);
+  this._selectedLocationId.set(locationId || null);
+  this._selectedLocationName.set(locationName);
+
+  if (scopeId != null) {
+    localStorage.setItem('selected_project_id', scopeId.toString());
+    this._selectedProjectId.set(scopeId || null);
   }
 }
 
-getStoredProjectId(): number | null {
-  const id = localStorage.getItem('selected_project_id');
-  return id ? parseInt(id) : null;
-}
-
-getStoredLocationId(): number | null {
-  const id = localStorage.getItem('selected_location_id');
-  return id ? parseInt(id) : null;
+/** Forget the module and branch (another company was selected). */
+private clearScope(): void {
+  localStorage.removeItem('selected_module_key');
+  localStorage.removeItem('selected_project_key');
+  localStorage.removeItem('selected_project_id');
+  localStorage.removeItem('selected_location_id');
+  localStorage.removeItem('selected_location_name');
+  this._selectedModuleKey.set(null);
+  this._selectedProjectId.set(null);
+  this._selectedLocationId.set(null);
+  this._selectedLocationName.set('');
 }
 
 private loadFromStorage(): void {
@@ -385,6 +431,7 @@ private loadFromStorage(): void {
 
   if (storedProjectId) this._selectedProjectId.set(+storedProjectId);
   if (storedLocationId) this._selectedLocationId.set(+storedLocationId);
+  this._selectedLocationName.set(localStorage.getItem('selected_location_name') || '');
 
   if (storedUser) {
     try {
@@ -410,8 +457,14 @@ private loadFromStorage(): void {
     try {
       const temp = JSON.parse(tempLogin);
       this._companies.set(temp.companies || []);
+      // a reload on the company list: keep the user logged in (as setTempSession does)
+      if (!storedUser) this._currentUser.set({ ...temp, menus: [] });
     } catch {}
   }
+
+  // A session scoped by the previous UI has no module stored: it was the Service module.
+  const storedModuleKey = localStorage.getItem('selected_module_key');
+  this._selectedModuleKey.set(storedModuleKey || legacyModuleKey(this._currentUser()));
 }
 private setSessionWithCompanies(data: ExtendedLoginResponse): void {
 
@@ -442,6 +495,28 @@ private setSessionWithCompanies(data: ExtendedLoginResponse): void {
   //       }
   //     }));
   // }
+
+  /** Whether the user may create a company now, and why not. */
+  getCompanyCreation(): Observable<ApiResponse<CompanyCreationState>> {
+    return this.http.get<ApiResponse<CompanyCreationState>>(`${this.apiUrl}/company-creation`);
+  }
+
+  /** Who creates it comes from the token: nothing about the user is sent. */
+  createCompany(form: NewCompanyForm): Observable<ApiResponse<{ companyId: number; provisionStatus: string }>> {
+    const text = (value: string) => (value ?? '').trim();
+    return this.http.post<ApiResponse<{ companyId: number; provisionStatus: string }>>(`${this.apiUrl}/create-company`, {
+      companyName: text(form.companyName),
+      companyCode: text(form.companyCode).toUpperCase(),
+      firstBranchName: text(form.firstBranchName),
+      address: text(form.address),
+      city: text(form.city),
+      phoneNumber: text(form.phoneNumber),
+    });
+  }
+
+  retryProvision(companyId: number): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.apiUrl}/companies/${companyId}/retry-provision`, {});
+  }
 
   // NEW: Get User's Companies
   getUserCompanies(): Observable<Company[]> {
@@ -497,6 +572,7 @@ private setSessionWithCompanies(data: ExtendedLoginResponse): void {
     this._selectedCompanyId.set(null);
     this._selectedCompanyRole.set(null);
     this._companies.set([]);
+    this.clearScope();
   }
 
   // NEW: Helper to check if user has access to current company

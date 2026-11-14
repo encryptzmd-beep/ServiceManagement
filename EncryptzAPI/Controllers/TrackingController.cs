@@ -10,6 +10,7 @@ namespace EncryptzAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
+    [AppModule("SERVICE")]
     public class TrackingController : ControllerBase
     {
         private readonly ITrackingService _svc;

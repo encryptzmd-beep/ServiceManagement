@@ -4,6 +4,13 @@ using Microsoft.Extensions.Logging;
 
 namespace EncryptzBL.Common.Tenant
 {
+    /// <summary>The company has no ready database to sync to (a normal state until one is attached).</summary>
+    public class CompanyDatabaseNotReadyException : InvalidOperationException
+    {
+        public CompanyDatabaseNotReadyException(int companyId)
+            : base($"Company {companyId} has no ready database in MainDB.") { }
+    }
+
     public class TenantUserSyncService : ITenantUserSyncService
     {
         private readonly MainDbHelper _mainDb;
@@ -20,22 +27,79 @@ namespace EncryptzBL.Common.Tenant
             _logger = logger;
         }
 
-        public async Task<List<TenantUserMap>> SyncProjectUsersAsync(int projectId, int locationId = 0)
+        public async Task<List<TenantUserMap>> SyncCompanyUsersAsync(int companyId, int locationId = 0)
         {
-            // 1) Who may enter the project, and with which company role (MainDB)
-            var ds = await _mainDb.ExecuteDataSetAsync("sp_Project_GetUsersForSync", new[]
+            var (tenantKey, scopeId, users) = await LoadAsync(companyId, null);
+
+            // An empty list would deactivate every user and technician in the company database.
+            if (TenantUserSyncRules.ShouldSkipFullSync(users.Count))
             {
-                SqlParameterHelper.Input("@ProjectId", projectId)
+                _logger.LogWarning("User sync skipped for company {CompanyId}: no users to mirror", companyId);
+                return new List<TenantUserMap>();
+            }
+
+            var dt = await (await OpenAsync(tenantKey)).ExecuteDataTableAsync("sp_Tenant_SyncUsers", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId),
+                SqlParameterHelper.Input("@ProjectId", scopeId),
+                SqlParameterHelper.Input("@LocationId", locationId),
+                SqlParameterHelper.Input("@UsersJson", JsonSerializer.Serialize(users))
+            });
+
+            return dt?.ToList<TenantUserMap>() ?? new List<TenantUserMap>();
+        }
+
+        public async Task<TenantUserMap?> SyncCompanyUserAsync(int companyId, int locationId, int mainUserId)
+        {
+            var (tenantKey, scopeId, users) = await LoadAsync(companyId, mainUserId);
+
+            if (users.Count == 0)
+                throw new InvalidOperationException("Your user does not have active access to this company.");
+
+            var result = await (await OpenAsync(tenantKey)).ExecuteDataTableAsync("sp_Tenant_SyncUsers", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId),
+                SqlParameterHelper.Input("@ProjectId", scopeId),
+                SqlParameterHelper.Input("@LocationId", locationId),
+                SqlParameterHelper.Input("@UsersJson", JsonSerializer.Serialize(users)),
+                SqlParameterHelper.Input("@SyncSingleUser", true)
+            });
+
+            return result?.ToList<TenantUserMap>().FirstOrDefault();
+        }
+
+        public async Task TrySyncCompanyUsersAsync(int companyId)
+        {
+            try
+            {
+                await SyncCompanyUsersAsync(companyId);
+            }
+            catch (CompanyDatabaseNotReadyException)
+            {
+                _logger.LogInformation("No ready database to sync users to for company {CompanyId}", companyId);
+            }
+            catch (Exception ex)
+            {
+                // The MainDB change is already committed; the mirror catches up on the next set-scope.
+                _logger.LogError(ex, "User sync to the company database failed for company {CompanyId}", companyId);
+            }
+        }
+
+        /// <summary>The company's routing info and the users to mirror (all, or one).</summary>
+        private async Task<(string TenantKey, int ScopeId, List<object> Users)> LoadAsync(int companyId, int? mainUserId)
+        {
+            var ds = await _mainDb.ExecuteDataSetAsync("sp_Company_GetUsersForSync", new[]
+            {
+                SqlParameterHelper.Input("@CompanyId", companyId),
+                SqlParameterHelper.Input("@UserId", mainUserId ?? (object)DBNull.Value)
             });
 
             if (ds == null || ds.Tables.Count < 2 || ds.Tables[0].Rows.Count == 0)
-                throw new InvalidOperationException($"Project {projectId} was not found in MainDB.");
+                throw new CompanyDatabaseNotReadyException(companyId);
 
-            var project = ds.Tables[0].Rows[0];
-            var projectKey = project["ProjectKey"]?.ToString() ?? "";
-            var companyId = Convert.ToInt32(project["CompanyId"]);
+            var company = ds.Tables[0].Rows[0];
 
-            var users = ds.Tables[1].Rows.Cast<DataRow>().Select(r => new
+            var users = ds.Tables[1].Rows.Cast<DataRow>().Select(r => (object)new
             {
                 userId = Convert.ToInt32(r["UserId"]),
                 fullName = r["FullName"]?.ToString() ?? "",
@@ -44,107 +108,10 @@ namespace EncryptzBL.Common.Tenant
                 role = r["RoleInCompany"]?.ToString() ?? ""
             }).ToList();
 
-            // 2) Mirror them into the project's own DB
-            var connStr = await _connectionResolver.GetServiceConnectionAsync(projectKey);
-            var projectDb = new ExplicitDbHelper(connStr);
-
-            var dt = await projectDb.ExecuteDataTableAsync("sp_Tenant_SyncUsers", new[]
-            {
-                SqlParameterHelper.Input("@CompanyId", companyId),
-                SqlParameterHelper.Input("@ProjectId", projectId),
-                SqlParameterHelper.Input("@LocationId", locationId),
-                SqlParameterHelper.Input("@UsersJson", JsonSerializer.Serialize(users))
-            });
-
-            return dt?.ToList<TenantUserMap>() ?? new List<TenantUserMap>();
+            return (company["TenantKey"]?.ToString() ?? "", Convert.ToInt32(company["TenantScopeId"]), users);
         }
 
-        public async Task<TenantUserMap?> SyncProjectUserAsync(int projectId, int locationId, int mainUserId)
-        {
-            var timer = System.Diagnostics.Stopwatch.StartNew();
-            _logger.LogInformation("Single-user sync: loading project {ProjectId} and user {UserId} from MainDB", projectId, mainUserId);
-            var ds = await _mainDb.ExecuteDataSetAsync("sp_Project_GetUsersForSync", new[]
-            {
-                SqlParameterHelper.Input("@ProjectId", projectId),
-                SqlParameterHelper.Input("@UserId", mainUserId)
-            });
-            _logger.LogInformation("Single-user sync: MainDB lookup completed in {ElapsedMilliseconds} ms", timer.ElapsedMilliseconds);
-
-            if (ds == null || ds.Tables.Count < 2 || ds.Tables[0].Rows.Count == 0)
-                throw new InvalidOperationException($"Project {projectId} was not found in MainDB.");
-
-            var project = ds.Tables[0].Rows[0];
-            var companyId = Convert.ToInt32(project["CompanyId"]);
-            var projectKey = project["ProjectKey"]?.ToString() ?? string.Empty;
-            var userRow = ds.Tables[1].Rows.Cast<DataRow>()
-                .FirstOrDefault(row => Convert.ToInt32(row["UserId"]) == mainUserId);
-
-            if (userRow == null)
-                throw new InvalidOperationException("Your user does not have active access to this project.");
-
-            var user = new[]
-            {
-                new
-                {
-                    userId = mainUserId,
-                    fullName = userRow["FullName"]?.ToString() ?? string.Empty,
-                    email = userRow["Email"] == DBNull.Value ? null : userRow["Email"]?.ToString(),
-                    mobileNumber = userRow["MobileNumber"] == DBNull.Value ? null : userRow["MobileNumber"]?.ToString(),
-                    role = userRow["RoleInCompany"]?.ToString() ?? string.Empty
-                }
-            };
-
-            timer.Restart();
-            var tenantConnection = await _connectionResolver.GetServiceConnectionAsync(projectKey);
-            _logger.LogInformation("Single-user sync: tenant connection resolved in {ElapsedMilliseconds} ms", timer.ElapsedMilliseconds);
-            var projectDb = new ExplicitDbHelper(tenantConnection);
-            timer.Restart();
-            _logger.LogInformation("Single-user sync: executing tenant sync procedure for project {ProjectId}", projectId);
-            var result = await projectDb.ExecuteDataTableAsync("sp_Tenant_SyncUsers", new[]
-            {
-                SqlParameterHelper.Input("@CompanyId", companyId),
-                SqlParameterHelper.Input("@ProjectId", projectId),
-                SqlParameterHelper.Input("@LocationId", locationId),
-                SqlParameterHelper.Input("@UsersJson", JsonSerializer.Serialize(user)),
-                SqlParameterHelper.Input("@SyncSingleUser", true)
-            });
-            _logger.LogInformation("Single-user sync: tenant procedure completed in {ElapsedMilliseconds} ms", timer.ElapsedMilliseconds);
-
-            return result?.ToList<TenantUserMap>().FirstOrDefault();
-        }
-
-        public async Task TrySyncProjectUsersAsync(int projectId)
-        {
-            try
-            {
-                await SyncProjectUsersAsync(projectId);
-            }
-            catch (Exception ex)
-            {
-                // The MainDB change is already committed; the mirror catches up on the next set-scope.
-                _logger.LogError(ex, "User sync to the project DB failed for project {ProjectId}", projectId);
-            }
-        }
-
-        public async Task TrySyncCompanyProjectsAsync(int companyId)
-        {
-            List<int> projectIds;
-            try
-            {
-                var dt = await _mainDb.ExecuteQueryDataTableAsync(
-                    "SELECT ProjectId FROM dbo.Projects WHERE CompanyId = @CompanyId AND IsActive = 1",
-                    new[] { SqlParameterHelper.Input("@CompanyId", companyId) });
-
-                projectIds = dt.Rows.Cast<DataRow>().Select(r => Convert.ToInt32(r["ProjectId"])).ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Could not list projects of company {CompanyId} for user sync", companyId);
-                return;
-            }
-
-            foreach (var projectId in projectIds)
-                await TrySyncProjectUsersAsync(projectId);
-        }
+        private async Task<ExplicitDbHelper> OpenAsync(string tenantKey)
+            => new ExplicitDbHelper(await _connectionResolver.GetServiceConnectionAsync(tenantKey));
     }
 }

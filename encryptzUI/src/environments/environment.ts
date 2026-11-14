@@ -5,7 +5,9 @@ export const environment = {
   // apiUrl: 'https://serviceapp.encryptz.in/api'
    //  apiUrl:'https://app.encryptz.in'
     //apiUrl:'http://192.168.1.39:5092'
-    apiUrl:'http://localhost:5092',
+    //apiUrl:'http://localhost:5092',
+  // Production build: the API is an IIS application named "api" under the UI site.
+  apiUrl:'/api',
   //apiUrl:'https://erp.encryptz.in',
 
   // Customer portal: the project (MainDB Projects.ProjectKey) whose database customers

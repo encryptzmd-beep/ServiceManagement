@@ -1,0 +1,233 @@
+<app-personal-shell appName="Job Portal" icon="badge" [menu]="menu()">
+
+  @if (pageFailed()) {
+    <div class="jp-state">
+      <span class="material-icons">lock_outline</span>
+      <p>{{ pageFailed() }}</p>
+    </div>
+  } @else {
+    <div class="db">
+
+      <!-- ═══════════ WHO YOU ARE ═══════════ -->
+      <header class="db-head">
+        <div class="db-avatar" aria-hidden="true">
+          @if (photoUrl()) { <img [src]="photoUrl()" alt="" (error)="photoFailed()" /> } @else { {{ initial(page()?.profile?.fullName) }} }
+        </div>
+        <div class="db-head-text">
+          <h1>{{ greeting() }}</h1>
+          @if (page(); as p) {
+            <p class="db-sub">
+              <span>{{ p.profile.headline || 'Add a headline so that employers know what you do' }}</span>
+              @if (p.profile.isVerified) { <app-verified-badge label="Verified" hint="Encryptz verified your profile" /> }
+            </p>
+          }
+        </div>
+        <div class="db-head-actions">
+          <a class="db-btn" routerLink="/apps/jobs/profile"><span class="material-icons" aria-hidden="true">edit</span>Edit profile</a>
+          <a class="db-btn primary" routerLink="/apps/jobs/search"><span class="material-icons" aria-hidden="true">search</span>Find jobs</a>
+        </div>
+      </header>
+
+      @if (page(); as p) {
+        @if (!p.profile.isVisible) {
+          <div class="db-banner" role="status">
+            <span class="material-icons" aria-hidden="true">visibility_off</span>
+            <span><strong>Your profile is private.</strong> Employers cannot find you in a search. You can still apply to jobs.</span>
+            <a routerLink="/apps/jobs/profile">Make it visible</a>
+          </div>
+        }
+      }
+
+      <div class="db-layout">
+        <!-- ═══════════ THE MAIN COLUMN ═══════════ -->
+        <div class="db-main">
+
+          <!-- applications, by state, and the interviews to come -->
+          <section class="db-card" aria-labelledby="db-apps-title">
+            <div class="db-card-head">
+              <h2 id="db-apps-title">Your applications</h2>
+              <a routerLink="/apps/jobs/applications">View all</a>
+            </div>
+            <div class="db-kpis">
+              @for (c of statusCards(); track c.key) {
+                <a class="db-kpi" [attr.data-state]="c.key" routerLink="/apps/jobs/applications" [title]="c.hint">
+                  <strong>{{ applications() === null ? '–' : c.count }}</strong>
+                  <span>{{ c.label }}</span>
+                </a>
+              }
+            </div>
+
+            @if (interviews().length) {
+              <div class="db-sub-head">Upcoming interviews</div>
+              <ul class="db-list">
+                @for (a of interviews(); track a.applicationId) {
+                  @let when = interviewParts(a.interviewAt);
+                  <li class="db-item db-interview">
+                    <div class="db-date" aria-hidden="true"><span>{{ when.month }}</span><strong>{{ when.day }}</strong></div>
+                    <div class="db-item-text">
+                      <a class="db-item-title" [routerLink]="['/apps/jobs/job', a.postingId]">{{ a.title }}</a>
+                      <span class="db-item-meta">{{ a.companyName }} · {{ when.rest }} · {{ a.interviewMode }}</span>
+                      @if (a.interviewPlace && !isWebLink(a.interviewPlace)) {
+                        <span class="db-item-meta"><span class="material-icons" aria-hidden="true">{{ a.interviewMode === 'Phone' ? 'call' : 'place' }}</span>{{ a.interviewPlace }}</span>
+                      }
+                      @if (a.interviewNote) { <span class="db-item-note">{{ a.interviewNote }}</span> }
+                    </div>
+                    @if (isWebLink(a.interviewPlace)) {
+                      <a class="db-btn small primary db-join" [href]="a.interviewPlace" target="_blank" rel="noopener noreferrer"><span class="material-icons" aria-hidden="true">videocam</span>Join</a>
+                    }
+                  </li>
+                }
+              </ul>
+            }
+          </section>
+
+          <!-- jobs that match the person -->
+          <section class="db-card" aria-labelledby="db-jobs-title">
+            <div class="db-card-head">
+              <h2 id="db-jobs-title">Recommended for you</h2>
+              <a routerLink="/apps/jobs/search">See all jobs</a>
+            </div>
+            @if (matches() === null) {
+              <div class="db-loading"><span class="jp-spinner" aria-hidden="true"></span></div>
+            } @else {
+              <ul class="db-list">
+                @for (j of matches(); track j.postingId) {
+                  <li>
+                    <a class="db-item db-job" [routerLink]="['/apps/jobs/job', j.postingId]">
+                      <span class="db-logo" aria-hidden="true">{{ initial(j.companyName) }}</span>
+                      <span class="db-item-text">
+                        <span class="db-item-title">{{ j.title }}@if (j.isVerified) { <app-verified-badge [compact]="true" hint="Job verified by Encryptz" /> }</span>
+                        <span class="db-item-meta">{{ j.companyName }} · {{ j.city }}@if (j.workMode) { · {{ j.workMode }} }</span>
+                      </span>
+                      <span class="db-item-side">
+                        @if (salaryLabel(j); as pay) { <span class="db-pay">{{ pay }}</span> }
+                        @if ((j.matchScore ?? 0) > 0) { <span class="db-tag good">Matches your preferences</span> }
+                      </span>
+                      <span class="material-icons db-chevron" aria-hidden="true">chevron_right</span>
+                    </a>
+                  </li>
+                } @empty {
+                  <li class="db-empty">No open job right now. Tell us what you look for in <a routerLink="/apps/jobs/profile">your profile</a>, and look again soon.</li>
+                }
+              </ul>
+            }
+          </section>
+
+          <!-- the latest applications -->
+          <section class="db-card" aria-labelledby="db-recent-title">
+            <div class="db-card-head">
+              <h2 id="db-recent-title">Recent activity</h2>
+              <a routerLink="/apps/jobs/applications">My applications</a>
+            </div>
+            <ul class="db-list">
+              @for (a of recentApplications(); track a.applicationId) {
+                <li>
+                  <a class="db-item db-application" [routerLink]="['/apps/jobs/job', a.postingId]">
+                    <span class="db-logo" aria-hidden="true">{{ initial(a.companyName) }}</span>
+                    <span class="db-item-text">
+                      <span class="db-item-title">{{ a.title }}</span>
+                      <span class="db-item-meta">{{ a.companyName }} · {{ a.status === 'Applied' ? 'applied' : 'updated' }} {{ ago(a.statusAt || a.appliedAt) }}</span>
+                      @if (hasInterview(a)) { <span class="db-item-meta good">Interview {{ interviewLabel(a.interviewAt) }}</span> }
+                      @if (a.status === 'Rejected' && a.rejectReason) { <span class="db-item-meta bad db-reason" [title]="a.rejectReason">{{ a.rejectReason }}</span> }
+                    </span>
+                    <span [class]="statusClass(a.status)">{{ a.status === 'Rejected' ? 'Not selected' : a.status }}</span>
+                  </a>
+                </li>
+              } @empty {
+                <li class="db-empty">You have not applied yet. <a routerLink="/apps/jobs/search">Find a job</a> and apply with your profile.</li>
+              }
+            </ul>
+          </section>
+        </div>
+
+        <!-- ═══════════ THE SIDE COLUMN ═══════════ -->
+        <aside class="db-rail">
+
+          @if (page(); as p) {
+            <section class="db-card" aria-labelledby="db-strength-title">
+              <div class="db-strength">
+                <div class="db-ring" [style.--pct]="p.completeness" role="img" [attr.aria-label]="'Profile ' + p.completeness + '% complete'">
+                  <span>{{ p.completeness }}%</span>
+                </div>
+                <div>
+                  <h2 id="db-strength-title">Profile strength</h2>
+                  <p class="db-muted">{{ p.completeness >= 90 ? 'Employers see you at your best.' : p.completeness >= 60 ? 'Good. A few steps more.' : 'Complete profiles get far more views.' }}</p>
+                </div>
+              </div>
+              @if (tips().length) {
+                <ul class="db-checklist">
+                  @for (t of tips(); track t.text) {
+                    <li><a routerLink="/apps/jobs/profile"><span class="material-icons" aria-hidden="true">radio_button_unchecked</span>{{ t.text }}</a></li>
+                  }
+                </ul>
+                <a class="db-btn block" routerLink="/apps/jobs/profile">Complete your profile</a>
+              } @else {
+                <p class="db-done"><span class="material-icons" aria-hidden="true">check_circle</span>Your profile is complete.</p>
+              }
+            </section>
+          }
+
+          <section class="db-card tight" aria-label="Activity">
+            <a class="db-stat" routerLink="/apps/jobs/saved">
+              <span class="material-icons" aria-hidden="true">bookmark_border</span>
+              <span class="db-stat-label">Saved jobs</span>
+              <strong>{{ saved() === null ? '–' : stats().saved }}</strong>
+            </a>
+            <a class="db-stat" routerLink="/apps/jobs/messages">
+              <span class="material-icons" aria-hidden="true">chat_bubble_outline</span>
+              <span class="db-stat-label">Unread messages</span>
+              <strong>{{ unreadMessages() }}</strong>
+            </a>
+            <a class="db-stat" routerLink="/apps/jobs/profile">
+              <span class="material-icons" aria-hidden="true">visibility</span>
+              <span class="db-stat-label">Profile views@if (stats().companies) { <small>by {{ stats().companies }} {{ stats().companies === 1 ? 'company' : 'companies' }}</small> }</span>
+              <strong>{{ views() === null ? '–' : stats().views }}</strong>
+            </a>
+          </section>
+
+          <section class="db-card" aria-labelledby="db-msg-title">
+            <div class="db-card-head">
+              <h2 id="db-msg-title">Messages</h2>
+              <a routerLink="/apps/jobs/messages">Open</a>
+            </div>
+            <ul class="db-list compact">
+              @for (c of conversations() ?? []; track c.conversationId) {
+                <li>
+                  <a class="db-item db-message" routerLink="/apps/jobs/messages" [queryParams]="{ c: c.conversationId }" [class.unread]="c.unread > 0">
+                    <span class="db-logo round" aria-hidden="true">{{ initial(c.companyName) }}</span>
+                    <span class="db-item-text">
+                      <span class="db-item-title">{{ c.companyName }}</span>
+                      <span class="db-item-meta">{{ c.lastIsJob ? 'Shared a job' : c.lastBody }}</span>
+                    </span>
+                    @if (c.unread > 0) { <span class="db-count">{{ c.unread }}</span> }
+                  </a>
+                </li>
+              } @empty {
+                <li class="db-empty">No messages yet. Companies can write to you here.</li>
+              }
+            </ul>
+          </section>
+
+          <section class="db-card" aria-labelledby="db-views-title">
+            <div class="db-card-head">
+              <h2 id="db-views-title">Who viewed your profile</h2>
+            </div>
+            <ul class="db-list compact">
+              @for (v of (views() ?? []).slice(0, 4); track $index) {
+                <li class="db-item">
+                  <span class="db-logo round" aria-hidden="true">{{ initial(v.companyName) }}</span>
+                  <span class="db-item-text">
+                    <span class="db-item-title">{{ v.companyName }}</span>
+                    <span class="db-item-meta">{{ v.postingTitle || 'Candidate search' }} · {{ ago(v.lastViewedAt) }}</span>
+                  </span>
+                </li>
+              } @empty {
+                <li class="db-empty">No company has opened your profile yet.</li>
+              }
+            </ul>
+          </section>
+        </aside>
+      </div>
+    </div>
+  }
+</app-personal-shell>

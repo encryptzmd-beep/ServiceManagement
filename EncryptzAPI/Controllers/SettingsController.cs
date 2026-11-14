@@ -11,6 +11,7 @@ namespace EncryptzAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(Roles = "Admin")]
+    [AppModule("SERVICE")]
     public class SettingsController : ControllerBase
     {
         private readonly ISettingsService _service;

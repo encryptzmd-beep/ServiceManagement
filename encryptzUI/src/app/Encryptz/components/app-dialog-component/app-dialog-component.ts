@@ -76,8 +76,9 @@ export class AppDialogComponent {
   /** clicking outside: an alert closes, a confirm counts as "No" */
   onOverlay(mode: 'alert' | 'confirm'): void { this.dialog.close(mode === 'alert'); }
 
-  @HostListener('document:keydown.escape')
-  onEscape(): void { const d = this.dialog.state(); if (d) this.dialog.close(d.mode === 'alert'); }
+  /** Marks the key as used, so a dialog under the message box (EscapeClose) stays open. */
+  @HostListener('document:keydown.escape', ['$event'])
+  onEscape(event?: Event): void { const d = this.dialog.state(); if (d) { event?.preventDefault(); this.dialog.close(d.mode === 'alert'); } }
 
   @HostListener('document:keydown.enter')
   onEnter(): void { if (this.dialog.state()) this.dialog.close(true); }
