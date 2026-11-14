@@ -5,10 +5,13 @@ import { scopeGuard } from './guard-guard';
 import { ScopeState } from './scope-flow';
 
 describe('scopeGuard', () => {
-  const run = (scope: ScopeState, data: Record<string, unknown> = {}) => {
+  const run = (scope: ScopeState, data: Record<string, unknown> = {}, isPlatformAdmin = false) => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), { provide: AuthService, useValue: { scopeState: () => scope } }],
+      providers: [provideRouter([]), {
+        provide: AuthService,
+        useValue: { scopeState: () => scope, isLoggedIn: () => scope.loggedIn, currentUser: () => ({ isPlatformAdmin }) },
+      }],
     });
     const route = { data } as unknown as ActivatedRouteSnapshot;
     const result = TestBed.runInInjectionContext(() => scopeGuard(route, {} as RouterStateSnapshot));
@@ -43,5 +46,13 @@ describe('scopeGuard', () => {
 
   it('still asks for a company on a company-only page', () => {
     expect(run({ ...full, companyId: null }, { scope: 'company' })).toBe('/select-company');
+  });
+
+  it('sends a platform administrator without a company to Platform Admin', () => {
+    expect(run({ ...full, companyId: null, moduleKey: null, locationId: null }, {}, true)).toBe('/settings/platform');
+  });
+
+  it('asks a platform administrator in a company for the module as usual', () => {
+    expect(run({ ...full, moduleKey: null, locationId: null }, {}, true)).toBe('/select-module');
   });
 });

@@ -58,7 +58,8 @@ export const dashboardRedirectGuard: CanActivateFn = () => {
  * `data: { scope: 'company' }` (administration, profile) need only a company, and pages
  * marked `data: { scope: 'none' }` (personal applications) need only a login.
  * A session that is not there yet is sent to the step it is missing.
- * A platform administrator opens pages marked `data: { platformAdmin: true }` without a company.
+ * A platform administrator opens pages marked `data: { platformAdmin: true }` without a company,
+ * and is sent to Platform Admin from any other page that needs one.
  */
 export const scopeGuard: CanActivateChildFn = (childRoute) => {
   const auth = inject(AuthService);
@@ -69,6 +70,11 @@ export const scopeGuard: CanActivateChildFn = (childRoute) => {
   const scope = childRoute.data?.['scope'];
   const need: ScopeNeed = scope === 'company' || scope === 'none' ? scope : 'full';
   const step = nextScopeStep(auth.scopeState(), need);
+  if (step === 'ready') return true;
 
-  return step === 'ready' ? true : router.createUrlTree([routeForStep(step)]);
+  // A platform administrator without a company lands on Platform Admin, not on the company list.
+  if (step === 'company' && auth.isLoggedIn() && auth.currentUser()?.isPlatformAdmin) {
+    return router.createUrlTree(['/settings/platform']);
+  }
+  return router.createUrlTree([routeForStep(step)]);
 };

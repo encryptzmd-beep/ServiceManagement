@@ -500,6 +500,10 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 return ApiResponse<object>.Fail("Save failed");
 
             var row = dt.Rows[0];
+            // a built-in role keeps its name: the application checks for it by name
+            if (row["Status"]?.ToString() == "Refused")
+                return ApiResponse<object>.Fail(dt.Columns.Contains("Message") ? row["Message"]?.ToString() : "Save failed");
+
             return ApiResponse<object>.Ok(new
             {
                 roleId = Convert.ToInt32(row["RoleId"]),
