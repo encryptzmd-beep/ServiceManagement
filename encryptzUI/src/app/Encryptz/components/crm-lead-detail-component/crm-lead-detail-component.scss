@@ -1,0 +1,30 @@
+/* The lead page: the facts, the timeline and the convert dialog. */
+
+.crm-head h1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.ld-facts {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 20px; margin: 0;
+  > div { min-width: 0; }
+  .wide { grid-column: span 2; }
+  dt { font-size: 12px; font-weight: 600; color: #64748b; }
+  dd { margin: 2px 0 0; color: #0f172a; overflow-wrap: anywhere; }
+  a { color: #2563eb; text-decoration: none; }
+}
+
+.ld-timeline {
+  list-style: none; margin: 0; padding: 0;
+  li { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+  li:last-child { border-bottom: none; }
+  .material-icons { font-size: 18px; color: #2563eb; margin-top: 2px; }
+  li.status .material-icons { color: #b45309; }
+}
+
+.ld-choices { display: flex; flex-direction: column; gap: 8px; }
+.ld-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ld-totals { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 900px) { .ld-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) {
+  .ld-facts { grid-template-columns: minmax(0, 1fr); .wide { grid-column: auto; } }
+  .ld-two { grid-template-columns: minmax(0, 1fr); }
+}

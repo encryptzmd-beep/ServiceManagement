@@ -1,0 +1,39 @@
+/* The quotation line editor (its look follows the Sales Order lines, copied, not shared). */
+
+.crm-head h1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.q-search {
+  position: relative; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; padding: 14px 16px; border-bottom: 1px solid #e2e8f0;
+  .crm-field input { width: 100%; }
+}
+.q-results {
+  position: absolute; z-index: 20; top: calc(100% - 8px); left: 16px; right: 16px; max-height: 280px; overflow-y: auto;
+  list-style: none; margin: 0; padding: 4px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+  button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border: none; background: none; font: inherit;
+    text-align: left; cursor: pointer; border-radius: 6px; &:hover { background: #eff6ff; } }
+  .q-mrp { margin-left: auto; font-variant-numeric: tabular-nums; }
+}
+.q-none { flex-basis: 100%; margin: 0; }
+
+.q-lines {
+  input, select { width: 100%; padding: 5px 8px; }
+  .q-name { min-width: 180px; }
+  .q-hsn { min-width: 80px; }
+  .q-qty, .q-warranty { width: 70px; text-align: right; }
+  .q-rate, .q-disc { width: 100px; text-align: right; }
+  .q-gst { width: 70px; }
+}
+
+.q-bottom { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.q-terms textarea { width: 100%; }
+.q-totals {
+  dl { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+  dl > div { display: flex; justify-content: space-between; gap: 12px; }
+  dt { color: #64748b; }
+  dd { margin: 0; font-variant-numeric: tabular-nums; color: #0f172a; }
+  .grand { border-top: 1px solid #e2e8f0; padding-top: 8px; font-size: 16px; font-weight: 700; dt { color: #0f172a; } }
+  p { margin: 10px 0 0; }
+}
+
+@media (max-width: 760px) { .q-bottom { grid-template-columns: minmax(0, 1fr); } }

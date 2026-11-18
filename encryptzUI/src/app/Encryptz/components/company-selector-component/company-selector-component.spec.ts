@@ -113,6 +113,15 @@ describe('CompanySelectorComponent', () => {
     expect(navigated).toEqual([[['/technicians/work-orders'], { replaceUrl: true }]]);
   });
 
+  it('opens the CRM dashboard after the branch is set for CRM, whatever the role', () => {
+    auth.getBranches = () => of({ success: true, message: '', data: [branch(7, 'Elankulam')] });
+    auth.setScope = () => of({ success: true, message: '', data: { role: 'Technician' } });
+
+    create('branch', 'CRM');
+
+    expect(navigated).toEqual([[['/crm/dashboard'], { replaceUrl: true }]]);
+  });
+
   it('explains when no branch is assigned', () => {
     auth.getBranches = () => of({ success: true, message: '', data: [] });
     const fixture = create('branch', 'SERVICE');

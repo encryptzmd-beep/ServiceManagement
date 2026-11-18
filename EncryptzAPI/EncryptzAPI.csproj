@@ -25,6 +25,8 @@
     <Content Include="Database\ProjectDB\11_Consultancy.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Database\ProjectDB\12_Consultancy_Candidates.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Database\ProjectDB\13_Consultancy_Candidate_Search.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Database\ProjectDB\14_CRM.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Database\ProjectDB\15_CRM_Convert_Check.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

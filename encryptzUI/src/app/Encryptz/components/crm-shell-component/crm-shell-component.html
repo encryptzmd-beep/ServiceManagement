@@ -1,0 +1,14 @@
+<header class="crm-bar">
+  <span class="crm-brand">CRM</span>
+  <nav class="crm-nav" aria-label="CRM">
+    <a routerLink="/crm/dashboard" routerLinkActive="active">Dashboard</a>
+    <a routerLink="/crm/leads" routerLinkActive="active">Leads</a>
+    <a routerLink="/crm/reports" routerLinkActive="active">Reports</a>
+    @if (isManager()) {
+      <a routerLink="/crm/settings" routerLinkActive="active" class="settings-link">Settings</a>
+    }
+  </nav>
+  <span class="crm-scope">{{ companyName() }}@if (branchName()) { · {{ branchName() }}}</span>
+  <button type="button" class="crm-back" (click)="backToWorkspace()">Back to workspace</button>
+</header>
+<main class="crm-body"><router-outlet /></main>

@@ -1,0 +1,120 @@
+@if (error() === forbidden) {
+  <app-crm-refused />
+} @else {
+  <div class="crm-page">
+    <header class="crm-head">
+      <div>
+        <h1>Leads</h1>
+        <p>{{ isManager() ? 'All the leads of the team.' : 'The leads you own.' }}</p>
+      </div>
+      <div class="crm-head-actions">
+        <a class="crm-btn primary" routerLink="/crm/leads/new"><span class="material-icons" aria-hidden="true">add</span>New lead</a>
+      </div>
+    </header>
+
+    <section class="crm-card">
+      <form class="crm-filters" (ngSubmit)="apply()">
+        <label class="crm-field grow">
+          <span>Search</span>
+          <input type="search" name="search" placeholder="Name, mobile, lead no." [ngModel]="filter().search ?? ''" (ngModelChange)="set('search', $event)" />
+        </label>
+        <label class="crm-field">
+          <span>Status</span>
+          <select name="status" [ngModel]="filter().status ?? ''" (ngModelChange)="set('status', $event)">
+            <option value="">All</option>
+            @if (extraStatus()) { <option [value]="extraStatus()">{{ extraStatus().split(',').join(' + ') }}</option> }
+            @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
+          </select>
+        </label>
+        <label class="crm-field">
+          <span>Source</span>
+          <select name="sourceId" [ngModel]="filter().sourceId ?? ''" (ngModelChange)="set('sourceId', $event ? +$event : undefined)">
+            <option value="">All</option>
+            @for (s of sources(); track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+          </select>
+        </label>
+        @if (isManager()) {
+          <label class="crm-field crm-owner-filter">
+            <span>Owner</span>
+            <select name="ownerUserId" [ngModel]="filter().ownerUserId ?? ''" (ngModelChange)="set('ownerUserId', $event ? +$event : undefined)">
+              <option value="">Everyone</option>
+              @for (m of owners(); track m.userId) { <option [value]="m.userId">{{ m.fullName }}</option> }
+            </select>
+          </label>
+        }
+        <label class="crm-field">
+          <span>Follow-up</span>
+          <select name="due" [ngModel]="filter().due ?? ''" (ngModelChange)="set('due', $event)">
+            <option value="">Any</option>
+            <option value="Today">Due today</option>
+            <option value="Overdue">Overdue</option>
+            <option value="Pending">Pending</option>
+          </select>
+        </label>
+        <label class="crm-field">
+          <span>Lead date from</span>
+          <input type="date" name="from" [ngModel]="filter().from ?? ''" (ngModelChange)="set('from', $event)" />
+        </label>
+        <label class="crm-field">
+          <span>to</span>
+          <input type="date" name="to" [ngModel]="filter().to ?? ''" (ngModelChange)="set('to', $event)" />
+        </label>
+        <button type="submit" class="crm-btn primary">Apply</button>
+        <button type="button" class="crm-btn" (click)="clear()">Clear</button>
+      </form>
+      @if (filter().closedFrom || filter().closedTo) {
+        <p class="crm-muted">Closed between {{ showDate(filter().closedFrom) || 'the start' }} and {{ showDate(filter().closedTo) || 'today' }}.
+          <button type="button" class="crm-link" (click)="set('closedFrom', undefined); set('closedTo', undefined); apply()">Remove</button></p>
+      }
+    </section>
+
+    <section class="crm-card flush">
+      @if (rows() === null) {
+        <div class="crm-state"><p>Loading…</p></div>
+      } @else {
+        @if (error()) { <p class="crm-error">{{ error() }}</p> }
+        <div class="crm-table-wrap">
+          <table class="crm-table">
+            <thead>
+              <tr>
+                <th>Lead</th><th>Contact</th><th>Product</th><th>Source</th><th>Owner</th><th>Next follow-up</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of rows(); track r.leadId) {
+                <tr class="crm-lead-row">
+                  <td><a [routerLink]="['/crm/leads', r.leadId]">{{ r.leadNo }}</a><div class="crm-muted">{{ showDate(r.leadDate) }}</div></td>
+                  <td>{{ r.contactName }}<div class="crm-muted">{{ r.mobile }}@if (r.city) { · {{ r.city }} }</div></td>
+                  <td>{{ r.productCategory }}</td>
+                  <td>{{ r.sourceName }}</td>
+                  <td>{{ r.ownerName }}</td>
+                  <td>
+                    @if (r.nextFollowUpAt) {
+                      <span [class.crm-pill]="isOverdue(r)" [class.overdue]="isOverdue(r)">{{ showDateTime(r.nextFollowUpAt) }}</span>
+                    }
+                  </td>
+                  <td>
+                    <span [class]="pill(r.status)">{{ r.status }}</span>
+                    @if (r.priority === 'High') { <span class="crm-pill high">High</span> }
+                    @if (r.orderNo) { <div class="crm-muted">{{ r.orderNo }}</div> }
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="7" class="crm-empty">No lead matches. @if (dueLabel(filter().due)) { ({{ dueLabel(filter().due) }}) }</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (pages() > 1) {
+          <div class="crm-pager">
+            <span>{{ total() }} leads · page {{ page() }} of {{ pages() }}</span>
+            <span>
+              <button type="button" class="crm-btn small" [disabled]="page() <= 1" (click)="apply(page() - 1)">Previous</button>
+              <button type="button" class="crm-btn small" [disabled]="page() >= pages()" (click)="apply(page() + 1)">Next</button>
+            </span>
+          </div>
+        }
+      }
+    </section>
+  </div>
+}

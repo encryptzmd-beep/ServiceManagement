@@ -1,0 +1,140 @@
+@if (error() === forbidden) {
+  <app-crm-refused />
+} @else {
+  <div class="crm-page">
+    <header class="crm-head">
+      <div>
+        <p>
+          <a class="crm-link" routerLink="/crm/leads">Leads</a>
+          @if (leadId()) { / <a class="crm-link" [routerLink]="['/crm/leads', leadId()]">{{ leadTitle() || 'Lead' }}</a> }
+        </p>
+        <h1>
+          @if (saved(); as q) { Quotation {{ q.quotationNo }} / R{{ q.revisionNo }} <span [class]="pill(q.status)">{{ q.status }}</span> }
+          @else { New quotation }
+        </h1>
+        @if (saved(); as q) { @if (!q.isLatest) { <p>This revision was replaced by a newer one.</p> } }
+      </div>
+      <div class="crm-head-actions">
+        @if (quotationId()) {
+          <a class="crm-btn" [routerLink]="['/crm/quotations', quotationId(), 'print']" target="_blank"><span class="material-icons" aria-hidden="true">print</span>Print</a>
+        }
+        @if (editable()) {
+          <button type="button" class="crm-btn" [disabled]="busy()" (click)="save()">Save draft</button>
+          <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="setStatus('Sent')">Save and mark sent</button>
+        }
+        @if (status() === 'Sent' && saved()?.isLatest) {
+          <button type="button" class="crm-btn" [disabled]="busy()" (click)="setStatus('Rejected')">Mark rejected</button>
+          <button type="button" class="crm-btn primary q-revise" [disabled]="busy()" (click)="revise()">Revise</button>
+        }
+        @if (status() === 'Rejected' && saved()?.isLatest) {
+          <button type="button" class="crm-btn primary q-revise" [disabled]="busy()" (click)="revise()">Revise</button>
+        }
+      </div>
+    </header>
+
+    @if (notice()) { <p class="crm-ok">{{ notice() }}</p> }
+    @if (error()) { <p class="crm-error">{{ error() }}</p> }
+
+    @if (loaded()) {
+      <section class="crm-card">
+        <div class="crm-grid">
+          <label class="crm-field"><span>Quotation date</span>
+            <input type="date" [disabled]="!editable()" [ngModel]="head().quoteDate" (ngModelChange)="setHead('quoteDate', $event)" /></label>
+          <label class="crm-field"><span>Valid until</span>
+            <input type="date" [disabled]="!editable()" [ngModel]="head().validUntil" (ngModelChange)="setHead('validUntil', $event)" /></label>
+          <label class="crm-field"><span>Supply</span>
+            <select [disabled]="!editable()" [ngModel]="head().isInterState" (ngModelChange)="setHead('isInterState', $event === true || $event === 'true')">
+              <option [ngValue]="false">Within the state (CGST + SGST)</option>
+              <option [ngValue]="true">Another state (IGST)</option>
+            </select></label>
+        </div>
+      </section>
+
+      <section class="crm-card flush">
+        @if (editable()) {
+          <div class="q-search">
+            <label class="crm-field grow"><span>Add a product</span>
+              <input type="search" placeholder="Search by name, code or model" [value]="term()" (input)="search(text($event))" /></label>
+            <button type="button" class="crm-btn" (click)="addLine()"><span class="material-icons" aria-hidden="true">add</span>Blank line</button>
+            @if (products().length) {
+              <ul class="q-results">
+                @for (p of products(); track p.productMasterId) {
+                  <li><button type="button" (click)="pick(p)">
+                    <strong>{{ p.productName }}</strong> <span class="crm-muted">{{ p.productCode }}@if (p.brand) { · {{ p.brand }} }@if (p.model) { · {{ p.model }} }</span>
+                    <span class="q-mrp">{{ amount(p.mrp) }}</span>
+                  </button></li>
+                }
+              </ul>
+            } @else if (term().trim().length >= 2 && !searching()) {
+              <p class="crm-muted q-none">No product matches. Use a blank line to type it.</p>
+            }
+          </div>
+        }
+        <div class="crm-table-wrap">
+          <table class="crm-table q-lines">
+            <thead>
+              <tr>
+                <th>#</th><th>Product</th><th>HSN/SAC</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Discount</th>
+                <th class="num">GST %</th><th class="num">Warranty (months)</th><th class="num">Taxable</th><th class="num">GST</th><th class="num">Total</th>
+                @if (editable()) { <th></th> }
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of lines(); track $index; let i = $index) {
+                <tr>
+                  <td>{{ i + 1 }}</td>
+                  @if (editable()) {
+                    <td><input class="q-name" maxlength="200" [value]="l.productName" (input)="setLine(i, 'productName', text($event))" /></td>
+                    <td><input class="q-hsn" maxlength="20" [value]="l.hsnSac ?? ''" (input)="setLine(i, 'hsnSac', text($event))" /></td>
+                    <td class="num"><input class="q-qty" type="number" min="1" step="1" [value]="l.qty" (input)="setLine(i, 'qty', num($event))" /></td>
+                    <td class="num"><input class="q-rate" type="number" min="0" step="0.01" [value]="l.rate" (input)="setLine(i, 'rate', num($event))" /></td>
+                    <td class="num"><input class="q-disc" type="number" min="0" step="0.01" [value]="l.discountAmount" (input)="setLine(i, 'discountAmount', num($event))" /></td>
+                    <td class="num">
+                      <select class="q-gst" [value]="l.gstPercent" (change)="setLine(i, 'gstPercent', num($event))">
+                        @for (g of gstRates; track g) { <option [value]="g" [selected]="g === +l.gstPercent">{{ g }}</option> }
+                      </select>
+                    </td>
+                    <td class="num"><input class="q-warranty" type="number" min="0" max="120" [value]="l.warrantyMonths" (input)="setLine(i, 'warrantyMonths', num($event))" /></td>
+                  } @else {
+                    <td>{{ l.productName }}</td><td>{{ l.hsnSac }}</td><td class="num">{{ l.qty }}</td><td class="num">{{ amount(l.rate) }}</td>
+                    <td class="num">{{ amount(l.discountAmount) }}</td><td class="num">{{ l.gstPercent }}</td><td class="num">{{ l.warrantyMonths }}</td>
+                  }
+                  <td class="num">{{ amount(totals().lines[i].taxableAmount) }}</td>
+                  <td class="num">{{ amount(totals().lines[i].gstAmount) }}</td>
+                  <td class="num">{{ amount(totals().lines[i].lineTotal) }}</td>
+                  @if (editable()) {
+                    <td><button type="button" class="crm-btn small danger" aria-label="Remove line" (click)="removeLine(i)"><span class="material-icons" aria-hidden="true">delete_outline</span></button></td>
+                  }
+                </tr>
+              } @empty {
+                <tr><td colspan="12" class="crm-empty">No line yet. Search a product above.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="q-bottom">
+        <section class="crm-card q-terms">
+          <label class="crm-field"><span>Terms</span>
+            <textarea rows="5" maxlength="4000" [disabled]="!editable()" [ngModel]="head().terms" (ngModelChange)="setHead('terms', $event)"></textarea></label>
+        </section>
+        <section class="crm-card q-totals" aria-label="Totals">
+          <dl>
+            <div><dt>Sub total</dt><dd data-total="sub">{{ amount(totals().subTotal) }}</dd></div>
+            <div><dt>Discount</dt><dd data-total="discount">{{ amount(totals().discountTotal) }}</dd></div>
+            <div><dt>Taxable</dt><dd data-total="taxable">{{ amount(totals().taxableTotal) }}</dd></div>
+            @if (head().isInterState) {
+              <div><dt>IGST</dt><dd data-total="igst">{{ amount(totals().igst) }}</dd></div>
+            } @else {
+              <div><dt>CGST</dt><dd data-total="cgst">{{ amount(totals().cgst) }}</dd></div>
+              <div><dt>SGST</dt><dd data-total="sgst">{{ amount(totals().sgst) }}</dd></div>
+            }
+            <div class="grand"><dt>Total</dt><dd data-total="grand">{{ amount(totals().grandTotal) }}</dd></div>
+          </dl>
+          @if (editable()) { <p class="crm-muted">Worked out as you type; the saved figures come from the server.</p> }
+        </section>
+      </div>
+    }
+  </div>
+}

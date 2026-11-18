@@ -1,0 +1,55 @@
+@if (error() === forbidden) {
+  <app-crm-refused />
+} @else {
+  <div class="crm-page">
+    <header class="crm-head">
+      <div>
+        <h1>Dashboard</h1>
+        <p>Your leads today. Choose a figure to see its leads.</p>
+      </div>
+      <div class="crm-head-actions">
+        <a class="crm-btn" routerLink="/crm/leads"><span class="material-icons" aria-hidden="true">list</span>All leads</a>
+        <a class="crm-btn primary" routerLink="/crm/leads/new"><span class="material-icons" aria-hidden="true">add</span>New lead</a>
+      </div>
+    </header>
+
+    @if (error()) {
+      <p class="crm-error">{{ error() }}</p>
+    } @else if (!board()) {
+      <div class="crm-state"><p>Loading…</p></div>
+    } @else {
+      <section class="crm-tiles" aria-label="Lead counts">
+        @for (t of tiles(); track t.key) {
+          <a class="crm-tile" [class]="t.tone ?? ''" [attr.data-key]="t.key" routerLink="/crm/leads" [queryParams]="t.query">
+            <strong>{{ t.value }}</strong>
+            <span>{{ t.label }}</span>
+            <small>{{ t.hint }}</small>
+          </a>
+        }
+      </section>
+
+      <section class="crm-card" aria-labelledby="crm-due-title">
+        <div class="crm-card-head">
+          <h2 id="crm-due-title">Today's and overdue follow-ups</h2>
+          <a class="crm-link" routerLink="/crm/leads" [queryParams]="{ due: 'Overdue' }">Overdue leads</a>
+        </div>
+        <ul class="crm-list crm-due">
+          @for (d of board()!.dueFollowUps; track d.leadId) {
+            <li>
+              <a class="crm-item" [routerLink]="['/crm/leads', d.leadId]">
+                <span class="crm-item-text">
+                  <span class="crm-item-title">{{ d.contactName }} <span class="crm-muted">{{ d.leadNo }} · {{ d.mobile }}</span></span>
+                  <span class="crm-item-meta">{{ showDateTime(d.nextFollowUpAt) }}@if (d.nextAction) { · {{ d.nextAction }} } · {{ d.ownerName }}</span>
+                </span>
+                <span [class]="pill(d.status)">{{ d.status }}</span>
+                @if (d.isOverdue) { <span class="crm-pill overdue">Overdue</span> } @else { <span class="crm-pill new">Today</span> }
+              </a>
+            </li>
+          } @empty {
+            <li class="crm-empty">No follow-up is due today.</li>
+          }
+        </ul>
+      </section>
+    }
+  </div>
+}

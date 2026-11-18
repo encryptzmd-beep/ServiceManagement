@@ -1,0 +1,76 @@
+@if (error() === forbidden) {
+  <app-crm-refused />
+} @else {
+  <div class="crm-page">
+    <header class="crm-head">
+      <div>
+        <h1>Settings</h1>
+        <p>The lists the team chooses from, and the sales team.</p>
+      </div>
+    </header>
+
+    @if (notice()) { <p class="crm-ok">{{ notice() }}</p> }
+    @if (error()) { <p class="crm-error">{{ error() }}</p> }
+
+    <section class="crm-card">
+      <h2>Sales team</h2>
+      <p class="crm-muted">A sales person sees and works only their own leads. A manager sees all, reassigns, and keeps these settings.
+        A company administrator is always a manager.</p>
+      <div class="crm-table-wrap">
+        <table class="crm-table">
+          <thead><tr><th>Name</th><th>Manager</th><th>Active</th></tr></thead>
+          <tbody>
+            @for (m of members(); track m.userId) {
+              <tr>
+                <td>{{ m.fullName }}</td>
+                <td><input type="checkbox" [checked]="m.isManager" [attr.aria-label]="m.fullName + ' is a manager'" (change)="saveMember(m, { isManager: checked($event) })" /></td>
+                <td><input type="checkbox" [checked]="m.isActive" [attr.aria-label]="m.fullName + ' is active'" (change)="saveMember(m, { isActive: checked($event) })" /></td>
+              </tr>
+            } @empty {
+              <tr><td colspan="3" class="crm-empty">Nobody on the team yet.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (available().length) {
+        <div class="crm-filters" style="margin-top: 12px">
+          <label class="crm-field grow"><span>Add a person of the company</span>
+            <select [ngModel]="newMemberId() ?? ''" (ngModelChange)="newMemberId.set($event ? +$event : null)">
+              <option value="">Choose…</option>
+              @for (u of available(); track u.userId) { <option [value]="u.userId">{{ u.fullName }}@if (u.email) { ({{ u.email }}) }</option> }
+            </select></label>
+          <label class="crm-check"><input type="checkbox" [checked]="newMemberManager()" (change)="newMemberManager.set(checked($event))" /> Manager</label>
+          <button type="button" class="crm-btn primary" [disabled]="!newMemberId()" (click)="addMember(newMemberId(), newMemberManager())">Add to team</button>
+        </div>
+      }
+    </section>
+
+    @for (l of lists; track l.kind) {
+      <section class="crm-card">
+        <h2>{{ l.title }}</h2>
+        <p class="crm-muted">{{ l.hint }} An unused entry can be switched off; it stays on old leads.</p>
+        <div class="crm-table-wrap">
+          <table class="crm-table">
+            <thead><tr><th>Name</th><th>Order</th><th>Active</th></tr></thead>
+            <tbody>
+              @for (m of masters()[l.kind]; track m.id) {
+                <tr>
+                  <td><input maxlength="100" [value]="m.name" [attr.aria-label]="'Name of ' + m.name" (change)="saveMaster(l.kind, m, { name: value($event) })" /></td>
+                  <td><input type="number" min="0" style="width: 80px" [value]="m.sortOrder" [attr.aria-label]="'Order of ' + m.name" (change)="saveMaster(l.kind, m, { sortOrder: +value($event) })" /></td>
+                  <td><input type="checkbox" [checked]="m.isActive" [attr.aria-label]="m.name + ' is active'" (change)="saveMaster(l.kind, m, { isActive: checked($event) })" /></td>
+                </tr>
+              } @empty {
+                <tr><td colspan="3" class="crm-empty">None yet.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <form class="crm-filters" style="margin-top: 12px" (ngSubmit)="addMaster(l.kind, drafts()[l.kind])">
+          <label class="crm-field grow"><span>New entry</span>
+            <input maxlength="100" [name]="'new-' + l.kind" [ngModel]="drafts()[l.kind]" (ngModelChange)="setDraft(l.kind, $event)" /></label>
+          <button type="submit" class="crm-btn" [disabled]="!drafts()[l.kind]?.trim()">Add</button>
+        </form>
+      </section>
+    }
+  </div>
+}

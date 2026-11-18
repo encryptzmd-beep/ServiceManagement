@@ -780,7 +780,7 @@ export class CompanySelectorComponent {
       next: (res) => {
         this.loading.set(false);
         if (res.success && res.data) {
-          this.router.navigate([landingRouteForRole(res.data.role)], extras);
+          this.router.navigate([this.moduleKey.toUpperCase() === 'CRM' ? '/crm/dashboard' : landingRouteForRole(res.data.role)], extras);
           return;
         }
         // leave the "entering" spinner so the reason and the list are visible
