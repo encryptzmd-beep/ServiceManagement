@@ -15,6 +15,21 @@ import {
 
 type Stage = 'company' | 'module' | 'branch';
 
+/** Radius of the orbit and the farthest an item sits above / below its centre (px). */
+const ORBIT_R = 180;
+const ORBIT_MAX_Y = 172;
+
+/** One bubble of the orbit on the home screen. */
+interface OrbitItem {
+  key: string;
+  label: string;
+  icon: string;
+  disabled: boolean;
+  /** Small caption under the label ('' = none). */
+  note: string;
+  open: () => void;
+}
+
 /** The search box shows only when there are more companies than this. */
 const SEARCH_ABOVE = 6;
 
@@ -163,6 +178,11 @@ export class CompanySelectorComponent {
 
     this.companies.set(kept);
     this.loading.set(kept.length === 0);
+    const firstKept = kept.find(c => this.enterable(c));
+    if (firstKept) {
+      this.activeCompany.set(firstKept);
+      this.defaultToBusiness();
+    }
     this.watchSetUps();
     this.refreshCompanies(() => {
       if (kept.length === 0) this.error.set('Could not load your companies. Please try again.');
@@ -184,6 +204,14 @@ export class CompanySelectorComponent {
         this.loading.set(false);
         this.companies.set(list);
         this.expectSetUp = false;
+        if (!this.activeCompany()) {
+          const first = list.find(c => this.enterable(c));
+          if (first) {
+            this.activeCompany.set(first);
+            // Business is shown (by default or picked before the list came): read the modules now
+            if (!this.defaultToBusiness() && this.mode() === 'business') this.loadBusinessModules();
+          }
+        }
         this.watchSetUps();
       },
       error: () => {
@@ -420,6 +448,173 @@ export class CompanySelectorComponent {
   menuOpen = signal(false);
   userMenuOpen = signal(false);
 
+  /** Company dropdown in the top bar. */
+  companyMenuOpen = signal(false);
+  /** First enterable company (pre-selected on load). */
+  activeCompany = signal<Company | null>(null);
+
+  toggleCompanyMenu(event: Event): void {
+    event.stopPropagation();
+    this.companyMenuOpen.update(v => !v);
+    this.userMenuOpen.set(false);
+    this.menuOpen.set(false);
+  }
+
+  pickCompany(company: Company, event: Event): void {
+    event.stopPropagation();
+    if (!this.enterable(company)) return;
+    this.activeCompany.set(company);
+    this.companyMenuOpen.set(false);
+    if (this.mode() === 'business') this.loadBusinessModules();
+  }
+
+  /**
+   * Home screen: first the two choices (Personal / Business); the orbit then shows the
+   * personal applications or the business modules of the company picked in the top bar.
+   */
+  mode = signal<'choose' | 'personal' | 'business'>('choose');
+
+  /** Business modules of the company in the top bar (read after the company is selected). */
+  businessModules = signal<ModuleDto[]>([]);
+  businessLoading = signal(false);
+  businessError = signal('');
+  /** Company whose modules are in businessModules (null = none read yet). */
+  private businessCompanyId: number | null = null;
+  private businessSeq = 0;
+
+  /** The user picked a mode themselves: the default no longer applies. */
+  private modeTouched = false;
+
+  setMode(m: 'choose' | 'personal' | 'business'): void {
+    this.modeTouched = true;
+    this.showMode(m);
+  }
+
+  private showMode(m: 'choose' | 'personal' | 'business'): void {
+    this.mode.set(m);
+    if (m === 'business') this.loadBusinessModules();
+  }
+
+  /**
+   * A user with a company that can be opened starts on Business (until they pick a mode).
+   * Returns true when it switched (and so already reads the modules).
+   */
+  private defaultToBusiness(): boolean {
+    if (this.modeTouched || this.mode() !== 'choose' || !this.hasBusinessCompany()) return false;
+    this.showMode('business');
+    return true;
+  }
+
+  /** Whether the company of the top bar can be opened (else the panel lists / creates one). */
+  hasBusinessCompany(): boolean {
+    const co = this.activeCompany();
+    return !!co && this.enterable(co);
+  }
+
+  /** Selects the company of the top bar and reads its modules, staying on this screen. */
+  private loadBusinessModules(force = false): void {
+    const co = this.activeCompany();
+    if (!co || !this.enterable(co)) {
+      this.businessModules.set([]);
+      setTimeout(() => document.getElementById('ws-business-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+      return;
+    }
+    if (!force && this.businessCompanyId === co.companyId && this.businessModules().length > 0) return;
+
+    const seq = ++this.businessSeq;
+    this.businessLoading.set(true);
+    this.businessError.set('');
+    this.businessModules.set([]);
+    const failed = (msg: string) => {
+      if (this.gone || seq !== this.businessSeq) return;
+      this.businessLoading.set(false);
+      this.businessError.set(msg);
+    };
+    this.auth.selectCompany(co.companyId).pipe(timeout(20000), takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (res) => {
+        if (this.gone || seq !== this.businessSeq) return;
+        if (!res.success || !res.data) { failed(res.message || 'Could not open this company'); return; }
+        this.auth.getModules().pipe(timeout(20000), takeUntilDestroyed(this.destroyRef)).subscribe({
+          next: (m) => {
+            if (this.gone || seq !== this.businessSeq) return;
+            if (!m.success) { failed(m.message || 'Could not load the modules'); return; }
+            this.businessLoading.set(false);
+            this.businessCompanyId = co.companyId;
+            this.businessModules.set(m.data || []);
+          },
+          error: () => failed('Could not load the modules. Please try again.'),
+        });
+      },
+      error: () => failed('Could not open this company. Please try again.'),
+    });
+  }
+
+  retryBusiness(): void { this.loadBusinessModules(true); }
+
+  // ── ORBITAL DISPLAY ───────────────────────────────────────────────
+
+  /** What the orbit shows: the two choices, the personal applications or the business modules. */
+  orbitItems = computed<OrbitItem[]>(() => {
+    const m = this.mode();
+    if (m === 'personal') {
+      return this.personalApps().map(a => ({
+        key: a.moduleKey, label: a.moduleName, icon: a.icon || 'apps',
+        disabled: !this.canOpenPersonalApp(a), note: a.isReleased ? '' : 'Coming soon',
+        open: () => this.openPersonalApp(a),
+      }));
+    }
+    if (m === 'business') {
+      return this.businessModules().map(mod => ({
+        key: mod.moduleKey, label: mod.moduleName, icon: mod.icon || 'apps',
+        disabled: mod.state !== 'Available',
+        note: mod.state === 'ComingSoon' ? 'Coming soon' : this.caption(mod),
+        open: () => this.openModule(mod),
+      }));
+    }
+    return [
+      { key: 'personal', label: 'Personal Apps', icon: 'person', disabled: false, note: '', open: () => this.setMode('personal') },
+      { key: 'business', label: 'Business Apps', icon: 'business_center', disabled: false, note: '', open: () => this.setMode('business') },
+    ];
+  });
+
+  openOrbitItem(item: OrbitItem): void {
+    if (!item.disabled) item.open();
+  }
+
+  /**
+   * Vertical offset of the i-th of n items from the centre. The items are spread evenly
+   * by height (not by angle), so each one sits on its own row and the labels never overlap.
+   */
+  private orbitOffsetY(i: number, n: number): number {
+    if (n <= 1) return 0;
+    const step = Math.min(80, (2 * ORBIT_MAX_Y) / (n - 1));
+    const half = step * (n - 1) / 2;
+    return half - step * i;
+  }
+
+  private orbitPos(i: number): { x: number; y: number } {
+    const r = ORBIT_R, cx = 160, cy = 240;
+    const dy = this.orbitOffsetY(i, this.orbitItems().length);
+    return { x: cx + Math.sqrt(r * r - dy * dy), y: cy - dy };
+  }
+
+  orbitItemX(i: number): number { return this.orbitPos(i).x - 28; }
+  orbitItemY(i: number): number { return this.orbitPos(i).y - 28; }
+  orbitDotCx(i: number): string { return this.orbitPos(i).x.toFixed(1); }
+  orbitDotCy(i: number): string { return this.orbitPos(i).y.toFixed(1); }
+
+  /** The dashed arc: a little past the first and the last item. */
+  orbitArcD = computed(() => {
+    const r = ORBIT_R, cx = 160, cy = 240;
+    const n = this.orbitItems().length;
+    const top = Math.asin(Math.min(1, this.orbitOffsetY(0, n) / r)) * 180 / Math.PI;
+    const a = Math.min(110, Math.max(40, top + 18));
+    const p = (deg: number) => ({ x: cx + r * Math.cos(deg * Math.PI / 180), y: cy - r * Math.sin(deg * Math.PI / 180) });
+    const s = p(a), e = p(-a);
+    const large = 2 * a > 180 ? 1 : 0;
+    return `M ${s.x.toFixed(1)} ${s.y.toFixed(1)} A ${r} ${r} 0 ${large} 1 ${e.x.toFixed(1)} ${e.y.toFixed(1)}`;
+  });
+
   /** What the user typed in the top bar to find one of their applications. */
   appSearch = signal('');
   filteredApps = computed(() => {
@@ -468,6 +663,7 @@ export class CompanySelectorComponent {
   closeMenus(): void {
     this.menuOpen.set(false);
     this.userMenuOpen.set(false);
+    this.companyMenuOpen.set(false);
   }
 
   goPersonal(): void {

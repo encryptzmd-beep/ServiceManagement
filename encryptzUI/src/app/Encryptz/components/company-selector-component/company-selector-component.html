@@ -1,335 +1,275 @@
-<!-- Encryptz/components/company-selector-component/company-selector-component.html -->
-<div class="ws-page">
+<div class="ws-page" (click)="closeMenus()">
 
-  <!-- ── SIDEBAR ── -->
-  <aside class="ws-sidebar">
-    <div class="ws-brand">
-      <img src="logo.png" alt="" />
-      <span>ENCRYPTZ</span>
+  <!-- ── TOP BAR ── -->
+  <header class="ws-topbar" (click)="$event.stopPropagation()">
+    <div class="ws-logo">
+      <img src="logo.png" alt="Encryptz" class="ws-logo-img" />
     </div>
 
-    <!-- workspace switcher: the personal workspace and every company of the user -->
-    <div class="ws-switch" (click)="$event.stopPropagation()">
-      <button type="button" class="ws-switch-btn" [class.open]="menuOpen()" (click)="toggleMenu()"
-              aria-haspopup="true" [attr.aria-expanded]="menuOpen()">
-        <span class="ws-switch-icon" [class.is-company]="stage() !== 'company'">
-          <span class="material-icons">{{ stage() === 'company' ? 'groups' : 'apartment' }}</span>
-        </span>
-        <span class="ws-switch-name" [title]="stage() === 'company' ? 'Personal Workspace' : currentCompanyName()">{{ stage() === 'company' ? 'Personal Workspace' : currentCompanyName() }}</span>
-        <span class="material-icons ws-chevron">expand_more</span>
-      </button>
-
-      <div class="ws-menu" [class.open]="menuOpen()">
-        @if (stage() === 'company' && showSearch()) {
-          <label class="search">
-            <span class="material-icons">search</span>
-            <input type="search" placeholder="Search company..." aria-label="Search companies"
-                   [ngModel]="search()" (ngModelChange)="search.set($event)" />
-          </label>
-        }
-
-        <div class="ws-item ws-personal" [class.current]="stage() === 'company'" role="button" tabindex="0"
-             (click)="goPersonal()" (keydown.enter)="goPersonal()">
-          <span class="ws-item-icon home"><span class="material-icons">home</span></span>
-          <span class="ws-item-text">
-            <strong>Personal Workspace</strong>
-            <small>My personal apps &amp; tools</small>
-          </span>
-          @if (stage() === 'company') { <span class="material-icons ws-check">verified</span> }
-        </div>
-
-        @if (stage() === 'company') {
-          @if (loading()) {
-            <div class="loading-state">
-              <div class="spinner"></div>
-              <span>Loading your companies...</span>
-            </div>
-          }
-
-          @if (!loading() && companies().length > 0) {
-            @for (company of filteredCompanies(); track company.companyId; let i = $index) {
-              <div class="company-item ws-item" [class.disabled]="!enterable(company)"
-                   [attr.aria-disabled]="!enterable(company)" (click)="selectCompany(company)"
-                   role="button" [attr.tabindex]="enterable(company) ? 0 : -1"
-                   (keydown.enter)="onRowKey(company, $event)" (keydown.space)="onRowKey(company, $event, true)">
-                <span class="ws-item-icon" [attr.data-tone]="tone(i + 1)" aria-hidden="true">
-                  <span class="material-icons">apartment</span>
-                </span>
-                <span class="ws-item-text">
-                  <h3 [title]="company.companyName">{{ company.companyName }}</h3>
-                  <small class="company-code">{{ company.companyCode }}</small>
-                  @if (companyStatus(company)) {
-                    <span class="status-badge">{{ companyStatus(company) }}</span>
-                  }
-                  @if (company.provisionStatus === 'Failed') {
-                    @if (company.isCreator) {
-                      <button class="retry-btn" (click)="retry(company, $event)" [disabled]="retrying() !== null">
-                        {{ retrying() === company.companyId ? 'Retrying…' : 'Retry' }}
-                      </button>
-                    } @else {
-                      <small class="small">Ask the person who created this company to retry.</small>
-                    }
-                  }
-                </span>
-                <span class="role-badge" [class]="getRoleClass(company.roleInCompany)">{{ company.roleInCompany }}</span>
-              </div>
-            } @empty {
-              <div class="no-match">
-                <span class="material-icons" aria-hidden="true">search_off</span>
-                No company matches "{{ search() }}".
-              </div>
-            }
-          }
-
-          @if (!loading() && !error() && companies().length === 0) {
-            <div class="empty-state">
-              <p>You are not in a company yet.</p>
-              <p class="small">Create your own company, or join one you were invited to.</p>
-              <button class="link-back" (click)="openInvitations()">Invitations and join requests</button>
-            </div>
-          }
-
-          @if (creation() && !creation()!.canCreate) {
-            <p class="notice create-reason">{{ creation()!.message }}</p>
-          }
-          @if (creationFailed() && !creation()) {
-            <p class="notice create-reason">
-              Could not check whether you can create a company.
-              <button class="link-back" (click)="reload()">Refresh</button>
-            </p>
-          }
-          @if (pollStopped()) {
-            <p class="notice">
-              Still setting up. Come back in a few minutes.
-              <button class="link-back" (click)="reload()">Refresh</button>
-            </p>
-          }
-
-          <div class="ws-menu-foot">
-            <button type="button" class="ws-add create-company-btn" (click)="openCreate()" [disabled]="!creation()?.canCreate">Create Company</button>
-            @if (companies().length > 0) {
-              <button type="button" class="ws-add" (click)="openInvitations()">Join a Company</button>
-            }
+    <!-- Company selector (stage=company only) -->
+    @if (stage() === 'company' && companies().length > 0) {
+      <div class="ws-company-selector" (click)="$event.stopPropagation()">
+        <button type="button" class="ws-company-btn" (click)="toggleCompanyMenu($event)"
+                [attr.aria-expanded]="companyMenuOpen()">
+          <div class="ws-company-dot" [attr.data-tone]="tone(0)">
+            {{ (activeCompany()?.companyName || companies()[0]?.companyName || 'C').charAt(0).toUpperCase() }}
           </div>
-        } @else {
-          <div class="ws-item current">
-            <span class="ws-item-icon" data-tone="red"><span class="material-icons">apartment</span></span>
-            <span class="ws-item-text">
-              <strong>{{ currentCompanyName() }}</strong>
-              <small>Current company</small>
-            </span>
-            <span class="material-icons ws-check">verified</span>
-          </div>
-        }
-      </div>
-    </div>
-
-    <nav class="ws-nav">
-      @if (stage() === 'company') {
-        <button type="button" class="ws-link active" (click)="scrollToTop()">
-          <span class="material-icons" aria-hidden="true">home</span>Home
+          <span class="ws-company-name">{{ activeCompany()?.companyName || companies()[0]?.companyName || 'Select Company' }}</span>
+          <span class="material-icons ws-chevron-icon">expand_more</span>
         </button>
-        @if (personalApps().length > 0) {
-          <div class="ws-section">Personal applications</div>
-          @for (app of personalApps(); track app.moduleKey) {
-            <!-- a real link when it can be opened (open in a new tab works); a disabled button when not (UX-033) -->
-            @if (canOpenPersonalApp(app)) {
-              <a class="ws-link" [routerLink]="app.routePath">
-                <span class="material-icons" aria-hidden="true">{{ app.icon || 'apps' }}</span>{{ app.moduleName }}
-              </a>
-            } @else {
-              <button type="button" class="ws-link soon" aria-disabled="true" [title]="app.isReleased ? '' : app.moduleName + ' is coming soon'">
-                <span class="material-icons" aria-hidden="true">{{ app.icon || 'apps' }}</span>{{ app.moduleName }}
-                @if (!app.isReleased) { <span class="ws-soon-tag">Soon</span> }
+        @if (companyMenuOpen()) {
+          <div class="ws-company-menu">
+            @for (co of companies(); track co.companyId) {
+              <button type="button" class="ws-company-menu-item"
+                      [class.active]="activeCompany()?.companyId === co.companyId"
+                      [class.disabled]="!enterable(co)"
+                      (click)="pickCompany(co, $event)">
+                <div class="ws-company-dot sm" [attr.data-tone]="tone($index)">
+                  {{ (co.companyName || 'C').charAt(0).toUpperCase() }}
+                </div>
+                <span class="ws-company-menu-name">{{ co.companyName }}</span>
+                @if (activeCompany()?.companyId === co.companyId) {
+                  <span class="material-icons" style="font-size:18px;color:#2563EB;margin-left:auto">check</span>
+                }
               </button>
             }
-          }
-        }
-      } @else {
-        <button type="button" class="ws-link" (click)="backToCompanies()">
-          <span class="material-icons" aria-hidden="true">home</span>Home
-        </button>
-        <div class="ws-section">{{ currentCompanyName() }}</div>
-        <button type="button" class="ws-link" [class.active]="stage() === 'module'" (click)="backToModules()">
-          <span class="material-icons" aria-hidden="true">widgets</span>Modules
-        </button>
-        @if (stage() === 'branch') {
-          <button type="button" class="ws-link active">
-            <span class="material-icons" aria-hidden="true">storefront</span>Branches
-          </button>
-        }
-      }
-    </nav>
-
-    <div class="ws-nav ws-nav-bottom">
-      <button type="button" class="ws-link" (click)="openChangePassword()">
-        <span class="material-icons" aria-hidden="true">lock</span>Change Password
-      </button>
-      <button type="button" class="ws-link" (click)="logout()">
-        <span class="material-icons" aria-hidden="true">logout</span>Logout
-      </button>
-    </div>
-  </aside>
-
-  <!-- ── MAIN ── -->
-  <div class="ws-main">
-    <header class="ws-topbar">
-      @if (stage() === 'company') {
-        <label class="ws-search">
-          <span class="material-icons">search</span>
-          <input type="search" placeholder="Search your applications..." aria-label="Search your applications"
-                 [ngModel]="appSearch()" (ngModelChange)="appSearch.set($event)" />
-        </label>
-      }
-      <span class="spacer"></span>
-      <div class="ws-round"><app-notification-bell /></div>
-      <div class="ws-user" (click)="$event.stopPropagation()">
-        <button type="button" class="ws-user-btn" (click)="toggleUserMenu()" aria-haspopup="true" [attr.aria-expanded]="userMenuOpen()">
-          <span class="user-pic">{{ (userName() || '?').charAt(0).toUpperCase() }}</span>
-          <span class="ws-user-text">
-            <strong class="user-name">{{ userName() }}</strong>
-            <small>{{ stage() === 'company' ? 'Personal Account' : currentCompanyName() }}</small>
-          </span>
-          <span class="material-icons">expand_more</span>
-        </button>
-        @if (userMenuOpen()) {
-          <div class="ws-user-menu">
-            <button type="button" (click)="openChangePassword()"><span class="material-icons" aria-hidden="true">lock</span>Change Password</button>
-            <button type="button" (click)="logout()"><span class="material-icons" aria-hidden="true">logout</span>Logout</button>
           </div>
         }
       </div>
-    </header>
+    }
 
-    <main class="ws-content" [class.with-aside]="stage() === 'company' && !showCreate()">
+    <div class="ws-search-wrap">
+      <label class="ws-searchbar">
+        <span class="material-icons">search</span>
+        <input type="search" placeholder="Search applications, reports, or help…" aria-label="Search" />
+      </label>
+    </div>
+    <div class="ws-topbar-actions" (click)="$event.stopPropagation()">
+      <div class="ws-bell-wrap"><app-notification-bell /></div>
+      <button class="ws-icon-btn" aria-label="All applications"><span class="material-icons">apps</span></button>
+      <div class="ws-vdivider"></div>
+      <div class="ws-user">
+        <button type="button" class="ws-user-btn"
+                (click)="toggleUserMenu()"
+                aria-haspopup="true"
+                [attr.aria-expanded]="userMenuOpen()">
+          <span class="user-pic">{{ (userName() || '?').charAt(0).toUpperCase() }}</span>
+          <span class="material-icons ws-chevron-icon">expand_more</span>
+        </button>
+        @if (userMenuOpen()) {
+          <div class="ws-user-menu" (click)="$event.stopPropagation()">
+            <button type="button" (click)="openChangePassword()">
+              <span class="material-icons" aria-hidden="true">lock</span>Change Password
+            </button>
+            <button type="button" (click)="logout()">
+              <span class="material-icons" aria-hidden="true">logout</span>Logout
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </header>
 
-      @if (stage() === 'company' && !showCreate()) {
-        <div class="ws-center">
+  <!-- ── BODY ── -->
+  <div class="ws-body">
+
+    <!-- ══════ STAGE: COMPANY ══════ -->
+    @if (stage() === 'company' && !showCreate()) {
+
+      <!-- WELCOME HERO (2-column layout) -->
+      <section class="ws-welcome-screen">
+        <!-- Background wave shapes -->
+        <div class="wave-corner wave-bl"></div>
+        <div class="wave-corner wave-br"></div>
+
+        <!-- Left: welcome text + buttons -->
+        <div class="ws-welcome-left">
           @if (error()) {
-            <div class="error-msg">
+            <div class="error-msg" style="margin-bottom:16px">
               <span class="material-icons" aria-hidden="true">error_outline</span>
               {{ error() }}
               <button (click)="reload()" class="retry-btn">Refresh</button>
             </div>
           }
-
-          <!-- greeting banner -->
-          <section class="ws-hero">
-            <div class="ws-hero-text">
-              <h1>{{ greeting() }}@if (firstName()) {, {{ firstName() }}}! <span class="wave">👋</span></h1>
-              <p>Manage your career, finance &amp; daily tasks<br />from one powerful workspace.</p>
-              @if (individualId(); as id) {
-                <!-- what the ID is for, and a copy button (UX-010) -->
-                <div class="individual-id" title="Your lifelong ID on this platform. It never changes. Give it to a company that wants to add you as a member or administrator.">
-                  Individual ID <strong>{{ id }}</strong>
-                  <button type="button" class="id-copy" (click)="copyIndividualId(id)" [attr.aria-label]="'Copy your Individual ID ' + id">
-                    <span class="material-icons" aria-hidden="true">{{ idCopied() ? 'check' : 'content_copy' }}</span>
-                  </button>
-                </div>
-                <div class="individual-id-help">Give this ID to a company that wants to add you. It never changes.</div>
-              }
-              <div class="ws-hero-actions">
-                <button type="button" class="hero-btn solid" (click)="scrollTo('quick-access')">
-                  <span class="material-icons" aria-hidden="true">auto_awesome</span>Quick Actions
-                </button>
-                <button type="button" class="hero-btn ghost" (click)="scrollTo('insights')">
-                  <span class="material-icons" aria-hidden="true">insights</span>View Insights
-                </button>
-              </div>
-            </div>
-            <img class="ws-hero-art" src="workspace-hero.jpg" alt="" />
-          </section>
-
-          <!-- quick access: the personal applications of the catalogue -->
-          @if (personalApps().length > 0) {
-            <section class="ws-block" id="quick-access">
-              <div class="ws-block-head"><h2>Quick Access</h2></div>
-              <div class="quick-grid">
-                @for (app of filteredApps(); track app.moduleKey; let i = $index) {
-                  <div class="company-item personal-app-item quick-tile" [class.disabled]="!canOpenPersonalApp(app)"
-                       [attr.aria-disabled]="!canOpenPersonalApp(app)" (click)="openPersonalApp(app)"
-                       role="button" [attr.tabindex]="canOpenPersonalApp(app) ? 0 : -1" [title]="app.description"
-                       (keydown.enter)="openPersonalApp(app)" (keydown.space)="openPersonalApp(app); $event.preventDefault()">
-                    <div class="quick-icon" [attr.data-tone]="tone(i)">
-                      <span class="material-icons">{{ app.icon || 'apps' }}</span>
-                    </div>
-                    <h3>{{ app.moduleName }}</h3>
-                    @if (!app.isReleased) { <span class="soon-badge">Coming soon</span> }
-                  </div>
-                } @empty {
-                  <div class="ws-empty-line">No application matches "{{ appSearch() }}".</div>
-                }
-              </div>
-            </section>
-          }
-
-          <!-- insights: filled in by the applications as they are released -->
-          <section class="ws-block" id="insights">
-            <div class="ws-block-head">
-              <h2>Insights &amp; Summary</h2>
-              <span class="ws-pill">This Month</span>
-            </div>
-            <div class="insight-grid">
-              @for (card of insights; track card.title) {
-                <div class="insight-card">
-                  <div class="insight-icon" [attr.data-tone]="card.tone"><span class="material-icons">{{ card.icon }}</span></div>
-                  <div class="insight-title">{{ card.title }}</div>
-                  <div class="insight-value">—</div>
-                  <div class="insight-foot"><span class="material-icons" aria-hidden="true">schedule</span>No data yet</div>
-                </div>
-              }
-            </div>
-          </section>
+          <p class="greeting-line">Welcome Back,</p>
+          <h1 class="user-name-big">{{ userName() }}</h1>
+          <div class="red-accent-line"></div>
+          <p class="choose-line">
+            @switch (mode()) {
+              @case ('personal') { Your personal applications }
+              @case ('business') { Modules of {{ activeCompany()?.companyName || 'your company' }} }
+              @default { Choose an application to get started }
+            }
+          </p>
+          <div class="ws-action-row">
+            <button class="btn-app btn-personal" [class.active]="mode() === 'personal'" (click)="setMode('personal')">
+              <span class="material-icons">person</span> Personal Apps
+            </button>
+            <button class="btn-app btn-business" [class.active]="mode() === 'business'" (click)="setMode('business')">
+              <span class="material-icons">business_center</span> Business Apps
+            </button>
+          </div>
         </div>
 
-        <aside class="ws-aside">
-          <section class="side-card">
-            <div class="side-head"><h2>Upcoming</h2></div>
-            <div class="side-empty">
-              <span class="side-empty-icon" data-tone="blue"><span class="material-icons">event_available</span></span>
-              <div>
-                <strong>Nothing coming up</strong>
-                <small>Interviews, bills and deadlines will show here.</small>
+        <!-- Right: orbital display -->
+        <div class="ws-welcome-right">
+          <div class="ws-orbital">
+            <!-- Arc SVG -->
+            <svg class="orbital-svg" viewBox="0 0 520 480" aria-hidden="true">
+              <path [attr.d]="orbitArcD()" class="orbital-arc" />
+              @for (item of orbitItems(); track item.key; let i = $index) {
+                <circle [attr.cx]="orbitDotCx(i)" [attr.cy]="orbitDotCy(i)" r="5" class="orbital-dot" />
+              }
+            </svg>
+
+            <!-- Center user avatar -->
+            <div class="orbital-center">
+              <span class="orbital-initials">{{ (userName() || '?').charAt(0).toUpperCase() }}</span>
+            </div>
+
+            <!-- Bubbles: the two choices, the personal apps or the business modules -->
+            @for (item of orbitItems(); track item.key; let i = $index) {
+              <div class="orbit-item" [class.disabled]="item.disabled"
+                   [style.left.px]="orbitItemX(i)" [style.top.px]="orbitItemY(i)"
+                   (click)="openOrbitItem(item)" role="button"
+                   [attr.tabindex]="item.disabled ? -1 : 0" [attr.aria-disabled]="item.disabled"
+                   (keydown.enter)="openOrbitItem(item)"
+                   (keydown.space)="openOrbitItem(item); $event.preventDefault()">
+                <div class="orbit-circle"><span class="material-icons">{{ item.icon }}</span></div>
+                <span class="orbit-vsep"></span>
+                <span class="orbit-label">
+                  {{ item.label }}
+                  @if (item.note) { <small class="orbit-note">{{ item.note }}</small> }
+                </span>
               </div>
-            </div>
-          </section>
+            }
 
-          <section class="side-card">
-            <div class="side-head">
-              <h2>Spending Overview</h2>
-              <span class="ws-pill small">This Month</span>
-            </div>
-            <div class="spend">
-              <div class="donut"><div class="donut-in"><strong>₹0</strong><small>Total</small></div></div>
-              <ul class="legend">
-                @for (l of spending; track l.label) {
-                  <li><span class="dot" [style.background]="l.color"></span>{{ l.label }}<em>0%</em></li>
+            <!-- Nothing to show yet -->
+            @if (orbitItems().length === 0) {
+              <div class="orbit-status">
+                @if (mode() === 'business' && businessLoading()) {
+                  <div class="spinner"></div><span>Loading modules…</span>
+                } @else if (mode() === 'business' && businessError()) {
+                  <span>{{ businessError() }}</span>
+                  <button class="retry-btn" (click)="retryBusiness()">Retry</button>
+                } @else if (mode() === 'business' && !hasBusinessCompany()) {
+                  <span>Select or create a company below.</span>
+                } @else if (mode() === 'business') {
+                  <span>No modules for this company yet.</span>
+                } @else {
+                  <span>No personal applications yet.</span>
                 }
-              </ul>
-            </div>
-          </section>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
 
-          <section class="side-card">
-            <div class="side-head">
-              <h2>Job Matches for You</h2>
-              @if (jobPortal(); as jp) {
-                <button type="button" class="view-all" (click)="openPersonalApp(jp)">View All</button>
+      <!-- BUSINESS PANEL: appears when Business Apps is clicked -->
+      @if (mode() === 'business') {
+        <div class="ws-business-panel" id="ws-business-panel">
+          <div class="ws-panel-inner">
+            @if (loading()) {
+              <div class="loading-state">
+                <div class="spinner"></div><span>Loading your companies…</span>
+              </div>
+            }
+
+            @if (!loading() && companies().length > 0) {
+              <section class="ws-block">
+                <div class="ws-block-head">
+                  <h2>Your Companies</h2>
+                  @if (showSearch()) {
+                    <label class="ws-search">
+                      <span class="material-icons">search</span>
+                      <input type="search" placeholder="Search companies…" aria-label="Search companies"
+                             [ngModel]="search()" (ngModelChange)="search.set($event)" />
+                    </label>
+                  }
+                </div>
+                <div class="company-list">
+                  @for (company of filteredCompanies(); track company.companyId; let i = $index) {
+                    <div class="company-row"
+                         [class.disabled]="!enterable(company)"
+                         [attr.aria-disabled]="!enterable(company)"
+                         (click)="selectCompany(company)"
+                         role="button"
+                         [attr.tabindex]="enterable(company) ? 0 : -1"
+                         (keydown.enter)="onRowKey(company, $event)"
+                         (keydown.space)="onRowKey(company, $event, true)">
+                      <span class="ws-item-icon" [attr.data-tone]="tone(i + 1)">
+                        <span class="material-icons">apartment</span>
+                      </span>
+                      <div class="company-info">
+                        <h3 [title]="company.companyName">{{ company.companyName }}</h3>
+                        <small class="company-code">{{ company.companyCode }}</small>
+                        @if (companyStatus(company)) {
+                          <span class="status-badge">{{ companyStatus(company) }}</span>
+                        }
+                        @if (company.provisionStatus === 'Failed') {
+                          @if (company.isCreator) {
+                            <button class="retry-btn-inline" (click)="retry(company, $event)"
+                                    [disabled]="retrying() !== null">
+                              {{ retrying() === company.companyId ? 'Retrying…' : 'Retry' }}
+                            </button>
+                          } @else {
+                            <small class="small">Ask the company creator to retry.</small>
+                          }
+                        }
+                      </div>
+                      <span class="role-badge" [class]="getRoleClass(company.roleInCompany)">{{ company.roleInCompany }}</span>
+                      <span class="material-icons arrow-icon">chevron_right</span>
+                    </div>
+                  } @empty {
+                    <div class="ws-empty-line">No company matches "{{ search() }}".</div>
+                  }
+                </div>
+              </section>
+            }
+
+            @if (!loading() && !error() && companies().length === 0) {
+              <div class="empty-state">
+                <span class="material-icons">domain</span>
+                <p>You are not in a company yet.</p>
+                <p class="small">Create your own or join one you were invited to.</p>
+                <button class="link-back" (click)="openInvitations()">View Invitations &amp; Requests</button>
+              </div>
+            }
+
+            @if (pollStopped()) {
+              <p class="notice">Still setting up. Come back in a few minutes.
+                <button class="link-back" (click)="reload()">Refresh</button>
+              </p>
+            }
+
+            <div class="ws-company-actions">
+              <button type="button" class="btn-create" (click)="openCreate()" [disabled]="!creation()?.canCreate">
+                <span class="material-icons">add_business</span> Create Company
+              </button>
+              @if (companies().length > 0) {
+                <button type="button" class="btn-create outline" (click)="openInvitations()">
+                  <span class="material-icons">group_add</span> Join a Company
+                </button>
               }
             </div>
-            <div class="side-empty">
-              <span class="side-empty-icon" data-tone="green"><span class="material-icons">work_outline</span></span>
-              <div>
-                <strong>No matches yet</strong>
-                <small>Complete your Job Portal profile to get matched.</small>
-              </div>
-            </div>
-          </section>
-        </aside>
-      }
 
-      <!-- create a company -->
-      @if (stage() === 'company' && showCreate()) {
-        <section class="frame main-frame">
+            @if (creation() && !creation()!.canCreate) {
+              <p class="notice">{{ creation()!.message }}</p>
+            }
+            @if (creationFailed() && !creation()) {
+              <p class="notice">Could not check whether you can create a company.
+                <button class="link-back" (click)="reload()">Refresh</button>
+              </p>
+            }
+          </div>
+        </div>
+      }
+    }
+
+    <!-- ══════ CREATE COMPANY ══════ -->
+    @if (stage() === 'company' && showCreate()) {
+      <div class="ws-frame-wrapper">
+        <section class="frame">
           <div class="frame-head">
             <div class="frame-icon"><span class="material-icons">apartment</span></div>
             <div class="frame-titles">
@@ -340,14 +280,17 @@
           <div class="frame-body">
             <form class="create-form" (ngSubmit)="submitCreate()">
               <label>Company name *
-                <input class="form-input" name="companyName" [(ngModel)]="createForm.companyName" (ngModelChange)="onNameTyped()" maxlength="200" autocomplete="organization" />
+                <input class="form-input" name="companyName" [(ngModel)]="createForm.companyName"
+                       (ngModelChange)="onNameTyped()" maxlength="200" autocomplete="organization" />
               </label>
               <label>Company code *
-                <input class="form-input" name="companyCode" [(ngModel)]="createForm.companyCode" (input)="onCodeTyped()" maxlength="20" placeholder="e.g. ACME" />
-                <small>Your customers type this code to reach your portal. Letters, digits, - and _.</small>
+                <input class="form-input" name="companyCode" [(ngModel)]="createForm.companyCode"
+                       (input)="onCodeTyped()" maxlength="20" placeholder="e.g. ACME" />
+                <small>Customers type this code to reach your portal. Letters, digits, - and _.</small>
               </label>
               <label>First branch
-                <input class="form-input" name="firstBranchName" [(ngModel)]="createForm.firstBranchName" maxlength="200" placeholder="Head Office" />
+                <input class="form-input" name="firstBranchName" [(ngModel)]="createForm.firstBranchName"
+                       maxlength="200" placeholder="Head Office" />
               </label>
               <label>City
                 <input class="form-input" name="city" [(ngModel)]="createForm.city" maxlength="100" />
@@ -358,28 +301,30 @@
               <label>Address
                 <input class="form-input" name="address" [(ngModel)]="createForm.address" maxlength="400" />
               </label>
-
               @if (createError()) { <div class="error-msg">{{ createError() }}</div> }
-
-              <button class="btn-signin" type="submit" [disabled]="creating()">{{ creating() ? 'Creating…' : 'Create Company' }}</button>
+              <button class="btn-signin" type="submit" [disabled]="creating()">
+                {{ creating() ? 'Creating…' : 'Create Company' }}
+              </button>
               <button class="link-back" type="button" (click)="closeCreate()" [disabled]="creating()">
                 <span class="material-icons" aria-hidden="true">chevron_left</span> Back to workspace
               </button>
-              <p class="small">Setting up a new company takes a few minutes. You can stay on the next screen or come back later.</p>
+              <p class="small">Setting up takes a few minutes. You can stay here or come back later.</p>
             </form>
           </div>
         </section>
-      }
+      </div>
+    }
 
-      <!-- STEP 2 / 3: MODULE and BRANCH of the chosen company -->
-      @if (stage() !== 'company') {
-        <section class="frame main-frame">
+    <!-- ══════ MODULE / BRANCH ══════ -->
+    @if (stage() !== 'company') {
+      <div class="ws-frame-wrapper">
+        <section class="frame">
           <div class="frame-head">
             @if (stage() === 'module') {
               <div class="frame-icon"><span class="material-icons">widgets</span></div>
               <div class="frame-titles">
                 <h2 class="frame-title">Modules</h2>
-                <div class="frame-sub">Choose what you want to work with</div>
+                <div class="frame-sub">Choose what you want to work with in {{ currentCompanyName() }}</div>
               </div>
               <span class="spacer"></span>
               @if (canAdminister()) {
@@ -388,7 +333,7 @@
                 </button>
               }
               <button class="link-back" (click)="backToCompanies()">
-                <span class="material-icons" aria-hidden="true">chevron_left</span> Back to workspace
+                <span class="material-icons" aria-hidden="true">chevron_left</span> Back
               </button>
             } @else {
               <div class="frame-icon"><span class="material-icons">storefront</span></div>
@@ -398,7 +343,7 @@
               </div>
               <span class="spacer"></span>
               <button class="link-back" (click)="backToModules()">
-                <span class="material-icons" aria-hidden="true">chevron_left</span> Back to modules
+                <span class="material-icons" aria-hidden="true">chevron_left</span> Back
               </button>
             }
           </div>
@@ -407,39 +352,37 @@
             @if (loading() || entering()) {
               <div class="loading-state">
                 <div class="spinner"></div>
-                @if (stage() === 'module') { <span>Loading the modules...</span> }
+                @if (stage() === 'module') { <span>Loading modules…</span> }
                 @else if (entering()) { <span>Setting up your workspace…</span> }
-                @else { <span>Loading the branches...</span> }
+                @else { <span>Loading branches…</span> }
               </div>
             }
 
             @if (!loading() && stage() === 'module') {
-              <!-- compact tiles: the description is the tooltip -->
               <div class="tile-grid module-grid">
                 @for (module of modules(); track module.moduleKey; let i = $index) {
-                  <div class="company-item module-item tile module-tile" [class.disabled]="module.state !== 'Available'"
-                       [attr.aria-disabled]="module.state !== 'Available'" (click)="openModule(module)"
-                       role="button" [attr.tabindex]="module.state === 'Available' ? 0 : -1"
-                       [attr.data-tip]="module.description || null"
-                       (keydown.enter)="openModule(module)" (keydown.space)="openModule(module); $event.preventDefault()">
+                  <div class="tile module-tile"
+                       [class.disabled]="module.state !== 'Available'"
+                       [attr.aria-disabled]="module.state !== 'Available'"
+                       (click)="openModule(module)"
+                       role="button"
+                       [attr.tabindex]="module.state === 'Available' ? 0 : -1"
+                       (keydown.enter)="openModule(module)"
+                       (keydown.space)="openModule(module); $event.preventDefault()">
                     <div class="quick-icon" [attr.data-tone]="tone(i)">
                       <span class="material-icons">{{ module.icon || 'apps' }}</span>
                     </div>
-                    <div class="company-info">
+                    <div class="tile-info">
                       <h3>{{ module.moduleName }}</h3>
-                      @if (module.description) { <span class="ws-sr">{{ module.description }}</span> }
-                      @if (module.state === 'ComingSoon') {
-                        <span class="soon-badge">Coming soon</span>
-                      } @else if (caption(module)) {
-                        <span class="status-badge">{{ caption(module) }}</span>
-                      }
+                      @if (module.state === 'ComingSoon') { <span class="soon-badge">Coming soon</span> }
+                      @else if (caption(module)) { <span class="status-badge">{{ caption(module) }}</span> }
                     </div>
                     @if (module.state === 'Available') {
-                      <span class="material-icons arrow">chevron_right</span>
+                      <span class="material-icons arrow-icon">chevron_right</span>
                     } @else if (module.state === 'ComingSoon') {
-                      <span class="material-icons arrow">schedule</span>
+                      <span class="material-icons arrow-icon muted">schedule</span>
                     } @else {
-                      <span class="material-icons arrow">lock</span>
+                      <span class="material-icons arrow-icon muted">lock</span>
                     }
                   </div>
                 }
@@ -463,15 +406,18 @@
               } @else {
                 <div class="tile-grid">
                   @for (branch of branches(); track branch.locationId) {
-                    <div class="company-item branch-item tile" (click)="enterBranch(branch)"
-                         role="button" tabindex="0" (keydown.enter)="enterBranch(branch)" (keydown.space)="enterBranch(branch); $event.preventDefault()">
+                    <div class="tile branch-item"
+                         (click)="enterBranch(branch)"
+                         role="button" tabindex="0"
+                         (keydown.enter)="enterBranch(branch)"
+                         (keydown.space)="enterBranch(branch); $event.preventDefault()">
                       <div class="tile-top">
                         <div class="quick-icon" data-tone="blue">
                           <span class="material-icons">storefront</span>
                         </div>
-                        <span class="material-icons arrow">chevron_right</span>
+                        <span class="material-icons arrow-icon">chevron_right</span>
                       </div>
-                      <div class="company-info">
+                      <div class="tile-info">
                         <h3>{{ branch.locationName }}</h3>
                         <p class="company-code">{{ branch.city || branch.locationCode }}</p>
                       </div>
@@ -490,92 +436,48 @@
             }
           </div>
         </section>
-      }
-    </main>
-  </div>
-</div>
+      </div>
+    }
 
-<!-- Change Password Modal -->
+  </div><!-- /ws-body -->
+
+</div><!-- /ws-page -->
+
+<!-- ── CHANGE PASSWORD MODAL ── -->
 @if (showChangePasswordModal()) {
-  <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999;">
-    <div style="background: rgba(10, 25, 50, 0.95); border: 1px solid rgba(58, 114, 176, 0.3); border-radius: 12px; padding: 30px; width: 400px; color: #fff;">
-      <h2 style="margin: 0 0 5px 0; font-size: 1.5rem;">Change Password</h2>
-      <p style="margin: 0 0 20px 0; font-size: 0.9rem; color: #8ba3c0;">Update your account password securely.</p>
-
-      <div style="margin-bottom: 15px;">
-        <label style="display: block; font-size: 0.85rem; color: #8ba3c0; margin-bottom: 8px;">Old Password</label>
-        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 0 12px; height: 44px; display: flex; align-items: center;">
-          <input
-            type="password"
-            [(ngModel)]="changePasswordOld"
-            placeholder="Enter old password"
-            required
-            [disabled]="changePasswordLoading()"
-            style="background: transparent; border: none; color: #fff; width: 100%; outline: none;"
-          />
+  <div class="modal-backdrop" (click)="closeChangePassword()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <h2>Change Password</h2>
+      <p class="modal-sub">Update your account password securely.</p>
+      <label class="modal-label">Old Password
+        <div class="modal-input-wrap">
+          <input type="password" [(ngModel)]="changePasswordOld" placeholder="Enter old password"
+                 required [disabled]="changePasswordLoading()" />
         </div>
-      </div>
-
-      <div style="margin-bottom: 15px;">
-        <label style="display: block; font-size: 0.85rem; color: #8ba3c0; margin-bottom: 8px;">New Password</label>
-        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 0 12px; height: 44px; display: flex; align-items: center;">
-          <input
-            type="password"
-            [(ngModel)]="changePasswordNew"
-            placeholder="Enter new password"
-            required
-            [disabled]="changePasswordLoading()"
-            style="background: transparent; border: none; color: #fff; width: 100%; outline: none;"
-          />
+      </label>
+      <label class="modal-label">New Password
+        <div class="modal-input-wrap">
+          <input type="password" [(ngModel)]="changePasswordNew" placeholder="Enter new password"
+                 required [disabled]="changePasswordLoading()" />
         </div>
-      </div>
-
-      <div style="margin-bottom: 20px;">
-        <label style="display: block; font-size: 0.85rem; color: #8ba3c0; margin-bottom: 8px;">Confirm New Password</label>
-        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 0 12px; height: 44px; display: flex; align-items: center;">
-          <input
-            type="password"
-            [(ngModel)]="changePasswordConfirm"
-            placeholder="Confirm new password"
-            required
-            [disabled]="changePasswordLoading()"
-            style="background: transparent; border: none; color: #fff; width: 100%; outline: none;"
-          />
+      </label>
+      <label class="modal-label">Confirm New Password
+        <div class="modal-input-wrap">
+          <input type="password" [(ngModel)]="changePasswordConfirm" placeholder="Confirm new password"
+                 required [disabled]="changePasswordLoading()" />
         </div>
-      </div>
-
-      <button
-        style="width: 100%; height: 44px; border-radius: 8px; border: none; background: linear-gradient(135deg, #3a72b0 0%, #1b3a6e 100%); color: white; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center;"
-        (click)="submitChangePassword()"
-        [disabled]="changePasswordLoading()">
-        @if (changePasswordLoading()) { <div style="width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite;"></div> }
+      </label>
+      <button class="btn-signin modal-submit" (click)="submitChangePassword()" [disabled]="changePasswordLoading()">
+        @if (changePasswordLoading()) { <div class="spinner white-spinner"></div> }
         @else { Update Password }
       </button>
-
       @if (changePasswordError()) {
-        <div style="margin-top: 15px; padding: 10px; background: rgba(212, 43, 43, 0.1); border: 1px solid rgba(212, 43, 43, 0.3); border-radius: 6px; color: #ff6b6b; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
-          <span class="material-icons" aria-hidden="true">error_outline</span>
-          {{ changePasswordError() }}
-        </div>
+        <div class="modal-error"><span class="material-icons">error_outline</span>{{ changePasswordError() }}</div>
       }
-
       @if (changePasswordSuccess()) {
-        <div style="margin-top: 15px; padding: 10px; background: rgba(50, 200, 100, 0.1); border: 1px solid rgba(50, 200, 100, 0.3); border-radius: 6px; color: #32c864; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
-          <span class="material-icons" aria-hidden="true">check_circle</span>
-          {{ changePasswordSuccess() }}
-        </div>
+        <div class="modal-success"><span class="material-icons">check_circle</span>{{ changePasswordSuccess() }}</div>
       }
-
-      <button
-        style="width: 100%; margin-top: 15px; background: transparent; border: none; color: #8ba3c0; cursor: pointer; padding: 8px;"
-        (click)="closeChangePassword()">
-        Cancel
-      </button>
+      <button class="modal-cancel" (click)="closeChangePassword()">Cancel</button>
     </div>
   </div>
 }
-<style>
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-</style>
