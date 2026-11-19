@@ -1,0 +1,42 @@
+.tf-overlay {
+  position: fixed; inset: 0; z-index: 1000; display: flex; align-items: flex-start; justify-content: center;
+  padding: 8vh 16px 16px; background: rgba(15, 23, 42, .45);
+}
+.tf-dialog {
+  width: 100%; max-width: 760px; max-height: 80vh; display: flex; flex-direction: column;
+  background: #fff; border-radius: 14px; box-shadow: 0 20px 50px rgba(15, 23, 42, .25); overflow: hidden;
+}
+.tf-head {
+  display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #e2e8f0;
+  h2 { margin: 0; font-size: 16px; font-weight: 700; color: #1a2332; }
+}
+.tf-close { border: none; background: none; color: #5a6a7e; cursor: pointer; display: flex; padding: 4px; border-radius: 6px;
+  &:hover { background: #f1f5f9; } }
+.tf-filters { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; padding: 14px 18px; border-bottom: 1px solid #eef2f6; }
+.tf-field { display: flex; flex-direction: column; gap: 4px; min-width: 0;
+  &.grow { flex: 1 1 220px; }
+  > span { font-size: 11.5px; font-weight: 600; color: #5a6a7e; }
+  input { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; font-size: 13px; width: 100%; box-sizing: border-box;
+    &:focus { outline: none; border-color: #1B4A7A; box-shadow: 0 0 0 3px rgba(27, 74, 122, .15); } }
+}
+.tf-search { display: inline-flex; align-items: center; gap: 5px; height: 36px; padding: 0 14px; border: none; border-radius: 8px;
+  background: #1B4A7A; color: #fff; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  .material-icons { font-size: 18px; } &:hover { background: #163d65; } }
+.tf-body { overflow: auto; }
+.tf-empty { margin: 0; padding: 28px 18px; text-align: center; font-size: 13px; color: #8a9ab0; }
+.tf-table { width: 100%; border-collapse: collapse; font-size: 13px;
+  th { position: sticky; top: 0; background: #f8fafc; text-align: left; padding: 9px 14px; font-size: 11px; font-weight: 600;
+    letter-spacing: .04em; text-transform: uppercase; color: #5a6a7e; border-bottom: 1px solid #e2e8f0; }
+  td { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #1a2332; }
+  tbody tr { cursor: pointer; &:hover, &:focus { background: #e8eef5; outline: none; } }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+}
+.tf-no { font-weight: 700; color: #1B4A7A; white-space: nowrap; }
+.tf-status { padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; background: #e8eef5; color: #1B4A7A;
+  &[data-status="Cancelled"], &[data-status="Rejected"] { background: #f9e8e8; color: #D42B2B; } }
+
+@media (max-width: 640px) {
+  .tf-overlay { padding: 0; align-items: stretch; }
+  .tf-dialog { max-height: none; border-radius: 0; }
+  .tf-table th:nth-child(2), .tf-table td:nth-child(2) { display: none; }
+}

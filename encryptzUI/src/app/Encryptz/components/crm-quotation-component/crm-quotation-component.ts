@@ -6,6 +6,9 @@ import { CrmService } from '../../Services/crm-service';
 import { CrmConvertDialogComponent } from '../crm-shell-component/crm-convert-dialog-component';
 import { CrmRefusedComponent } from '../crm-shell-component/crm-refused';
 import { FORBIDDEN, amount, isoDate, pill, quoteTotals, refusalOf, showDate } from '../crm-shell-component/crm-ui';
+import { TransactionMode, TransactionToolbarComponent } from '../shared/transaction-toolbar/transaction-toolbar';
+import { FindQuery, FindRow, TransactionFindComponent } from '../shared/transaction-toolbar/transaction-find';
+import { DialogService } from '../../Services/dialog-service';
 
 export const GST_RATES = [0, 5, 12, 18, 28];
 const OPEN_FOR_CONVERT = ['Quotation', 'Negotiation'];
@@ -26,7 +29,7 @@ interface Head { quoteDate: string; validUntil: string; isInterState: boolean; t
 @Component({
   selector: 'app-crm-quotation',
   standalone: true,
-  imports: [FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent],
+  imports: [FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent, TransactionToolbarComponent, TransactionFindComponent],
   templateUrl: './crm-quotation-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-quotation-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,6 +38,7 @@ export class CrmQuotationComponent {
   private crm = inject(CrmService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private dialog = inject(DialogService);
 
   readonly forbidden = FORBIDDEN;
   readonly gstRates = GST_RATES;
@@ -60,7 +64,23 @@ export class CrmQuotationComponent {
   searching = signal(false);
 
   readonly status = computed(() => this.saved()?.status ?? 'Draft');
-  readonly editable = computed(() => this.status() === 'Draft');
+
+  // ── toolbar (New · Edit · Save · Print · Cancel · Previous · Next · Find) ──
+  /** A saved quotation opens read-only; Edit unlocks a draft. */
+  editing = signal(false);
+  readonly mode = computed<TransactionMode>(() => !this.quotationId() ? 'new' : this.editing() ? 'edit' : 'view');
+  readonly editable = computed(() => this.status() === 'Draft' && this.mode() !== 'view');
+  private readonly open = computed(() => !!this.saved()?.isLatest && ['Draft', 'Sent', 'Rejected'].includes(this.status())
+    && !['Converted', 'Lost'].includes(this.saved()?.leadStatus ?? ''));
+  /** Draft: edit it. Sent or rejected: Edit makes a new revision. */
+  readonly canEditDoc = computed(() => this.open());
+  readonly editLabel = computed(() => this.status() === 'Draft' ? 'Edit' : 'Revise');
+  readonly canCancelDoc = computed(() => this.open());
+  neighbours = signal<{ previousId: number | null; nextId: number | null }>({ previousId: null, nextId: null });
+  findOpen = signal(false);
+  findRows = signal<FindRow[]>([]);
+  findLoading = signal(false);
+  private savedSnapshot = '';
   readonly totals = computed(() => quoteTotals(this.lines(), this.head().isInterState));
 
   /** The convert dialog is open; after a convert, the order that was made. */
@@ -97,6 +117,11 @@ export class CrmQuotationComponent {
       this.leadId.set(leadId);
       this.lines.set([blankLine(1)]);
       this.loaded.set(true);
+      this.markSaved();
+      this.crm.quotationNeighbours(0)?.subscribe({
+        next: r => this.neighbours.set({ previousId: r?.data?.previousId ?? null, nextId: null }),
+        error: () => {},
+      });
       if (leadId > 0) this.crm.getLead(leadId).subscribe({
         next: res => { if (!res.success || !res.data) return; this.leadTitle.set(`${res.data.leadNo} · ${res.data.contactName}`); this.startWithProduct(res.data); },
         error: err => this.fail(err),
@@ -115,7 +140,7 @@ export class CrmQuotationComponent {
     this.crm.searchProducts(undefined, lead.productCategory || undefined, 100).subscribe({
       next: res => {
         const p = (res.success ? res.data ?? [] : []).find(x => x.productMasterId === id);
-        if (p) this.pick(p); else missed();
+        if (p) { this.pick(p); this.markSaved(); } else missed();   // the prefill is not a change of the user
       },
       error: () => missed(),
     });
@@ -139,10 +164,98 @@ export class CrmQuotationComponent {
         });
         this.lines.set([...(q.items ?? [])].sort((a, b) => a.sortOrder - b.sortOrder).map(i => ({ ...i })));
         this.loaded.set(true);
+        // a loaded quotation opens read-only; Edit unlocks a draft
+        this.editing.set(false);
+        this.markSaved();
+        this.crm.quotationNeighbours(q.quotationId).subscribe({
+          next: r => this.neighbours.set({ previousId: r?.data?.previousId ?? null, nextId: r?.data?.nextId ?? null }),
+          error: () => this.neighbours.set({ previousId: null, nextId: null }),
+        });
         this.crm.getLead(q.leadId).subscribe({ next: r => { this.lead.set(r.success ? r.data ?? null : null); this.leadLoaded.set(true); }, error: () => { this.lead.set(null); this.leadLoaded.set(true); } });
       },
       error: err => this.fail(err),
     });
+  }
+
+  // ── toolbar ──
+  private snapshot(): string { return JSON.stringify([this.head(), this.lines()]); }
+  private markSaved(): void { this.savedSnapshot = this.snapshot(); }
+  isDirty(): boolean { return this.mode() !== 'view' && this.snapshot() !== this.savedSnapshot; }
+
+  /** Runs the action, after "Discard the changes?" when there is unsaved work. */
+  private async leave(action: () => void): Promise<void> {
+    if (this.isDirty() && !(await this.dialog.confirm({ message: 'Discard the changes to this quotation?', kind: 'danger', okText: 'Discard' }))) return;
+    action();
+  }
+
+  /** Shows another quotation in this screen (the route is reused). */
+  private openQuotation(id: number): void {
+    // replace the address: the screen is reused, so Back must not show another quotation under this one's address
+    this.router.navigate(['/crm/quotations', id], { replaceUrl: true });
+    this.error.set(''); this.notice.set(''); this.warning.set(''); this.convertedOrderNo.set('');
+    this.lead.set(null); this.leadLoaded.set(false);
+    this.load(id);
+  }
+
+  onNew(): void { this.leave(() => this.router.navigate(['/crm/quotations'], { queryParams: { new: 1 } })); }
+
+  async onEdit(): Promise<void> {
+    if (!this.canEditDoc()) return;
+    if (this.status() === 'Draft') { this.editing.set(true); return; }
+    const q = this.saved();
+    if (await this.dialog.confirm({ message: `Make a new draft revision of ${q?.quotationNo}? This one stays as it was sent.`, okText: 'Revise' })) this.revise();
+  }
+
+  onDiscard(): void { this.leave(() => this.load(this.quotationId())); }
+
+  onSave(): void { this.save(); }
+
+  onPrint(): void {
+    const id = this.quotationId();
+    if (id) window.open(this.router.serializeUrl(this.router.createUrlTree(['/crm/quotations', id, 'print'])), '_blank');
+  }
+
+  async onCancelDoc(): Promise<void> {
+    const q = this.saved();
+    if (!q || !this.canCancelDoc()) return;
+    const ok = await this.dialog.confirm({
+      message: `Cancel quotation ${q.quotationNo}? It cannot be sent or converted after this.`, kind: 'danger', okText: 'Cancel quotation', cancelText: 'Keep it',
+    });
+    if (!ok) return;
+    this.busy.set(true);
+    this.crm.setQuotationStatus(q.quotationId, 'Cancelled').subscribe({
+      next: res => {
+        this.busy.set(false);
+        if (!res.success) { this.error.set(res.message || 'The quotation could not be cancelled'); return; }
+        this.notice.set(`Quotation ${q.quotationNo} cancelled`);
+        this.load(q.quotationId);
+      },
+      error: err => { this.busy.set(false); this.fail(err); },
+    });
+  }
+
+  onPrevious(): void { const id = this.neighbours().previousId; if (id) this.leave(() => this.openQuotation(id)); }
+
+  onNext(): void { const id = this.neighbours().nextId; if (id) this.leave(() => this.openQuotation(id)); }
+
+  onFind(): void { this.findRows.set([]); this.findOpen.set(true); }
+
+  onFindSearch(q: FindQuery): void {
+    this.findLoading.set(true);
+    this.crm.getQuotations({ search: q.term || undefined, from: q.from || undefined, to: q.to || undefined, page: 1, pageSize: 30 }).subscribe({
+      next: res => {
+        this.findLoading.set(false);
+        this.findRows.set((res.success ? res.data?.items ?? [] : []).map(r => ({
+          id: r.quotationId, number: `${r.quotationNo} / R${r.revisionNo}`, date: r.quoteDate, party: r.contactName, amount: r.grandTotal, status: r.status,
+        })));
+      },
+      error: () => { this.findLoading.set(false); this.findRows.set([]); },
+    });
+  }
+
+  onFindPick(id: number): void {
+    this.findOpen.set(false);
+    if (id !== this.quotationId()) this.leave(() => this.openQuotation(id));
   }
 
   setHead<K extends keyof Head>(key: K, value: Head[K]): void {

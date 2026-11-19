@@ -50,6 +50,18 @@ namespace EncryptzBL.Infrastructure.Crm
                 return q == null ? ApiResponse<QuotationDto>.Fail(QuotationNotFound) : ApiResponse<QuotationDto>.Ok(q);
             });
 
+        public Task<ApiResponse<NeighboursDto>> GetQuotationNeighbours(int userId, bool isManager, int companyId, int quotationId)
+            => Guard(async () =>
+            {
+                var dt = await GetDataTableAsync("crm.sp_Quotation_Neighbours", new[]
+                {
+                    In("@CompanyId", companyId), In("@UserId", userId), In("@IsManager", isManager),
+                    In("@LocationId", LocationId), In("@QuotationId", Math.Max(0, quotationId))
+                });
+                var n = dt.Rows.Count > 0 ? dt.ToList<NeighboursDto>().First() : new NeighboursDto();
+                return ApiResponse<NeighboursDto>.Ok(n);
+            });
+
         private async Task<QuotationDto?> ReadQuotation(int userId, bool isManager, int companyId, int quotationId)
         {
             var ds = await GetDataSetAsync("crm.sp_Quotation_Get", new[]

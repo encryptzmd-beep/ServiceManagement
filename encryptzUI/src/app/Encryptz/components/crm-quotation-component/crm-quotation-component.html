@@ -15,12 +15,8 @@
         @if (saved(); as q) { @if (!q.isLatest) { <p>This revision was replaced by a newer one.</p> } }
       </div>
       <div class="crm-page-actions">
-        @if (quotationId()) {
-          <a class="crm-btn" [routerLink]="['/crm/quotations', quotationId(), 'print']" target="_blank"><span class="material-icons" aria-hidden="true">print</span>Print</a>
-        }
-        @if (editable()) {
-          <button type="button" class="crm-btn navy" [disabled]="busy()" (click)="save()">Save draft</button>
-          <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="setStatus('Sent')">Save and mark sent</button>
+        @if (editable() || (status() === 'Draft' && quotationId() && saved()?.isLatest)) {
+          <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="setStatus('Sent')">{{ editable() ? 'Save and mark sent' : 'Mark sent' }}</button>
         }
         @if (status() === 'Sent' && saved()?.isLatest) {
           <button type="button" class="crm-btn navy" [disabled]="busy()" (click)="setStatus('Rejected')">Mark rejected</button>
@@ -35,6 +31,19 @@
         }
       </div>
     </header>
+
+    <app-transaction-toolbar
+      [mode]="mode()" [label]="saved() ? saved()!.quotationNo + ' / R' + saved()!.revisionNo : ''" [status]="saved()?.status ?? ''"
+      [canEdit]="canEditDoc()" [editLabel]="editLabel()" [canSave]="editable()" [canCancel]="canCancelDoc()"
+      [previousId]="neighbours().previousId" [nextId]="neighbours().nextId" [busy]="busy()"
+      (newDoc)="onNew()" (edit)="onEdit()" (discard)="onDiscard()" (save)="onSave()" (print)="onPrint()"
+      (cancelDoc)="onCancelDoc()" (previous)="onPrevious()" (next)="onNext()" (find)="onFind()" />
+
+    @if (findOpen()) {
+      <app-transaction-find title="Find a quotation" placeholder="Quotation number or contact"
+        [rows]="findRows()" [loading]="findLoading()"
+        (search)="onFindSearch($event)" (pick)="onFindPick($event)" (close)="findOpen.set(false)" />
+    }
 
     @if (convertHint()) { <p id="q-convert-hint" class="crm-muted q-convert-hint">{{ convertHint() }}</p> }
     @if (convertedOrderNo()) {

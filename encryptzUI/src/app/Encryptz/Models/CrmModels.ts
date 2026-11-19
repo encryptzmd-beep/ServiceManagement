@@ -4,7 +4,7 @@
 export const LEAD_STATUSES = ['New', 'Contacted', 'Qualified', 'Quotation', 'Negotiation', 'Converted', 'Lost'] as const;
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
 export type LeadPriority = 'Low' | 'Medium' | 'High';
-export type QuotationStatus = 'Draft' | 'Sent' | 'Accepted' | 'Rejected' | 'Superseded';
+export type QuotationStatus = 'Draft' | 'Sent' | 'Accepted' | 'Rejected' | 'Superseded' | 'Cancelled';
 /** The two lists kept by api/crm/masters/{kind}. */
 export type CrmMasterKind = 'sources' | 'lost-reasons';
 

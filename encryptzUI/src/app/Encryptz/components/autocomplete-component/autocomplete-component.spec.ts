@@ -39,6 +39,21 @@ describe('AutocompleteComponent', () => {
 
   afterEach(() => TestBed.resetTestingModule());
 
+  it('shows the aside of a choice (a rate) at its right, when it has one', async () => {
+    const { fixture, input, host } = await create();
+    host.options.set([
+      { value: 1, label: 'Split AC 1.5T', sub: 'AC-15 · Voltas', aside: '₹42,500.00' },
+      { value: 2, label: 'Stabiliser' },
+    ]);
+    fixture.detectChanges();
+    input.dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
+    const rows = [...fixture.nativeElement.querySelectorAll('.ac-list li[role="option"]')] as HTMLElement[];
+    const withRate = rows.find(r => r.textContent!.includes('Split AC'))!;
+    expect(withRate.querySelector('.ac-aside')!.textContent!.trim()).toBe('₹42,500.00');
+    expect(rows.find(r => r.textContent!.includes('Stabiliser'))!.querySelector('.ac-aside')).toBeNull();
+  });
+
   it('shows the label of the choice it was given', async () => {
     const { ac } = await create();
     expect(ac.chosen()?.label).toBe('HR Manager');

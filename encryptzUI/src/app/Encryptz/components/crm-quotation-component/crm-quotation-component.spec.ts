@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { CrmService } from '../../Services/crm-service';
+import { DialogService } from '../../Services/dialog-service';
 import { CrmQuotationComponent } from './crm-quotation-component';
 
 describe('CrmQuotationComponent', () => {
@@ -18,6 +19,7 @@ describe('CrmQuotationComponent', () => {
   });
 
   let crm: any;
+  let dialog: any;
   let current: any;
   let params: Record<string, string>;
   let query: Record<string, string>;
@@ -30,6 +32,7 @@ describe('CrmQuotationComponent', () => {
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(params), queryParamMap: convertToParamMap(query) } } },
         { provide: CrmService, useValue: crm },
+        { provide: DialogService, useValue: dialog },
       ],
     });
     vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
@@ -45,6 +48,11 @@ describe('CrmQuotationComponent', () => {
     f.detectChanges();
   };
 
+  const tb = (f: any, name: string) => f.nativeElement.querySelector(`[data-tb="${name}"]`) as HTMLButtonElement;
+  /** A saved draft opens read-only: Edit unlocks it. */
+  const edit = (f: any) => { tb(f, 'edit').click(); f.detectChanges(); };
+  const flush = () => new Promise(r => setTimeout(r, 0));
+
   beforeEach(() => {
     current = quotation();
     params = { id: '30' };
@@ -55,7 +63,11 @@ describe('CrmQuotationComponent', () => {
       searchProducts: () => ok([]),
       saveQuotation: vi.fn(() => ok(30)),
       reviseQuotation: vi.fn(() => ok(31)),
+      quotationNeighbours: vi.fn(() => ok({ previousId: 29, nextId: 31 })),
+      setQuotationStatus: vi.fn(() => ok(30)),
+      getQuotations: vi.fn(() => ok({ items: [], totalCount: 0 })),
     };
+    dialog = { confirm: vi.fn(async () => true), alert: vi.fn() };
   });
 
   it('shows 18% on 1000 within the state as CGST 90, SGST 90 and 1180 in all', () => {
@@ -68,6 +80,7 @@ describe('CrmQuotationComponent', () => {
 
   it('works the totals out again when the quantity or the rate changes', () => {
     const f = create();
+    edit(f);
     type(f, '.q-qty', '2');
     expect(total(f, 'cgst')).toBe('180.00');
     expect(total(f, 'grand')).toBe('2,360.00');
@@ -261,6 +274,7 @@ describe('CrmQuotationComponent', () => {
       crm.saveQuotation = vi.fn(() => { calls.push('save'); return ok(30); });
       crm.previewConvert = vi.fn(() => { calls.push('preview'); return ok({ matches: [], quotation: { ...current, items: [item({ rate: 1500 })] } }); });
       const f = create();
+      edit(f);
       type(f, '.q-rate', '1500');
       convertButton(f)!.click();
       f.detectChanges();
@@ -275,6 +289,7 @@ describe('CrmQuotationComponent', () => {
       current = quotation({ status: 'Draft', leadStatus: 'Quotation' });
       crm.saveQuotation = vi.fn(() => of({ success: false, message: 'The quotation could not be saved here', data: null }));
       let f = create();
+      edit(f);
       convertButton(f)!.click();
       f.detectChanges();
       expect(f.nativeElement.querySelector('app-crm-convert-dialog')).toBeNull();
@@ -284,6 +299,7 @@ describe('CrmQuotationComponent', () => {
       // a line that fails the page's own check is not sent at all
       crm.saveQuotation = vi.fn(() => ok(30));
       f = create();
+      edit(f);
       type(f, '.q-qty', '0');
       convertButton(f)!.click();
       f.detectChanges();
@@ -326,5 +342,106 @@ describe('CrmQuotationComponent', () => {
       f.detectChanges();
       expect(f.nativeElement.querySelector('.crm-refused a')!.getAttribute('href')).toBe('/select-module');
     });
+  });
+
+  // ── toolbar ──
+  it('a saved draft opens read-only and Edit unlocks it', () => {
+    const f = create();
+    const qty = () => f.nativeElement.querySelector('.q-qty') as HTMLInputElement | null;
+    expect(qty()).toBeNull();
+    expect(tb(f, 'save').disabled).toBe(true);
+    edit(f);
+    expect(qty()).not.toBeNull();
+    expect(tb(f, 'save').disabled).toBe(false);
+  });
+
+  it('Edit of a sent quotation makes a revision, after asking', async () => {
+    current = quotation({ status: 'Sent' });
+    const f = create();
+    expect(tb(f, 'edit').textContent).toContain('Revise');
+    tb(f, 'edit').click();
+    await flush();
+    expect(dialog.confirm).toHaveBeenCalled();
+    expect(crm.reviseQuotation).toHaveBeenCalledWith(30);
+  });
+
+  it('Cancel voids the quotation after asking', async () => {
+    const f = create();
+    tb(f, 'cancel').click();
+    await flush();
+    expect(dialog.confirm).toHaveBeenCalled();
+    expect(crm.setQuotationStatus).toHaveBeenCalledWith(30, 'Cancelled');
+  });
+
+  it('an accepted or cancelled quotation cannot be edited or cancelled', () => {
+    for (const status of ['Accepted', 'Cancelled']) {
+      current = quotation({ status });
+      const f = create();
+      expect(tb(f, 'edit').disabled).toBe(true);
+      expect(tb(f, 'cancel').disabled).toBe(true);
+    }
+  });
+
+  it('previous and next load the neighbours', async () => {
+    const f = create();
+    expect(crm.quotationNeighbours).toHaveBeenCalledWith(30);
+    const spy = vi.spyOn(f.componentInstance, 'load');
+    tb(f, 'next').click();
+    await flush();
+    expect(spy).toHaveBeenCalledWith(31);
+    f.detectChanges();
+    tb(f, 'previous').click();
+    await flush();
+    expect(spy).toHaveBeenCalledWith(29);
+  });
+
+  it('asks before leaving unsaved changes', async () => {
+    dialog.confirm = vi.fn(async () => false);
+    const f = create();
+    edit(f);
+    type(f, '.q-qty', '3');
+    const spy = vi.spyOn(f.componentInstance, 'load');
+    tb(f, 'next').click();
+    await flush();
+    expect(dialog.confirm).toHaveBeenCalled();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('Find lists the quotations and opens the one picked', async () => {
+    crm.getQuotations = vi.fn(() => ok({ items: [{ quotationId: 12, quotationNo: 'QT-0012', revisionNo: 2, quoteDate: '2026-11-01', contactName: 'Ravi', grandTotal: 500, status: 'Sent' }], totalCount: 1 }));
+    const f = create();
+    tb(f, 'find').click();
+    f.detectChanges();
+    expect(crm.getQuotations).toHaveBeenCalled();
+    expect(f.nativeElement.textContent).toContain('QT-0012 / R2');
+    const spy = vi.spyOn(f.componentInstance, 'load');
+    (f.nativeElement.querySelector('app-transaction-find tbody tr') as HTMLElement).click();
+    await flush();
+    expect(spy).toHaveBeenCalledWith(12);
+  });
+
+  it('previous / next replace the address, so Back does not show another document', async () => {
+    const f = create();
+    const nav = TestBed.inject(Router).navigate as any;
+    tb(f, 'next').click();
+    await flush();
+    expect(nav).toHaveBeenCalledWith(['/crm/quotations', 31], { replaceUrl: true });
+  });
+
+  it('a new quotation that starts with the lead product has no unsaved changes', () => {
+    params = { id: 'new' };
+    query = { leadId: '5' };
+    crm.getLead = () => ok({ leadId: 5, leadNo: 'LD-0005', contactName: 'Meera', status: 'Qualified', productMasterId: 7, productCategory: 'Inverter' });
+    crm.searchProducts = () => ok([{ productMasterId: 7, productName: 'Inverter 1kVA', productCode: 'P7', mrp: 1000, warrantyMonths: 12, category: 'Inverter' }]);
+    const f = create();
+    expect(f.componentInstance.lines()[0].productName).toBe('Inverter 1kVA');
+    expect(f.componentInstance.isDirty()).toBe(false);
+  });
+
+  it('a quotation of a converted or lost lead cannot be edited or cancelled', () => {
+    current = quotation({ status: 'Sent', leadStatus: 'Converted' });
+    const f = create();
+    expect(tb(f, 'edit').disabled).toBe(true);
+    expect(tb(f, 'cancel').disabled).toBe(true);
   });
 });

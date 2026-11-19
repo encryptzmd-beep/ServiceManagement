@@ -84,6 +84,11 @@ export class CrmService {
     return this.http.post<ApiResponse<number>>(`${this.base}/quotations/${id}/revise`, {});
   }
 
+  /** Toolbar previous / next (latest revisions the caller may see; 0 = from a new one). */
+  quotationNeighbours(id: number): Observable<ApiResponse<{ previousId: number | null; nextId: number | null }>> {
+    return this.http.get<ApiResponse<{ previousId: number | null; nextId: number | null }>>(`${this.base}/quotations/${id}/neighbours`);
+  }
+
   setQuotationStatus(id: number, status: string): Observable<ApiResponse<number>> {
     return this.http.post<ApiResponse<number>>(`${this.base}/quotations/${id}/status`, { status });
   }

@@ -7,21 +7,28 @@
       <div class="so-sub">Create and manage customer sales invoices</div>
     </div>
     <div class="so-header-actions">
-      @if (!isNew()) {
-        <span class="so-status" [attr.data-status]="status()">{{ status() }}</span>
-        <button type="button" class="btn-outline" (click)="print()" title="Print invoice">
-          <span class="material-icons">print</span> Print Invoice
-        </button>
-      }
       <button type="button" class="btn-outline" (click)="back()">← Back to Sales Orders</button>
     </div>
   </div>
+
+  <app-transaction-toolbar
+    [mode]="mode()" [label]="orderNo()" [status]="isNew() ? '' : status()"
+    [canEdit]="canEditBill()" [canSave]="isEditable()" [canCancel]="canCancelBill()"
+    [previousId]="neighbours().previousId" [nextId]="neighbours().nextId" [busy]="saving() || loading()"
+    (newDoc)="onNew()" (edit)="onEdit()" (discard)="onDiscard()" (save)="onSave()" (print)="print()"
+    (cancelDoc)="onCancelBill()" (previous)="onPrevious()" (next)="onNext()" (find)="onFind()" />
+
+  @if (findOpen()) {
+    <app-transaction-find title="Find a sales order" placeholder="Bill number, customer or mobile"
+      [rows]="findRows()" [loading]="findLoading()"
+      (search)="onFindSearch($event)" (pick)="onFindPick($event)" (close)="findOpen.set(false)" />
+  }
 
   @if (loading()) {
     <div class="so-loading"><div class="spinner"></div><span>Loading bill…</span></div>
   } @else {
 
-  @if (!isEditable()) {
+  @if (!isNew() && status() !== 'Billed') {
     <div class="so-note info">
       <span class="material-icons">lock</span>
       This bill is <strong>{{ status() }}</strong> and cannot be changed.
@@ -197,12 +204,10 @@
               <tr>
                 <td>
                   @if (isEditable()) {
-                    <select [ngModel]="l.productMasterId" (ngModelChange)="onProductChange(l, $event)">
-                      <option [ngValue]="null">Select product</option>
-                      @for (p of products(); track p.productMasterId) {
-                        <option [ngValue]="p.productMasterId">{{ productLabel(p) }}</option>
-                      }
-                    </select>
+                    <app-autocomplete [ngModel]="l.productMasterId" (ngModelChange)="onProductChange(l, $event)"
+                      [options]="productOptions()" placeholder="Search product by name, code or model"
+                      emptyText="No product matches" ariaLabel="Product" />
+
                     @if (l.productMasterId === null && l.productName) {
                       <small class="muted">{{ l.productName }}</small>
                     }
@@ -307,6 +312,11 @@
             <button type="button" class="btn-primary" [disabled]="saving()" (click)="save(true)">
               <span class="material-icons">local_shipping</span>
               {{ saving() ? 'Saving…' : 'Save & Despatch' }}
+            </button>
+          } @else if (status() === 'Billed' && !isNew()) {
+            <!-- a saved bill, shown read-only: it can go on to despatch without Edit -->
+            <button type="button" class="btn-primary" [disabled]="saving()" (click)="goToDespatch()">
+              <span class="material-icons">local_shipping</span> Despatch
             </button>
           } @else if (detail()?.despatches?.length) {
             <button type="button" class="btn-primary" (click)="viewDespatch(detail()!.despatches[0].despatchId)">

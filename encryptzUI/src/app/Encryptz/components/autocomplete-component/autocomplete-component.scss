@@ -82,5 +82,13 @@
 .ac-label { font-size: 13.5px; font-weight: 500; color: #141b34; overflow-wrap: anywhere; }
 .ac-sub { font-size: 12px; color: #6b7489; }
 
+/* a choice with an aside (a rate): label and second line on the left, the aside on the right */
+.ac-list li:has(.ac-aside) {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: center;
+  .ac-label, .ac-sub { grid-column: 1; }
+  .ac-aside { grid-column: 2; grid-row: 1 / span 2; }
+}
+.ac-aside { font-size: 13px; font-weight: 600; color: #141b34; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
 .ac-list li.ac-empty, .ac-list li.ac-more { cursor: default; font-size: 12.5px; color: #9aa3b5; &:hover { background: none; } }
 .ac-list li.ac-more { border-top: 1px dashed #eef1f6; margin-top: 2px; }

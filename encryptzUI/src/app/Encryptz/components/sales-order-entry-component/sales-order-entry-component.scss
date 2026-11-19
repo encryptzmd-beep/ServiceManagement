@@ -285,3 +285,7 @@ table.lines {
   a { color: var(--navy); font-weight: 600; &:hover { text-decoration: underline; } }
   small { width: 100%; color: var(--muted); font-size: 11.5px; }
 }
+
+/* the product autocomplete list must not be cut by the card or the scrolling table while it is open */
+.card:has(.ac.open), .table-scroll:has(.ac.open) { overflow: visible; }
+.lines-table td app-autocomplete, td > app-autocomplete { display: block; min-width: 240px; }

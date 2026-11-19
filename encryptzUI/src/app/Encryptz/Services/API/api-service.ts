@@ -1141,6 +1141,11 @@ saveSalesOrder(dto: M.SalesOrderSave): Observable<M.ApiResponse<M.SalesOrderSave
   return this.post<M.ApiResponse<M.SalesOrderSaveResult>>('Sales/orders', dto);
 }
 
+/** Toolbar previous / next of a bill (0 = from a new one): { previousId, nextId } */
+getSalesOrderNeighbours(id: number): Observable<M.ApiResponse<{ previousId: number | null; nextId: number | null }>> {
+  return this.get<M.ApiResponse<{ previousId: number | null; nextId: number | null }>>(`Sales/orders/${id}/neighbours`);
+}
+
 cancelSalesOrder(id: number): Observable<M.ApiResponse> {
   return this.post<M.ApiResponse>(`Sales/orders/${id}/cancel`, {});
 }

@@ -161,6 +161,13 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
             return Page(items, items.FirstOrDefault()?.TotalCount ?? 0, filter.PageNumber, filter.PageSize);
         }
 
+        public async Task<ApiResponse<NeighboursDto>> GetOrderNeighbours(int salesOrderId)
+        {
+            var dt = await GetDataTableAsync("sp_SalesOrder_Neighbours", new[] { SqlParameterHelper.Input("@SalesOrderId", Math.Max(0, salesOrderId)) });
+            var n = dt != null && dt.Rows.Count > 0 ? dt.ToList<NeighboursDto>().First() : new NeighboursDto();
+            return ApiResponse<NeighboursDto>.Ok(n);
+        }
+
         public async Task<ApiResponse<SalesOrderDetailDto>> GetOrder(int salesOrderId)
         {
             var ds = await GetDataSetAsync("sp_SalesOrder_GetById", new[] { SqlParameterHelper.Input("@SalesOrderId", salesOrderId) });

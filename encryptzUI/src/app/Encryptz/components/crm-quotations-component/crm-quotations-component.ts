@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LeadSaveDto, QuotationListRowDto } from '../../Models/CrmModels';
 import { CrmService } from '../../Services/crm-service';
 import { CrmRefusedComponent } from '../crm-shell-component/crm-refused';
@@ -21,9 +21,10 @@ const PAGE_SIZE = 20;
 export class CrmQuotationsComponent {
   private crm = inject(CrmService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute, { optional: true });
 
   readonly forbidden = FORBIDDEN;
-  readonly statuses = ['Draft', 'Sent', 'Accepted', 'Rejected', 'Superseded'];
+  readonly statuses = ['Draft', 'Sent', 'Accepted', 'Rejected', 'Superseded', 'Cancelled'];
   readonly pill = pill;
   readonly rupees = rupees;
   readonly showDate = showDate;
@@ -45,7 +46,11 @@ export class CrmQuotationsComponent {
   nqError = signal('');
   nqSaving = signal(false);
 
-  constructor() { this.apply(); }
+  constructor() {
+    this.apply();
+    // the toolbar "New" of a quotation comes here with ?new=1: open the New quotation form
+    if (this.route?.snapshot?.queryParamMap?.get('new') === '1') this.openNew();
+  }
 
   openNew(): void {
     this.nq.set({ contactName: '', mobile: '', city: '', productCategory: '', productMasterId: null });

@@ -114,7 +114,7 @@ private _scrollTileTop(): void {
 
   readonly priorities = [
     { value: 'Low', color: '#10b981' }, { value: 'Medium', color: '#f59e0b' },
-    { value: 'High', color: '#ef4444' }, { value: 'Critical', color: '#7c3aed' },
+    { value: 'High', color: '#ef4444' }, { value: 'Critical', color: '#991b1b' },
   ];
   readonly slots = [
     { value: 'morning', label: 'Morning', time: '9AM–12PM', icon: 'wb_sunny' },

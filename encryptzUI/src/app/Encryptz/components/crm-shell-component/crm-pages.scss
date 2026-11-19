@@ -147,7 +147,7 @@ textarea { resize: vertical; min-height: 64px; }
   &.contacted, &.qualified, &.sent { background: #f5f3ff; color: #6d28d9; }
   &.quotation, &.negotiation { background: $warn-tint; color: $warn; }
   &.converted, &.accepted { background: $good-tint; color: $good; }
-  &.lost, &.rejected, &.overdue, &.high { background: $bad-tint; color: $bad; }
+  &.lost, &.rejected, &.cancelled, &.overdue, &.high { background: $bad-tint; color: $bad; }
   &.superseded { background: $hair; color: $faint; }
 }
 

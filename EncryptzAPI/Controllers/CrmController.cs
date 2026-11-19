@@ -104,6 +104,11 @@ namespace EncryptzAPI.Controllers
             return result.Message == "Quotation not found" ? NotFound(result) : BadRequest(result);
         }
 
+        // previous / next of the toolbar; id 0 = from a new quotation
+        [HttpGet("quotations/{id:int}/neighbours")]
+        public async Task<IActionResult> GetQuotationNeighbours(int id)
+            => Answer(await _crm.GetQuotationNeighbours(Caller(), await Manager(), Company(), id));
+
         [HttpPost("quotations/{id:int}/revise")]
         public async Task<IActionResult> ReviseQuotation(int id)
             => Answer(await _crm.ReviseQuotation(Caller(), await Manager(), Company(), id));

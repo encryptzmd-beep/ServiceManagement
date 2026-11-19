@@ -4,8 +4,8 @@
       <h1>Settings</h1>
       <p class="subtitle">System configuration and preferences</p>
     </div>
-    <button class="btn-primary" (click)="saveAll()" >
-      💾 Save All Changes
+    <button type="button" class="fx-btn-new" (click)="saveAll()">
+      <span class="material-icons" style="font-size:18px;" aria-hidden="true">save</span> Save All Changes
     </button>
   </div>
 
@@ -14,7 +14,7 @@
   <!-- Group Tabs -->
   <div class="group-tabs" *ngIf="!loading()">
     <button *ngFor="let g of groups()" [class.active]="activeGroup() === g" (click)="activeGroup.set(g)">
-      {{ g }}
+      {{ groupLabel(g) }}
     </button>
   </div>
 
@@ -115,7 +115,9 @@
       <div class="upi-section">
         <div class="section-header">
           <h3>UPI Configurations</h3>
-          <button class="btn-primary-sm" (click)="openAddUpi()">+ Add UPI ID</button>
+          <button type="button" class="fx-btn-new" (click)="openAddUpi()">
+            <span class="material-icons" style="font-size:18px;" aria-hidden="true">add</span> Add UPI ID
+          </button>
         </div>
 
         <table class="upi-table">
@@ -187,7 +189,7 @@
       <div class="upi-error" *ngIf="upiError()">{{ upiError() }}</div>
       <div class="modal-actions">
         <button class="btn-secondary" (click)="showAddUpiModal.set(false)" [disabled]="savingUpi()">Cancel</button>
-        <button class="btn-primary" (click)="addUpi()"
+        <button type="button" class="fx-btn-new" (click)="addUpi()"
                 [disabled]="savingUpi() || !newUpi.displayName.trim() || !isValidUpiId(newUpi.upiId)">Save</button>
       </div>
     </div>

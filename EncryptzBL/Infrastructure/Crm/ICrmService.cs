@@ -20,6 +20,8 @@ namespace EncryptzBL.Infrastructure.Crm
 
         Task<ApiResponse<int>> SaveQuotation(int userId, bool isManager, int companyId, QuotationSaveDto dto);
         Task<ApiResponse<QuotationDto>> GetQuotation(int userId, bool isManager, int companyId, int quotationId);
+        /// <summary>Previous / next latest quotation the caller may see (0 = from a new one).</summary>
+        Task<ApiResponse<NeighboursDto>> GetQuotationNeighbours(int userId, bool isManager, int companyId, int quotationId);
         Task<ApiResponse<int>> ReviseQuotation(int userId, bool isManager, int companyId, int quotationId);
         Task<ApiResponse<int>> SetQuotationStatus(int userId, bool isManager, int companyId, int quotationId, string status);
         Task<ApiResponse<List<CrmProductDto>>> SearchProducts(int userId, bool isManager, int companyId, string? term, string? category = null, int? top = null);

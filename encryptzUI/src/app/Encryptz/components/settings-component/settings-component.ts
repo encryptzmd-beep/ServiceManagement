@@ -34,6 +34,9 @@ export class SettingsComponent {
   private static readonly UPI_ID = /^[a-zA-Z0-9][a-zA-Z0-9._-]{1,255}@[a-zA-Z][a-zA-Z0-9]{1,63}$/;
 
   groups = computed(() => [...new Set(this.settings().map(s => s.settingGroup)), 'Payments']);
+  /** "ServiceWorkflow" → "Service Workflow" (the group names are stored without spaces) */
+  groupLabel(g: string): string { return (g ?? '').replace(/([a-z])([A-Z])/g, '$1 $2'); }
+
   filteredSettings = computed(() => this.settings().filter(s => s.settingGroup === this.activeGroup()));
 
   constructor(private svc: ApiService) {}
