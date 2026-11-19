@@ -36,7 +36,46 @@ export class TechnicianListComponent {
 
   constructor(private techService: ApiService) {}
 
-  ngOnInit() { this.loadData(); }
+  ngOnInit() { this.loadData(); this.loadAttendanceRules(); }
+
+  // ── Attendance check-in required per technician (by TechnicianId: the list rows carry no userId) ──
+  /** null until loaded; stays null when the call fails (e.g. script 19 not run): the switch is then hidden. */
+  attendanceRules = signal<Map<number, boolean> | null>(null);
+  attendanceSaving = signal(false);
+
+  loadAttendanceRules() {
+    this.techService.getAttendanceRules().subscribe({
+      next: (r: any) => {
+        const rows: any[] = Array.isArray(r?.data) ? r.data : [];
+        this.attendanceRules.set(new Map(rows.map(x => [Number(x.technicianId), x.attendanceRequired !== false])));
+      },
+      error: () => this.attendanceRules.set(null)
+    });
+  }
+
+  /** Not in the list (no technician row yet) counts as required, like the API. */
+  attendanceRequiredOf(technicianId: number): boolean {
+    return this.attendanceRules()?.get(technicianId) ?? true;
+  }
+
+  setAttendanceRequired(t: TechnicianListItem, event: Event) {
+    const input = event.target as HTMLInputElement;
+    const required = input.checked;
+    this.attendanceSaving.set(true);
+    this.techService.setAttendanceRequired(t.technicianId, required).subscribe({
+      next: () => {
+        const m = new Map(this.attendanceRules() ?? []);
+        m.set(t.technicianId, required);
+        this.attendanceRules.set(m);
+        this.attendanceSaving.set(false);
+      },
+      error: (err) => {
+        input.checked = !required;   // put the switch back
+        this.attendanceSaving.set(false);
+        this.dialog.alert({ message: err?.error?.message || 'The setting could not be saved', kind: 'danger' });
+      }
+    });
+  }
 
   totalPages = () => Math.ceil(this.totalCount() / this.filter.pageSize);
 

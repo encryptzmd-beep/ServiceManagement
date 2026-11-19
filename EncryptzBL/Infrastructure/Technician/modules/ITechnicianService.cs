@@ -32,5 +32,15 @@ namespace EncryptzBL.Infrastructure.Technician.modules
         Task<bool> IsCheckedIn(int technicianId);
         /// <summary>Has the complaint of this assignment at least one service image?</summary>
         Task<bool> HasServiceImage(int assignmentId);
+        /// <summary>Number of service images on the complaint of this assignment (every visit, every technician).</summary>
+        Task<int> CountServiceImages(int assignmentId);
+        /// <summary>Service Workflow settings for completing a job; photos uploaded when an assignment is given.</summary>
+        Task<CompletionRulesDto> GetCompletionRules(int? assignmentId);
+        /// <summary>Must this technician check in (attendance required; true when unknown)?</summary>
+        Task<bool> IsAttendanceRequired(int technicianId);
+        /// <summary>Attendance required and not checked in today: the work is refused.</summary>
+        Task<bool> NeedsCheckIn(int technicianId);
+        Task<List<TechnicianAttendanceRuleDto>> GetAttendanceRules();
+        Task<ApiResponse<string>> SetAttendanceRequired(int technicianId, bool required);
     }
 }

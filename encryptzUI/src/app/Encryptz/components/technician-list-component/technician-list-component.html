@@ -227,6 +227,16 @@
           <div class="d-stat"><span>{{ t.experienceYears }}y</span><small>Experience</small></div>
           <div class="d-stat"><span>{{ t.activeComplaints }}</span><small>Active</small></div>
         </div>
+        <label class="attendance-switch" *ngIf="attendanceRules()">
+          <input type="checkbox"
+                 [checked]="attendanceRequiredOf(t.technicianId)"
+                 [disabled]="attendanceSaving()"
+                 (change)="setAttendanceRequired(t, $event)" />
+          <span>
+            <strong>Attendance check-in required</strong>
+            <small>When off, this technician can start and complete jobs without checking in</small>
+          </span>
+        </label>
       </div>
     </div>
   </div>

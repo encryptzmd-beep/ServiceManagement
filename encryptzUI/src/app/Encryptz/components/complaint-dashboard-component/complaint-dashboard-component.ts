@@ -12,6 +12,7 @@ import { ApiService } from '../../Services/API/api-service';
 import { DashboardStateService } from '../../Services/dashboard-state-service';
 import { ComplaintDetailPopupComponent } from "../complaint-detail-popup-component/complaint-detail-popup-component";
 import { Router } from '@angular/router';
+import { attentionItems, kpiCards } from './attention';
 
 interface TileConfig {
   key: string; label: string; statusId?: number; isSpare?: boolean;
@@ -172,6 +173,11 @@ private _scrollTileTop(): void {
       { key:'hold',          label:'On Hold',            value: rc['hold'] ?? 0,                                  icon:'⏸️', bg:'#ffedd5', accent:'#ea580c',  statusId: this.sid('hold') },
     ];
   });
+
+  /** "Needs attention now": the urgent tiles above zero, most urgent first; each opens its tile's list. */
+  attention = computed(() => attentionItems(this.statCards()));
+  /** The KPI tiles: the other tiles, as before. */
+  kpis = computed(() => kpiCards(this.statCards()));
 
   statusItems = computed(() => {
     const s = this.dashboardData()?.stats;

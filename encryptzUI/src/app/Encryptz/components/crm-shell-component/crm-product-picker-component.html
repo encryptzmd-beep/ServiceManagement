@@ -1,14 +1,38 @@
 <label class="crm-field"><span>Product category</span>
   <select class="pp-category" [value]="category() ?? ''" (change)="chooseCategory($any($event.target).value)">
-    <option value="">–</option>
+    <option value="">All categories</option>
     @for (c of categories(); track c) { <option [value]="c" [selected]="c === category()">{{ c }}</option> }
   </select></label>
-<label class="crm-field"><span>Product</span>
-  <select class="pp-product" [disabled]="!category()" (change)="chooseProduct($any($event.target).value)">
-    <option value="">–</option>
-    @for (p of productOptions(); track p.productMasterId) {
-      <option [value]="p.productMasterId" [selected]="p.productMasterId === productMasterId()">{{ p.productName }}</option>
+<div class="crm-field pp-product">
+  <span [id]="listId + '-label'">Product</span>
+  <div class="pp-box">
+    <span class="material-icons pp-icon" aria-hidden="true">search</span>
+    <input type="text" role="combobox" autocomplete="off" aria-autocomplete="list"
+      [attr.aria-labelledby]="listId + '-label'" [attr.aria-controls]="listId" [attr.aria-expanded]="showList()"
+      [attr.aria-activedescendant]="active() >= 0 ? listId + '-' + active() : null"
+      [placeholder]="category() ? 'Search in ' + category() : 'Search by name, code or model'"
+      [value]="displayValue()"
+      (focus)="onFocus()" (blur)="onBlur()" (input)="onInput($any($event.target).value)" (keydown)="onKey($event)" />
+    @if (showList()) {
+      <ul class="pp-results" role="listbox" [id]="listId">
+        @for (p of results(); track p.productMasterId; let i = $index) {
+          <li role="option" [id]="listId + '-' + i" [attr.aria-selected]="i === active()" [class.active]="i === active()"
+            [class.chosen]="p.productMasterId === productMasterId()"
+            (mousedown)="$event.preventDefault(); pick(p)" (mouseenter)="active.set(i)">
+            <span class="pp-text">
+              <span class="pp-name">{{ p.productName }}</span>
+              @if (meta(p)) { <span class="pp-meta">{{ meta(p) }}</span> }
+            </span>
+            <span class="pp-rate">₹{{ amount(p.mrp) }}</span>
+          </li>
+        }
+      </ul>
+    } @else if (showNone()) {
+      <div class="pp-results pp-none">No product matches</div>
+    } @else if (open() && searching()) {
+      <div class="pp-results pp-none">Searching…</div>
     }
-  </select></label>
+  </div>
+</div>
 @if (loadFailed()) { <p class="crm-error pp-note">The products could not be loaded</p> }
 @else if (products().length >= limit) { <p class="pp-note">Showing the first {{ limit }} products</p> }

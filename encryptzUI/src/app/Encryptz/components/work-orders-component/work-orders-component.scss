@@ -2055,6 +2055,11 @@
 /* Footer */
 .cmp-footer {
   display: flex; gap: 10px; padding: 14px 20px; border-top: 1px solid #f1f5f9; flex-shrink: 0;
+  flex-wrap: wrap;
+}
+/* Settings › Service Workflow: photos still needed before Complete */
+.cmp-photo-hint {
+  flex-basis: 100%; order: -1; font-size: 12px; font-weight: 600; color: #b45309;
 }
 .cmp-cancel {
   flex: 1; padding: 10px; border: 1.5px solid #e2e8f0; border-radius: 9px;

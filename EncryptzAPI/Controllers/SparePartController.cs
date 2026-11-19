@@ -36,7 +36,7 @@ using System.Security.Claims;
             dto.TechnicianId = User.GetTechnicianId();   // never the id from the body
             if (!await _technicians.IsComplaintAssignedTo(dto.ComplaintId, dto.TechnicianId))
                 return this.Forbidden("This complaint is not assigned to you");
-            if (!await _technicians.IsCheckedIn(dto.TechnicianId))
+            if (await _technicians.NeedsCheckIn(dto.TechnicianId))
                 return BadRequest(new { success = false, message = "Please check in before requesting spare parts" });
 
             return null;

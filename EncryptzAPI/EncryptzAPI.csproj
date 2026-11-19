@@ -29,6 +29,8 @@
     <Content Include="Database\ProjectDB\15_CRM_Convert_Check.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Database\ProjectDB\16_CRM_Board_Reports.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Database\ProjectDB\17_CRM_Product_Fixes.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Database\ProjectDB\18_Service_Workflow_Settings.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Database\ProjectDB\19_Technician_Attendance_Optional.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

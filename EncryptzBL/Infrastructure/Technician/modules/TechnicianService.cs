@@ -1,4 +1,5 @@
 using EncryptzBL.Common;
+using EncryptzBL.Common.Service;
 using EncryptzBL.Common.Tenant;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Technician.modules;
@@ -322,6 +323,89 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
                 new[] { SqlParameterHelper.Input("@AssignmentId", assignmentId) });
 
             return dt.Rows.Count > 0;
+        }
+
+        public async Task<int> CountServiceImages(int assignmentId)
+        {
+            var dt = await GetDataTableByQueryAsync(
+                @"SELECT COUNT(*) AS Photos
+                  FROM dbo.ServiceImages si
+                  INNER JOIN dbo.TechnicianAssignments a ON a.ComplaintId = si.ComplaintId
+                  WHERE a.AssignmentId = @AssignmentId",
+                new[] { SqlParameterHelper.Input("@AssignmentId", assignmentId) });
+
+            return dt.Rows.Count > 0 ? Convert.ToInt32(dt.Rows[0]["Photos"]) : 0;
+        }
+
+        public async Task<CompletionRulesDto> GetCompletionRules(int? assignmentId)
+        {
+            var dt = await GetDataTableByQueryAsync(
+                @"SELECT SettingKey, SettingValue FROM dbo.SystemSettings
+                  WHERE SettingKey IN (@MinKey, @CategoriesKey)",
+                new[]
+                {
+                    SqlParameterHelper.Input("@MinKey", ServiceWorkflowRules.MinPhotosKey),
+                    SqlParameterHelper.Input("@CategoriesKey", ServiceWorkflowRules.CategoriesKey)
+                });
+
+            string? Value(string key) => dt.AsEnumerable()
+                .Where(r => string.Equals(r["SettingKey"]?.ToString(), key, StringComparison.OrdinalIgnoreCase))
+                .Select(r => r["SettingValue"] == DBNull.Value ? null : r["SettingValue"].ToString())
+                .FirstOrDefault();
+
+            return new CompletionRulesDto
+            {
+                MinPhotos = ServiceWorkflowRules.ParseMinPhotos(Value(ServiceWorkflowRules.MinPhotosKey)),
+                PhotoCategories = ServiceWorkflowRules.ParseCategories(Value(ServiceWorkflowRules.CategoriesKey)),
+                PhotosUploaded = assignmentId is > 0 ? await CountServiceImages(assignmentId.Value) : 0
+            };
+        }
+
+        public async Task<bool> IsAttendanceRequired(int technicianId)
+        {
+            // the column comes with 19_Technician_Attendance_Optional.sql: before it is run, everyone is required
+            var dt = await GetDataTableByQueryAsync(
+                @"IF COL_LENGTH('dbo.Technicians', 'AttendanceRequired') IS NULL
+                      SELECT CAST(1 AS BIT) AS Required;
+                  ELSE
+                      EXEC sp_executesql
+                          N'SELECT ISNULL((SELECT TOP 1 AttendanceRequired FROM dbo.Technicians WHERE TechnicianId = @T), CAST(1 AS BIT)) AS Required',
+                          N'@T INT', @T = @TechnicianId;",
+                new[] { SqlParameterHelper.Input("@TechnicianId", technicianId) });
+
+            return dt.Rows.Count == 0 || dt.Rows[0]["Required"] == DBNull.Value || Convert.ToBoolean(dt.Rows[0]["Required"]);
+        }
+
+        public async Task<bool> NeedsCheckIn(int technicianId)
+            => await IsAttendanceRequired(technicianId) && !await IsCheckedIn(technicianId);
+
+        public async Task<List<TechnicianAttendanceRuleDto>> GetAttendanceRules()
+        {
+            var dt = await GetDataTableAsync("sp_Technician_AttendanceRequired_List");
+            return dt.Rows.Count > 0 ? dt.ToList<TechnicianAttendanceRuleDto>() : new List<TechnicianAttendanceRuleDto>();
+        }
+
+        public async Task<ApiResponse<string>> SetAttendanceRequired(int technicianId, bool required)
+        {
+            // the procedure (script 19) sets every row of the user; the screen knows the technician id
+            var user = await GetDataTableByQueryAsync(
+                "SELECT TOP 1 UserId FROM dbo.Technicians WHERE TechnicianId = @TechnicianId",
+                new[] { SqlParameterHelper.Input("@TechnicianId", technicianId) });
+            if (user.Rows.Count == 0 || user.Rows[0]["UserId"] == DBNull.Value)
+                return ApiResponse<string>.Fail("Technician not found");
+            var userId = Convert.ToInt32(user.Rows[0]["UserId"]);
+
+            var dt = await GetDataTableAsync("sp_Technician_AttendanceRequired_Set", new[]
+            {
+                SqlParameterHelper.Input("@UserId", userId),
+                SqlParameterHelper.Input("@Required", required)
+            });
+
+            if (dt.Rows.Count == 0) return ApiResponse<string>.Fail("The setting could not be saved");
+            var message = dt.Rows[0]["Message"]?.ToString() ?? "";
+            return Convert.ToBoolean(dt.Rows[0]["Success"])
+                ? ApiResponse<string>.Ok(message, message)
+                : ApiResponse<string>.Fail(message);
         }
 
         public async Task<List<WorkOrderDto>> GetWorkOrders(int technicianId)

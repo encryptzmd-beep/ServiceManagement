@@ -166,7 +166,7 @@
         }}</span>
     </div>
     <div class="cb-info">
-      <strong>{{ isCheckedIn() ? 'Checked In' : 'Not Checked In' }}</strong>
+      <strong>{{ isCheckedIn() ? 'Checked In' : (attendanceRequired() ? 'Not Checked In' : 'Attendance not required') }}</strong>
       @if (isCheckedIn() && checkInTime()) {
       <span class="cb-time">Since {{ checkInTime() | date: 'hh:mm a' }}</span>
       }
@@ -361,7 +361,7 @@
  <button
  class="btn-action btn-start icon-only-action"
  (click)="startWork(wo); $event.stopPropagation()"
- [disabled]="!isAdmin() && !isCheckedIn()"
+ [disabled]="!canWork()"
  title="Start Work"
  aria-label="Start Work"
  >
@@ -1165,7 +1165,7 @@
  type="button"
  title="Start Work"
  aria-label="Start Work"
- [disabled]="!isAdmin() && !isCheckedIn()"
+ [disabled]="!canWork()"
  (click)="startWork(detailData())"
  >
  <span class="material-icons">play_arrow</span> Start Work
@@ -2057,7 +2057,7 @@
  (ngModelChange)="updateImageType(i, $event)"
  [disabled]="img.status === 'uploading' || img.status === 'done'"
  >
- @for (t of imageTypes; track t) {
+ @for (t of imageTypes(); track t) {
  <option [value]="t">{{ t }}</option>
  }
  </select>
@@ -2102,10 +2102,13 @@
  Cancel
  </button>
  @if (!completePaymentStep()) {
+ @if (photosStillNeeded() > 0 && !completeBusy()) {
+ <span class="cmp-photo-hint">{{ morePhotosHint(photosStillNeeded()) }}</span>
+ }
  <button
  class="cmp-submit"
  (click)="submitCompletion()"
- [disabled]="completeBusy()"
+ [disabled]="completeBusy() || photosStillNeeded() > 0"
  >
  @if (completeBusy()) {
  <span class="mini-spin white"></span>

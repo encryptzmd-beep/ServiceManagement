@@ -351,6 +351,16 @@ export const routes: Routes = [
           ),
         canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
       },
+      {
+        // office staff register a complaint for a customer (quick access on the dashboard)
+        path: 'complaints/register',
+        loadComponent: () =>
+          import('../app/Encryptz/components/staff-complaint-register-component/staff-complaint-register-component').then(
+            (m) => m.StaffComplaintRegisterComponent,
+          ),
+        canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
+        data: { title: 'Register Complaint' },
+      },
 
       // 2. Customer Portal
       // {

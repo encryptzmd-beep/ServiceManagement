@@ -691,6 +691,8 @@ export interface DashboardChartData {
 // models/technician.model.ts
 // ============================================
 export interface TechnicianListItem {
+  /** dbo.Technicians.TechnicianId (sp_Technician_GetAll returns it; it has no userId) */
+  technicianId: number;
   profileId: number;
   userId: number;
   fullName: string;
