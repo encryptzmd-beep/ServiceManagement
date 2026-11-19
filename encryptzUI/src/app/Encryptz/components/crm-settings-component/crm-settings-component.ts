@@ -11,7 +11,7 @@ import { FORBIDDEN, refusalOf } from '../crm-shell-component/crm-ui';
   standalone: true,
   imports: [FormsModule, CrmRefusedComponent],
   templateUrl: './crm-settings-component.html',
-  styleUrls: ['../crm-shell-component/crm-pages.scss'],
+  styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-settings-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CrmSettingsComponent {

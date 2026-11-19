@@ -37,6 +37,13 @@ namespace EncryptzTests
             }
         }
 
+        [Fact]
+        public void Product_search_takes_an_optional_top()
+        {
+            var p = typeof(CrmController).GetMethod("SearchProducts")!.GetParameters().Single(x => x.Name == "top");
+            Assert.Equal(typeof(int?), p.ParameterType);
+        }
+
         [Theory]
         [InlineData("GET", "leads")]
         [InlineData("GET", "leads/{id:int}")]
@@ -54,6 +61,7 @@ namespace EncryptzTests
         [InlineData("POST", "quotations/{id:int}/revise")]
         [InlineData("POST", "quotations/{id:int}/status")]
         [InlineData("GET", "products")]
+        [InlineData("GET", "product-categories")]
         [InlineData("GET", "dashboard")]
         [InlineData("GET", "reports/follow-ups")]
         [InlineData("GET", "reports/conversion")]
@@ -61,6 +69,12 @@ namespace EncryptzTests
         [InlineData("POST", "leads/{id:int}/convert")]
         [InlineData("POST", "leads/{id:int}/link-order")]
         [InlineData("POST", "leads/{id:int}/cancel-convert")]
+        [InlineData("GET", "board")]
+        [InlineData("GET", "quotations")]
+        [InlineData("GET", "reports/pipeline")]
+        [InlineData("GET", "reports/sources")]
+        [InlineData("GET", "reports/team")]
+        [InlineData("GET", "reports/lost-reasons")]
         public void Routes_are_as_planned(string verb, string template)
         {
             var found = typeof(CrmController)
@@ -69,6 +83,13 @@ namespace EncryptzTests
                 .Any(a => a.Template == template && a.HttpMethods.Contains(verb));
             Assert.True(found, $"{verb} {template} is missing");
         }
+
+        [Theory]
+        [InlineData(3, 2, true)]
+        [InlineData(2, 2, false)]
+        [InlineData(0, 0, false)]
+        public void Board_is_truncated_only_when_more_leads_are_open_than_shown(int open, int shown, bool expected)
+            => Assert.Equal(expected, CrmBoardDto.IsTruncated(open, shown));
 
         [Fact]
         public void Service_is_registered()

@@ -5,16 +5,17 @@ import { environment } from '../../../environments/environment';
 import { ApiResponse, PagedResult } from '../Models/ApiModels';
 import {
   ConversionReportFilter, ConvertPreviewDto, ConvertRequestDto, ConvertResultDto, CrmConversionRowDto,
-  CrmDashboardDto, CrmFollowUpReportRowDto, CrmMasterDto, CrmMasterKind, CrmMe, CrmMemberDto, CrmMemberListDto,
-  CrmProductDto, FollowUpReportFilter, FollowUpSaveDto, LeadDetailDto, LeadFilterDto, LeadListDto, LeadSaveDto,
-  LinkOrderDto, QuotationDto, QuotationSaveDto, ReassignDto, StatusChangeDto,
+  CrmBoardDto, CrmDashboardDto, CrmFollowUpReportRowDto, CrmLostReasonRowDto, CrmMasterDto, CrmMasterKind, CrmMe,
+  CrmMemberDto, CrmMemberListDto, CrmPipelineRowDto, CrmProductDto, CrmSourceRowDto, CrmTeamRowDto,
+  FollowUpReportFilter, FollowUpSaveDto, LeadDetailDto, LeadFilterDto, LeadListDto, LeadSaveDto,
+  LinkOrderDto, QuotationDto, QuotationFilterDto, QuotationListRowDto, QuotationSaveDto, ReassignDto, StatusChangeDto,
 } from '../Models/CrmModels';
 
 /** CRM Lead Management. One method per action of CrmController; company, branch and person come from the token. */
 @Injectable({ providedIn: 'root' })
 export class CrmService {
   private http = inject(HttpClient);
-  private base = `${environment.apiUrl}/crm`;
+  private base = `${environment.apiUrl}/api/crm`;
 
   /** Query parameters without the empty values. */
   private params(source: object): HttpParams {
@@ -87,8 +88,13 @@ export class CrmService {
     return this.http.post<ApiResponse<number>>(`${this.base}/quotations/${id}/status`, { status });
   }
 
-  searchProducts(term?: string): Observable<ApiResponse<CrmProductDto[]>> {
-    return this.http.get<ApiResponse<CrmProductDto[]>>(`${this.base}/products`, { params: this.params({ term }) });
+  /** The categories of the product master. */
+  productCategories(): Observable<ApiResponse<string[]>> {
+    return this.http.get<ApiResponse<string[]>>(`${this.base}/product-categories`);
+  }
+
+  searchProducts(term?: string, category?: string, top?: number): Observable<ApiResponse<CrmProductDto[]>> {
+    return this.http.get<ApiResponse<CrmProductDto[]>>(`${this.base}/products`, { params: this.params({ term, category, top }) });
   }
 
   getMasters(kind: CrmMasterKind | string): Observable<ApiResponse<CrmMasterDto[]>> {
@@ -119,5 +125,33 @@ export class CrmService {
   conversionReport(filter: ConversionReportFilter = {}): Observable<ApiResponse<CrmConversionRowDto[]>> {
     return this.http.get<ApiResponse<CrmConversionRowDto[]>>(`${this.base}/reports/conversion`,
       { params: this.params(filter) });
+  }
+
+  /** The Kanban board: open leads as cards, and the counts per attention rule. */
+  getBoard(ownerUserId?: number): Observable<ApiResponse<CrmBoardDto>> {
+    return this.http.get<ApiResponse<CrmBoardDto>>(`${this.base}/board`, { params: this.params({ ownerUserId }) });
+  }
+
+  getQuotations(filter: QuotationFilterDto = {}): Observable<ApiResponse<PagedResult<QuotationListRowDto>>> {
+    return this.http.get<ApiResponse<PagedResult<QuotationListRowDto>>>(`${this.base}/quotations`,
+      { params: this.params(filter) });
+  }
+
+  pipelineReport(ownerUserId?: number): Observable<ApiResponse<CrmPipelineRowDto[]>> {
+    return this.http.get<ApiResponse<CrmPipelineRowDto[]>>(`${this.base}/reports/pipeline`,
+      { params: this.params({ ownerUserId }) });
+  }
+
+  sourcesReport(f: { from?: string; to?: string } = {}): Observable<ApiResponse<CrmSourceRowDto[]>> {
+    return this.http.get<ApiResponse<CrmSourceRowDto[]>>(`${this.base}/reports/sources`, { params: this.params(f) });
+  }
+
+  teamReport(f: FollowUpReportFilter = {}): Observable<ApiResponse<CrmTeamRowDto[]>> {
+    return this.http.get<ApiResponse<CrmTeamRowDto[]>>(`${this.base}/reports/team`, { params: this.params(f) });
+  }
+
+  lostReasonsReport(f: FollowUpReportFilter = {}): Observable<ApiResponse<CrmLostReasonRowDto[]>> {
+    return this.http.get<ApiResponse<CrmLostReasonRowDto[]>>(`${this.base}/reports/lost-reasons`,
+      { params: this.params(f) });
   }
 }

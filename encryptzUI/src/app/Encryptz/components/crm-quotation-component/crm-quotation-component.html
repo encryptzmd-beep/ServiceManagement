@@ -2,9 +2,9 @@
   <app-crm-refused />
 } @else {
   <div class="crm-page">
-    <header class="crm-head">
+    <header class="crm-page-head">
       <div>
-        <p>
+        <p class="q-crumb">
           <a class="crm-link" routerLink="/crm/leads">Leads</a>
           @if (leadId()) { / <a class="crm-link" [routerLink]="['/crm/leads', leadId()]">{{ leadTitle() || 'Lead' }}</a> }
         </p>
@@ -14,25 +14,35 @@
         </h1>
         @if (saved(); as q) { @if (!q.isLatest) { <p>This revision was replaced by a newer one.</p> } }
       </div>
-      <div class="crm-head-actions">
+      <div class="crm-page-actions">
         @if (quotationId()) {
           <a class="crm-btn" [routerLink]="['/crm/quotations', quotationId(), 'print']" target="_blank"><span class="material-icons" aria-hidden="true">print</span>Print</a>
         }
         @if (editable()) {
-          <button type="button" class="crm-btn" [disabled]="busy()" (click)="save()">Save draft</button>
+          <button type="button" class="crm-btn navy" [disabled]="busy()" (click)="save()">Save draft</button>
           <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="setStatus('Sent')">Save and mark sent</button>
         }
         @if (status() === 'Sent' && saved()?.isLatest) {
-          <button type="button" class="crm-btn" [disabled]="busy()" (click)="setStatus('Rejected')">Mark rejected</button>
+          <button type="button" class="crm-btn navy" [disabled]="busy()" (click)="setStatus('Rejected')">Mark rejected</button>
           <button type="button" class="crm-btn primary q-revise" [disabled]="busy()" (click)="revise()">Revise</button>
         }
         @if (status() === 'Rejected' && saved()?.isLatest) {
           <button type="button" class="crm-btn primary q-revise" [disabled]="busy()" (click)="revise()">Revise</button>
         }
+        @if (showConvert()) {
+          <button type="button" class="crm-btn primary q-convert" [disabled]="busy() || !canConvert()"
+            [attr.aria-describedby]="canConvert() ? null : 'q-convert-hint'" (click)="openConvert()"><span class="material-icons" aria-hidden="true">shopping_cart_checkout</span>Convert to sales order</button>
+        }
       </div>
     </header>
 
+    @if (convertHint()) { <p id="q-convert-hint" class="crm-muted q-convert-hint">{{ convertHint() }}</p> }
+    @if (convertedOrderNo()) {
+      <p class="crm-ok q-converted">Converted to sales order <strong>{{ convertedOrderNo() }}</strong>.
+        <a class="crm-link" [routerLink]="['/crm/leads', leadId()]">Open the lead</a></p>
+    }
     @if (notice()) { <p class="crm-ok">{{ notice() }}</p> }
+    @if (warning()) { <p class="crm-warn">{{ warning() }}</p> }
     @if (error()) { <p class="crm-error">{{ error() }}</p> }
 
     @if (loaded()) {
@@ -50,7 +60,7 @@
         </div>
       </section>
 
-      <section class="crm-card flush">
+      <section class="crm-table-card">
         @if (editable()) {
           <div class="q-search">
             <label class="crm-field grow"><span>Add a product</span>
@@ -70,44 +80,44 @@
             }
           </div>
         }
-        <div class="crm-table-wrap">
+        <div class="crm-table-wrap q-wrap">
           <table class="crm-table q-lines">
             <thead>
               <tr>
-                <th>#</th><th>Product</th><th>HSN/SAC</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Discount</th>
-                <th class="num">GST %</th><th class="num">Warranty (months)</th><th class="num">Taxable</th><th class="num">GST</th><th class="num">Total</th>
+                <th>#</th><th class="q-col-name">Product</th><th>HSN/SAC</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Discount</th>
+                <th class="num">GST %</th><th class="num">Warranty (mo)</th><th class="num q-col-taxable">Taxable</th><th class="num">GST</th><th class="num">Total</th>
                 @if (editable()) { <th></th> }
               </tr>
             </thead>
             <tbody>
               @for (l of lines(); track $index; let i = $index) {
-                <tr>
-                  <td>{{ i + 1 }}</td>
+                <tr class="q-line-card">
+                  <td class="q-no" data-label="Line">{{ i + 1 }}</td>
                   @if (editable()) {
-                    <td><input class="q-name" maxlength="200" [value]="l.productName" (input)="setLine(i, 'productName', text($event))" /></td>
-                    <td><input class="q-hsn" maxlength="20" [value]="l.hsnSac ?? ''" (input)="setLine(i, 'hsnSac', text($event))" /></td>
-                    <td class="num"><input class="q-qty" type="number" min="1" step="1" [value]="l.qty" (input)="setLine(i, 'qty', num($event))" /></td>
-                    <td class="num"><input class="q-rate" type="number" min="0" step="0.01" [value]="l.rate" (input)="setLine(i, 'rate', num($event))" /></td>
-                    <td class="num"><input class="q-disc" type="number" min="0" step="0.01" [value]="l.discountAmount" (input)="setLine(i, 'discountAmount', num($event))" /></td>
-                    <td class="num">
+                    <td data-label="Product"><input class="q-name" maxlength="200" [value]="l.productName" (input)="setLine(i, 'productName', text($event))" /></td>
+                    <td data-label="HSN/SAC"><input class="q-hsn" maxlength="20" [value]="l.hsnSac ?? ''" (input)="setLine(i, 'hsnSac', text($event))" /></td>
+                    <td class="num" data-label="Qty"><input class="q-qty" type="number" min="1" step="1" [value]="l.qty" (input)="setLine(i, 'qty', num($event))" /></td>
+                    <td class="num" data-label="Rate"><input class="q-rate" type="number" min="0" step="0.01" [value]="l.rate" (input)="setLine(i, 'rate', num($event))" /></td>
+                    <td class="num" data-label="Discount"><input class="q-disc" type="number" min="0" step="0.01" [value]="l.discountAmount" (input)="setLine(i, 'discountAmount', num($event))" /></td>
+                    <td class="num" data-label="GST %">
                       <select class="q-gst" [value]="l.gstPercent" (change)="setLine(i, 'gstPercent', num($event))">
                         @for (g of gstRates; track g) { <option [value]="g" [selected]="g === +l.gstPercent">{{ g }}</option> }
                       </select>
                     </td>
-                    <td class="num"><input class="q-warranty" type="number" min="0" max="120" [value]="l.warrantyMonths" (input)="setLine(i, 'warrantyMonths', num($event))" /></td>
+                    <td class="num" data-label="Warranty (months)"><input class="q-warranty" type="number" min="0" max="120" [value]="l.warrantyMonths" (input)="setLine(i, 'warrantyMonths', num($event))" /></td>
                   } @else {
-                    <td>{{ l.productName }}</td><td>{{ l.hsnSac }}</td><td class="num">{{ l.qty }}</td><td class="num">{{ amount(l.rate) }}</td>
-                    <td class="num">{{ amount(l.discountAmount) }}</td><td class="num">{{ l.gstPercent }}</td><td class="num">{{ l.warrantyMonths }}</td>
+                    <td data-label="Product">{{ l.productName }}</td><td data-label="HSN/SAC">{{ l.hsnSac }}</td><td class="num" data-label="Qty">{{ l.qty }}</td><td class="num" data-label="Rate">{{ amount(l.rate) }}</td>
+                    <td class="num" data-label="Discount">{{ amount(l.discountAmount) }}</td><td class="num" data-label="GST %">{{ l.gstPercent }}</td><td class="num" data-label="Warranty (months)">{{ l.warrantyMonths }}</td>
                   }
-                  <td class="num">{{ amount(totals().lines[i].taxableAmount) }}</td>
-                  <td class="num">{{ amount(totals().lines[i].gstAmount) }}</td>
-                  <td class="num">{{ amount(totals().lines[i].lineTotal) }}</td>
+                  <td class="num q-col-taxable" data-label="Taxable">{{ amount(totals().lines[i].taxableAmount) }}</td>
+                  <td class="num" data-label="GST">{{ amount(totals().lines[i].gstAmount) }}</td>
+                  <td class="num q-total" data-label="Total">{{ amount(totals().lines[i].lineTotal) }}</td>
                   @if (editable()) {
-                    <td><button type="button" class="crm-btn small danger" aria-label="Remove line" (click)="removeLine(i)"><span class="material-icons" aria-hidden="true">delete_outline</span></button></td>
+                    <td class="q-del"><button type="button" class="crm-btn small danger" aria-label="Remove line" (click)="removeLine(i)"><span class="material-icons" aria-hidden="true">delete_outline</span></button></td>
                   }
                 </tr>
               } @empty {
-                <tr><td colspan="12" class="crm-empty">No line yet. Search a product above.</td></tr>
+                <tr><td colspan="12" class="crm-empty q-empty">No line yet. Search a product above.</td></tr>
               }
             </tbody>
           </table>
@@ -137,4 +147,9 @@
       </div>
     }
   </div>
+
+  @if (convertOpen() && saved(); as q) {
+    <app-crm-convert-dialog [leadId]="q.leadId" [quotationId]="q.quotationId" [quotations]="[q]" [mobile]="q.mobile"
+      (converted)="converted($event)" (cancelled)="convertOpen.set(false)" (forbidden)="convertForbidden()" />
+  }
 }

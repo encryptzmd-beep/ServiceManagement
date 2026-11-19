@@ -1,0 +1,18 @@
+/* The settings page: Products-page cards for the sales team and the two lists. */
+
+.st-hint { margin: 0; padding: 12px 20px; font-size: 13px; color: #5a6a7e; border-bottom: 1px solid #e2e8f0; }
+.st-wrap {
+  td input:not([type='checkbox']) { width: 100%; min-width: 0; box-sizing: border-box; padding: 7px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font: inherit; color: #1a2332; }
+  td input:focus { outline: none; border-color: #4a7ab5; }
+  td input[type='checkbox'] { width: 16px; height: 16px; accent-color: #1b4a7a; }
+  .st-order { width: 80px !important; }
+}
+.st-add {
+  padding: 14px 20px; border-top: 1px solid #e2e8f0;
+  .crm-field input, .crm-field select { width: 100%; box-sizing: border-box; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 9px; font: inherit; }
+}
+
+@media (max-width: 640px) {
+  .st-hint { padding: 12px 14px; }
+  .st-add { padding: 12px 14px; .crm-btn { flex: 1 1 100%; justify-content: center; } }
+}

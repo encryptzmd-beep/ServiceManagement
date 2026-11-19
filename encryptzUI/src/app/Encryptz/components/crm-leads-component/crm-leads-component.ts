@@ -16,7 +16,7 @@ const KEYS = ['search', 'status', 'sourceId', 'ownerUserId', 'from', 'to', 'due'
   standalone: true,
   imports: [FormsModule, RouterLink, CrmRefusedComponent],
   templateUrl: './crm-leads-component.html',
-  styleUrls: ['../crm-shell-component/crm-pages.scss'],
+  styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-leads-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CrmLeadsComponent {
@@ -115,6 +115,12 @@ export class CrmLeadsComponent {
 
   dueLabel(due?: string): string {
     return due === 'Today' ? "Today's follow-ups" : due === 'Overdue' ? 'Overdue follow-ups' : due === 'Pending' ? 'Follow-up pending' : '';
+  }
+
+  /** The next follow-up of an open lead, as text; closed leads (Converted, Lost) have none. */
+  followUpOf(row: LeadListDto): string {
+    if (!row.nextFollowUpAt || row.status === 'Converted' || row.status === 'Lost') return '';
+    return showDateTime(row.nextFollowUpAt);
   }
 
   isOverdue(row: LeadListDto): boolean {

@@ -1,110 +1,126 @@
 @if (error() === forbidden) {
   <app-crm-refused />
 } @else {
-  <div class="crm-page">
-    <header class="crm-head">
+  <div class="crm-reports">
+    <header class="crm-page-head">
       <div>
-        <h1>Reports</h1>
+        <h1>{{ current().label }}</h1>
         <p>{{ isManager() ? 'The whole team.' : 'Your own leads.' }}</p>
+      </div>
+      <div class="crm-page-actions">
+        <button type="button" class="crm-btn crm-excel" [disabled]="!view() || !!error()" (click)="excel()">
+          <span class="material-icons" aria-hidden="true">table_view</span>Excel</button>
+        <button type="button" class="crm-btn crm-pdf" [disabled]="!view() || !!error()" (click)="pdf()">
+          <span class="material-icons" aria-hidden="true">picture_as_pdf</span>PDF</button>
       </div>
     </header>
 
-    <section class="crm-card">
-      <nav class="crm-tabs" role="tablist">
-        <button type="button" role="tab" [class.active]="tab() === 'followups'" (click)="show('followups')">Leads &amp; follow-ups</button>
-        <button type="button" role="tab" [class.active]="tab() === 'conversion'" (click)="show('conversion')">Sales conversion</button>
-      </nav>
-
-      <form class="crm-filters" (ngSubmit)="run()">
+    <form class="crm-report-filters" (ngSubmit)="run()">
+      @if (current().dates) {
         <label class="crm-field"><span>From</span>
           <input type="date" name="from" [ngModel]="from()" (ngModelChange)="from.set($event)" /></label>
         <label class="crm-field"><span>To</span>
           <input type="date" name="to" [ngModel]="to()" (ngModelChange)="to.set($event)" /></label>
-        @if (tab() === 'followups' && isManager()) {
-          <label class="crm-field"><span>Owner</span>
-            <select name="owner" [ngModel]="ownerUserId() ?? ''" (ngModelChange)="ownerUserId.set($event ? +$event : null)">
-              <option value="">Everyone</option>
-              @for (m of owners(); track m.userId) { <option [value]="m.userId">{{ m.fullName }}</option> }
-            </select></label>
-        }
-        @if (tab() === 'conversion') {
-          <label class="crm-field"><span>By</span>
-            <select name="groupBy" [ngModel]="groupBy()" (ngModelChange)="groupBy.set($event); loadConversion()">
-              <option value="source">Source</option>
-              <option value="owner">Owner</option>
-              <option value="month">Month</option>
-            </select></label>
-        }
-        <button type="submit" class="crm-btn primary">Show</button>
-        <button type="button" class="crm-btn" (click)="download()"><span class="material-icons" aria-hidden="true">download</span>CSV</button>
-      </form>
-    </section>
-
-    @if (error()) { <p class="crm-error">{{ error() }}</p> }
-
-    <section class="crm-card flush">
-      @if (tab() === 'followups') {
-        @if (followUps() === null) {
-          <div class="crm-state"><p>Loading…</p></div>
-        } @else {
-          <div class="crm-table-wrap">
-            <table class="crm-table">
-              <thead><tr><th>Date</th><th>Lead</th><th>Type</th><th>Notes</th><th>Next</th><th>By</th><th>Owner</th><th>Status</th></tr></thead>
-              <tbody>
-                @for (r of followUps(); track r.followUpId) {
-                  <tr>
-                    <td>{{ showDateTime(r.followUpAt) }}</td>
-                    <td><a [routerLink]="['/crm/leads', r.leadId]">{{ r.leadNo }}</a><div class="crm-muted">{{ r.contactName }} · {{ r.mobile }}</div></td>
-                    <td>{{ r.type }}</td>
-                    <td>{{ r.notes }}@if (r.remarks) { <div class="crm-muted">{{ r.remarks }}</div> }</td>
-                    <td>{{ showDateTime(r.nextFollowUpAt) }}@if (r.nextAction) { <div class="crm-muted">{{ r.nextAction }}</div> }</td>
-                    <td>{{ r.userName }}</td>
-                    <td>{{ r.ownerName }}</td>
-                    <td><span [class]="pill(r.leadStatus)">{{ r.leadStatus }}</span></td>
-                  </tr>
-                } @empty {
-                  <tr><td colspan="8" class="crm-empty">No follow-up in this period.</td></tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        }
       } @else {
-        @if (conversion() === null) {
-          <div class="crm-state"><p>Loading…</p></div>
-        } @else {
-          <div class="crm-table-wrap">
-            <table class="crm-table">
-              <thead><tr><th>{{ groupBy() === 'owner' ? 'Owner' : groupBy() === 'month' ? 'Month' : 'Source' }}</th>
-                <th class="num">Leads</th><th class="num">Converted</th><th class="num">Conversion</th><th class="num">Converted value</th></tr></thead>
+        <p class="crm-report-now">Open leads as they stand now.</p>
+      }
+      @if (showOwner()) {
+        <label class="crm-field"><span>Owner</span>
+          <select name="owner" [ngModel]="ownerUserId() ?? ''" (ngModelChange)="ownerUserId.set($event ? +$event : null)">
+            <option value="">Everyone</option>
+            @for (m of owners(); track m.userId) { <option [value]="m.userId">{{ m.fullName }}</option> }
+          </select></label>
+      }
+      @if (tab() === 'conversion') {
+        <label class="crm-field"><span>By</span>
+          <select name="groupBy" [ngModel]="groupBy()" (ngModelChange)="groupBy.set($event); run()">
+            <option value="source">Source</option>
+            <option value="owner">Owner</option>
+            <option value="month">Month</option>
+          </select></label>
+      }
+      <button type="submit" class="crm-btn navy">Show</button>
+    </form>
+
+    @if (error()) { <p class="crm-error" role="alert">{{ error() }}</p> }
+
+    @if (view(); as v) {
+     @if (!error()) {
+      @if (v.stats.length) {
+        <div class="crm-stats">
+          @for (s of v.stats; track s.label) {
+            <div class="crm-stat"><div class="crm-stat-label">{{ s.label }}</div><div class="crm-stat-val">{{ s.value }}</div></div>
+          }
+        </div>
+      }
+
+      @if (v.bars.length) {
+        <section class="crm-table-card crm-bars-card">
+          <div class="crm-table-toolbar"><span class="crm-table-title">{{ v.barTitle }}</span></div>
+          <ul class="crm-bars">
+            @for (b of v.bars; track $index) {
+              <li class="crm-bar-row">
+                <span class="crm-bar-label">{{ b.label }}</span>
+                <span class="crm-bar-track"><span class="crm-bar-fill" [style.width.%]="b.pct"></span></span>
+                <span class="crm-bar-val">{{ b.text }}</span>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
+      <section class="crm-table-card">
+        <div class="crm-table-toolbar">
+          <div class="crm-toolbar-left">
+            <span class="crm-table-title">{{ v.title }}</span>
+            <span class="crm-count-pill">{{ v.rows.length }}</span>
+          </div>
+        </div>
+        @if (v.note) { <p class="crm-report-note">{{ v.note }}</p> }
+        @if (v.rows.length) {
+          <div class="crm-table-wrap crm-cards-sm">
+            <table>
+              <thead><tr>
+                @for (c of v.cols; track c.key) { <th [class.num]="c.kind">{{ c.title }}</th> }
+              </tr></thead>
               <tbody>
-                @for (r of conversion(); track $index) {
+                @for (r of v.rows; track $index) {
                   <tr>
-                    <td>{{ groupLabel(r) }}</td>
-                    <td class="num">{{ r.leads }}</td>
-                    <td class="num">{{ r.converted }}</td>
-                    <td class="num">{{ r.conversionPct }}%</td>
-                    <td class="num">{{ rupees(r.convertedValue) }}</td>
+                    @for (c of v.cols; track c.key) {
+                      <td [attr.data-label]="c.title" [class.num]="c.kind">
+                        <div>
+                          @if (c.link) {
+                            <a [routerLink]="c.link(r)">{{ cell(r, c) }}</a>
+                          } @else if (c.pill) {
+                            <span [class]="pill(r[c.key])">{{ cell(r, c) }}</span>
+                          } @else {
+                            {{ cell(r, c) }}
+                          }
+                          @if (c.sub && r[c.sub]) { <div class="crm-muted">{{ r[c.sub] }}</div> }
+                        </div>
+                      </td>
+                    }
                   </tr>
-                } @empty {
-                  <tr><td colspan="5" class="crm-empty">No lead in this period.</td></tr>
                 }
               </tbody>
-              @if (conversion()!.length > 1) {
+              @if (v.footer; as f) {
                 <tfoot>
                   <tr>
-                    <td><b>All</b></td>
-                    <td class="num"><b>{{ conversionTotal().leads }}</b></td>
-                    <td class="num"><b>{{ conversionTotal().converted }}</b></td>
-                    <td class="num"><b>{{ conversionTotal().pct }}%</b></td>
-                    <td class="num"><b>{{ rupees(conversionTotal().value) }}</b></td>
+                    @for (c of v.cols; track c.key) {
+                      <td [attr.data-label]="c.title" [class.num]="c.kind"><b>{{ cell(f, c) }}</b></td>
+                    }
                   </tr>
                 </tfoot>
               }
             </table>
           </div>
+        } @else {
+          <div class="crm-empty"><span class="material-icons" aria-hidden="true">insights</span>{{ v.empty }}</div>
         }
-      }
-    </section>
+      </section>
+     }
+    } @else {
+      <section class="crm-table-card"><div class="crm-empty"><span class="crm-skeleton crm-report-loading"></span>Loading…</div></section>
+    }
   </div>
 }

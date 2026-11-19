@@ -1,0 +1,21 @@
+<div class="crm-overlay" (click)="cancel()">
+  <div class="crm-dialog crm-status-dialog" role="dialog" aria-modal="true" aria-labelledby="crm-status-dialog-title"
+       (click)="$event.stopPropagation()" (keydown.escape)="cancel()">
+    @if (mode() === 'lost') {
+      <h2 id="crm-status-dialog-title">Mark {{ leadNo() }} as lost</h2>
+      <label class="crm-field"><span>Why was it lost?</span>
+        <select [value]="lostReasonId() ?? ''" (change)="setReason($any($event.target).value)">
+          <option value="">Choose the reason</option>
+          @for (r of activeReasons(); track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+        </select></label>
+    } @else {
+      <h2 id="crm-status-dialog-title">Move {{ leadNo() }} to {{ toStatus() }}</h2>
+    }
+    <label class="crm-field"><span>Note (optional)</span>
+      <textarea maxlength="2000" rows="3" [value]="note()" (input)="note.set($any($event.target).value)"></textarea></label>
+    <div class="crm-actions">
+      <button type="button" class="crm-btn" [disabled]="busy()" (click)="cancel()">Cancel</button>
+      <button type="button" class="crm-btn primary" [disabled]="!canConfirm()" (click)="confirm()">Confirm</button>
+    </div>
+  </div>
+</div>

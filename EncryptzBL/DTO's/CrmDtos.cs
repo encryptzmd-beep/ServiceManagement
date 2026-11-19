@@ -15,6 +15,7 @@ namespace EncryptzBL.DTO_s
         public string? Landmark { get; set; }
         public int? LeadSourceId { get; set; }
         public string? ProductCategory { get; set; }
+        public int? ProductMasterId { get; set; }
         public string? ModelRequirement { get; set; }
         public int? EstimatedQty { get; set; }
         public DateTime? ExpectedPurchaseDate { get; set; }
@@ -61,6 +62,8 @@ namespace EncryptzBL.DTO_s
         public int? LeadSourceId { get; set; }
         public string SourceName { get; set; } = string.Empty;
         public string ProductCategory { get; set; } = string.Empty;
+        public int? ProductMasterId { get; set; }
+        public string? ProductName { get; set; }
         public string ModelRequirement { get; set; } = string.Empty;
         public int? EstimatedQty { get; set; }
         public DateTime? ExpectedPurchaseDate { get; set; }
@@ -261,6 +264,7 @@ namespace EncryptzBL.DTO_s
         public string Category { get; set; } = string.Empty;
         public decimal MRP { get; set; }
         public int WarrantyMonths { get; set; }
+        public string? HsnSac { get; set; }
     }
 
     /// <summary>A lead source or a lost reason.</summary>
@@ -397,5 +401,127 @@ namespace EncryptzBL.DTO_s
         public int OwnerUserId { get; set; }
         public string OwnerName { get; set; } = string.Empty;
         public string SourceName { get; set; } = string.Empty;
+    }
+
+    /// <summary>One open lead card of crm.sp_Lead_Board (set 1).</summary>
+    public class CrmBoardCardDto
+    {
+        public int LeadId { get; set; }
+        public string LeadNo { get; set; } = string.Empty;
+        public string ContactName { get; set; } = string.Empty;
+        public string? City { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string Priority { get; set; } = string.Empty;
+        public int OwnerUserId { get; set; }
+        public string OwnerName { get; set; } = string.Empty;
+        public DateTime? NextFollowUpAt { get; set; }
+        public DateTime? StatusSince { get; set; }
+        public int DaysInStage { get; set; }
+        public int? QuotationId { get; set; }
+        public string? QuotationNo { get; set; }
+        public string? QuotationStatus { get; set; }
+        public decimal? QuotationValue { get; set; }
+        public DateTime? QuotationSentAt { get; set; }
+        public bool IsOverdue { get; set; }
+        public bool IsDueToday { get; set; }
+        public bool IsNewNotContacted { get; set; }
+        public bool HasNoFollowUp { get; set; }
+        public bool IsQuotationWaiting { get; set; }
+        public bool IsStuck { get; set; }
+    }
+
+    /// <summary>The counts row of crm.sp_Lead_Board (set 2).</summary>
+    public class CrmAttentionCountsDto
+    {
+        public int Overdue { get; set; }
+        public int DueToday { get; set; }
+        public int NewNotContacted { get; set; }
+        public int NoFollowUp { get; set; }
+        public int QuotationWaiting { get; set; }
+        public int Stuck { get; set; }
+        public int OpenLeads { get; set; }
+        public int ConvertedThisMonth { get; set; }
+        public int LostThisMonth { get; set; }
+    }
+
+    public class CrmBoardDto
+    {
+        public List<CrmBoardCardDto> Cards { get; set; } = new();
+        public CrmAttentionCountsDto Counts { get; set; } = new();
+        /// <summary>True when more leads are open than the cards shown (the procedure returns at most 500).</summary>
+        public bool Truncated { get; set; }
+
+        public static bool IsTruncated(int openLeads, int shown) => openLeads > shown;
+    }
+
+    /// <summary>One row of crm.sp_Quotation_List.</summary>
+    public class QuotationListRowDto
+    {
+        public int QuotationId { get; set; }
+        public string QuotationNo { get; set; } = string.Empty;
+        public int RevisionNo { get; set; }
+        public DateTime QuoteDate { get; set; }
+        public int LeadId { get; set; }
+        public string LeadNo { get; set; } = string.Empty;
+        public string ContactName { get; set; } = string.Empty;
+        public string OwnerName { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public decimal GrandTotal { get; set; }
+        public DateTime? SentAt { get; set; }
+        public int AgeDays { get; set; }
+        public int TotalCount { get; set; }
+    }
+
+    public class QuotationFilterDto
+    {
+        public string? Search { get; set; }
+        public string? Status { get; set; }
+        public DateTime? From { get; set; }
+        public DateTime? To { get; set; }
+        public int Page { get; set; } = 1;
+        public int PageSize { get; set; } = 25;
+    }
+
+    /// <summary>One row of crm.sp_Report_Pipeline.</summary>
+    public class CrmPipelineRowDto
+    {
+        public string Status { get; set; } = string.Empty;
+        public int Leads { get; set; }
+        public decimal QuotationValue { get; set; }
+        public decimal AvgDaysInStage { get; set; }
+    }
+
+    /// <summary>One row of crm.sp_Report_Sources.</summary>
+    public class CrmSourceRowDto
+    {
+        public string SourceName { get; set; } = string.Empty;
+        public int Leads { get; set; }
+        public int Converted { get; set; }
+        public int Lost { get; set; }
+        public int OpenLeads { get; set; }
+        public decimal ConversionPct { get; set; }
+        public decimal ConvertedValue { get; set; }
+    }
+
+    /// <summary>One row of crm.sp_Report_Team.</summary>
+    public class CrmTeamRowDto
+    {
+        public int OwnerUserId { get; set; }
+        public string OwnerName { get; set; } = string.Empty;
+        public int Leads { get; set; }
+        public int FollowUpsDone { get; set; }
+        public int OverdueNow { get; set; }
+        public int Converted { get; set; }
+        public int Lost { get; set; }
+        public decimal ConvertedValue { get; set; }
+    }
+
+    /// <summary>One row of crm.sp_Report_LostReasons.</summary>
+    public class CrmLostReasonRowDto
+    {
+        public string ReasonName { get; set; } = string.Empty;
+        public int Leads { get; set; }
+        public decimal PctOfLost { get; set; }
+        public decimal ValueLost { get; set; }
     }
 }

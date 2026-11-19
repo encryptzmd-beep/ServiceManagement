@@ -23,6 +23,7 @@ export interface LeadSaveDto {
   landmark?: string | null;
   leadSourceId?: number | null;
   productCategory?: string | null;
+  productMasterId?: number | null;
   modelRequirement?: string | null;
   estimatedQty?: number | null;
   expectedPurchaseDate?: string | null;
@@ -105,6 +106,8 @@ export interface LeadDetailDto {
   leadSourceId?: number | null;
   sourceName: string;
   productCategory: string;
+  productMasterId?: number | null;
+  productName?: string | null;
   modelRequirement: string;
   estimatedQty?: number | null;
   expectedPurchaseDate?: string | null;
@@ -226,6 +229,7 @@ export interface CrmProductDto {
   category: string;
   mrp: number;
   warrantyMonths: number;
+  hsnSac?: string | null;
 }
 
 /** A lead source or a lost reason. */
@@ -324,3 +328,112 @@ export interface CrmFollowUpReportRowDto {
 
 export interface FollowUpReportFilter { from?: string; to?: string; ownerUserId?: number; }
 export interface ConversionReportFilter { from?: string; to?: string; groupBy?: string; }
+
+/* ── Board, quotation list and the new reports (Task 3 DTOs) ── */
+
+/** One open lead on the board, with its latest quotation and one flag per attention rule. */
+export interface CrmBoardCardDto {
+  leadId: number;
+  leadNo: string;
+  contactName: string;
+  city: string | null;
+  status: string;
+  priority: string;
+  ownerUserId: number;
+  ownerName: string;
+  nextFollowUpAt: string | null;
+  statusSince: string | null;
+  daysInStage: number;
+  quotationId: number | null;
+  quotationNo: string | null;
+  quotationStatus: string | null;
+  quotationValue: number | null;
+  quotationSentAt: string | null;
+  isOverdue: boolean;
+  isDueToday: boolean;
+  isNewNotContacted: boolean;
+  hasNoFollowUp: boolean;
+  isQuotationWaiting: boolean;
+  isStuck: boolean;
+}
+
+/** The counts per attention rule, plus the month figures. */
+export interface CrmAttentionCountsDto {
+  overdue: number;
+  dueToday: number;
+  newNotContacted: number;
+  noFollowUp: number;
+  quotationWaiting: number;
+  stuck: number;
+  openLeads: number;
+  convertedThisMonth: number;
+  lostThisMonth: number;
+}
+
+export interface CrmBoardDto {
+  cards: CrmBoardCardDto[];
+  counts: CrmAttentionCountsDto;
+  /** True when more leads are open than the cards shown (at most 500). */
+  truncated: boolean;
+}
+
+/** One row of the quotation list. */
+export interface QuotationListRowDto {
+  quotationId: number;
+  quotationNo: string;
+  revisionNo: number;
+  quoteDate: string;
+  leadId: number;
+  leadNo: string;
+  contactName: string;
+  ownerName: string;
+  status: string;
+  grandTotal: number;
+  sentAt: string | null;
+  ageDays: number;
+  totalCount: number;
+}
+
+export interface QuotationFilterDto {
+  search?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CrmPipelineRowDto {
+  status: string;
+  leads: number;
+  quotationValue: number;
+  avgDaysInStage: number;
+}
+
+export interface CrmSourceRowDto {
+  sourceName: string;
+  leads: number;
+  converted: number;
+  lost: number;
+  openLeads: number;
+  conversionPct: number;
+  convertedValue: number;
+}
+
+export interface CrmTeamRowDto {
+  ownerUserId: number;
+  ownerName: string;
+  leads: number;
+  followUpsDone: number;
+  overdueNow: number;
+  converted: number;
+  lost: number;
+  convertedValue: number;
+}
+
+export interface CrmLostReasonRowDto {
+  reasonName: string;
+  leads: number;
+  pctOfLost: number;
+  valueLost: number;
+}

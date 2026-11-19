@@ -9,6 +9,19 @@ namespace EncryptzTests
         private static LeadSaveDto Lead(string name = "Anil", string mobile = "9847012345")
             => new() { ContactName = name, Mobile = mobile };
 
+        [Theory]
+        [InlineData(-3, null)]
+        [InlineData(0, null)]
+        [InlineData(7, 7)]
+        [InlineData(null, null)]
+        public void Lead_product_id_below_one_is_treated_as_none(int? given, int? expected)
+        {
+            var l = Lead();
+            l.ProductMasterId = given;
+            Assert.Null(CrmRules.LeadProblem(l));
+            Assert.Equal(expected, l.ProductMasterId);
+        }
+
         [Fact]
         public void Lead_needs_name_and_mobile()
         {

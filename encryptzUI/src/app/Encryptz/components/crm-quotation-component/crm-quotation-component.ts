@@ -1,12 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { CrmProductDto, QuotationDto, QuotationItemDto } from '../../Models/CrmModels';
+import { ConvertResultDto, CrmProductDto, LeadDetailDto, QuotationDto, QuotationItemDto } from '../../Models/CrmModels';
 import { CrmService } from '../../Services/crm-service';
+import { CrmConvertDialogComponent } from '../crm-shell-component/crm-convert-dialog-component';
 import { CrmRefusedComponent } from '../crm-shell-component/crm-refused';
 import { FORBIDDEN, amount, isoDate, pill, quoteTotals, refusalOf, showDate } from '../crm-shell-component/crm-ui';
 
 export const GST_RATES = [0, 5, 12, 18, 28];
+const OPEN_FOR_CONVERT = ['Quotation', 'Negotiation'];
 
 const blankLine = (sortOrder: number): QuotationItemDto => ({
   quotationItemId: 0, productMasterId: null, productName: '', hsnSac: '', qty: 1, rate: 0, discountAmount: 0, gstPercent: 18,
@@ -24,7 +26,7 @@ interface Head { quoteDate: string; validUntil: string; isInterState: boolean; t
 @Component({
   selector: 'app-crm-quotation',
   standalone: true,
-  imports: [FormsModule, RouterLink, CrmRefusedComponent],
+  imports: [FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent],
   templateUrl: './crm-quotation-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-quotation-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,6 +50,8 @@ export class CrmQuotationComponent {
   lines = signal<QuotationItemDto[]>([]);
   error = signal('');
   notice = signal('');
+  /** The lead's product is not in the product master (a warning, not a success). */
+  warning = signal('');
   busy = signal(false);
   loaded = signal(false);
 
@@ -59,6 +63,33 @@ export class CrmQuotationComponent {
   readonly editable = computed(() => this.status() === 'Draft');
   readonly totals = computed(() => quoteTotals(this.lines(), this.head().isInterState));
 
+  /** The convert dialog is open; after a convert, the order that was made. */
+  convertOpen = signal(false);
+  convertedOrderNo = signal('');
+
+  /** Convert to sales order is offered for the latest Draft or Sent revision of a lead still open. */
+  readonly showConvert = computed(() => {
+    const q = this.saved();
+    return !!q && q.isLatest && (q.status === 'Draft' || q.status === 'Sent') && !['Converted', 'Lost'].includes(q.leadStatus ?? '');
+  });
+
+  /** The server converts only a lead in Quotation or Negotiation (CrmRules.ConvertProblem). */
+  /** The lead's convert flags (the quotation does not carry them); null until read. */
+  lead = signal<LeadDetailDto | null>(null);
+  /** False until the lead read has answered (success or failure); Convert stays disabled meanwhile. */
+  leadLoaded = signal(false);
+
+  /** Why a shown Convert button is disabled, or '' when the convert may go ahead. Same wording as the lead page. */
+  readonly convertHint = computed(() => {
+    if (!this.showConvert()) return '';
+    const l = this.lead();
+    if (l?.salesOrderId) return 'This lead has already been converted to a sales order';
+    if (l?.convertNeedsCheck) return 'A manager must check the sales orders for this lead first, then link the order or cancel the convert';
+    if (!OPEN_FOR_CONVERT.includes(this.saved()?.leadStatus ?? '')) return 'Mark the quotation as sent first';
+    return '';
+  });
+  readonly canConvert = computed(() => this.showConvert() && this.leadLoaded() && !this.convertHint());
+
   constructor() {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
     if (id === 'new') {
@@ -67,13 +98,27 @@ export class CrmQuotationComponent {
       this.lines.set([blankLine(1)]);
       this.loaded.set(true);
       if (leadId > 0) this.crm.getLead(leadId).subscribe({
-        next: res => { if (res.success && res.data) this.leadTitle.set(`${res.data.leadNo} · ${res.data.contactName}`); },
+        next: res => { if (!res.success || !res.data) return; this.leadTitle.set(`${res.data.leadNo} · ${res.data.contactName}`); this.startWithProduct(res.data); },
         error: err => this.fail(err),
       });
       else this.error.set('Open the quotation from its lead');
     } else {
       this.load(Number(id));
     }
+  }
+
+  /** A lead with a chosen product: the empty first line starts with it, at its MRP, warranty and HSN. */
+  private startWithProduct(lead: LeadDetailDto): void {
+    const id = lead.productMasterId;
+    if (!id) return;
+    const missed = () => this.warning.set("The lead's product was not found in the product master");
+    this.crm.searchProducts(undefined, lead.productCategory || undefined, 100).subscribe({
+      next: res => {
+        const p = (res.success ? res.data ?? [] : []).find(x => x.productMasterId === id);
+        if (p) this.pick(p); else missed();
+      },
+      error: () => missed(),
+    });
   }
 
   private fail(err: unknown): void {
@@ -94,6 +139,7 @@ export class CrmQuotationComponent {
         });
         this.lines.set([...(q.items ?? [])].sort((a, b) => a.sortOrder - b.sortOrder).map(i => ({ ...i })));
         this.loaded.set(true);
+        this.crm.getLead(q.leadId).subscribe({ next: r => { this.lead.set(r.success ? r.data ?? null : null); this.leadLoaded.set(true); }, error: () => { this.lead.set(null); this.leadLoaded.set(true); } });
       },
       error: err => this.fail(err),
     });
@@ -142,6 +188,7 @@ export class CrmQuotationComponent {
       productName: p.productName,
       rate: p.mrp ?? 0,
       warrantyMonths: p.warrantyMonths ?? 0,
+      ...(p.hsnSac ? { hsnSac: p.hsnSac } : {}),
     };
     this.lines.update(list => {
       const empty = list.findIndex(l => !l.productName.trim() && !l.productMasterId);
@@ -226,5 +273,31 @@ export class CrmQuotationComponent {
       },
       error: err => { this.busy.set(false); this.fail(err); },
     });
+  }
+
+  // ── convert to sales order: app-crm-convert-dialog (shared with the lead page) reads the preview and asks the server ──
+
+  openConvert(): void {
+    if (!this.canConvert() || this.busy()) return;
+    this.error.set('');
+    this.notice.set('');
+    this.convertedOrderNo.set('');
+    // a draft is saved first, so what is converted is what is on the screen; a failed save leaves the dialog shut
+    if (this.editable()) this.save(() => this.convertOpen.set(true));
+    else this.convertOpen.set(true);
+  }
+
+  converted(res: ConvertResultDto): void {
+    this.convertOpen.set(false);
+    this.notice.set('');
+    this.convertedOrderNo.set(res.orderNo);
+    // the quotation is Accepted now and the lead Converted
+    this.load(this.quotationId());
+  }
+
+  /** A 403 means the session is not for CRM: the page says so, as every page does. */
+  convertForbidden(): void {
+    this.convertOpen.set(false);
+    this.error.set(FORBIDDEN);
   }
 }

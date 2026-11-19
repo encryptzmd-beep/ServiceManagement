@@ -7,7 +7,7 @@ import { CrmService } from './crm-service';
 describe('CrmService', () => {
   let service: CrmService;
   let http: HttpTestingController;
-  const api = environment.apiUrl + '/crm';
+  const api = environment.apiUrl + '/api/crm';
 
   beforeEach(() => {
     TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
@@ -80,6 +80,20 @@ describe('CrmService', () => {
     req = http.expectOne(r => r.url === `${api}/products`);
     expect(req.request.params.get('term')).toBe('fan');
     req.flush({ success: true, message: '' });
+
+    service.searchProducts(undefined, 'Treadmill').subscribe();
+    req = http.expectOne(r => r.url === `${api}/products`);
+    expect(req.request.params.has('term')).toBe(false);
+    expect(req.request.params.get('category')).toBe('Treadmill');
+    req.flush({ success: true, message: '' });
+
+    service.searchProducts(undefined, 'Treadmill', 100).subscribe();
+    req = http.expectOne(r => r.url === `${api}/products`);
+    expect(req.request.params.get('top')).toBe('100');
+    req.flush({ success: true, message: '' });
+
+    service.productCategories().subscribe();
+    http.expectOne(`${api}/product-categories`).flush({ success: true, message: '', data: [] });
   });
 
   it('reads the reports with their filters', () => {
@@ -93,6 +107,69 @@ describe('CrmService', () => {
     req = http.expectOne(r => r.url === `${api}/reports/conversion`);
     expect(req.request.params.get('groupBy')).toBe('source');
     expect(req.request.params.has('from')).toBe(false);
+    req.flush({ success: true, message: '' });
+  });
+
+  it('reads the board, with the owner only when set', () => {
+    service.getBoard(7).subscribe();
+    let req = http.expectOne(r => r.url === `${api}/board`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('ownerUserId')).toBe('7');
+    req.flush({ success: true, message: '' });
+
+    service.getBoard().subscribe();
+    req = http.expectOne(r => r.url === `${api}/board`);
+    expect(req.request.params.has('ownerUserId')).toBe(false);
+    req.flush({ success: true, message: '' });
+  });
+
+  it('reads the quotation list with the filter as query parameters', () => {
+    service.getQuotations({ search: 'QT', page: 2 }).subscribe();
+    const req = http.expectOne(r => r.url === `${api}/quotations`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('search')).toBe('QT');
+    expect(req.request.params.get('page')).toBe('2');
+    expect(req.request.params.has('status')).toBe(false);
+    req.flush({ success: true, message: '', data: { items: [], totalCount: 0, pageNumber: 2, pageSize: 25, totalPages: 0 } });
+  });
+
+  it('reads the pipeline report, with the owner only when set', () => {
+    service.pipelineReport(3).subscribe();
+    let req = http.expectOne(r => r.url === `${api}/reports/pipeline`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('ownerUserId')).toBe('3');
+    req.flush({ success: true, message: '' });
+
+    service.pipelineReport().subscribe();
+    req = http.expectOne(r => r.url === `${api}/reports/pipeline`);
+    expect(req.request.params.keys().length).toBe(0);
+    req.flush({ success: true, message: '' });
+  });
+
+  it('reads the sources report with its dates', () => {
+    service.sourcesReport({ from: '2026-11-01' }).subscribe();
+    const req = http.expectOne(r => r.url === `${api}/reports/sources`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('from')).toBe('2026-11-01');
+    expect(req.request.params.has('to')).toBe(false);
+    req.flush({ success: true, message: '' });
+  });
+
+  it('reads the team report with its filter', () => {
+    service.teamReport({ from: '2026-11-01', to: '2026-11-18', ownerUserId: 4 }).subscribe();
+    const req = http.expectOne(r => r.url === `${api}/reports/team`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('to')).toBe('2026-11-18');
+    expect(req.request.params.get('ownerUserId')).toBe('4');
+    req.flush({ success: true, message: '' });
+  });
+
+  it('reads the lost reasons report with its filter', () => {
+    service.lostReasonsReport({ to: '2026-11-18' }).subscribe();
+    const req = http.expectOne(r => r.url === `${api}/reports/lost-reasons`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('to')).toBe('2026-11-18');
+    expect(req.request.params.has('ownerUserId')).toBe(false);
     req.flush({ success: true, message: '' });
   });
 });

@@ -22,7 +22,8 @@ namespace EncryptzBL.Infrastructure.Crm
         Task<ApiResponse<QuotationDto>> GetQuotation(int userId, bool isManager, int companyId, int quotationId);
         Task<ApiResponse<int>> ReviseQuotation(int userId, bool isManager, int companyId, int quotationId);
         Task<ApiResponse<int>> SetQuotationStatus(int userId, bool isManager, int companyId, int quotationId, string status);
-        Task<ApiResponse<List<CrmProductDto>>> SearchProducts(int userId, bool isManager, int companyId, string? term);
+        Task<ApiResponse<List<CrmProductDto>>> SearchProducts(int userId, bool isManager, int companyId, string? term, string? category = null, int? top = null);
+        Task<ApiResponse<List<string>>> GetProductCategories(int userId, bool isManager, int companyId);
 
         Task<ApiResponse<ConvertPreviewDto>> PreviewConvert(int userId, bool isManager, int companyId, int leadId, int quotationId);
         Task<ApiResponse<ConvertResultDto>> Convert(int userId, bool isManager, int companyId, int leadId, ConvertRequestDto dto);
@@ -35,6 +36,13 @@ namespace EncryptzBL.Infrastructure.Crm
         Task<ApiResponse<CrmDashboardDto>> GetDashboard(int userId, bool isManager, int companyId);
         Task<ApiResponse<List<CrmFollowUpReportRowDto>>> FollowUpReport(int userId, bool isManager, int companyId, DateTime? from, DateTime? to, int? ownerUserId);
         Task<ApiResponse<List<CrmConversionRowDto>>> ConversionReport(int userId, bool isManager, int companyId, DateTime? from, DateTime? to, string? groupBy);
+
+        Task<ApiResponse<CrmBoardDto>> GetBoard(int userId, bool isManager, int companyId, int? ownerUserId);
+        Task<ApiResponse<PagedResult<QuotationListRowDto>>> GetQuotations(int userId, bool isManager, int companyId, QuotationFilterDto f);
+        Task<ApiResponse<List<CrmPipelineRowDto>>> PipelineReport(int userId, bool isManager, int companyId, int? ownerUserId);
+        Task<ApiResponse<List<CrmSourceRowDto>>> SourcesReport(int userId, bool isManager, int companyId, DateTime? from, DateTime? to);
+        Task<ApiResponse<List<CrmTeamRowDto>>> TeamReport(int userId, bool isManager, int companyId, DateTime? from, DateTime? to, int? ownerUserId);
+        Task<ApiResponse<List<CrmLostReasonRowDto>>> LostReasonsReport(int userId, bool isManager, int companyId, DateTime? from, DateTime? to, int? ownerUserId);
 
         Task<ApiResponse<CrmMemberListDto>> GetMembers(int userId, bool isManager, int companyId);
         Task<ApiResponse<int>> SaveMember(int userId, bool isManager, int companyId, CrmMemberDto dto);

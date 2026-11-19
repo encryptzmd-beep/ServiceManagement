@@ -87,7 +87,7 @@ namespace EncryptzBL.Infrastructure.Crm
                     In("@LeadSourceId", dto.LeadSourceId), In("@ProductCategory", dto.ProductCategory),
                     In("@ModelRequirement", dto.ModelRequirement), In("@EstimatedQty", dto.EstimatedQty),
                     In("@ExpectedPurchaseDate", dto.ExpectedPurchaseDate?.Date), In("@OwnerUserId", owner),
-                    In("@Priority", dto.Priority), In("@Remarks", dto.Remarks)
+                    In("@Priority", dto.Priority), In("@Remarks", dto.Remarks), In("@ProductMasterId", dto.ProductMasterId)
                 });
 
                 var answer = Answer(dt);

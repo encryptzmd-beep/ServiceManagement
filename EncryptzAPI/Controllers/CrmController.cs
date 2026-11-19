@@ -113,8 +113,12 @@ namespace EncryptzAPI.Controllers
             => Answer(await _crm.SetQuotationStatus(Caller(), await Manager(), Company(), id, dto?.Status ?? ""));
 
         [HttpGet("products")]
-        public async Task<IActionResult> SearchProducts([FromQuery] string? term)
-            => Answer(await _crm.SearchProducts(Caller(), await Manager(), Company(), term));
+        public async Task<IActionResult> SearchProducts([FromQuery] string? term, [FromQuery] string? category = null, [FromQuery] int? top = null)
+            => Answer(await _crm.SearchProducts(Caller(), await Manager(), Company(), term, category, top));
+
+        [HttpGet("product-categories")]
+        public async Task<IActionResult> GetProductCategories()
+            => Answer(await _crm.GetProductCategories(Caller(), await Manager(), Company()));
 
         [HttpGet("masters/{kind}")]
         public async Task<IActionResult> GetMasters(string kind)
@@ -135,6 +139,30 @@ namespace EncryptzAPI.Controllers
         [HttpGet("dashboard")]
         public async Task<IActionResult> GetDashboard()
             => Answer(await _crm.GetDashboard(Caller(), await Manager(), Company()));
+
+        [HttpGet("board")]
+        public async Task<IActionResult> GetBoard([FromQuery(Name = "ownerUserId")] int? owner)
+            => Answer(await _crm.GetBoard(Caller(), await Manager(), Company(), owner));
+
+        [HttpGet("quotations")]
+        public async Task<IActionResult> GetQuotations([FromQuery] QuotationFilterDto filter)
+            => Answer(await _crm.GetQuotations(Caller(), await Manager(), Company(), filter));
+
+        [HttpGet("reports/pipeline")]
+        public async Task<IActionResult> PipelineReport([FromQuery(Name = "ownerUserId")] int? owner)
+            => Answer(await _crm.PipelineReport(Caller(), await Manager(), Company(), owner));
+
+        [HttpGet("reports/sources")]
+        public async Task<IActionResult> SourcesReport([FromQuery] DateTime? from, [FromQuery] DateTime? to)
+            => Answer(await _crm.SourcesReport(Caller(), await Manager(), Company(), from, to));
+
+        [HttpGet("reports/team")]
+        public async Task<IActionResult> TeamReport([FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery(Name = "ownerUserId")] int? owner)
+            => Answer(await _crm.TeamReport(Caller(), await Manager(), Company(), from, to, owner));
+
+        [HttpGet("reports/lost-reasons")]
+        public async Task<IActionResult> LostReasonsReport([FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery(Name = "ownerUserId")] int? owner)
+            => Answer(await _crm.LostReasonsReport(Caller(), await Manager(), Company(), from, to, owner));
 
         [HttpGet("reports/follow-ups")]
         public async Task<IActionResult> FollowUpReport([FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery(Name = "ownerUserId")] int? owner)

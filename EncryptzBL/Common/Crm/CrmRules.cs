@@ -42,6 +42,7 @@ namespace EncryptzBL.Common.Crm
 
             l.ContactName = T(l.ContactName);
             l.Mobile = NormaliseMobile(l.Mobile);
+            if (l.ProductMasterId <= 0) l.ProductMasterId = null;
             l.Email = T(l.Email);
             l.Address = T(l.Address);
             l.City = T(l.City);

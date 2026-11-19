@@ -1,6 +1,6 @@
-/* The quotation line editor (its look follows the Sales Order lines, copied, not shared). */
+/* The quotation line editor, in the Products-page look. */
 
-.crm-head h1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.crm-page-head h1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
 .q-search {
   position: relative; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; padding: 14px 16px; border-bottom: 1px solid #e2e8f0;
@@ -16,14 +16,27 @@
 }
 .q-none { flex-basis: 100%; margin: 0; }
 
+.q-crumb { font-size: 12.5px; }
+.q-search .crm-field > span { font-size: 12px; font-weight: 600; color: #5a6a7e; }
+
 .q-lines {
-  input, select { width: 100%; padding: 5px 8px; }
-  .q-name { min-width: 180px; }
-  .q-hsn { min-width: 80px; }
-  .q-qty, .q-warranty { width: 70px; text-align: right; }
-  .q-rate, .q-disc { width: 100px; text-align: right; }
-  .q-gst { width: 70px; }
+  input, select { width: 100%; box-sizing: border-box; padding: 6px 5px; border: 1px solid #e2e8f0; border-radius: 8px; font: inherit; color: #1a2332; background: #fff; }
+  input:focus, select:focus { outline: none; border-color: #4a7ab5; }
+  input:disabled { background: #f8fafc; }
+  th, td { padding-left: 5px; padding-right: 5px; }
+  .q-col-name, td[data-label='Product'] { min-width: 200px; }
+  .q-name { min-width: 190px; }
+  .q-hsn { min-width: 64px; }
+  .q-qty, .q-warranty { width: 52px; text-align: right; }
+  .q-rate, .q-disc { width: 80px; text-align: right; }
+  .q-rate { width: 96px; }
+  input[type=number] { appearance: textfield; -moz-appearance: textfield; }
+  input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .q-gst { width: 58px; }
+  .q-del { width: 36px; padding-left: 2px; padding-right: 2px; }
+  .q-total { font-weight: 600; }
 }
+@media (max-width: 1279px) { .q-col-taxable { display: none; } }
 
 .q-bottom { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
 .q-terms textarea { width: 100%; }
@@ -36,4 +49,32 @@
   p { margin: 10px 0 0; }
 }
 
-@media (max-width: 760px) { .q-bottom { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 900px) {
+  .q-bottom { grid-template-columns: minmax(0, 1fr); }
+  /* every line becomes a card with labelled inputs */
+  .q-wrap { overflow-x: visible; }
+  .q-lines {
+    thead { display: none; }
+    display: block; width: 100%;
+    tbody { display: block; width: 100%; }
+    .q-line-card {
+      position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; margin: 12px; padding: 14px;
+      border: 1px solid #e2e8f0; border-radius: 12px; background: #fff;
+    }
+    .q-line-card td, .q-line-card:hover td {
+      display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 0; border: none; text-align: left; background: none;
+      &::before { content: attr(data-label); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8a9ab0; }
+    }
+    .q-line-card .q-no { grid-column: 1 / -1; font-weight: 600; padding-right: 44px; flex-direction: row; gap: 6px; &::before { content: 'Line'; } }
+    .q-line-card td[data-label='Product'] { grid-column: 1 / -1; min-width: 0; }
+    .q-line-card .q-col-taxable { display: flex; }
+    .q-line-card .num { text-align: left; }
+    .q-line-card .q-del { position: absolute; top: 8px; right: 8px; width: auto; &::before { display: none; } }
+    .q-name, .q-hsn, .q-qty, .q-rate, .q-disc, .q-gst, .q-warranty { width: 100%; min-width: 0; text-align: left; }
+    .q-empty { display: block; grid-column: 1 / -1; text-align: center; &::before { display: none; } }
+  }
+}
+@media (max-width: 480px) {
+  .q-search { padding: 12px; .crm-btn { flex: 1 1 100%; justify-content: center; } }
+  .q-results { left: 12px; right: 12px; }
+}

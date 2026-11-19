@@ -2,78 +2,64 @@
   <app-crm-refused />
 } @else {
   <div class="crm-page">
-    <header class="crm-head">
+    <header class="crm-page-head">
       <div>
         <h1>Leads</h1>
         <p>{{ isManager() ? 'All the leads of the team.' : 'The leads you own.' }}</p>
       </div>
-      <div class="crm-head-actions">
+      <div class="crm-page-actions">
         <a class="crm-btn primary" routerLink="/crm/leads/new"><span class="material-icons" aria-hidden="true">add</span>New lead</a>
       </div>
     </header>
 
-    <section class="crm-card">
-      <form class="crm-filters" (ngSubmit)="apply()">
-        <label class="crm-field grow">
-          <span>Search</span>
-          <input type="search" name="search" placeholder="Name, mobile, lead no." [ngModel]="filter().search ?? ''" (ngModelChange)="set('search', $event)" />
-        </label>
-        <label class="crm-field">
-          <span>Status</span>
-          <select name="status" [ngModel]="filter().status ?? ''" (ngModelChange)="set('status', $event)">
-            <option value="">All</option>
+    <section class="crm-table-card">
+      <form class="crm-table-toolbar crm-lead-filters" (ngSubmit)="apply()">
+        <div class="crm-toolbar-left">
+          <span class="crm-table-title">All leads</span>
+          <span class="crm-count-pill">{{ total() }}</span>
+        </div>
+        <div class="crm-toolbar-right">
+          <label class="crm-search">
+            <span class="material-icons" aria-hidden="true">search</span>
+            <input type="search" name="search" aria-label="Search" placeholder="Name, mobile, lead no." [ngModel]="filter().search ?? ''" (ngModelChange)="set('search', $event)" />
+          </label>
+          <select name="status" aria-label="Status" [ngModel]="filter().status ?? ''" (ngModelChange)="set('status', $event)">
+            <option value="">All statuses</option>
             @if (extraStatus()) { <option [value]="extraStatus()">{{ extraStatus().split(',').join(' + ') }}</option> }
             @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
           </select>
-        </label>
-        <label class="crm-field">
-          <span>Source</span>
-          <select name="sourceId" [ngModel]="filter().sourceId ?? ''" (ngModelChange)="set('sourceId', $event ? +$event : undefined)">
-            <option value="">All</option>
+          <select name="sourceId" aria-label="Source" [ngModel]="filter().sourceId ?? ''" (ngModelChange)="set('sourceId', $event ? +$event : undefined)">
+            <option value="">All sources</option>
             @for (s of sources(); track s.id) { <option [value]="s.id">{{ s.name }}</option> }
           </select>
-        </label>
-        @if (isManager()) {
-          <label class="crm-field crm-owner-filter">
-            <span>Owner</span>
-            <select name="ownerUserId" [ngModel]="filter().ownerUserId ?? ''" (ngModelChange)="set('ownerUserId', $event ? +$event : undefined)">
+          @if (isManager()) {
+            <select name="ownerUserId" aria-label="Owner" class="crm-owner-filter" [ngModel]="filter().ownerUserId ?? ''" (ngModelChange)="set('ownerUserId', $event ? +$event : undefined)">
               <option value="">Everyone</option>
               @for (m of owners(); track m.userId) { <option [value]="m.userId">{{ m.fullName }}</option> }
             </select>
-          </label>
-        }
-        <label class="crm-field">
-          <span>Follow-up</span>
-          <select name="due" [ngModel]="filter().due ?? ''" (ngModelChange)="set('due', $event)">
-            <option value="">Any</option>
+          }
+          <select name="due" aria-label="Follow-up" [ngModel]="filter().due ?? ''" (ngModelChange)="set('due', $event)">
+            <option value="">Any follow-up</option>
             <option value="Today">Due today</option>
             <option value="Overdue">Overdue</option>
             <option value="Pending">Pending</option>
           </select>
-        </label>
-        <label class="crm-field">
-          <span>Lead date from</span>
-          <input type="date" name="from" [ngModel]="filter().from ?? ''" (ngModelChange)="set('from', $event)" />
-        </label>
-        <label class="crm-field">
-          <span>to</span>
-          <input type="date" name="to" [ngModel]="filter().to ?? ''" (ngModelChange)="set('to', $event)" />
-        </label>
-        <button type="submit" class="crm-btn primary">Apply</button>
-        <button type="button" class="crm-btn" (click)="clear()">Clear</button>
+          <label class="crm-date"><span>Lead date from</span><input type="date" name="from" aria-label="Lead date from" [ngModel]="filter().from ?? ''" (ngModelChange)="set('from', $event)" /></label>
+          <label class="crm-date"><span>to</span><input type="date" name="to" aria-label="Lead date to" [ngModel]="filter().to ?? ''" (ngModelChange)="set('to', $event)" /></label>
+          <button type="submit" class="crm-btn navy">Apply</button>
+          <button type="button" class="crm-btn" (click)="clear()">Clear</button>
+        </div>
       </form>
       @if (filter().closedFrom || filter().closedTo) {
-        <p class="crm-muted">Closed between {{ showDate(filter().closedFrom) || 'the start' }} and {{ showDate(filter().closedTo) || 'today' }}.
+        <p class="crm-closed-note">Closed between {{ showDate(filter().closedFrom) || 'the start' }} and {{ showDate(filter().closedTo) || 'today' }}.
           <button type="button" class="crm-link" (click)="set('closedFrom', undefined); set('closedTo', undefined); apply()">Remove</button></p>
       }
-    </section>
 
-    <section class="crm-card flush">
       @if (rows() === null) {
-        <div class="crm-state"><p>Loading…</p></div>
+        <div class="crm-empty">Loading…</div>
       } @else {
         @if (error()) { <p class="crm-error">{{ error() }}</p> }
-        <div class="crm-table-wrap">
+        <div class="crm-table-wrap crm-cards-sm">
           <table class="crm-table">
             <thead>
               <tr>
@@ -83,20 +69,24 @@
             <tbody>
               @for (r of rows(); track r.leadId) {
                 <tr class="crm-lead-row">
-                  <td><a [routerLink]="['/crm/leads', r.leadId]">{{ r.leadNo }}</a><div class="crm-muted">{{ showDate(r.leadDate) }}</div></td>
-                  <td>{{ r.contactName }}<div class="crm-muted">{{ r.mobile }}@if (r.city) { · {{ r.city }} }</div></td>
-                  <td>{{ r.productCategory }}</td>
-                  <td>{{ r.sourceName }}</td>
-                  <td>{{ r.ownerName }}</td>
-                  <td>
-                    @if (r.nextFollowUpAt) {
-                      <span [class.crm-pill]="isOverdue(r)" [class.overdue]="isOverdue(r)">{{ showDateTime(r.nextFollowUpAt) }}</span>
+                  <td data-label="Lead"><span class="crm-cell"><a [routerLink]="['/crm/leads', r.leadId]">{{ r.leadNo }}</a><span class="crm-muted">{{ showDate(r.leadDate) }}</span></span></td>
+                  <td data-label="Contact"><span class="crm-cell">{{ r.contactName }}<span class="crm-muted">{{ r.mobile }}@if (r.city) { · {{ r.city }} }</span></span></td>
+                  <td data-label="Product">{{ r.productCategory }}</td>
+                  <td data-label="Source">{{ r.sourceName }}</td>
+                  <td data-label="Owner">{{ r.ownerName }}</td>
+                  <td data-label="Next follow-up">
+                    @if (followUpOf(r); as when) {
+                      <span [class]="isOverdue(r) ? 'crm-badge red' : ''">{{ when }}</span>
                     }
                   </td>
-                  <td>
-                    <span [class]="pill(r.status)">{{ r.status }}</span>
-                    @if (r.priority === 'High') { <span class="crm-pill high">High</span> }
-                    @if (r.orderNo) { <div class="crm-muted">{{ r.orderNo }}</div> }
+                  <td data-label="Status">
+                    <span class="crm-cell">
+                      <span>
+                        <span [class]="pill(r.status)">{{ r.status }}</span>
+                        @if (r.priority === 'High') { <span class="crm-pill red">High</span> }
+                      </span>
+                      @if (r.orderNo) { <span class="crm-muted">{{ r.orderNo }}</span> }
+                    </span>
                   </td>
                 </tr>
               } @empty {

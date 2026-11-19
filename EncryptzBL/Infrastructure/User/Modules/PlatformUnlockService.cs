@@ -1,6 +1,7 @@
 using EncryptzBL.Common;
 using EncryptzBL.DTO_s;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -36,10 +37,13 @@ namespace EncryptzBL.Infrastructure.User.Modules
         private readonly IConfiguration _config;
         private readonly IEmailService _emailService;
 
-        public PlatformUnlockService(MainDbHelper db, IConfiguration config, IEmailService emailService) : base(db)
+        private readonly ILogger<PlatformUnlockService> _logger;
+
+        public PlatformUnlockService(MainDbHelper db, IConfiguration config, IEmailService emailService, ILogger<PlatformUnlockService> logger) : base(db)
         {
             _config = config;
             _emailService = emailService;
+            _logger = logger;
         }
 
         private string OtpEmail => _config["PlatformAdmin:OtpEmail"] ?? "";
@@ -86,9 +90,11 @@ namespace EncryptzBL.Infrastructure.User.Modules
             {
                 await _emailService.SendEmailAsync(OtpEmail, "Platform Admin access code - Encryptz", body);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return ApiResponse<string>.Fail("The access code could not be e-mailed. Check the Smtp settings.");
+                _logger.LogError(ex, "Platform Admin access code could not be e-mailed");
+                var reason = (ex.InnerException ?? ex).Message;
+                return ApiResponse<string>.Fail("The access code could not be e-mailed. Check the Smtp settings. (" + reason + ")");
             }
 
             return ApiResponse<string>.Ok(MaskEmail(OtpEmail), "Access code sent to " + MaskEmail(OtpEmail));

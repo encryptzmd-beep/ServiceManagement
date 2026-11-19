@@ -28,6 +28,8 @@ describe('CrmLeadFormComponent', () => {
       me: () => ok({ userId: 1, fullName: 'A', isManager: false }),
       getMasters: () => ok([]),
       getMembers: () => ok({ members: [], available: [] }),
+      productCategories: () => ok(['Inverter', 'Treadmill']),
+      searchProducts: () => ok([]),
       saveLead: vi.fn(() => ok(44)),
     };
   });
@@ -47,5 +49,15 @@ describe('CrmLeadFormComponent', () => {
     f.componentInstance.save();
     expect(crm.saveLead).toHaveBeenCalledWith(expect.objectContaining({ leadId: 0, contactName: 'Ravi', mobile: '98765 43210' }));
     expect(navigate).toHaveBeenCalledWith(['/crm/leads', 44]);
+  });
+
+  it('saves the chosen product', () => {
+    const f = create();
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    f.componentInstance.form.update((x: any) => ({ ...x, contactName: 'Ravi', mobile: '9876543210' }));
+    f.componentInstance.set('productCategory', 'Treadmill');
+    f.componentInstance.set('productMasterId', 9);
+    f.componentInstance.save();
+    expect(crm.saveLead).toHaveBeenCalledWith(expect.objectContaining({ productCategory: 'Treadmill', productMasterId: 9 }));
   });
 });

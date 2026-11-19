@@ -1,0 +1,14 @@
+<label class="crm-field"><span>Product category</span>
+  <select class="pp-category" [value]="category() ?? ''" (change)="chooseCategory($any($event.target).value)">
+    <option value="">–</option>
+    @for (c of categories(); track c) { <option [value]="c" [selected]="c === category()">{{ c }}</option> }
+  </select></label>
+<label class="crm-field"><span>Product</span>
+  <select class="pp-product" [disabled]="!category()" (change)="chooseProduct($any($event.target).value)">
+    <option value="">–</option>
+    @for (p of productOptions(); track p.productMasterId) {
+      <option [value]="p.productMasterId" [selected]="p.productMasterId === productMasterId()">{{ p.productName }}</option>
+    }
+  </select></label>
+@if (loadFailed()) { <p class="crm-error pp-note">The products could not be loaded</p> }
+@else if (products().length >= limit) { <p class="pp-note">Showing the first {{ limit }} products</p> }

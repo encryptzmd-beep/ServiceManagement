@@ -1,0 +1,5 @@
+// the two fields sit in the grid of the form that holds the picker
+:host { display: contents; }
+
+.pp-note { margin: 0; font-size: 12px; color: #64748b; grid-column: 1 / -1; }
+.pp-note.crm-error { color: #b91c1c; }

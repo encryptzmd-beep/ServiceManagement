@@ -1,0 +1,45 @@
+/* The Reports page: filter bar and bars. The rest comes from crm-pages.scss (Products-page look). */
+$navy: #1b4a7a;
+$navy-light: #e8eef5;
+$border: #e2e8f0;
+$text: #1a2332;
+$text-2: #5a6a7e;
+$muted: #8a9ab0;
+
+:host { display: block; min-width: 0; }
+.crm-reports { display: flex; flex-direction: column; gap: 16px; min-width: 0; max-width: 1240px; margin: 0 auto; }
+.crm-reports .crm-page-head, .crm-reports .crm-stats { margin-bottom: 0; }
+
+.crm-report-filters {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; padding: 14px 18px;
+  background: #fff; border: 1px solid $border; border-radius: 14px; min-width: 0;
+  .crm-btn { height: auto; padding: 9px 18px; border-radius: 10px; }
+}
+.crm-report-now { margin: 0 auto 0 0; align-self: center; font-size: 13px; color: $muted; }
+.crm-report-note { margin: 0; padding: 10px 20px; border-bottom: 1px solid $border; font-size: 12.5px; color: #b45309; background: #fffbeb; }
+
+/* one horizontal bar per row of the main figure */
+.crm-bars { list-style: none; margin: 0; padding: 12px 20px 16px; display: flex; flex-direction: column; gap: 10px; }
+.crm-bar-row {
+  display: grid; grid-template-columns: minmax(0, 180px) minmax(0, 1fr) auto; align-items: center; gap: 12px; font-size: 13px;
+}
+.crm-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: $text; }
+.crm-bar-track { display: block; height: 10px; border-radius: 999px; background: $navy-light; overflow: hidden; }
+.crm-bar-fill { display: block; height: 100%; border-radius: 999px; background: $navy; min-width: 2px; }
+.crm-bar-val { font-variant-numeric: tabular-nums; color: $text-2; white-space: nowrap; }
+
+.crm-table-wrap tfoot td { border-top: 1px solid $border; background: #f8fafc; }
+.crm-report-loading { width: 120px; }
+
+@media (max-width: 640px) {
+  .crm-report-filters { padding: 12px 14px; }
+  .crm-report-filters .crm-field { flex: 1 1 100%; }
+  .crm-report-filters .crm-field input, .crm-report-filters .crm-field select { width: 100%; }
+  .crm-report-filters .crm-btn { flex: 1 1 100%; }
+  .crm-bars { padding: 10px 14px 14px; }
+  .crm-bar-row { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; }
+  .crm-bar-label { grid-column: 1 / -1; }
+  .crm-cards-sm tfoot { display: block; }
+  .crm-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .crm-stat-val { font-size: 22px; overflow-wrap: anywhere; }
+}

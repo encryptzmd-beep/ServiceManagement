@@ -69,5 +69,74 @@ namespace EncryptzBL.Infrastructure.Crm
                     r.ConversionPct = CrmRules.Percent(r.Converted, r.Leads);
                 return ApiResponse<List<CrmConversionRowDto>>.Ok(rows);
             });
+
+        public Task<ApiResponse<CrmBoardDto>> GetBoard(int userId, bool isManager, int companyId, int? ownerUserId)
+            => Guard(async () =>
+            {
+                var ds = await GetDataSetAsync("crm.sp_Lead_Board", new[]
+                {
+                    In("@CompanyId", companyId), In("@UserId", userId), In("@IsManager", isManager), In("@LocationId", LocationId),
+                    In("@OwnerUserId", ownerUserId)
+                });
+
+                var board = new CrmBoardDto();
+                if (ds.Tables.Count > 0) board.Cards = ds.Tables[0].ToList<CrmBoardCardDto>();
+                if (ds.Tables.Count > 1) board.Counts = ds.Tables[1].ToList<CrmAttentionCountsDto>().FirstOrDefault() ?? new CrmAttentionCountsDto();
+                board.Truncated = CrmBoardDto.IsTruncated(board.Counts.OpenLeads, board.Cards.Count);
+                return ApiResponse<CrmBoardDto>.Ok(board);
+            });
+
+        public Task<ApiResponse<List<CrmPipelineRowDto>>> PipelineReport(int userId, bool isManager, int companyId, int? ownerUserId)
+            => Guard(async () =>
+            {
+                var dt = await GetDataTableAsync("crm.sp_Report_Pipeline", new[]
+                {
+                    In("@CompanyId", companyId), In("@UserId", userId), In("@IsManager", isManager), In("@LocationId", LocationId),
+                    In("@OwnerUserId", ownerUserId)
+                });
+                return ApiResponse<List<CrmPipelineRowDto>>.Ok(dt.ToList<CrmPipelineRowDto>());
+            });
+
+        public Task<ApiResponse<List<CrmSourceRowDto>>> SourcesReport(int userId, bool isManager, int companyId, DateTime? from, DateTime? to)
+            => Guard(async () =>
+            {
+                if (from.HasValue && to.HasValue && from.Value.Date > to.Value.Date)
+                    return ApiResponse<List<CrmSourceRowDto>>.Fail("The From date is after the To date");
+
+                var dt = await GetDataTableAsync("crm.sp_Report_Sources", new[]
+                {
+                    In("@CompanyId", companyId), In("@UserId", userId), In("@IsManager", isManager), In("@LocationId", LocationId),
+                    In("@From", from?.Date), In("@To", to?.Date)
+                });
+                return ApiResponse<List<CrmSourceRowDto>>.Ok(dt.ToList<CrmSourceRowDto>());
+            });
+
+        public Task<ApiResponse<List<CrmTeamRowDto>>> TeamReport(int userId, bool isManager, int companyId, DateTime? from, DateTime? to, int? ownerUserId)
+            => Guard(async () =>
+            {
+                if (from.HasValue && to.HasValue && from.Value.Date > to.Value.Date)
+                    return ApiResponse<List<CrmTeamRowDto>>.Fail("The From date is after the To date");
+
+                var dt = await GetDataTableAsync("crm.sp_Report_Team", new[]
+                {
+                    In("@CompanyId", companyId), In("@UserId", userId), In("@IsManager", isManager), In("@LocationId", LocationId),
+                    In("@From", from?.Date), In("@To", to?.Date), In("@OwnerUserId", ownerUserId)
+                });
+                return ApiResponse<List<CrmTeamRowDto>>.Ok(dt.ToList<CrmTeamRowDto>());
+            });
+
+        public Task<ApiResponse<List<CrmLostReasonRowDto>>> LostReasonsReport(int userId, bool isManager, int companyId, DateTime? from, DateTime? to, int? ownerUserId)
+            => Guard(async () =>
+            {
+                if (from.HasValue && to.HasValue && from.Value.Date > to.Value.Date)
+                    return ApiResponse<List<CrmLostReasonRowDto>>.Fail("The From date is after the To date");
+
+                var dt = await GetDataTableAsync("crm.sp_Report_LostReasons", new[]
+                {
+                    In("@CompanyId", companyId), In("@UserId", userId), In("@IsManager", isManager), In("@LocationId", LocationId),
+                    In("@From", from?.Date), In("@To", to?.Date), In("@OwnerUserId", ownerUserId)
+                });
+                return ApiResponse<List<CrmLostReasonRowDto>>.Ok(dt.ToList<CrmLostReasonRowDto>());
+            });
     }
 }

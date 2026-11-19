@@ -55,6 +55,12 @@ describe('CrmLeadDetailComponent', () => {
     };
   });
 
+  it('shows the product', () => {
+    current = lead({ productMasterId: 9, productName: 'Treadmill T-10C' });
+    const f = create();
+    expect(el(f).textContent).toContain('Treadmill T-10C');
+  });
+
   it('offers Convert for a lead in Quotation or Negotiation with a current quotation', () => {
     expect(el(create()).querySelector('.crm-convert')).not.toBeNull();
     current = lead({ status: 'Negotiation' });
@@ -78,7 +84,7 @@ describe('CrmLeadDetailComponent', () => {
     const confirm = () => el(f).querySelector('.crm-confirm-convert') as HTMLButtonElement;
     expect(confirm().disabled).toBe(true);
 
-    f.componentInstance.chooseCustomer(4);
+    (el(f).querySelectorAll('input[name="convert-customer"]')[1] as HTMLInputElement).dispatchEvent(new Event('change'));
     f.detectChanges();
     expect(confirm().disabled).toBe(false);
     confirm().click();
@@ -91,6 +97,22 @@ describe('CrmLeadDetailComponent', () => {
     f.componentInstance.openConvert();
     f.detectChanges();
     expect((el(f).querySelector('.crm-confirm-convert') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('opens the convert dialog from the button and, once converted, says so and reads the lead again', () => {
+    crm.getLead = vi.fn(() => ok(current));
+    const f = create();
+    (el(f).querySelector('.crm-convert') as HTMLButtonElement).click();
+    f.detectChanges();
+    expect(el(f).querySelector('app-crm-convert-dialog')).not.toBeNull();
+    const reads = crm.getLead.mock.calls.length;
+    current = lead({ status: 'Converted', salesOrderId: 9, orderNo: 'SO-0009' });
+    (el(f).querySelector('.crm-confirm-convert') as HTMLButtonElement).click();
+    f.detectChanges();
+    expect(crm.convert).toHaveBeenCalledWith(5, expect.objectContaining({ quotationId: 30, customerId: null, paymentMode: 'Cash' }));
+    expect(el(f).querySelector('app-crm-convert-dialog')).toBeNull();
+    expect(el(f).textContent).toContain('Sales order SO-0009 made. Despatch it from the Sales screens.');
+    expect(crm.getLead.mock.calls.length).toBe(reads + 1);
   });
 
   it('shows a failed convert as the server said it', () => {
@@ -189,5 +211,20 @@ describe('CrmLeadDetailComponent', () => {
     const text = el(create()).textContent!;
     expect(text).toContain('SO-0009');
     expect(el(create()).querySelector('.crm-add-follow-up')).toBeNull();
+  });
+
+  it('flags an open lead whose follow-up is overdue, due today or missing, and no closed lead', () => {
+    const badges = () => Array.from(el(create()).querySelectorAll('.ld-attention')).map(b => b.textContent!.trim());
+    const at = (days: number) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(12, 0, 0, 0); return d.toISOString(); };
+    current = lead({ nextFollowUpAt: at(-2) });
+    expect(badges()).toEqual(['Overdue follow-up']);
+    current = lead({ nextFollowUpAt: at(0) });
+    expect(badges()).toEqual(['Follow-up today']);
+    current = lead({ nextFollowUpAt: null });
+    expect(badges()).toEqual(['No next follow-up']);
+    current = lead({ nextFollowUpAt: at(3) });
+    expect(badges()).toEqual([]);
+    current = lead({ status: 'Lost', nextFollowUpAt: null });
+    expect(badges()).toEqual([]);
   });
 });

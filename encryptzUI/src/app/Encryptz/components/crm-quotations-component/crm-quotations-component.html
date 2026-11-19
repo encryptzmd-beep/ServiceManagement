@@ -1,0 +1,93 @@
+@if (error() === forbidden) {
+  <app-crm-refused />
+} @else {
+  <div class="crm-page">
+    <header class="crm-page-head">
+      <div>
+        <h1>Quotations</h1>
+        <p>Every quotation sent from a lead, with its status.</p>
+      </div>
+      <div class="crm-page-actions"><button type="button" class="crm-btn primary" (click)="openNew()">New quotation</button></div>
+    </header>
+
+    <section class="crm-table-card">
+      <form class="crm-table-toolbar" (ngSubmit)="apply()">
+        <div class="crm-toolbar-left">
+          <span class="crm-table-title">All quotations</span>
+          <span class="crm-count-pill">{{ total() }}</span>
+        </div>
+        <div class="crm-toolbar-right">
+          <label class="crm-search">
+            <span class="material-icons" aria-hidden="true">search</span>
+            <input type="search" name="search" aria-label="Search" placeholder="Quote no., lead, contact" [ngModel]="search()" (ngModelChange)="search.set($event)" />
+          </label>
+          <select name="status" aria-label="Status" [ngModel]="status()" (ngModelChange)="status.set($event)">
+            <option value="">All</option>
+            @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
+          </select>
+          <label class="crm-date"><span>From</span><input type="date" name="from" aria-label="From" [ngModel]="from()" (ngModelChange)="from.set($event)" /></label>
+          <label class="crm-date"><span>To</span><input type="date" name="to" aria-label="To" [ngModel]="to()" (ngModelChange)="to.set($event)" /></label>
+          <button type="submit" class="crm-btn navy">Apply</button>
+        </div>
+      </form>
+
+      @if (rows() === null) {
+        <div class="crm-empty">Loading…</div>
+      } @else {
+        @if (error()) { <p class="crm-error">{{ error() }}</p> }
+        <div class="crm-table-wrap crm-cards-sm">
+          <table class="crm-table">
+            <thead>
+              <tr><th>Quotation</th><th>Date</th><th>Lead</th><th>Contact</th><th>Owner</th><th>Total</th><th>Status</th><th>Age</th></tr>
+            </thead>
+            <tbody>
+              @for (r of rows(); track r.quotationId) {
+                <tr>
+                  <td data-label="Quotation"><a [routerLink]="['/crm/quotations', r.quotationId]">{{ r.quotationNo }}</a>@if (r.revisionNo > 1) { <span class="crm-muted"> rev {{ r.revisionNo }}</span> }</td>
+                  <td data-label="Date">{{ showDate(r.quoteDate) }}</td>
+                  <td data-label="Lead"><a [routerLink]="['/crm/leads', r.leadId]">{{ r.leadNo }}</a></td>
+                  <td data-label="Contact">{{ r.contactName }}</td>
+                  <td data-label="Owner">{{ r.ownerName }}</td>
+                  <td data-label="Total">{{ rupees(r.grandTotal) }}</td>
+                  <td data-label="Status"><span [class]="pill(r.status)">{{ r.status }}</span></td>
+                  <td data-label="Age">{{ r.ageDays }} d</td>
+                </tr>
+              } @empty {
+                <tr><td colspan="8" class="crm-empty">No quotation matches.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (pages() > 1) {
+          <div class="crm-pager">
+            <span>Page {{ page() }} of {{ pages() }}</span>
+            <span>
+              <button type="button" class="crm-btn small" [disabled]="page() <= 1" (click)="goTo(page() - 1)">Previous</button>
+              <button type="button" class="crm-btn small" [disabled]="page() >= pages()" (click)="goTo(page() + 1)">Next</button>
+            </span>
+          </div>
+        }
+      }
+    </section>
+    @if (newOpen()) {
+      <div class="crm-overlay" (click)="closeNew()">
+        <div class="crm-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+          <h2>New quotation</h2>
+          <label class="crm-field"><span>Contact name *</span>
+            <input name="nqName" maxlength="150" [ngModel]="nq().contactName" (ngModelChange)="setNq('contactName', $event)" /></label>
+          <label class="crm-field"><span>Mobile *</span>
+            <input name="nqMobile" type="tel" maxlength="20" [ngModel]="nq().mobile" (ngModelChange)="setNq('mobile', $event)" /></label>
+          <label class="crm-field"><span>City</span>
+            <input name="nqCity" maxlength="100" [ngModel]="nq().city" (ngModelChange)="setNq('city', $event)" /></label>
+          <app-crm-product-picker [category]="nq().productCategory" [productMasterId]="nq().productMasterId"
+            (categoryChange)="setNq('productCategory', $event)" (productMasterIdChange)="setNq('productMasterId', $event)" />
+          @if (nqError()) { <p class="crm-error">{{ nqError() }}</p> }
+          <div class="crm-actions">
+            <button type="button" class="crm-btn" [disabled]="nqSaving()" (click)="closeNew()">Cancel</button>
+            <button type="button" class="crm-btn primary" [disabled]="nqSaving()" (click)="saveNew()">Create and quote</button>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}

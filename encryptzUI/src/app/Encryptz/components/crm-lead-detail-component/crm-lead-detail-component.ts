@@ -2,11 +2,12 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
-  ConvertPreviewDto, CrmMasterDto, CrmMemberDto, FollowUpSaveDto, LEAD_STATUSES, LeadDetailDto, QuotationSummaryDto,
+  ConvertResultDto, CrmMasterDto, CrmMemberDto, FollowUpSaveDto, LEAD_STATUSES, LeadDetailDto, QuotationSummaryDto,
 } from '../../Models/CrmModels';
 import { CrmService } from '../../Services/crm-service';
+import { CrmConvertDialogComponent } from '../crm-shell-component/crm-convert-dialog-component';
 import { CrmRefusedComponent } from '../crm-shell-component/crm-refused';
-import { FORBIDDEN, amount, isoDate, isoDateTime, pill, refusalOf, showDate, showDateTime } from '../crm-shell-component/crm-ui';
+import { FORBIDDEN, amount, isoDateTime, pill, refusalOf, showDate, showDateTime } from '../crm-shell-component/crm-ui';
 
 type Dialog = 'followup' | 'status' | 'lost' | 'reassign' | 'convert' | 'link' | 'cancel-convert' | null;
 type Tab = 'details' | 'timeline' | 'quotations';
@@ -14,7 +15,7 @@ type Tab = 'details' | 'timeline' | 'quotations';
 interface TimelineEntry { key: string; at: string; kind: 'followup' | 'status'; title: string; text: string; by: string; next?: string; }
 
 export const FOLLOW_UP_TYPES = ['Phone Call', 'Meeting', 'Site Visit', 'WhatsApp', 'Email', 'Other'];
-export const PAYMENT_MODES = ['Cash', 'UPI', 'Card', 'Bank Transfer', 'Cheque', 'Credit'];
+export { PAYMENT_MODES } from '../crm-shell-component/crm-convert-dialog-component';
 const OPEN_FOR_CONVERT = ['Quotation', 'Negotiation'];
 
 /**
@@ -25,7 +26,7 @@ const OPEN_FOR_CONVERT = ['Quotation', 'Negotiation'];
 @Component({
   selector: 'app-crm-lead-detail',
   standalone: true,
-  imports: [FormsModule, RouterLink, CrmRefusedComponent],
+  imports: [FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent],
   templateUrl: './crm-lead-detail-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-lead-detail-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,7 +38,6 @@ export class CrmLeadDetailComponent {
 
   readonly forbidden = FORBIDDEN;
   readonly followUpTypes = FOLLOW_UP_TYPES;
-  readonly paymentModes = PAYMENT_MODES;
   readonly pill = pill;
   readonly amount = amount;
   readonly showDate = showDate;
@@ -66,13 +66,23 @@ export class CrmLeadDetailComponent {
   newOwner = signal<number | null>(null);
   orderNo = signal('');
 
+  /** The quotation the convert dialog opens with; null is the most recently changed of `convertible`. */
   convertQuotationId = signal<number | null>(null);
-  preview = signal<ConvertPreviewDto | null>(null);
-  chosenCustomerId = signal<number | null>(null);
-  orderDate = signal(isoDate(new Date()));
-  paymentMode = signal('Cash');
 
   readonly isClosed = computed(() => ['Converted', 'Lost'].includes(this.lead()?.status ?? ''));
+
+  /** What needs the owner's eye on an open lead: an overdue or due-today follow-up, or none planned. */
+  readonly attention = computed<{ label: string; tone: 'red' | 'amber' }[]>(() => {
+    const l = this.lead();
+    if (!l || this.isClosed()) return [];
+    if (!l.nextFollowUpAt) return [{ label: 'No next follow-up', tone: 'amber' }];
+    const at = new Date(l.nextFollowUpAt);
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    const end = new Date(start); end.setDate(end.getDate() + 1);
+    if (at < start) return [{ label: 'Overdue follow-up', tone: 'red' }];
+    if (at < end) return [{ label: 'Follow-up today', tone: 'amber' }];
+    return [];
+  });
 
   /** The latest revisions that may still become an order (a superseded one never). */
   readonly convertible = computed<QuotationSummaryDto[]>(() =>
@@ -105,11 +115,6 @@ export class CrmLeadDetailComponent {
   /** The statuses a person may move an open lead to by hand. */
   readonly statusChoices = computed(() =>
     LEAD_STATUSES.filter(s => s !== 'Converted' && s !== 'Lost' && s !== this.lead()?.status));
-
-  readonly confirmDisabled = computed(() => {
-    const p = this.preview();
-    return this.busy() || !p || (p.matches.length > 1 && !this.chosenCustomerId());
-  });
 
   readonly timeline = computed<TimelineEntry[]>(() => {
     const l = this.lead();
@@ -254,60 +259,22 @@ export class CrmLeadDetailComponent {
     this.router.navigate(['/crm/quotations', 'new'], { queryParams: { leadId: this.leadId } });
   }
 
-  // ── convert to sale ──
+  // ── convert to sale: app-crm-convert-dialog reads the preview and asks the server; the page hears the outcome ──
 
   openConvert(quotationId?: number): void {
-    const list = this.convertible();
-    const chosen = quotationId ?? [...list].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))[0]?.quotationId ?? list[0]?.quotationId;
-    this.dialogError.set('');
-    this.preview.set(null);
-    this.chosenCustomerId.set(null);
-    this.orderDate.set(isoDate(new Date()));
+    this.convertQuotationId.set(quotationId ?? null);
     this.dialog.set('convert');
-    if (!chosen) { this.dialogError.set('There is no quotation to convert'); return; }
-    this.convertQuotationId.set(chosen);
-    this.busy.set(true);
-    this.crm.previewConvert(this.leadId, chosen).subscribe({
-      next: res => {
-        this.busy.set(false);
-        if (!res.success || !res.data) { this.dialogError.set(res.message || 'The quotation could not be read'); return; }
-        this.preview.set(res.data);
-        if (res.data.matches.length === 1) this.chosenCustomerId.set(res.data.matches[0].customerId);
-      },
-      error: err => { this.busy.set(false); this.refuse(err); },
-    });
   }
 
-  /** A 403 means the session is not for CRM: the page says so, as every page does; anything else stays in the dialog. */
-  private refuse(err: unknown): void {
-    const said = refusalOf(err);
-    if (said === FORBIDDEN) { this.dialog.set(null); this.error.set(said); } else this.dialogError.set(said);
+  converted(res: ConvertResultDto): void {
+    this.dialog.set(null);
+    this.notice.set(`Sales order ${res.orderNo} made. Despatch it from the Sales screens.`);
+    this.load();
   }
 
-  chooseCustomer(id: number): void {
-    this.chosenCustomerId.set(id);
-  }
-
-  confirmConvert(): void {
-    const p = this.preview();
-    const quotationId = this.convertQuotationId();
-    if (!p || !quotationId || this.confirmDisabled()) return;
-    this.busy.set(true);
-    this.dialogError.set('');
-    this.crm.convert(this.leadId, {
-      quotationId, customerId: p.matches.length ? this.chosenCustomerId() : null, orderDate: this.orderDate(), paymentMode: this.paymentMode() || null,
-    }).subscribe({
-      next: res => {
-        this.busy.set(false);
-        if (!res.success || !res.data) { this.dialogError.set(res.message || 'The lead could not be converted'); return; }
-        this.dialog.set(null);
-        this.notice.set(`Sales order ${res.data.orderNo} made. Despatch it from the Sales screens.`);
-        this.load();
-      },
-      error: err => {
-        this.busy.set(false);
-        this.refuse(err);
-      },
-    });
+  /** A 403 means the session is not for CRM: the page says so, as every page does. */
+  convertForbidden(): void {
+    this.dialog.set(null);
+    this.error.set(FORBIDDEN);
   }
 }

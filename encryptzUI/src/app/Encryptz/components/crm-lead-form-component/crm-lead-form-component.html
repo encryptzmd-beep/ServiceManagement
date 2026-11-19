@@ -2,14 +2,14 @@
   <app-crm-refused />
 } @else {
   <div class="crm-page">
-    <header class="crm-head">
+    <header class="crm-page-head">
       <div>
         <h1>{{ form().leadId ? 'Change lead' : 'New lead' }}</h1>
         <p><a class="crm-link" routerLink="/crm/leads">Leads</a></p>
       </div>
     </header>
 
-    <form class="crm-card" (ngSubmit)="save()">
+    <form class="crm-table-card crm-form-card" (ngSubmit)="save()">
       <h2>Contact</h2>
       <div class="crm-grid">
         <label class="crm-field"><span>Contact name *</span>
@@ -30,7 +30,7 @@
           <input name="landmark" maxlength="200" [ngModel]="form().landmark" (ngModelChange)="set('landmark', $event)" /></label>
       </div>
 
-      <h2 style="margin-top: 20px">Requirement</h2>
+      <h2>Requirement</h2>
       <div class="crm-grid">
         <label class="crm-field"><span>Lead date</span>
           <input name="leadDate" type="date" [ngModel]="form().leadDate" (ngModelChange)="set('leadDate', $event)" /></label>
@@ -43,8 +43,8 @@
           <select name="priority" [ngModel]="form().priority" (ngModelChange)="set('priority', $event)">
             @for (p of priorities; track p) { <option [value]="p">{{ p }}</option> }
           </select></label>
-        <label class="crm-field"><span>Product category</span>
-          <input name="productCategory" maxlength="100" [ngModel]="form().productCategory" (ngModelChange)="set('productCategory', $event)" /></label>
+        <app-crm-product-picker [category]="form().productCategory" [productMasterId]="form().productMasterId" [productName]="productName()"
+          (categoryChange)="set('productCategory', $event)" (productMasterIdChange)="set('productMasterId', $event); productName.set('')" />
         <label class="crm-field"><span>Estimated quantity</span>
           <input name="estimatedQty" type="number" min="1" [ngModel]="form().estimatedQty" (ngModelChange)="set('estimatedQty', $event)" /></label>
         <label class="crm-field"><span>Expected purchase</span>
@@ -62,10 +62,10 @@
           <textarea name="remarks" maxlength="2000" rows="2" [ngModel]="form().remarks" (ngModelChange)="set('remarks', $event)"></textarea></label>
       </div>
 
-      @if (error()) { <p class="crm-error" style="margin-top: 12px">{{ error() }}</p> }
+      @if (error()) { <p class="crm-error crm-form-error">{{ error() }}</p> }
       <div class="crm-actions">
         <button type="button" class="crm-btn" (click)="cancel()">Cancel</button>
-        <button type="submit" class="crm-btn primary" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save lead' }}</button>
+        <button type="submit" class="crm-btn navy" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save lead' }}</button>
       </div>
     </form>
   </div>

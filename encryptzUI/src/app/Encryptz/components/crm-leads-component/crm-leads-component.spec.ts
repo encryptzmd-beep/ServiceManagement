@@ -9,6 +9,8 @@ describe('CrmLeadsComponent', () => {
   let crm: any;
   let asked: any[];
   let isManager: boolean;
+  let rowStatus: string;
+  let rowNext: string | null;
 
   const create = (query: Record<string, string>) => {
     TestBed.resetTestingModule();
@@ -28,6 +30,8 @@ describe('CrmLeadsComponent', () => {
   beforeEach(() => {
     asked = [];
     isManager = false;
+    rowStatus = 'New';
+    rowNext = null;
     crm = {
       me: () => ok({ userId: 1, fullName: 'A', isManager }),
       getMasters: () => ok([{ id: 2, name: 'Walk-in', sortOrder: 1, isActive: true }]),
@@ -36,7 +40,7 @@ describe('CrmLeadsComponent', () => {
         asked.push(f);
         return ok({ items: [{ leadId: 12, leadNo: 'LD-0012', leadDate: '2026-11-01', contactName: 'Ravi', mobile: '9876543210', email: '',
           city: 'Kochi', sourceName: 'Walk-in', productCategory: 'Inverter', ownerUserId: 1, ownerName: 'Anu', priority: 'High',
-          status: 'New', nextFollowUpAt: null, orderNo: null, totalCount: 1 }], totalCount: 1, pageNumber: 1, pageSize: 20, totalPages: 1 });
+          status: rowStatus, nextFollowUpAt: rowNext, orderNo: null, totalCount: 1 }], totalCount: 1, pageNumber: 1, pageSize: 20, totalPages: 1 });
       },
     };
   });
@@ -53,5 +57,15 @@ describe('CrmLeadsComponent', () => {
     expect(create({}).querySelector('.crm-owner-filter')).toBeNull();
     isManager = true;
     expect(create({}).querySelector('.crm-owner-filter')).not.toBeNull();
+  });
+
+  it('hides next follow-up of closed leads', () => {
+    rowStatus = 'Lost';
+    rowNext = '2026-12-05T10:00:00';
+    const lost = create({}).querySelector('td[data-label="Next follow-up"]') as HTMLElement;
+    expect(lost.textContent!.trim()).toBe('');
+    rowStatus = 'New';
+    const open = create({}).querySelector('td[data-label="Next follow-up"]') as HTMLElement;
+    expect(open.textContent!.trim()).not.toBe('');
   });
 });

@@ -8,14 +8,14 @@
 } @else {
   @let l = lead()!;
   <div class="crm-page">
-    <header class="crm-head">
+    <header class="crm-page-head">
       <div>
         <p><a class="crm-link" routerLink="/crm/leads">Leads</a> / {{ l.leadNo }}</p>
-        <h1>{{ l.contactName }} <span [class]="pill(l.status)">{{ l.status }}</span></h1>
+        <h1>{{ l.contactName }} <span [class]="pill(l.status)">{{ l.status }}</span>@for (a of attention(); track a.label) { <span class="crm-badge ld-attention" [class.red]="a.tone === 'red'" [class.amber]="a.tone === 'amber'">{{ a.label }}</span> }</h1>
         <p>{{ l.mobile }}@if (l.city) { · {{ l.city }} } · owner {{ l.ownerName }}
           @if (l.nextFollowUpAt && !isClosed()) { · next follow-up {{ showDateTime(l.nextFollowUpAt) }} }</p>
       </div>
-      <div class="crm-head-actions">
+      <div class="crm-page-actions ld-actions">
         @if (!isClosed()) {
           <button type="button" class="crm-btn crm-add-follow-up" (click)="open('followup')"><span class="material-icons" aria-hidden="true">add_call</span>Add follow-up</button>
           <button type="button" class="crm-btn" (click)="open('status')">Change status</button>
@@ -23,7 +23,7 @@
           @if (isManager()) { <button type="button" class="crm-btn crm-reassign" (click)="open('reassign')">Reassign</button> }
           <button type="button" class="crm-btn" (click)="newQuotation()">New quotation</button>
           @if (canConvert()) {
-            <button type="button" class="crm-btn primary crm-convert" (click)="openConvert()"><span class="material-icons" aria-hidden="true">shopping_cart_checkout</span>Convert to Sale</button>
+            <button type="button" class="crm-btn navy crm-convert" (click)="openConvert()"><span class="material-icons" aria-hidden="true">shopping_cart_checkout</span>Convert to Sale</button>
           }
         }
         @if (l.status === 'Lost' && isManager()) { <button type="button" class="crm-btn" (click)="reopen()">Reopen</button> }
@@ -46,7 +46,7 @@
       <p class="crm-error">Lost{{ l.lostAt ? ' on ' + showDate(l.lostAt) : '' }}: {{ l.lostReasonName }}@if (l.lostNote) { · {{ l.lostNote }} }</p>
     }
 
-    <section class="crm-card">
+    <section class="crm-table-card ld-card">
       <nav class="crm-tabs" role="tablist">
         <button type="button" role="tab" [class.active]="tab() === 'details'" (click)="tab.set('details')">Details</button>
         <button type="button" role="tab" [class.active]="tab() === 'timeline'" (click)="tab.set('timeline')">Timeline ({{ timeline().length }})</button>
@@ -64,6 +64,7 @@
             <div><dt>E-mail</dt><dd>{{ l.email || '–' }}</dd></div>
             <div class="wide"><dt>Address</dt><dd>{{ join(l.address, l.landmark, l.city, l.state, l.pinCode) || '–' }}</dd></div>
             <div><dt>Product category</dt><dd>{{ l.productCategory || '–' }}</dd></div>
+            <div><dt>Product</dt><dd>{{ l.productName || '–' }}</dd></div>
             <div><dt>Estimated quantity</dt><dd>{{ l.estimatedQty ?? '–' }}</dd></div>
             <div><dt>Expected purchase</dt><dd>{{ showDate(l.expectedPurchaseDate) || '–' }}</dd></div>
             <div class="wide"><dt>Model / requirement</dt><dd>{{ l.modelRequirement || '–' }}</dd></div>
@@ -91,19 +92,19 @@
           </ol>
         }
         @case ('quotations') {
-          <div class="crm-table-wrap">
+          <div class="crm-table-wrap crm-cards-sm">
             <table class="crm-table">
               <thead><tr><th>Quotation</th><th>Date</th><th>Valid until</th><th class="num">Taxable</th><th class="num">Total</th><th>Status</th><th></th></tr></thead>
               <tbody>
                 @for (q of l.quotations; track q.quotationId) {
                   <tr>
-                    <td><a [routerLink]="['/crm/quotations', q.quotationId]">{{ q.quotationNo }} / R{{ q.revisionNo }}</a></td>
-                    <td>{{ showDate(q.quoteDate) }}</td>
-                    <td>{{ showDate(q.validUntil) || '–' }}</td>
-                    <td class="num">{{ amount(q.taxableTotal) }}</td>
-                    <td class="num">{{ amount(q.grandTotal) }}</td>
-                    <td><span [class]="pill(q.status)">{{ q.status }}</span>@if (q.isInterState) { <span class="crm-muted"> IGST</span> }</td>
-                    <td class="num"><a [routerLink]="['/crm/quotations', q.quotationId, 'print']" target="_blank">Print</a></td>
+                    <td data-label="Quotation"><a [routerLink]="['/crm/quotations', q.quotationId]">{{ q.quotationNo }} / R{{ q.revisionNo }}</a></td>
+                    <td data-label="Date">{{ showDate(q.quoteDate) }}</td>
+                    <td data-label="Valid until">{{ showDate(q.validUntil) || '–' }}</td>
+                    <td class="num" data-label="Taxable">{{ amount(q.taxableTotal) }}</td>
+                    <td class="num" data-label="Total">{{ amount(q.grandTotal) }}</td>
+                    <td data-label="Status"><span [class]="pill(q.status)">{{ q.status }}</span>@if (q.isInterState) { <span class="crm-muted"> IGST</span> }</td>
+                    <td class="num" data-label="Print"><a [routerLink]="['/crm/quotations', q.quotationId, 'print']" target="_blank">Print</a></td>
                   </tr>
                 } @empty {
                   <tr><td colspan="7" class="crm-empty">No quotation yet.</td></tr>
@@ -117,9 +118,12 @@
     </section>
   </div>
 
-  @if (dialog()) {
+  @if (dialog() === 'convert') {
+    <app-crm-convert-dialog [leadId]="leadId" [quotationId]="convertQuotationId()" [quotations]="convertible()" [mobile]="l.mobile"
+      (converted)="converted($event)" (cancelled)="close()" (forbidden)="convertForbidden()" />
+  } @else if (dialog()) {
     <div class="crm-overlay" (click)="close()">
-      <div class="crm-dialog" [class.wide]="dialog() === 'convert'" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <div class="crm-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
         @switch (dialog()) {
           @case ('followup') {
             <h2>Add follow-up</h2>
@@ -175,59 +179,6 @@
             <h2>Cancel convert</h2>
             <p class="crm-muted">Do this only when the sales orders show no order for this lead. The lead can then be converted again.</p>
           }
-          @case ('convert') {
-            <h2>Convert to Sale</h2>
-            @if (convertible().length > 1) {
-              <label class="crm-field"><span>Quotation</span>
-                <select [ngModel]="convertQuotationId()" (ngModelChange)="openConvert(+$event)">
-                  @for (q of convertible(); track q.quotationId) { <option [value]="q.quotationId">{{ q.quotationNo }} / R{{ q.revisionNo }} · {{ amount(q.grandTotal) }}</option> }
-                </select></label>
-            }
-            @if (busy() && !preview()) { <p class="crm-muted">Reading the quotation…</p> }
-            @if (preview(); as p) {
-              <div>
-                <div class="crm-field"><span>Customer</span></div>
-                @if (p.matches.length === 0) {
-                  <p class="crm-muted">No customer has the mobile {{ l.mobile }}. A new customer is made from the lead.</p>
-                } @else if (p.matches.length === 1) {
-                  <p>The customer <strong>{{ p.matches[0].customerName }}</strong> ({{ p.matches[0].mobileNumber }}) has this mobile; the order is made for them.</p>
-                } @else {
-                  <p class="crm-muted">More than one customer has this mobile. Choose one.</p>
-                  <div class="ld-choices">
-                    @for (c of p.matches; track c.customerId) {
-                      <label class="crm-choice" [class.chosen]="chosenCustomerId() === c.customerId">
-                        <input type="radio" name="convert-customer" [checked]="chosenCustomerId() === c.customerId" (change)="chooseCustomer(c.customerId)" />
-                        <span><strong>{{ c.customerName }}</strong> · {{ c.mobileNumber }}
-                          <span class="crm-item-meta"><br />{{ join(c.address, c.city) }}@if (c.totalProducts) { · {{ c.totalProducts }} products }</span></span>
-                      </label>
-                    }
-                  </div>
-                }
-              </div>
-              <div class="crm-grid ld-two">
-                <label class="crm-field"><span>Order date</span>
-                  <input type="date" [ngModel]="orderDate()" (ngModelChange)="orderDate.set($event)" /></label>
-                <label class="crm-field"><span>Payment mode</span>
-                  <select [ngModel]="paymentMode()" (ngModelChange)="paymentMode.set($event)">
-                    @for (m of paymentModes; track m) { <option [value]="m">{{ m }}</option> }
-                  </select></label>
-              </div>
-              <div class="crm-table-wrap">
-                <table class="crm-table">
-                  <thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">GST %</th><th class="num">Total</th></tr></thead>
-                  <tbody>
-                    @for (i of p.quotation.items; track $index) {
-                      <tr><td>{{ i.productName }}</td><td class="num">{{ i.qty }}</td><td class="num">{{ amount(i.rate) }}</td>
-                        <td class="num">{{ i.gstPercent }}</td><td class="num">{{ amount(i.lineTotal) }}</td></tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-              <p class="ld-totals">Taxable {{ amount(p.quotation.taxableTotal) }}
-                @if (p.quotation.isInterState) { · IGST {{ amount(p.quotation.igst) }} } @else { · CGST {{ amount(p.quotation.cgst) }} · SGST {{ amount(p.quotation.sgst) }} }
-                · <strong>Total {{ amount(p.quotation.grandTotal) }}</strong></p>
-            }
-          }
         }
         @if (dialogError()) { <p class="crm-error">{{ dialogError() }}</p> }
         <div class="crm-actions">
@@ -239,7 +190,6 @@
             @case ('reassign') { <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="saveReassign()">Reassign</button> }
             @case ('link') { <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="saveLink()">Link order</button> }
             @case ('cancel-convert') { <button type="button" class="crm-btn primary crm-confirm-cancel-convert" [disabled]="busy()" (click)="saveCancelConvert()">Cancel convert</button> }
-            @case ('convert') { <button type="button" class="crm-btn primary crm-confirm-convert" [disabled]="confirmDisabled()" (click)="confirmConvert()">Confirm</button> }
           }
         </div>
       </div>

@@ -89,14 +89,46 @@ namespace EncryptzBL.Infrastructure.Crm
                 return ToResponse(Answer(dt));
             });
 
-        public Task<ApiResponse<List<CrmProductDto>>> SearchProducts(int userId, bool isManager, int companyId, string? term)
+        public Task<ApiResponse<List<CrmProductDto>>> SearchProducts(int userId, bool isManager, int companyId, string? term, string? category = null, int? top = null)
             => Guard(async () =>
             {
                 var dt = await GetDataTableAsync("crm.sp_Product_Search", new[]
                 {
-                    In("@CompanyId", companyId), In("@Search", string.IsNullOrWhiteSpace(term) ? null : term.Trim()), In("@Top", 20)
+                    In("@CompanyId", companyId), In("@Search", string.IsNullOrWhiteSpace(term) ? null : term.Trim()), In("@Top", Math.Clamp(top ?? 20, 1, 100)),
+                    In("@Category", string.IsNullOrWhiteSpace(category) ? null : category.Trim())
                 });
                 return ApiResponse<List<CrmProductDto>>.Ok(dt.ToList<CrmProductDto>());
+            });
+
+        public Task<ApiResponse<List<string>>> GetProductCategories(int userId, bool isManager, int companyId)
+            => Guard(async () =>
+            {
+                var dt = await GetDataTableAsync("crm.sp_Product_Categories", new[] { In("@CompanyId", companyId) });
+                var list = dt.Rows.Cast<System.Data.DataRow>().Select(r => Convert.ToString(r["Category"]) ?? "")
+                    .Where(s => s.Length > 0).ToList();
+                return ApiResponse<List<string>>.Ok(list);
+            });
+
+        public Task<ApiResponse<PagedResult<QuotationListRowDto>>> GetQuotations(int userId, bool isManager, int companyId, QuotationFilterDto f)
+            => Guard(async () =>
+            {
+                f ??= new QuotationFilterDto();
+                if (f.From.HasValue && f.To.HasValue && f.From.Value.Date > f.To.Value.Date)
+                    return ApiResponse<PagedResult<QuotationListRowDto>>.Fail("The From date is after the To date");
+                var page = f.Page < 1 ? 1 : f.Page;
+                var size = f.PageSize < 1 ? 25 : Math.Min(f.PageSize, 200);
+
+                var dt = await GetDataTableAsync("crm.sp_Quotation_List", new[]
+                {
+                    In("@CompanyId", companyId), In("@UserId", userId), In("@IsManager", isManager), In("@LocationId", LocationId),
+                    In("@Search", f.Search), In("@Status", f.Status), In("@From", f.From?.Date), In("@To", f.To?.Date),
+                    In("@Page", page), In("@PageSize", size)
+                });
+
+                var items = dt.ToList<QuotationListRowDto>();
+                var total = items.Count > 0 ? items[0].TotalCount : 0;
+                var pages = total == 0 ? 0 : (int)Math.Ceiling(total / (double)size);
+                return ApiResponse<PagedResult<QuotationListRowDto>>.Ok(new PagedResult<QuotationListRowDto>(items, total, page, size, pages), "Success", total);
             });
     }
 }
