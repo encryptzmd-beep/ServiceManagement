@@ -8,6 +8,24 @@ namespace EncryptzBL.DTO_s
         public int PhotosUploaded { get; set; }
     }
 
+    /// <summary>A product category (ParentId null) or sub category of the master (dbo.ProductCategories).</summary>
+    public class ProductCategoryDto
+    {
+        public int CategoryId { get; set; }
+        public int? ParentId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public int ProductCount { get; set; }
+    }
+
+    public class ProductCategorySaveDto
+    {
+        public int CategoryId { get; set; }
+        public int? ParentId { get; set; }
+        public string? Name { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+
     /// <summary>Previous / next document of the transaction toolbar (null at either end).</summary>
     public class NeighboursDto
     {

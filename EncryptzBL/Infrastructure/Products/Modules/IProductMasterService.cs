@@ -9,6 +9,9 @@ namespace EncryptzBL.Infrastructure.Products.Modules
     public interface IProductMasterService
     {
         Task<ApiResponse<ProductMaster>> CreateProduct(ProductMasterRequestDto dto);
+        /// <summary>The category / sub category master, as a flat list (ParentId gives the tree).</summary>
+        Task<ApiResponse<List<ProductCategoryDto>>> GetCategories();
+        Task<ApiResponse<int>> SaveCategory(ProductCategorySaveDto dto);
         Task<ApiResponse<ProductMaster>> UpdateProduct(ProductMasterRequestDto dto);
         Task<ApiResponse<bool>> DeleteProduct(int id, int userId);
         Task<ApiResponse<ProductMaster>> GetProductById(int id);

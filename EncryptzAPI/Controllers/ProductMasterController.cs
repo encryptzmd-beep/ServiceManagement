@@ -58,6 +58,23 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        // GET api/ProductMaster/categories  (category / sub category master)
+        [HttpGet("categories")]
+        public async Task<IActionResult> GetCategories()
+        {
+            var result = await _productMasterService.GetCategories();
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        // POST api/ProductMaster/categories  { categoryId (0 = new), parentId, name, isActive }
+        [HttpPost("categories")]
+        [Authorize(Roles = "Admin,CompanyAdmin,ServiceManager,Manager")]
+        public async Task<IActionResult> SaveCategory([FromBody] ProductCategorySaveDto dto)
+        {
+            var result = await _productMasterService.SaveCategory(dto);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
         [HttpGet("dropdowns")]
         public async Task<IActionResult> GetDropdowns()
         {

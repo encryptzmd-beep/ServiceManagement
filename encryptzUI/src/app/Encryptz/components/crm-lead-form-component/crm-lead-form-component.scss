@@ -12,3 +12,6 @@
   .crm-form-card { padding: 16px 14px; }
   .crm-form-card .crm-actions { .crm-btn { flex: 1 1 auto; } }
 }
+
+/* the product picker's labels look like the other labels of this form */
+:host ::ng-deep app-crm-product-picker .crm-field > span { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8a9ab0; }

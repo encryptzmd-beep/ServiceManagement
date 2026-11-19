@@ -1,0 +1,92 @@
+<div class="fx-page pc-page">
+  <div class="fx-page-header">
+    <div>
+      <div class="fx-page-title">Product Categories</div>
+      <div class="fx-page-sub">The categories and sub categories offered in the product form and the CRM</div>
+    </div>
+    <a class="pc-back" routerLink="/products"><span class="material-icons" aria-hidden="true">arrow_back</span> Products</a>
+  </div>
+
+  @if (error()) { <p class="pc-error" role="alert">{{ error() }}</p> }
+
+  @if (loading() && !list().length) {
+    <p class="pc-muted">Loading…</p>
+  } @else {
+    <div class="pc-grid">
+      <!-- categories -->
+      <section class="pc-card pc-cats" aria-label="Categories">
+        <h2>Categories</h2>
+        <form class="pc-add pc-add-cat" (submit)="addCategory($event)">
+          <input name="newCategory" maxlength="100" placeholder="New category" [value]="newCategory()" (input)="newCategory.set($any($event.target).value)" />
+          <button type="submit" class="fx-btn-new" [disabled]="saving()"><span class="material-icons" aria-hidden="true">add</span>Add</button>
+        </form>
+        <ul class="pc-list">
+          @for (c of categories(); track c.categoryId) {
+            <li class="pc-row" [class.chosen]="selected()?.categoryId === c.categoryId" [class.off]="!c.isActive">
+              @if (renamingId() === c.categoryId) {
+                <form class="pc-rename" (submit)="rename($event, c)">
+                  <input name="rename" maxlength="100" [value]="renameText()" (input)="renameText.set($any($event.target).value)" />
+                  <button type="submit" class="pc-icon" [disabled]="saving()" aria-label="Save the name"><span class="material-icons">check</span></button>
+                  <button type="button" class="pc-icon" (click)="renamingId.set(null)" aria-label="Cancel"><span class="material-icons">close</span></button>
+                </form>
+              } @else {
+                <button type="button" class="pc-pick" (click)="select(c)">
+                  <span class="pc-name">{{ c.name }}</span>
+                  @if (!c.isActive) { <span class="pc-tag">Inactive</span> }
+                  <span class="pc-count" title="Products">{{ c.productCount }}</span>
+                </button>
+                <button type="button" class="pc-icon" data-act="rename" (click)="startRename(c)" [attr.aria-label]="'Rename ' + c.name"><span class="material-icons">edit</span></button>
+                <button type="button" class="pc-icon" data-act="toggle" [disabled]="saving()" (click)="toggle(c)"
+                  [attr.aria-label]="(c.isActive ? 'Deactivate ' : 'Activate ') + c.name" [title]="c.isActive ? 'Deactivate' : 'Activate'">
+                  <span class="material-icons">{{ c.isActive ? 'toggle_on' : 'toggle_off' }}</span>
+                </button>
+              }
+            </li>
+          } @empty {
+            <li class="pc-muted">No category yet. Add the first one above.</li>
+          }
+        </ul>
+      </section>
+
+      <!-- sub categories of the chosen category -->
+      <section class="pc-card pc-subs" aria-label="Sub categories">
+        <h2>Sub categories @if (selected(); as s) { <span class="pc-of">of {{ s.name }}</span> }</h2>
+        @if (selected()) {
+          <form class="pc-add pc-add-sub" (submit)="addSub($event)">
+            <input name="newSub" maxlength="100" placeholder="New sub category" [value]="newSub()" (input)="newSub.set($any($event.target).value)" />
+            <button type="submit" class="fx-btn-new" [disabled]="saving()"><span class="material-icons" aria-hidden="true">add</span>Add</button>
+          </form>
+          <ul class="pc-list">
+            @for (c of subs(); track c.categoryId) {
+              <li class="pc-row" [class.off]="!c.isActive">
+                @if (renamingId() === c.categoryId) {
+                  <form class="pc-rename" (submit)="rename($event, c)">
+                    <input name="rename" maxlength="100" [value]="renameText()" (input)="renameText.set($any($event.target).value)" />
+                    <button type="submit" class="pc-icon" [disabled]="saving()" aria-label="Save the name"><span class="material-icons">check</span></button>
+                    <button type="button" class="pc-icon" (click)="renamingId.set(null)" aria-label="Cancel"><span class="material-icons">close</span></button>
+                  </form>
+                } @else {
+                  <span class="pc-pick static">
+                    <span class="pc-name">{{ c.name }}</span>
+                    @if (!c.isActive) { <span class="pc-tag">Inactive</span> }
+                    <span class="pc-count" title="Products">{{ c.productCount }}</span>
+                  </span>
+                  <button type="button" class="pc-icon" data-act="rename" (click)="startRename(c)" [attr.aria-label]="'Rename ' + c.name"><span class="material-icons">edit</span></button>
+                  <button type="button" class="pc-icon" data-act="toggle" [disabled]="saving()" (click)="toggle(c)"
+                    [attr.aria-label]="(c.isActive ? 'Deactivate ' : 'Activate ') + c.name" [title]="c.isActive ? 'Deactivate' : 'Activate'">
+                    <span class="material-icons">{{ c.isActive ? 'toggle_on' : 'toggle_off' }}</span>
+                  </button>
+                }
+              </li>
+            } @empty {
+              <li class="pc-muted">No sub category yet.</li>
+            }
+          </ul>
+        } @else {
+          <p class="pc-muted">Add a category first.</p>
+        }
+      </section>
+    </div>
+    <p class="pc-muted pc-note">Renaming also renames the products that use the name. An inactive name is no longer offered for new choices; products keep it.</p>
+  }
+</div>

@@ -54,3 +54,11 @@
   .qp-sheet { border: none; border-radius: 0; box-shadow: none; padding: 0; max-width: none; }
   @page { size: A4; margin: 12mm; }
 }
+
+/* on screen the A4 sheet never runs wider than the window; a tablet scrolls the lines inside it */
+@media screen {
+  .qp-sheet, .qp-bar { max-width: min(210mm, 100%); }
+}
+@media screen and (max-width: 860px) {
+  .qp-sheet { overflow-x: auto; }
+}

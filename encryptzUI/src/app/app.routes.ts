@@ -475,6 +475,14 @@ export const routes: Routes = [
   loadComponent: () => import('./Encryptz/components/product-list-component/product-list-component')
     .then(m => m.ProductListComponent)
 },
+  {
+  // the category / sub category master (Products › Manage categories)
+  path: 'products/categories',
+  loadComponent: () => import('./Encryptz/components/product-categories-component/product-categories-component')
+    .then(m => m.ProductCategoriesComponent),
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
+  data: { title: 'Product Categories' }
+},
 
  {
   path: 'spare-parts',

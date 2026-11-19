@@ -1,14 +1,16 @@
 // components/product-form/product-form.component.ts
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { ProductCategory, categoryOptions, subCategoryOptions } from '../product-categories-component/product-category-options';
 import { ProductMasterDTO, ProductMasterRequest } from '../../Models/ApiModels';
 import { ProductService } from '../../Services/product-service';
 
 @Component({
   selector: 'app-product-form',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="modal-overlay" (click)="close.emit(false)">
       <div class="modal" (click)="$event.stopPropagation()">
@@ -35,7 +37,7 @@ import { ProductService } from '../../Services/product-service';
                 class="tab"
                 [class.active]="activeTab === tab.id"
                 (click)="activeTab = tab.id">
-                <span class="tab-icon">{{ tab.icon }}</span>
+                <span class="material-icons tab-icon" aria-hidden="true">{{ tab.icon }}</span>
                 <span>{{ tab.name }}</span>
               </button>
             </div>
@@ -92,14 +94,24 @@ import { ProductService } from '../../Services/product-service';
               <div class="form-row">
                 <div class="form-group">
                   <label class="form-label">Category</label>
-                  <input type="text" class="form-control" [(ngModel)]="formData.category" name="category">
+                  <select class="form-control" [ngModel]="formData.category" (ngModelChange)="chooseCategory($event)" name="category">
+                    <option value="">Select category</option>
+                    <option *ngFor="let c of categoryChoices()" [value]="c">{{ c }}</option>
+                  </select>
                 </div>
 
                 <div class="form-group">
                   <label class="form-label">Sub Category</label>
-                  <input type="text" class="form-control" [(ngModel)]="formData.subCategory" name="subCategory">
+                  <select class="form-control" [(ngModel)]="formData.subCategory" name="subCategory" [disabled]="!formData.category">
+                    <option value="">{{ formData.category ? 'Select sub category' : 'Choose the category first' }}</option>
+                    <option *ngFor="let s of subCategoryChoices()" [value]="s">{{ s }}</option>
+                  </select>
                 </div>
               </div>
+              <p class="cat-hint">
+                The lists come from the category master.
+                <a routerLink="/products/categories" (click)="close.emit(false)">Manage categories</a>
+              </p>
             </div>
 
             <div class="tab-content" [class.active]="activeTab === 'pricing'">
@@ -296,8 +308,16 @@ import { ProductService } from '../../Services/product-service';
     }
 
     .tab-icon {
-      font-size: 14px;
+      font-size: 18px;
       line-height: 1;
+    }
+
+    .cat-hint {
+      margin: 10px 0 0;
+      font-size: 12.5px;
+      color: #5a6a7e;
+      a { color: #1B4A7A; font-weight: 600; text-decoration: none; margin-left: 4px; }
+      a:hover { text-decoration: underline; }
     }
 
     .tab-content {
@@ -513,14 +533,32 @@ export class ProductFormComponent implements OnInit {
   activeTab = 'basic';
   submitError = '';
   tabs = [
-    { id: 'basic', name: 'Basic Info', icon: '📝' },
-    { id: 'category', name: 'Category', icon: '📁' },
-    { id: 'pricing', name: 'Pricing', icon: '💰' },
-    { id: 'warranty', name: 'Warranty', icon: '✅' },
-    { id: 'description', name: 'Description', icon: '📄' }
+    { id: 'basic', name: 'Basic Info', icon: 'inventory_2' },
+    { id: 'category', name: 'Category', icon: 'category' },
+    { id: 'pricing', name: 'Pricing', icon: 'payments' },
+    { id: 'warranty', name: 'Warranty', icon: 'verified_user' },
+    { id: 'description', name: 'Description', icon: 'notes' }
   ];
 
-  constructor(private productService: ProductService) {}
+  constructor(private productService: ProductService) {
+    this.productService.getCategories().subscribe({
+      next: r => this.categoryMaster.set(r?.success ? r.data ?? [] : []),
+      error: () => this.categoryMaster.set([]),
+    });
+  }
+
+  // ── category master (Products › Manage categories) ──
+  categoryMaster = signal<ProductCategory[]>([]);
+  /** formData is a plain object: the selects ask for their options with its current values. */
+  categoryChoices(): string[] { return categoryOptions(this.categoryMaster(), this.formData.category ?? ''); }
+  subCategoryChoices(): string[] {
+    return subCategoryOptions(this.categoryMaster(), this.formData.category ?? '', this.formData.subCategory ?? '');
+  }
+  /** A new category: its sub category no longer applies. */
+  chooseCategory(value: string): void {
+    if ((value ?? '') !== (this.formData.category ?? '')) this.formData.subCategory = '';
+    this.formData.category = value ?? '';
+  }
 
   ngOnInit(): void {
     if (this.isEditMode && this.product) {

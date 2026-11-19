@@ -233,3 +233,11 @@
   color: #64748b;
   font-weight: 500;
 }
+
+/* phones: the day picker and the filter wrap instead of running off the screen */
+.actions { flex-wrap: wrap; min-width: 0; max-width: 100%; }
+@media (max-width: 480px) {
+  .actions { width: 100%; }
+  .actions .date-input { flex: 1 1 140px; min-width: 0; }
+  .actions select { flex: 1 1 100%; min-width: 0; }
+}

@@ -4,6 +4,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApiResponse, ProductMaster, PaginatedResult, DropdownData, BulkOperationDto, BulkUpdateStatusDto, ProductMasterDTO, ProductMasterRequest } from '../Models/ApiModels';
 import { environment } from '../../../environments/environment';
+import { ProductCategory } from '../components/product-categories-component/product-category-options';
 
 
 @Injectable({
@@ -12,6 +13,16 @@ import { environment } from '../../../environments/environment';
 export class ProductService {
   private apiUrl = `${environment.apiUrl}/api/ProductMaster`;
 private http = inject(HttpClient);
+
+  /** The category / sub category master (flat; parentId gives the tree). */
+  getCategories(): Observable<ApiResponse<ProductCategory[]>> {
+    return this.http.get<ApiResponse<ProductCategory[]>>(`${this.apiUrl}/categories`);
+  }
+
+  /** Adds (categoryId 0) or changes a category or sub category; a rename also renames the products. */
+  saveCategory(dto: { categoryId: number; parentId: number | null; name: string; isActive: boolean }): Observable<ApiResponse<number>> {
+    return this.http.post<ApiResponse<number>>(`${this.apiUrl}/categories`, dto);
+  }
 
 
   createProduct(product: ProductMasterRequest): Observable<ApiResponse<ProductMasterDTO>> {
