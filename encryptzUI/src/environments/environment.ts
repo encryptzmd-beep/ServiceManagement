@@ -6,8 +6,10 @@ export const environment = {
    //  apiUrl:'https://app.encryptz.in'
     //apiUrl:'http://192.168.1.39:5092'
     //apiUrl:'http://localhost:5092',
-  // Production build: the API is an IIS application named "api" under the UI site.
-  apiUrl:'/api',
+  // Production build (Hostinger VPS, erp.encryptz.in): nginx passes /api/... and /hubs/...
+  // to the API unchanged, so the UI calls them on the same origin with no extra prefix.
+  // (For the old IIS setup, where the API was an IIS application named "api", use '/api'.)
+  apiUrl:'',
   //apiUrl:'https://erp.encryptz.in',
 
   // Customer portal: the project (MainDB Projects.ProjectKey) whose database customers
