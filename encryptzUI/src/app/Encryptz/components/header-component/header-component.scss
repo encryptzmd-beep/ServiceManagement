@@ -280,3 +280,50 @@
 @media (max-width: 400px) {
   .brand-accent { display: none; }
 }
+
+/* ── module switcher (left of the credits) ── */
+.mod-switch { position: relative; }
+.mod-btn {
+  display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 8px 0 10px;
+  border: 1px solid #e2e8f0; border-radius: 9px; background: #fff; color: #1a2332;
+  font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s;
+  &:hover { border-color: #cbd5e1; background: #f8fafc; }
+  &:focus-visible { outline: 2px solid var(--brand-navy); outline-offset: 2px; }
+}
+.mod-btn-icon { font-size: 16px; color: var(--brand-navy); }
+.mod-btn-name { max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+.mod-chevron { font-size: 18px; color: #64748b; transition: transform 0.15s; &.open { transform: rotate(180deg); } }
+
+.mod-backdrop { position: fixed; inset: 0; z-index: 1000; }
+.mod-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 1001; width: 260px; padding: 6px;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 12px 36px rgba(15, 23, 42, 0.14);
+}
+.mod-menu-label { padding: 8px 10px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #94a3b8; }
+.mod-menu-note { padding: 10px; font-size: 12px; color: #64748b; }
+.mod-menu-sep { height: 1px; margin: 6px 4px; background: #eef2f7; }
+.mod-item {
+  width: 100%; display: flex; align-items: center; gap: 10px; padding: 7px 8px; border: none; border-radius: 8px;
+  background: none; font: inherit; text-align: left; color: #1a2332; cursor: pointer; text-decoration: none;
+  &:hover:not(:disabled) { background: #f5f7fa; }
+  &.on { background: #eef4fb; }
+  &:disabled { cursor: default; opacity: 0.55; }
+}
+.mod-item-icon {
+  width: 30px; height: 30px; flex-shrink: 0; border-radius: 8px; display: grid; place-items: center;
+  background: var(--brand-navy-light); color: var(--brand-navy);
+  .material-icons { font-size: 17px; }
+}
+.mod-item:disabled .mod-item-icon { background: #f1f5f9; color: #94a3b8; }
+.mod-item-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.mod-item-name { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mod-item-sub { font-size: 10.5px; color: #94a3b8; }
+.mod-check { font-size: 18px; color: var(--brand-navy); }
+.mod-all .mod-item-name { font-weight: 500; color: #475569; }
+
+@media (max-width: 768px) {
+  .mod-btn-name { display: none; }
+  .mod-btn { padding: 0 6px; }
+}
+.mod-menu-error { color: #b42323; }

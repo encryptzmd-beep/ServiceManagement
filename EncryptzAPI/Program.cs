@@ -178,7 +178,9 @@ app.Use(async (context, next) =>
     app.MapOpenApi();
 
 
-app.UseHttpsRedirection();
+// Local dev: the UI calls http://localhost:5092 — don't bounce it to https://localhost:7148
+if (!app.Environment.IsDevelopment())
+    app.UseHttpsRedirection();
 
 // 🔥 VERY IMPORTANT ORDER (Most people do wrong)
 app.UseCors("CorsPolicy");     // 1️⃣ FIRST CORS

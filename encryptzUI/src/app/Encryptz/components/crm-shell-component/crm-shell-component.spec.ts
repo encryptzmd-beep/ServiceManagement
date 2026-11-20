@@ -55,10 +55,8 @@ describe('CrmShellComponent', () => {
     const nodes = Array.from(el(f).querySelectorAll('.crm-side .nav-item'));
     const iReports = nodes.findIndex(n => n.classList.contains('nav-group-header'));
     const iSettings = nodes.findIndex(n => n.getAttribute('href') === '/crm/settings');
-    const iBack = nodes.findIndex(n => n.classList.contains('crm-back'));
     expect(iReports).toBeGreaterThan(-1);
     expect(iSettings).toBeGreaterThan(iReports);
-    expect(iBack).toBeGreaterThan(iSettings);
   });
 
   it('shows Settings only to a manager', () => {
@@ -85,12 +83,10 @@ describe('CrmShellComponent', () => {
     expect(el(f).querySelector('.crm-side.collapsed')).toBeNull();
   });
 
-  it('back to workspace goes to select-company', () => {
+  it('has no Back to workspace: the module switcher in the top bar replaces it', () => {
     const f = create(false);
-    const router = TestBed.inject(Router);
-    const nav = vi.spyOn(router, 'navigate').mockResolvedValue(true);
-    (el(f).querySelector('.crm-side .crm-back') as HTMLButtonElement).click();
-    expect(nav).toHaveBeenCalledWith(['/select-company']);
+    expect(el(f).querySelector('.crm-side .crm-back')).toBeNull();
+    expect(el(f).querySelector('.crm-side')!.textContent).not.toContain('Back to workspace');
   });
 
   const group = (f: ReturnType<typeof create>) => el(f).querySelector('.crm-side button.nav-group-header') as HTMLButtonElement;

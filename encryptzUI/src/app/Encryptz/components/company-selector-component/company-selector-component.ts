@@ -1,5 +1,6 @@
 import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
 import { NotificationBellComponent } from '../notification-bell-component/notification-bell-component';
+import { moduleLanding, moduleRoute } from '../shared/module-route';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Subscription, finalize, interval, timeout } from 'rxjs';
@@ -7,7 +8,7 @@ import { AuthService, Company } from '../../Auth/auth-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LocationDto, ModuleDto, PersonalApp } from '../../Models/ApiModels';
-import { branchDecision, landingRouteForRole, moduleCaption } from '../../Auth/scope-flow';
+import { branchDecision, moduleCaption } from '../../Auth/scope-flow';
 import {
   anyProvisioning, canEnter, CompanyCreationState, emptyCompanyForm, NewCompanyForm, POLL_LIMIT_MS, POLL_MS,
   provisionLabel, requestErrorMessage, suggestCompanyCode, validateNewCompany
@@ -33,13 +34,6 @@ interface OrbitItem {
 /** The search box shows only when there are more companies than this. */
 const SEARCH_ABOVE = 6;
 
-/**
- * Commercial applications whose pages need no branch (they do not work on the database
- * of the company): opening one goes straight to its first page.
- */
-const MODULE_HOME: Record<string, string> = {
-  JOBCONSULTANCY: '/consultancy/dashboard',
-};
 
 @Component({
   selector: 'app-company-selector-component',
@@ -730,11 +724,9 @@ export class CompanySelectorComponent {
   openModule(module: ModuleDto): void {
     if (module.state !== 'Available') return;
 
-    // an application whose pages need no branch opens at once
-    const home = MODULE_HOME[module.moduleKey?.toUpperCase()];
-    if (home) { this.router.navigate([home]); return; }
-
-    this.router.navigate(['/select-branch'], { queryParams: { module: module.moduleKey } });
+    // an application whose pages need no branch opens at once; the others ask for the branch
+    const to = moduleRoute(module);
+    this.router.navigate(to.commands, to.queryParams ? { queryParams: to.queryParams } : undefined);
   }
 
   /** Administrators of a company can work on it before any module can be opened. */
@@ -789,7 +781,7 @@ export class CompanySelectorComponent {
       next: (res) => {
         this.loading.set(false);
         if (res.success && res.data) {
-          this.router.navigate([this.moduleKey.toUpperCase() === 'CRM' ? '/crm/dashboard' : landingRouteForRole(res.data.role)], extras);
+          this.router.navigate([moduleLanding(this.moduleKey, res.data.role)], extras);
           return;
         }
         // leave the "entering" spinner so the reason and the list are visible

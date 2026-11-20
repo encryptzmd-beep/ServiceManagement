@@ -66,7 +66,6 @@
   &:hover { background: var(--sidebar-hover); color: #fff; }
   &.active { background: var(--brand-navy); color: #fff; .nav-icon { color: #fff; } }
 }
-.crm-back { margin-top: 10px; }
 .nav-arrow { font-size: 16px; color: rgba(255,255,255,0.4); flex-shrink: 0; }
 .nav-group-header { width: calc(100% - 16px); }
 .nav-group.expanded > .nav-group-header .nav-icon { color: rgba(255,255,255,0.7); }

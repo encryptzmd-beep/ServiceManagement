@@ -22,6 +22,49 @@
   </div> -->
 
   <div class="header-right">
+    <!-- module switcher: the company's modules, the current one marked -->
+    @if (auth.selectedCompanyId()) {
+      <div class="mod-switch">
+        <button type="button" class="mod-btn" (click)="toggleModuleMenu($event)" aria-haspopup="menu"
+                [attr.aria-expanded]="moduleMenuOpen()" title="Switch module">
+          <span class="material-icons mod-btn-icon" aria-hidden="true">{{ currentModule()?.icon || 'apps' }}</span>
+          <span class="mod-btn-name">{{ currentModule()?.moduleName || 'Modules' }}</span>
+          <span class="material-icons mod-chevron" [class.open]="moduleMenuOpen()" aria-hidden="true">expand_more</span>
+        </button>
+        @if (moduleMenuOpen()) {
+          <div class="mod-backdrop" (click)="closeModuleMenu()"></div>
+          <div class="mod-menu" role="menu" (keydown.escape)="closeModuleMenu()">
+            <div class="mod-menu-label">Switch module</div>
+            @if (modules() === null) {
+              <div class="mod-menu-note">Loading…</div>
+            } @else if (modulesError()) {
+              <div class="mod-menu-note">{{ modulesError() }}</div>
+            } @else {
+              @for (m of modules(); track m.moduleKey) {
+                <button type="button" class="mod-item" role="menuitem" [class.on]="isCurrent(m)"
+                        [disabled]="m.state !== 'Available'" (click)="switchTo(m)">
+                  <span class="mod-item-icon"><span class="material-icons" aria-hidden="true">{{ m.icon || 'apps' }}</span></span>
+                  <span class="mod-item-text">
+                    <span class="mod-item-name">{{ m.moduleName }}</span>
+                    @if (switching() === m.moduleKey) { <span class="mod-item-sub">Opening…</span> }
+                    @else if (stateLabel(m)) { <span class="mod-item-sub">{{ stateLabel(m) }}</span> }
+                  </span>
+                  @if (isCurrent(m)) { <span class="material-icons mod-check" aria-hidden="true">check</span> }
+                </button>
+              } @empty {
+                <div class="mod-menu-note">No modules for this company.</div>
+              }
+            }
+            @if (switchError()) { <div class="mod-menu-note mod-menu-error" role="alert">{{ switchError() }}</div> }
+            <div class="mod-menu-sep"></div>
+            <a class="mod-item mod-all" routerLink="/select-company" (click)="closeModuleMenu()">
+              <span class="mod-item-icon"><span class="material-icons" aria-hidden="true">grid_view</span></span>
+              <span class="mod-item-text"><span class="mod-item-name">All apps &amp; companies</span></span>
+            </a>
+          </div>
+        }
+      </div>
+    }
     <app-wallet-chip />
     <app-notification-bell />
     <div class="user-menu" (click)="showDropdown = !showDropdown">

@@ -70,7 +70,4 @@ export class CrmShellComponent {
     return typeof window !== 'undefined' && window.innerWidth <= 768;
   }
 
-  backToWorkspace(): void {
-    this.router.navigate(['/select-company']);
-  }
 }
