@@ -14,6 +14,11 @@ interface PendingMove { card: CrmBoardCardDto; fromStatus: string; toStatus: str
 
 const LOST = 'Lost';
 
+const DENSITY_KEY = 'crm.board.density';
+function readDensity(): 'comfortable' | 'compact' {
+  try { return localStorage.getItem(DENSITY_KEY) === 'compact' ? 'compact' : 'comfortable'; } catch { return 'comfortable'; }
+}
+
 /**
  * /crm/dashboard: the open leads as a Kanban board, one column per open status, with an attention strip that
  * filters it. Dragging a card to another column (or to "Mark lost") asks for confirmation and changes the
@@ -57,6 +62,36 @@ export class CrmDashboardComponent {
   owners = signal<CrmMemberDto[]>([]);
   ownerUserId = signal<number | null>(null);
   lostReasons = signal<CrmMasterDto[]>([]);
+
+  /** Card density: 'comfortable' (three lines a card) or 'compact' (two lines, the most cards on screen). */
+  density = signal<'comfortable' | 'compact'>(readDensity());
+
+  setDensity(d: 'comfortable' | 'compact'): void {
+    this.density.set(d);
+    try { localStorage.setItem(DENSITY_KEY, d); } catch { /* storage blocked: the choice lasts this visit */ }
+  }
+
+  /** The follow-up as "22 Nov, 11:00 am" (the year only when it is not this year). */
+  shortWhen(value: string | null | undefined): string {
+    if (!value) return '';
+    const at = new Date(value);
+    if (Number.isNaN(at.getTime())) return '';
+    const sameYear = at.getFullYear() === new Date().getFullYear();
+    const day = at.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }) });
+    const time = at.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+    return `${day}, ${time}`;
+  }
+
+  /** Initials of the owner, for the small avatar. */
+  initials(name: string | null | undefined): string {
+    const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+    return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase() || '?';
+  }
+
+  /** The badges other than the follow-up ones, which the follow-up line already shows by its colour. */
+  otherBadges(card: CrmBoardCardDto) {
+    return badgesOf(card).filter(b => b.label !== 'Overdue' && b.label !== 'Today' && b.label !== 'No follow-up');
+  }
 
   readonly columns = computed(() => {
     const cols = columnsOf(this.cards(), this.filter());

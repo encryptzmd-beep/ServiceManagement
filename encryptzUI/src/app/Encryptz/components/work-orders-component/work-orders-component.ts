@@ -12,6 +12,7 @@ import { GeocodeService } from '../../Services/API/geocode-service';
 import { DialogService } from '../../Services/dialog-service';
 import { CompletionRules, morePhotosHint, photoCategoriesOf, photosStillNeeded } from './completion-photos';
 import { canWorkWithoutCheckIn } from './attendance-rule';
+import { isNoChargeJob } from './no-charge-job';
 type SpareCartItem = {
   part?: any;                 // for master item
   isCustom: boolean;          // flag
@@ -654,11 +655,25 @@ private showCheckInMsg(m: string, err: boolean): void {
           .filter((o: any) => this.isActiveAssignmentStatus(o?.status));
         this.orders.set(list);
         this.loading.set(false);
+        this.refreshSelectedTech();
       },
       error: () => {
         this.loading.set(false);
         this.show('Failed to load work orders.', true);
       },
+    });
+  }
+
+  /** Admin: the chosen technician's Available/Busy chip follows the jobs just started or completed. */
+  private refreshSelectedTech(): void {
+    const t = this.selectedTech();
+    if (!this.isAdmin() || !t?.fullName) return;
+    this.api.getTechnicians({ searchTerm: t.fullName, pageNumber: 1, pageSize: 10 } as any).subscribe({
+      next: (d: any) => {
+        const fresh = (d?.items || d || []).find((x: any) => x.technicianId === t.technicianId);
+        if (fresh && this.selectedTech()?.technicianId === t.technicianId) this.selectedTech.set(fresh);
+      },
+      error: () => { /* keep the chip as it was */ }
     });
   }
 
@@ -1670,6 +1685,15 @@ completeMsgErr         = signal(false);
 completePaymentStep    = signal(false);
 completePaymentLoading = signal(false);
 completePayments       = signal<any[]>([]);
+/** Warranty / installation job: the payment step may be skipped. */
+completeNoCharge       = computed(() => isNoChargeJob(this.completeWo()));
+
+/** Warranty / installation: nothing to collect, go straight to the completion form. */
+skipCompletionPayment(): void {
+  if (!this.completeNoCharge()) return;
+  this.paymentMsg.set('');
+  this.completePaymentStep.set(false);
+}
 
 get completeBalanceDue(): number {
   const payments = this.completePayments();

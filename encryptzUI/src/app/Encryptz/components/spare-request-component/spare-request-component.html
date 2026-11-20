@@ -300,25 +300,25 @@
           }
           @for (r of requests(); track r.requestId) {
           <tr>
-            <td class="mono-id">#{{ r.requestId }}</td>
-            <td>
+            <td class="mono-id" data-label="Request">#{{ r.requestId }}</td>
+            <td class="part-td">
               <div class="part-cell">
                 <strong>{{ r.partName }}</strong>
                 @if ($any(r).partNumber) { <small>{{ $any(r).partNumber }}</small> }
               </div>
             </td>
-            <td class="mono-id">#{{ $any(r).complaintId }}</td>
-            <td><span class="qty-badge">× {{ r.quantity }}</span></td>
-            <td>
+            <td class="mono-id" data-label="Complaint">#{{ $any(r).complaintId }}</td>
+            <td data-label="Qty"><span class="qty-badge">× {{ r.quantity }}</span></td>
+            <td data-label="Urgency">
               @if ($any(r).urgencyLevel) {
               <span class="urgency-tag" [attr.data-level]="$any(r).urgencyLevel?.toLowerCase()">
                 {{ $any(r).urgencyLevel }}
               </span>
               }
             </td>
-            <td><span class="status" [class]="getStatusClass(r.status)">{{ r.status }}</span></td>
-            <td class="date">{{ r.requestedAt | date:'dd MMM, HH:mm' }}</td>
-            <td>{{ r.approvedByName || '—' }}</td>
+            <td data-label="Status"><span class="status" [class]="getStatusClass(r.status)">{{ r.status }}</span></td>
+            <td class="date" data-label="Requested">{{ r.requestedAt | date:'dd MMM, HH:mm' }}</td>
+            <td data-label="Approved by">{{ r.approvedByName || '—' }}</td>
           </tr>
           } @empty {
           @if (!loading()) {

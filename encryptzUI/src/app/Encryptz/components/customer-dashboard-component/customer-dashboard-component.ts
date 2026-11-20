@@ -82,10 +82,10 @@ import { CustomerAuthService } from '../../Services/customer-auth-service';
   `,
   styles: [`
     :host {
-      --red: #e8001c;
-      --red-deep: #c0001a;
-      --red-glow: rgba(232, 0, 28, 0.32);
-      --nav-bg: linear-gradient(180deg, #060e28 0%, #071540 55%, #060f2e 100%);
+      --red: var(--fx-brand-red, #D42B2B);
+      --red-deep: #b92222;
+      --red-glow: transparent;            /* no glow under red elements */
+      --nav-bg: #060e28;
       --content-bg: #f3f5f9;
       --border-soft: rgba(255, 255, 255, 0.08);
       font-family: var(--app-font);
@@ -371,13 +371,14 @@ import { CustomerAuthService } from '../../Services/customer-auth-service';
       .sidebar {
         transform: translateX(-100%);
         width: 260px;
-        box-shadow: 6px 0 30px rgba(0, 0, 0, 0.35);
+        box-shadow: none;                   /* closed: nothing may show at the screen edge */
       }
 
       .sidebar.collapsed { width: 260px; }
 
       .sidebar.mobile-open {
         transform: translateX(0);
+        box-shadow: 6px 0 30px rgba(0, 0, 0, 0.35);
       }
 
       .main-content,

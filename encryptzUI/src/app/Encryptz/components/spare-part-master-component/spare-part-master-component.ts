@@ -928,7 +928,7 @@ export interface SparePart {
       align-items: flex-start;
       justify-content: space-between;
       padding: 18px 24px;
-      background: linear-gradient(135deg, #0f172a, #1e293b);
+      background: #0f172a;
       color: #fff;
       flex-shrink: 0;
     }

@@ -1785,8 +1785,13 @@
  <div class="cmp-pay-banner">
  <span class="material-icons">payment</span>
  <div>
+ @if (completeNoCharge()) {
+ <strong>No charge: {{ $any(completeWo())?.natureOfJob === 'Installation' ? 'installation' : 'warranty job' }}</strong>
+ <p>Nothing to collect. Record a payment only if the customer paid for something extra.</p>
+ } @else {
  <strong>Final Payment Required</strong>
  <p>Please collect and record the final payment before completing this work order.</p>
+ }
  </div>
  </div>
 
@@ -1915,6 +1920,14 @@
  ((paymentForm().serviceChargeAmount || 0) <= 0 && (paymentForm().sparePartsAmount || 0) <= 0)">
  <span class="material-icons">{{ paymentSubmitting() ? 'hourglass_top' : 'check_circle' }}</span>
  {{ paymentSubmitting() ? 'Recording...' : 'Record Payment & Continue' }}
+ </button>
+ </div>
+ }
+ @if (completeNoCharge()) {
+ <div class="cmp-pay-actions">
+ <button class="pay-skip-btn" type="button" (click)="skipCompletionPayment()" [disabled]="paymentSubmitting()">
+ <span class="material-icons">verified_user</span>
+ Complete without charge
  </button>
  </div>
  }

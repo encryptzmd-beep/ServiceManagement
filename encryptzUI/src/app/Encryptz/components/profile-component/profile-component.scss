@@ -1,7 +1,7 @@
 :host {
-  --red: #e8001c;
+  --red: var(--fx-brand-red, #D42B2B);
   --red-deep: #c0001a;
-  --red-glow: rgba(232, 0, 28, 0.24);
+  --red-glow: transparent;  /* no glow under red elements */
 
   --ink-900: #0f172a;
   --ink-700: #334155;

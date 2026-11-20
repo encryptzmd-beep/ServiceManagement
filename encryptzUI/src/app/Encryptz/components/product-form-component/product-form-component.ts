@@ -228,7 +228,7 @@ import { ProductService } from '../../Services/product-service';
       justify-content: space-between;
       gap: 16px;
       padding: 18px 24px;
-      background: linear-gradient(135deg, #0f172a, #1e293b);
+      background: #0f172a;
       color: #fff;
     }
 

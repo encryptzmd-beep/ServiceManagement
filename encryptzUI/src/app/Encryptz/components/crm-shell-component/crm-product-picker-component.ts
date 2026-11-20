@@ -82,6 +82,13 @@ export class CrmProductPickerComponent {
 
   readonly showList = computed(() => this.open() && this.results().length > 0);
 
+  /** No category and fewer letters than a search needs: say how to start. */
+  readonly showHint = computed(() =>
+    this.open() && !this.hasCategory() && !this.productMasterId() && (this.query() ?? '').trim().length < MIN_SEARCH);
+
+  /** Exposed for the template's hint text. */
+  readonly minSearch = MIN_SEARCH;
+
   readonly showNone = computed(() => {
     const q = (this.query() ?? '').trim();
     return this.open() && !this.searching() && this.results().length === 0 && !!q

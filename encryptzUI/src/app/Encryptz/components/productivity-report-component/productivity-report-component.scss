@@ -43,7 +43,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      background: linear-gradient(135deg, #e8001c, #c0001a);
+      background: #1B4A7A;
       color: #fff;
       border: none;
       border-radius: 10px;
@@ -178,7 +178,7 @@
       left: 0;
       right: 0;
       height: 4px;
-      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+      background: #f59e0b;
     }
 
     .performer-card.rank-2::before {
@@ -188,7 +188,7 @@
       left: 0;
       right: 0;
       height: 4px;
-      background: linear-gradient(90deg, #94a3b8, #cbd5e1);
+      background: #94a3b8;
     }
 
     .performer-card.rank-3::before {
@@ -198,7 +198,7 @@
       left: 0;
       right: 0;
       height: 4px;
-      background: linear-gradient(90deg, #b45309, #d97706);
+      background: #b45309;
     }
 
     .rank-badge {
@@ -244,15 +244,15 @@
     }
 
     .rank-1 .perf-avatar {
-      background: linear-gradient(135deg, #f59e0b, #d97706);
+      background: #f59e0b;
     }
 
     .rank-2 .perf-avatar {
-      background: linear-gradient(135deg, #64748b, #475569);
+      background: #64748b;
     }
 
     .rank-3 .perf-avatar {
-      background: linear-gradient(135deg, #d97706, #b45309);
+      background: #d97706;
     }
 
     .performer-card h4 {
@@ -315,19 +315,19 @@
     }
 
     .perf-fill.excellent {
-      background: linear-gradient(90deg, #22c55e, #16a34a);
+      background: #22c55e;
     }
 
     .perf-fill.good {
-      background: linear-gradient(90deg, #3b82f6, #2563eb);
+      background: #3b82f6;
     }
 
     .perf-fill.average {
-      background: linear-gradient(90deg, #f59e0b, #d97706);
+      background: #f59e0b;
     }
 
     .perf-fill.poor {
-      background: linear-gradient(90deg, #ef4444, #dc2626);
+      background: #ef4444;
     }
 
     /* Table */
@@ -394,7 +394,7 @@
       width: 30px;
       height: 30px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #1b4a7a, #0f2d4a);
+      background: #1b4a7a;
       color: #fff;
       display: flex;
       align-items: center;
@@ -542,3 +542,22 @@
         display: none;
       }
     }
+
+/* ── calm podium: rank shown by the number, not by gold/silver decoration ── */
+.performer-card,
+.performer-card.rank-1,
+.performer-card.rank-2,
+.performer-card.rank-3 { border-color: var(--fx-border, #e2e8f0); border-radius: 12px; box-shadow: none; }
+.performer-card:hover { box-shadow: none; transform: none; }
+.performer-card.rank-1::before,
+.performer-card.rank-2::before,
+.performer-card.rank-3::before { display: none; }
+.perf-avatar,
+.rank-1 .perf-avatar,
+.rank-2 .perf-avatar,
+.rank-3 .perf-avatar { background: #eef4fb; color: var(--fx-brand-navy, #1B4A7A); }
+.rank-badge,
+.rank-1 .rank-badge,
+.rank-2 .rank-badge,
+.rank-3 .rank-badge { background: #f1f5f9; color: var(--fx-text-secondary, #5a6a7e); border: 0; }
+.rank-1 .rank-badge { background: var(--fx-brand-navy, #1B4A7A); color: #fff; }

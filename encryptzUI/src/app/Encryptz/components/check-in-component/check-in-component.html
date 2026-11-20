@@ -294,14 +294,14 @@
           <tbody>
             @for (a of attendance(); track a.attendanceId) {
             <tr>
-              <td>
+              <td class="tech-td">
                 <div class="tech-cell">
                   <div class="tc-avatar">{{ a.technicianName?.charAt(0) || 'T' }}</div>
                   <strong>{{ a.technicianName }}</strong>
                 </div>
               </td>
-              <td class="date-cell">{{ a.attendanceDate }}</td>
-              <td>
+              <td class="date-cell" data-label="Date">{{ a.attendanceDate }}</td>
+              <td data-label="Check in">
                 @if (a.checkInTime) {
                 <span class="time-chip in">
                   <span class="material-icons">login</span>
@@ -311,8 +311,8 @@
                 <span class="text-muted">—</span>
                 }
               </td>
-              <td class="loc-cell" [title]="a.checkInAddress || ''">{{ a.checkInAddress || '—' }}</td>
-              <td>
+              <td class="loc-cell" data-label="In at" [title]="a.checkInAddress || ''">{{ a.checkInAddress || '—' }}</td>
+              <td data-label="Check out">
                 @if (a.checkOutTime) {
                 <span class="time-chip out">
                   <span class="material-icons">logout</span>
@@ -324,8 +324,8 @@
                 </span>
                 }
               </td>
-              <td class="loc-cell" [title]="a.checkOutAddress || ''">{{ a.checkOutAddress || '—' }}</td>
-              <td>
+              <td class="loc-cell" data-label="Out at" [title]="a.checkOutAddress || ''">{{ a.checkOutAddress || '—' }}</td>
+              <td data-label="Hours">
                 @if (a.totalWorkHours) {
                 <span class="hours-val" [class.overtime]="a.totalWorkHours > 8">
                   {{ a.totalWorkHours | number:'1.1-1' }}h

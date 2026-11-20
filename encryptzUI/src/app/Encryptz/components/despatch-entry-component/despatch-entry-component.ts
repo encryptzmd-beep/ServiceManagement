@@ -3,9 +3,19 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ApiService } from '../../Services/API/api-service';
-import { DespatchCreate, DespatchDetail, SalesOrderDetail, PRIORITIES } from '../../Models/ApiModels';
+import { AssignTechnician, DespatchCreate, DespatchDetail, SalesOrderDetail, PRIORITIES } from '../../Models/ApiModels';
+
+/** A technician as the picker shows it. */
+interface TechOption {
+  technicianId: number;
+  fullName: string;
+  specialization?: string | null;
+  availabilityStatus?: number;   // 1 Available · 2 Busy · 3 On leave
+  todayAssignments?: number;
+}
 import { ComplaintDetailPopupComponent } from '../complaint-detail-popup-component/complaint-detail-popup-component';
 import { DialogService } from '../../Services/dialog-service';
+import { isProductLine } from './despatch-units';
 
 /** One unit (bill line × qty) that receives a serial number at despatch. */
 interface UnitRow {
@@ -59,10 +69,26 @@ export class DespatchEntryComponent implements OnInit {
   createInstallationComplaint = true;
   priority = 'Medium';
   preferredDate = '';
+  /** Optional: the technician the installation job goes to as soon as it is created. */
+  technicianId: number | null = null;
+
+  // technicians (create-mode picker and the view-mode assign dialog)
+  technicians = signal<TechOption[]>([]);
+  techLoading = signal(false);
+  techError = signal('');
 
   // view mode
   detail = signal<DespatchDetail | null>(null);
   showComplaint = signal(false);
+
+  // view mode: assign dialog
+  showAssign = signal(false);
+  assigning = signal(false);
+  assignError = signal('');
+  assignTechId: number | null = null;
+  assignRole: 'Primary' | 'Supporting' = 'Primary';
+  assignDate = '';
+  assignNotes = '';
 
   private despatchDateSig = signal(this.despatchDate);
   unitCount = computed(() => this.units().length);
@@ -88,7 +114,55 @@ export class DespatchEntryComponent implements OnInit {
     } else {
       const orderId = Number(this.route.snapshot.paramMap.get('orderId') || 0);
       this.loadOrder(orderId);
+      this.loadTechnicians();
     }
+  }
+
+  // =====================================================================
+  // technicians
+  // =====================================================================
+  loadTechnicians(): void {
+    if (this.techLoading() || this.technicians().length) return;
+    this.techLoading.set(true);
+    this.techError.set('');
+    this.api.getTechnicians({ pageNumber: 1, pageSize: 200 }).subscribe({
+      next: (d: any) => {
+        this.techLoading.set(false);
+        const raw = d?.data?.items ?? d?.data ?? d?.items ?? d;
+        const list: TechOption[] = (Array.isArray(raw) ? raw : [])
+          .filter((t: any) => t?.technicianId && t.isActive !== false)
+          .map((t: any) => ({
+            technicianId: t.technicianId, fullName: t.fullName || `Technician ${t.technicianId}`,
+            specialization: t.specialization, availabilityStatus: t.availabilityStatus,
+            todayAssignments: t.todayAssignments,
+          }))
+          // available first, then busy, then on leave; by name within each
+          .sort((a: TechOption, b: TechOption) =>
+            (a.availabilityStatus ?? 9) - (b.availabilityStatus ?? 9) || a.fullName.localeCompare(b.fullName));
+        this.technicians.set(list);
+      },
+      error: () => { this.techLoading.set(false); this.techError.set('Could not load the technicians'); },
+    });
+  }
+
+  techLabel(t: TechOption): string {
+    const state = t.availabilityStatus === 1 ? 'Available' : t.availabilityStatus === 2 ? 'Busy' : t.availabilityStatus === 3 ? 'On leave' : '';
+    const jobs = t.todayAssignments ? `${t.todayAssignments} job${t.todayAssignments === 1 ? '' : 's'} today` : '';
+    return [t.fullName, t.specialization, state, jobs].filter(Boolean).join(' · ');
+  }
+
+  techName(id: number | null): string {
+    return this.technicians().find(t => t.technicianId === id)?.fullName || 'the technician';
+  }
+
+  /** Assigns the installation complaint; the error text (or '') comes back. */
+  private assign(p: AssignTechnician): Promise<string> {
+    return new Promise(resolve => {
+      this.api.assignTechnician(p).subscribe({
+        next: (r: any) => resolve(r?.success === false ? (r?.message || 'The technician could not be assigned') : ''),
+        error: e => resolve(e?.error?.message || 'The technician could not be assigned'),
+      });
+    });
   }
 
   // =====================================================================
@@ -117,7 +191,7 @@ export class DespatchEntryComponent implements OnInit {
         this.contactNumber = o.contactNumber || o.customerMobile || '';
 
         const rows: UnitRow[] = [];
-        for (const it of d.items) {
+        for (const it of d.items.filter(isProductLine)) {   // service lines get no serial / warranty
           for (let n = 1; n <= Math.max(1, it.qty); n++) {
             rows.push({
               salesOrderItemId: it.salesOrderItemId, unitNo: n,
@@ -164,11 +238,32 @@ export class DespatchEntryComponent implements OnInit {
 
     this.saving.set(true);
     this.api.createDespatch(dto).subscribe({
-      next: r => {
+      next: async r => {
+        if (!r?.success || !r.data) { this.saving.set(false); this.error.set(r?.message || 'Could not despatch'); this.showToast('error', this.error()); return; }
+        const saved = r.data;
+
+        // the despatch is saved; now hand the installation job to the chosen technician
+        let assignFailed = '';
+        if (this.createInstallationComplaint && this.technicianId && saved.complaintId) {
+          assignFailed = await this.assign({
+            complaintId: saved.complaintId,
+            technicianId: this.technicianId,
+            assignmentRole: 'Primary',
+            priority: this.priority,
+            scheduledDate: this.preferredDate || undefined,
+            notes: `Installation for despatch ${saved.despatchNo}`,
+          });
+        }
         this.saving.set(false);
-        if (!r?.success || !r.data) { this.error.set(r?.message || 'Could not despatch'); this.showToast('error', this.error()); return; }
-        this.showToast('success', r.message || `Despatch ${r.data.despatchNo} saved`);
-        setTimeout(() => this.router.navigate(['/sales/despatch/view', r.data!.despatchId], { replaceUrl: true }), 600);
+
+        if (assignFailed) {
+          this.showToast('error', `Despatch ${saved.despatchNo} saved, but ${assignFailed.toLowerCase()}. Assign it from the despatch page.`);
+        } else if (this.technicianId && saved.complaintId) {
+          this.showToast('success', `Despatch ${saved.despatchNo} saved; installation ${saved.complaintNumber} assigned to ${this.techName(this.technicianId)}.`);
+        } else {
+          this.showToast('success', r.message || `Despatch ${saved.despatchNo} saved`);
+        }
+        setTimeout(() => this.router.navigate(['/sales/despatch/view', saved.despatchId], { replaceUrl: true }), assignFailed ? 1800 : 900);
       },
       error: e => { this.saving.set(false); const m = e?.error?.message || 'Could not despatch'; this.error.set(m); this.showToast('error', m); },
     });
@@ -193,6 +288,47 @@ export class DespatchEntryComponent implements OnInit {
   openComplaint(): void { if (this.detail()?.despatch?.installationComplaintId) this.showComplaint.set(true); }
   closeComplaint(): void { this.showComplaint.set(false); }
   refreshDespatch(): void { const d = this.detail(); if (d) this.loadDespatch(d.despatch.despatchId); }
+
+  /** A closed or cancelled installation job takes no new technician. */
+  canAssign = computed(() => {
+    const d = this.detail()?.despatch;
+    if (!d?.installationComplaintId) return false;
+    const s = (d.installationStatus || '').toLowerCase();
+    return !(s.includes('closed') || s.includes('cancel'));
+  });
+
+  openAssign(): void {
+    if (!this.canAssign()) return;
+    const d = this.detail()!.despatch;
+    this.assignTechId = null;
+    this.assignRole = d.assignedTechnicians ? 'Supporting' : 'Primary';
+    this.assignDate = '';
+    this.assignNotes = `Installation for despatch ${d.despatchNo}`;
+    this.assignError.set('');
+    this.showAssign.set(true);
+    this.loadTechnicians();
+  }
+
+  closeAssign(): void { if (!this.assigning()) this.showAssign.set(false); }
+
+  async confirmAssign(): Promise<void> {
+    const d = this.detail()?.despatch;
+    if (!d?.installationComplaintId || !this.assignTechId) { this.assignError.set('Choose a technician'); return; }
+    this.assigning.set(true);
+    this.assignError.set('');
+    const failed = await this.assign({
+      complaintId: d.installationComplaintId,
+      technicianId: this.assignTechId,
+      assignmentRole: this.assignRole,
+      scheduledDate: this.assignDate || undefined,
+      notes: this.assignNotes || undefined,
+    });
+    this.assigning.set(false);
+    if (failed) { this.assignError.set(failed); return; }
+    this.showAssign.set(false);
+    this.showToast('success', `${this.techName(this.assignTechId)} assigned to installation ${d.installationComplaintNo}`);
+    this.refreshDespatch();
+  }
 
   openBill(): void {
     const id = this.detail()?.despatch?.salesOrderId ?? this.order()?.order?.salesOrderId;

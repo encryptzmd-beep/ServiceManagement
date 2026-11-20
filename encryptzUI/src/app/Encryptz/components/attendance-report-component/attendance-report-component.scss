@@ -14,7 +14,7 @@
 }
 .btn-primary {
   display: flex; align-items: center; gap: 6px;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff;
+  background: #1B4A7A; color: #fff;
   border: none; border-radius: 10px; padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
   .material-icons { font-size: 18px; }
   &:hover:not(:disabled) { box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
@@ -61,9 +61,9 @@
 .ta-avatar {
   width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 13px; color: #fff; flex-shrink: 0;
-  &.av { background: linear-gradient(135deg, #10b981, #059669); }
-  &.busy { background: linear-gradient(135deg, #ef4444, #dc2626); }
-  &.leave { background: linear-gradient(135deg, #9ca3af, #6b7280); }
+  &.av { background: #10b981; }
+  &.busy { background: #ef4444; }
+  &.leave { background: #9ca3af; }
 }
 .ta-info { flex: 1; min-width: 0;
   strong { display: block; font-size: 13px; color: #1e293b; }
@@ -82,11 +82,11 @@
   width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   .material-icons { font-size: 20px; color: #fff; }
 }
-.total-bg { background: linear-gradient(135deg, #6366f1, #4f46e5); }
-.active-bg { background: linear-gradient(135deg, #22c55e, #16a34a); }
-.hours-bg { background: linear-gradient(135deg, #3b82f6, #2563eb); }
-.avg-bg { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
-.overtime-bg { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.total-bg { background: #1B4A7A; }
+.active-bg { background: #22c55e; }
+.hours-bg { background: #3b82f6; }
+.avg-bg { background: #8b5cf6; }
+.overtime-bg { background: #f59e0b; }
 .sum-body { display: flex; flex-direction: column; }
 .sum-val { font-size: 18px; font-weight: 800; color: #1e293b; }
 .sum-label { font-size: 11px; color: #94a3b8; }
@@ -112,7 +112,7 @@
 .tech-cell { display: flex; align-items: center; gap: 8px; }
 .tc-avatar {
   width: 30px; height: 30px; border-radius: 50%;
-  background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: #fff;
+  background: #8b5cf6; color: #fff;
   display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0;
 }
 .date-cell { white-space: nowrap; font-size: 12px; color: #64748b; }

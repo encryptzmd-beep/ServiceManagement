@@ -124,12 +124,19 @@ editTech(tech: TechnicianListItem) {
         this.dialog.alert('Email is required: the technician signs in with it');
         return;
       }
-      this.techService.createTechnician(this.formData).subscribe({
+      // a blank date input is '' and the API only takes a date or null
+      const dto = { ...this.formData, joinDate: this.formData.joinDate || null };
+      this.techService.createTechnician(dto).subscribe({
         next: () => { this.closeModals(); this.loadData(); },
         error: (err) => this.dialog.alert(err?.error?.message || 'Could not create technician')
       });
     }
   }
+
+openCreate() {
+  this.closeModals();          // resets the form
+  this.showCreateModal = true;
+}
 
 closeModals() {
   this.showCreateModal = false;

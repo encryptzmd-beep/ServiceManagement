@@ -241,3 +241,43 @@
   .actions .date-input { flex: 1 1 140px; min-width: 0; }
   .actions select { flex: 1 1 100%; min-width: 0; }
 }
+
+/* ── calmer column heads: light, like the rest of the tables ── */
+.tech-column { background: #f8fafc; color: var(--fx-text-primary, #1a2332); }
+.tech-count { color: var(--fx-text-muted, #8a9ab0); opacity: 1; }
+.board-wrapper { border-radius: 12px; }
+.schedule-card { border-radius: 8px; border-left-width: 3px; }
+
+/* ── phone: list instead of the 1200px board ── */
+.board-list { display: none; }
+
+@media (max-width: 760px) {
+  .board-wrapper { display: none; }
+  .board-list { display: flex; flex-direction: column; gap: 12px; }
+
+  .fx-page-header { flex-direction: column; align-items: stretch; gap: 10px; }
+  .actions { display: grid; grid-template-columns: 40px 1fr 40px; gap: 8px; }
+  .actions .date-input { width: 100%; min-width: 0; font-size: 16px; }
+  .actions .fx-filter-select { grid-column: 1 / -1; height: 40px; font-size: 15px; }
+
+  .bl-tech {
+    background: #fff;
+    border: 1px solid var(--fx-border, #e2e8f0);
+    border-radius: 12px;
+    padding: 12px;
+  }
+  .bl-tech-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+    padding-bottom: 8px; margin-bottom: 4px;
+    border-bottom: 1px solid var(--fx-border, #e2e8f0);
+  }
+  .bl-tech-name { font-size: 15px; font-weight: 700; }
+  .bl-tech-count { font-size: 12px; color: var(--fx-text-muted, #8a9ab0); }
+  .bl-slot {
+    margin: 10px 0 6px;
+    font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--fx-text-muted, #8a9ab0);
+  }
+  .bl-tech .schedule-card { margin-bottom: 8px; }
+  .bl-tech .empty-slot { padding: 10px 0 2px; }
+}

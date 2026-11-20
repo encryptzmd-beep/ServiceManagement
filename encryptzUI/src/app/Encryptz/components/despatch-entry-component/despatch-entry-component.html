@@ -151,7 +151,7 @@
             <input type="checkbox" [(ngModel)]="createInstallationComplaint" />
             <span>
               <strong>Create a “New Installation” complaint on the dashboard</strong>
-              <small>It appears with the other complaints so the admin can assign a technician. The job is marked as under warranty.</small>
+              <small>It appears with the other complaints on the service desk. The job is marked as under warranty.</small>
             </span>
           </label>
           <div class="grid-2" style="margin-top:14px" [class.disabled]="!createInstallationComplaint">
@@ -165,6 +165,22 @@
               <label>Preferred installation date</label>
               <input type="date" [(ngModel)]="preferredDate" [disabled]="!createInstallationComplaint" />
             </div>
+            <div class="field span-2">
+              <label for="dspTech">Assign to technician <span class="opt">(optional)</span></label>
+              <select id="dspTech" [(ngModel)]="technicianId" [disabled]="!createInstallationComplaint || techLoading()">
+                <option [ngValue]="null">{{ techLoading() ? 'Loading technicians…' : 'Leave unassigned — assign later' }}</option>
+                @for (t of technicians(); track t.technicianId) {
+                  <option [ngValue]="t.technicianId">{{ techLabel(t) }}</option>
+                }
+              </select>
+              @if (techError()) {
+                <small class="hint err">{{ techError() }}. You can still assign it after the despatch.</small>
+              } @else if (technicianId) {
+                <small class="hint">The job goes straight to {{ techName(technicianId) }} as the primary technician{{ preferredDate ? ', scheduled for ' + (preferredDate | date:'dd MMM yyyy') : '' }}.</small>
+              } @else {
+                <small class="hint">Without a technician the job waits on the Complaint Dashboard.</small>
+              }
+            </div>
           </div>
         </div>
       </section>
@@ -175,12 +191,18 @@
           <ul class="checklist">
             <li><span class="material-icons">inventory_2</span>{{ unitCount() }} unit(s) added to the customer's products</li>
             <li><span class="material-icons">verified_user</span>Warranty starts {{ despatchDate ? (despatchDate | date:'dd MMM yyyy') : '—' }}</li>
-            <li><span class="material-icons">{{ createInstallationComplaint ? 'engineering' : 'block' }}</span>{{ createInstallationComplaint ? 'Installation job sent to the dashboard' : 'No installation job' }}</li>
+            <li><span class="material-icons">{{ createInstallationComplaint ? 'engineering' : 'block' }}</span>
+              {{ !createInstallationComplaint ? 'No installation job'
+                 : technicianId ? 'Installation job assigned to ' + techName(technicianId)
+                 : 'Installation job sent to the dashboard' }}</li>
             <li><span class="material-icons">lock</span>The bill becomes read-only</li>
           </ul>
           @if (error()) { <div class="note error"><span class="material-icons">error_outline</span>{{ error() }}</div> }
           <button type="button" class="btn-primary wide" [disabled]="saving() || d.order.status !== 'Billed' || !units().length" (click)="submit()">
-            <span class="material-icons">local_shipping</span>{{ saving() ? 'Despatching…' : 'Despatch & Create Installation Job' }}
+            <span class="material-icons">local_shipping</span>{{ saving() ? 'Despatching…'
+              : !createInstallationComplaint ? 'Despatch'
+              : technicianId ? 'Despatch & Assign Installation'
+              : 'Despatch & Create Installation Job' }}
           </button>
         </div>
       </section>
@@ -225,10 +247,16 @@
             </div>
             <div class="tech" [class.unassigned]="!v.despatch.assignedTechnicians">
               <span class="material-icons">{{ v.despatch.assignedTechnicians ? 'engineering' : 'person_off' }}</span>
-              {{ v.despatch.assignedTechnicians || 'No technician assigned yet — assign it from the dashboard' }}
+              {{ v.despatch.assignedTechnicians || 'No technician assigned yet' }}
             </div>
             <div class="install-actions">
-              <button type="button" class="btn-primary sm" (click)="openComplaint()"><span class="material-icons">open_in_new</span> View Complaint</button>
+              @if (canAssign()) {
+                <button type="button" class="btn-primary sm" (click)="openAssign()">
+                  <span class="material-icons">{{ v.despatch.assignedTechnicians ? 'group_add' : 'person_add' }}</span>
+                  {{ v.despatch.assignedTechnicians ? 'Add Technician' : 'Assign Technician' }}
+                </button>
+              }
+              <button type="button" class="btn-outline sm" (click)="openComplaint()"><span class="material-icons">open_in_new</span> View Complaint</button>
               <button type="button" class="btn-outline sm" (click)="goDashboard()"><span class="material-icons">dashboard</span> Dashboard</button>
             </div>
           } @else {
@@ -295,6 +323,61 @@
     (closed)="closeComplaint()"
     (refreshed)="refreshDespatch()">
   </app-complaint-detail-popup>
+}
+
+@if (showAssign() && detail(); as v) {
+  <div class="dlg-overlay" (click)="closeAssign()">
+    <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="asgTitle" (click)="$event.stopPropagation()" (keydown.escape)="closeAssign()">
+      <div class="dlg-head">
+        <div>
+          <h3 id="asgTitle">{{ v.despatch.assignedTechnicians ? 'Add a technician' : 'Assign a technician' }}</h3>
+          <p>Installation {{ v.despatch.installationComplaintNo }} · {{ v.despatch.customerName }}</p>
+        </div>
+        <button type="button" class="dlg-close" (click)="closeAssign()" aria-label="Close"><span class="material-icons">close</span></button>
+      </div>
+
+      <div class="dlg-body">
+        @if (v.despatch.assignedTechnicians) {
+          <div class="dlg-note"><span class="material-icons">engineering</span>Already on the job: {{ v.despatch.assignedTechnicians }}</div>
+        }
+        <div class="field">
+          <label for="asgTech">Technician <span class="req">*</span></label>
+          <select id="asgTech" [(ngModel)]="assignTechId" [disabled]="techLoading()">
+            <option [ngValue]="null">{{ techLoading() ? 'Loading technicians…' : 'Choose a technician' }}</option>
+            @for (t of technicians(); track t.technicianId) {
+              <option [ngValue]="t.technicianId">{{ techLabel(t) }}</option>
+            }
+          </select>
+          @if (techError()) { <small class="hint err">{{ techError() }}</small> }
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="asgRole">Role</label>
+            <select id="asgRole" [(ngModel)]="assignRole">
+              <option value="Primary">Primary (leads the job)</option>
+              <option value="Supporting">Supporting</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="asgDate">Visit date</label>
+            <input id="asgDate" type="date" [(ngModel)]="assignDate" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="asgNotes">Notes</label>
+          <textarea id="asgNotes" rows="2" [(ngModel)]="assignNotes" placeholder="Instructions for the technician"></textarea>
+        </div>
+        @if (assignError()) { <div class="note error"><span class="material-icons">error_outline</span>{{ assignError() }}</div> }
+      </div>
+
+      <div class="dlg-foot">
+        <button type="button" class="btn-outline" (click)="closeAssign()" [disabled]="assigning()">Cancel</button>
+        <button type="button" class="btn-primary" (click)="confirmAssign()" [disabled]="assigning() || !assignTechId">
+          <span class="material-icons">person_add</span>{{ assigning() ? 'Assigning…' : 'Assign' }}
+        </button>
+      </div>
+    </div>
+  </div>
 }
 
 @if (toast(); as t) {

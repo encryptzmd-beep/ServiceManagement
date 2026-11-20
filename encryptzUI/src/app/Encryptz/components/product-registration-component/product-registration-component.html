@@ -4,7 +4,7 @@
       <h1 class="page-title">My Products</h1>
       <p class="page-subtitle">Register and manage your products</p>
     </div>
-    <button class="btn-primary" (click)="toggleForm()">
+    <button class="btn-primary" [class.is-cancel]="showForm()" (click)="toggleForm()">
       <span class="material-icons">{{ showForm() ? 'close' : 'add_circle' }}</span>
       {{ showForm() ? 'Cancel' : (isEditMode() ? 'Editing Product' : 'Register Product') }}
     </button>
@@ -218,6 +218,17 @@
         </label>
       </div> -->
     </div>
+    } @empty {
+      @if (loaded() && !showForm()) {
+      <div class="empty-state">
+        <span class="material-icons empty-icon">inventory_2</span>
+        <h3>No products yet</h3>
+        <p>Register the products you bought so you can raise a complaint for them.</p>
+        <button class="btn-primary" type="button" (click)="toggleForm()">
+          <span class="material-icons">add_circle</span> Register a product
+        </button>
+      </div>
+      }
     }
   </div>
 

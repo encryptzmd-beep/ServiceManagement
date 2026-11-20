@@ -40,7 +40,7 @@
     @if (pageError()) { <p class="crm-error">{{ pageError() }}</p> }
     @if (l.status === 'Converted') {
       <p class="crm-ok">Converted{{ l.convertedAt ? ' on ' + showDate(l.convertedAt) : '' }}.
-        @if (l.orderNo) { Sales order <strong>{{ l.orderNo }}</strong>. } Despatch and installation are done in the Sales screens.</p>
+        @if (l.orderNo) { Sales order <strong>{{ l.orderNo }}</strong>. } Despatch and installation are done in the Sales screens of Service Management (switch module at the top).</p>
     }
     @if (l.status === 'Lost') {
       <p class="crm-error">Lost{{ l.lostAt ? ' on ' + showDate(l.lostAt) : '' }}: {{ l.lostReasonName }}@if (l.lostNote) { · {{ l.lostNote }} }</p>

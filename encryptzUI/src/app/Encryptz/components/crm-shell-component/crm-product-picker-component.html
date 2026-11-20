@@ -31,6 +31,8 @@
       <div class="pp-results pp-none">No product matches</div>
     } @else if (open() && searching()) {
       <div class="pp-results pp-none">Searching…</div>
+    } @else if (showHint()) {
+      <div class="pp-results pp-none">Type {{ minSearch }} or more letters, or choose a category</div>
     }
   </div>
 </div>

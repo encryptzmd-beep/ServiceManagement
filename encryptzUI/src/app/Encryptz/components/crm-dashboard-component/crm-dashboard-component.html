@@ -16,6 +16,16 @@
         <p>Your open leads by stage. Drag a card to change its status.</p>
       </div>
       <div class="crm-page-actions">
+        <div class="crm-density" role="group" aria-label="Card size">
+          <button type="button" [class.on]="density() === 'comfortable'" [attr.aria-pressed]="density() === 'comfortable'"
+                  title="Comfortable cards" (click)="setDensity('comfortable')">
+            <span class="material-icons" aria-hidden="true">view_agenda</span><span class="crm-density-txt">Comfortable</span>
+          </button>
+          <button type="button" [class.on]="density() === 'compact'" [attr.aria-pressed]="density() === 'compact'"
+                  title="Compact cards: the most leads on screen" (click)="setDensity('compact')">
+            <span class="material-icons" aria-hidden="true">view_headline</span><span class="crm-density-txt">Compact</span>
+          </button>
+        </div>
         @if (isManager()) {
           <select class="crm-owner-filter" aria-label="Owner" [value]="ownerUserId() ?? ''" (change)="setOwner($any($event.target).value)">
             <option value="">All owners</option>
@@ -53,7 +63,7 @@
       @if (message()) { <p class="crm-error crm-board-msg" role="alert">{{ message() }}</p> }
 
       <div class="crm-board-wrap" cdkDropListGroup>
-        <div class="crm-board" cdkScrollable>
+        <div class="crm-board" [class.compact]="density() === 'compact'" cdkScrollable>
           @for (col of columns(); track col.status) {
             <section class="crm-col" [attr.data-status]="col.status">
               <header class="crm-col-head">
@@ -63,28 +73,52 @@
               </header>
               <div class="crm-col-body" cdkDropList [cdkDropListData]="col.status" [cdkDropListSortingDisabled]="true" (cdkDropListDropped)="dropped($event)">
                 @for (card of col.cards; track card.leadId) {
-                  <a class="crm-kcard" [routerLink]="['/crm/leads', card.leadId]"
+                  <a class="crm-kcard" [routerLink]="['/crm/leads', card.leadId]" [attr.data-prio]="(card.priority || '').toLowerCase()"
+                     [title]="card.contactName + ' · ' + card.leadNo + (card.quotationNo ? ' · ' + card.quotationNo : '')"
                      cdkDrag cdkDragPreviewContainer="parent" [cdkDragData]="card" [cdkDragStartDelay]="dragDelay" [cdkDragDisabled]="!!pending()"
                      (cdkDragStarted)="dragStarted()" (cdkDragEnded)="dragEnded()">
+                    <!-- line 1: who, and what it is worth (or the lead no.) -->
                     <span class="crm-kcard-top">
                       <strong>{{ card.contactName }}</strong>
-                      <span class="crm-kcard-no">{{ card.leadNo }}</span>
-                    </span>
-                    <span class="crm-kcard-row">
-                      <span class="crm-kcard-priority" [class]="pill(card.priority)">{{ card.priority }}</span>
-                      <span class="crm-kcard-days">{{ card.daysInStage }} d in stage</span>
-                    </span>
-                    @if (card.city) { <span class="crm-kcard-meta">{{ card.city }}</span> }
-                    <span class="crm-kcard-meta">{{ card.ownerName }}@if (card.nextFollowUpAt) { · {{ showDateTime(card.nextFollowUpAt) }} }</span>
-                    @if (card.quotationValue !== null) {
-                      <span class="crm-kcard-value">{{ rupees(card.quotationValue) }}@if (card.quotationNo) { <small>{{ card.quotationNo }}</small> }</span>
-                    }
-                    @if (badgesOf(card); as badges) {
-                      @if (badges.length) {
-                        <span class="crm-kcard-badges">
-                          @for (b of badges; track b.label) { <span class="crm-badge" [class]="'crm-badge ' + b.tone">{{ b.label }}</span> }
-                        </span>
+                      @if (card.quotationValue !== null) {
+                        <span class="crm-kcard-amt">{{ rupees(card.quotationValue) }}</span>
+                      } @else {
+                        <span class="crm-kcard-no">{{ card.leadNo }}</span>
                       }
+                    </span>
+
+                    @if (density() === 'comfortable') {
+                      <!-- line 2: priority, place, time in stage -->
+                      <span class="crm-kcard-row">
+                        <span class="crm-kcard-priority" [class]="pill(card.priority)">{{ card.priority }}</span>
+                        @if (card.city) { <span class="crm-kcard-city"><span class="material-icons" aria-hidden="true">place</span>{{ card.city }}</span> }
+                        <span class="crm-kcard-days">{{ card.daysInStage }} d in stage</span>
+                      </span>
+                      <!-- line 3: owner and the next follow-up -->
+                      <span class="crm-kcard-foot">
+                        <span class="crm-kcard-owner"><span class="crm-avatar" aria-hidden="true">{{ initials(card.ownerName) }}</span><span class="crm-kcard-owner-name">{{ card.ownerName }}</span></span>
+                        <span class="crm-kcard-when" [class.overdue]="card.isOverdue" [class.today]="card.isDueToday" [class.none]="!card.nextFollowUpAt">
+                          <span class="material-icons" aria-hidden="true">{{ card.isOverdue ? 'alarm' : card.nextFollowUpAt ? 'event' : 'event_busy' }}</span>
+                          {{ card.nextFollowUpAt ? (card.isDueToday ? 'Today' : card.isOverdue ? 'Overdue' : '') + (card.isDueToday || card.isOverdue ? ' · ' : '') + shortWhen(card.nextFollowUpAt) : 'No follow-up' }}
+                        </span>
+                      </span>
+                      @if (otherBadges(card); as badges) {
+                        @if (badges.length) {
+                          <span class="crm-kcard-badges">
+                            @for (b of badges; track b.label) { <span class="crm-badge" [class]="'crm-badge ' + b.tone">{{ b.label }}</span> }
+                          </span>
+                        }
+                      }
+                    } @else {
+                      <!-- compact: one line of details -->
+                      <span class="crm-kcard-line">
+                        <span class="crm-kcard-when" [class.overdue]="card.isOverdue" [class.today]="card.isDueToday" [class.none]="!card.nextFollowUpAt">
+                          {{ card.nextFollowUpAt ? (card.isDueToday ? 'Today' : card.isOverdue ? 'Overdue' : shortWhen(card.nextFollowUpAt)) : 'No follow-up' }}
+                        </span>
+                        @if (card.city) { <span class="crm-kcard-sep">{{ card.city }}</span> }
+                        <span class="crm-kcard-sep">{{ card.ownerName }}</span>
+                        <span class="crm-kcard-days">{{ card.daysInStage }}d</span>
+                      </span>
                     }
                   </a>
                 } @empty {

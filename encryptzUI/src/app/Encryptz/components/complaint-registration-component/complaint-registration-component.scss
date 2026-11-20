@@ -1,7 +1,7 @@
 :host {
-  --red: #e8001c;
+  --red: var(--fx-brand-red, #D42B2B);
   --red-deep: #c0001a;
-  --red-glow: rgba(232, 0, 28, 0.24);
+  --red-glow: transparent;  /* no glow under red elements */
   --red-soft: #fef2f4;
 
   --ink-900: #0f172a;
@@ -639,7 +639,7 @@
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #0ea5e9);
+  background: #3b82f6;
   border-radius: 2px;
   transition: width 0.3s ease;
 }
