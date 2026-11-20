@@ -5,7 +5,7 @@
   --navy: #1B4A7A;
   --navy-dark: #0f2d4a;
   --navy-mid: #3a72b0;
-  --font: 'DM Sans', 'Inter', sans-serif;
+  --font: var(--app-font);
   --shadow-btn: 0 4px 14px rgba(212,43,43,0.35);
   --radius: 20px;
   --cycle: 20s;

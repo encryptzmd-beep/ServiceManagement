@@ -51,6 +51,11 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetLeads([FromQuery] LeadFilterDto filter)
             => Answer(await _crm.GetLeads(Caller(), await Manager(), Company(), filter));
 
+        /// <summary>Leads per status for the status tabs of the lead list, under the list's filters.</summary>
+        [HttpGet("leads/status-counts")]
+        public async Task<IActionResult> GetLeadStatusCounts([FromQuery] LeadFilterDto filter)
+            => Answer(await _crm.GetLeadStatusCounts(Caller(), await Manager(), Company(), filter));
+
         [HttpGet("leads/{id:int}")]
         public async Task<IActionResult> GetLead(int id)
         {
@@ -62,6 +67,15 @@ namespace EncryptzAPI.Controllers
         [HttpPost("leads")]
         public async Task<IActionResult> SaveLead([FromBody] LeadSaveDto dto)
             => Answer(await _crm.SaveLead(Caller(), await Manager(), Company(), dto));
+
+        /// <summary>Soft delete: the owner or a manager; never a converted lead (22_CRM_Lead_Delete.sql).</summary>
+        [HttpDelete("leads/{id:int}")]
+        public async Task<IActionResult> DeleteLead(int id)
+        {
+            var result = await _crm.DeleteLead(Caller(), await Manager(), Company(), id);
+            if (result.Success) return Ok(result);
+            return result.Message == "Lead not found" ? NotFound(result) : BadRequest(result);
+        }
 
         [HttpPost("leads/{id:int}/status")]
         public async Task<IActionResult> ChangeStatus(int id, [FromBody] StatusChangeDto dto)
@@ -152,6 +166,11 @@ namespace EncryptzAPI.Controllers
         [HttpGet("quotations")]
         public async Task<IActionResult> GetQuotations([FromQuery] QuotationFilterDto filter)
             => Answer(await _crm.GetQuotations(Caller(), await Manager(), Company(), filter));
+
+        /// <summary>Quotations per status for the status tabs of the quotation list, under the list's filters.</summary>
+        [HttpGet("quotations/status-counts")]
+        public async Task<IActionResult> GetQuotationStatusCounts([FromQuery] QuotationFilterDto filter)
+            => Answer(await _crm.GetQuotationStatusCounts(Caller(), await Manager(), Company(), filter));
 
         [HttpGet("reports/pipeline")]
         public async Task<IActionResult> PipelineReport([FromQuery(Name = "ownerUserId")] int? owner)

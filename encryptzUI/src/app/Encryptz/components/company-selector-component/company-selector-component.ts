@@ -516,7 +516,6 @@ export class CompanySelectorComponent {
     const co = this.activeCompany();
     if (!co || !this.enterable(co)) {
       this.businessModules.set([]);
-      setTimeout(() => document.getElementById('ws-business-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
       return;
     }
     if (!force && this.businessCompanyId === co.companyId && this.businessModules().length > 0) return;
@@ -598,8 +597,8 @@ export class CompanySelectorComponent {
     return { x: cx + Math.sqrt(r * r - dy * dy), y: cy - dy };
   }
 
-  orbitItemX(i: number): number { return this.orbitPos(i).x - 28; }
-  orbitItemY(i: number): number { return this.orbitPos(i).y - 28; }
+  orbitItemX(i: number): number { return this.orbitPos(i).x - 22; }
+  orbitItemY(i: number): number { return this.orbitPos(i).y - 22; }
   orbitDotCx(i: number): string { return this.orbitPos(i).x.toFixed(1); }
   orbitDotCy(i: number): string { return this.orbitPos(i).y.toFixed(1); }
 
@@ -674,6 +673,16 @@ export class CompanySelectorComponent {
   greeting(): string {
     const h = new Date().getHours();
     return h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
+  }
+
+  greetingIcon(): string {
+    const h = new Date().getHours();
+    return h < 12 ? 'wb_sunny' : h < 17 ? 'light_mode' : 'dark_mode';
+  }
+
+  /** e.g. "Friday, 20 November" */
+  todayLabel(): string {
+    return new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
   }
 
   firstName(): string {

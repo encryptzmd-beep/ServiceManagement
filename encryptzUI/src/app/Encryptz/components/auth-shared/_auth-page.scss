@@ -15,8 +15,8 @@
   --border: #DCE3EC;
   --field: #F7F9FC;
   --line: #E2E8F0;
-  --font: 'DM Sans', 'Inter', sans-serif;
-  --display: 'Outfit', 'DM Sans', sans-serif;
+  --font: var(--app-font);
+  --display: var(--app-font);
   display: block;
   width: 100%;
   height: 100vh;

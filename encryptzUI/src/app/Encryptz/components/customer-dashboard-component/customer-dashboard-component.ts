@@ -88,7 +88,7 @@ import { CustomerAuthService } from '../../Services/customer-auth-service';
       --nav-bg: linear-gradient(180deg, #060e28 0%, #071540 55%, #060f2e 100%);
       --content-bg: #f3f5f9;
       --border-soft: rgba(255, 255, 255, 0.08);
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: var(--app-font);
     }
 
     .customer-portal {

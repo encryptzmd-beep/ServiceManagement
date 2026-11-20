@@ -19,7 +19,9 @@ describe('CrmQuotationsComponent', () => {
     asked = [];
     items = [row(1)];
     crm = { productCategories: () => of({ success: true, message: '', data: ['Inverter'] }), searchProducts: () => of({ success: true, message: '', data: [] }),
-      saveLead: vi.fn(() => of({ success: true, message: '', data: 77 })), getQuotations: (f: any) => { asked.push({ ...f }); return of({ success: true, message: '', data: { items, totalCount: items[0]?.totalCount ?? 0, pageNumber: f.page, pageSize: 20, totalPages: 3 } }); } };
+      saveLead: vi.fn(() => of({ success: true, message: '', data: 77 })),
+      getQuotationStatusCounts: () => of({ success: true, message: '', data: [{ status: 'Sent', count: 40 }, { status: 'Accepted', count: 5 }] }),
+      getQuotations: (f: any) => { asked.push({ ...f }); return of({ success: true, message: '', data: { items, totalCount: items[0]?.totalCount ?? 0, pageNumber: f.page, pageSize: 20, totalPages: 3 } }); } };
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({ imports: [CrmQuotationsComponent], providers: [provideRouter([]), { provide: CrmService, useValue: crm }] });
     fixture = TestBed.createComponent(CrmQuotationsComponent);
@@ -40,18 +42,19 @@ describe('CrmQuotationsComponent', () => {
     const input = el.querySelector('.crm-search input') as HTMLInputElement;
     input.value = 'ravi';
     input.dispatchEvent(new Event('input'));
-    (el.querySelector('.crm-btn.navy') as HTMLButtonElement).click();
+    (el.querySelector('.crm-filterbar') as HTMLFormElement).dispatchEvent(new Event('submit'));   // Enter in the search box
     await flush();
     expect(asked.at(-1)).toEqual(expect.objectContaining({ search: 'ravi', page: 1 }));
   });
 
-  it('status filter sends status', async () => {
-    const select = el.querySelector('select[name="status"]') as HTMLSelectElement;
-    select.value = 'Accepted';
-    select.dispatchEvent(new Event('change'));
-    (el.querySelector('.crm-btn.navy') as HTMLButtonElement).click();
+  it('a status tab sends its status and shows the counts', async () => {
+    const tabs = Array.from(el.querySelectorAll('.crm-stab')) as HTMLButtonElement[];
+    expect(tabs.map(t => t.textContent!.replace(/\s+/g, ' ').trim())).toEqual(
+      expect.arrayContaining(['All45', 'Sent40', 'Accepted5', 'Draft0']));
+    tabs.find(t => t.textContent!.includes('Accepted'))!.click();
     await flush();
     expect(asked.at(-1)).toEqual(expect.objectContaining({ status: 'Accepted', page: 1 }));
+    expect(el.querySelector('.crm-stab.on')!.textContent).toContain('Accepted');
   });
 
   it('row links to the quotation', () => {

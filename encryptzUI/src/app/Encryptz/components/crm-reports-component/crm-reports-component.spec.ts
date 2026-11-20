@@ -112,8 +112,7 @@ describe('CrmReportsComponent', () => {
     await open('team');
     const sel = el.querySelector('select[name="owner"]') as HTMLSelectElement;
     sel.value = '3';
-    sel.dispatchEvent(new Event('change'));
-    (el.querySelector('.crm-btn.navy') as HTMLButtonElement).click();
+    sel.dispatchEvent(new Event('change'));   // a filter applies at once: there is no Show button
     await flush();
     expect(crm.teamReport).toHaveBeenLastCalledWith(expect.objectContaining({ ownerUserId: 3 }));
     expect(text()).toContain('Anu');
@@ -140,12 +139,24 @@ describe('CrmReportsComponent', () => {
     expect(text()).toContain('2 Nov 2026');
   });
 
-  it('shows a bar per row of the main figure', async () => {
+  it('shows the breakdown as one stacked bar of shares', async () => {
     await open('lost');
-    const bar = el.querySelector('.crm-bar-fill') as HTMLElement;
-    expect(bar).not.toBeNull();
-    expect(bar.style.width).toBe('100%');
+    const segs = Array.from(el.querySelectorAll('.rp-seg')) as HTMLElement[];
+    expect(segs.length).toBeGreaterThan(0);
+    const total = segs.reduce((s, b) => s + parseFloat(b.style.width), 0);
+    expect(Math.round(total)).toBe(100);
     expect(el.querySelectorAll('.crm-stat').length).toBeGreaterThan(0);
+  });
+
+  it('the search box narrows the rows on screen', async () => {
+    await open('lost');
+    const before = el.querySelectorAll('tbody tr').length;
+    const q = el.querySelector('input[name="q"]') as HTMLInputElement;
+    q.value = 'zzz-nothing';
+    q.dispatchEvent(new Event('input'));
+    await flush();
+    expect(before).toBeGreaterThan(0);
+    expect(el.querySelector('tbody')!.textContent).toContain('Nothing matches');
   });
 
   it('excel exports the visible report', async () => {

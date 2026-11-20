@@ -85,6 +85,14 @@ function groupBars(rows: Row[], label: (r: Row) => string, value: (r: Row) => nu
   return barsOf([...by].sort((a, b) => b[1] - a[1]).map(([l, v]) => ({ label: l, value: v, text: text(v) })));
 }
 
+/** Stacked-bar colours: a status or stage keeps its colour from the lists; the rest take PALETTE in turn. */
+const SEGMENT_COLORS: Record<string, string> = {
+  new: '#3b82f6', contacted: '#8b5cf6', qualified: '#0e9f9e', quotation: '#d97706', negotiation: '#db2777',
+  converted: '#2d7a38', accepted: '#2d7a38', lost: '#d42b2b', rejected: '#d42b2b', cancelled: '#b42323',
+  draft: '#94a3b8', sent: '#d97706', superseded: '#cbd5e1', other: '#cbd5e1',
+};
+const PALETTE = ['#1b4a7a', '#0e9f6e', '#d97706', '#7c3aed', '#0e7490', '#db2777'];
+
 const text = (key: string, title: string): ReportColumn<Row> => ({ key, title, kind: 'text' });
 const exp = (cols: Col[]): ReportColumn<Row>[] => cols.map(c => ({ key: c.key, title: c.title, kind: c.kind ?? 'text' }));
 
@@ -124,6 +132,52 @@ export class CrmReportsComponent {
   readonly showOwner = computed(() => this.current().owner && this.isManager());
   readonly view = computed(() => { const l = this.loaded(); return l ? this.viewOf(l) : null; });
 
+  /** The search box of the table: narrows the rows on screen (Excel and PDF keep the whole report). */
+  query = signal('');
+  readonly shownRows = computed(() => {
+    const v = this.view();
+    if (!v) return [];
+    const q = this.query().trim().toLowerCase();
+    if (!q) return v.rows;
+    return v.rows.filter(r => v.cols.some(c => this.cell(r, c).toLowerCase().includes(q) || (c.sub ? String(r[c.sub] ?? '').toLowerCase().includes(q) : false)));
+  });
+
+  /**
+   * The breakdown as ONE stacked bar: each group's share of the whole, the six largest by name
+   * and the rest as "Other". A status or stage keeps its own colour, anything else takes the palette.
+   */
+  readonly segments = computed(() => {
+    const bars = this.view()?.bars ?? [];
+    const total = bars.reduce((s, b) => s + Math.max(b.value, 0), 0);
+    if (total <= 0) return [];
+    const top = bars.slice(0, 6);
+    const rest = bars.slice(6);
+    const items = top.map(b => ({ label: b.label, value: b.value, text: b.text }));
+    if (rest.length) {
+      const v = rest.reduce((s, b) => s + Math.max(b.value, 0), 0);
+      const money = rest.some(b => b.text.includes('₹'));
+      items.push({ label: 'Other', value: v, text: money ? rupees(v) : count(v) });
+    }
+    return items.map((i, n) => ({
+      ...i,
+      pct: Math.round((Math.max(i.value, 0) * 1000) / total) / 10,
+      color: SEGMENT_COLORS[i.label.toLowerCase()] ?? PALETTE[n % PALETTE.length],
+    }));
+  });
+  readonly segmentTotal = computed(() => {
+    const bars = this.view()?.bars ?? [];
+    const v = bars.reduce((s, b) => s + Math.max(b.value, 0), 0);
+    return bars.some(b => b.text.includes('₹')) ? rupees(v) : count(v);
+  });
+
+  /** A filter changed: read the report again at once (there is no Show button). */
+  setFilter(which: 'from' | 'to' | 'owner', value: string): void {
+    if (which === 'from') this.from.set(value || '');
+    else if (which === 'to') this.to.set(value || '');
+    else this.ownerUserId.set(value ? +value : null);
+    this.run();
+  }
+
   private readonly companyName = computed(() => {
     const id = this.auth.selectedCompanyId();
     return this.auth.companies().find(c => c.companyId === id)?.companyName ?? '';
@@ -143,6 +197,7 @@ export class CrmReportsComponent {
         return;
       }
       this.tab.set(key);
+      this.query.set('');
       this.title.setTitle('CRM · ' + this.current().label);
       this.run();
     });

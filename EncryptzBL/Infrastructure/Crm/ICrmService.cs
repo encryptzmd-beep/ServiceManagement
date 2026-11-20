@@ -12,8 +12,10 @@ namespace EncryptzBL.Infrastructure.Crm
         Task<bool> IsManager(int userId, string? role, int companyId);
 
         Task<ApiResponse<PagedResult<LeadListDto>>> GetLeads(int userId, bool isManager, int companyId, LeadFilterDto f);
+        Task<ApiResponse<List<LeadStatusCountDto>>> GetLeadStatusCounts(int userId, bool isManager, int companyId, LeadFilterDto f);
         Task<ApiResponse<LeadDetailDto>> GetLead(int userId, bool isManager, int companyId, int leadId);
         Task<ApiResponse<int>> SaveLead(int userId, bool isManager, int companyId, LeadSaveDto dto);
+        Task<ApiResponse<int>> DeleteLead(int userId, bool isManager, int companyId, int leadId);
         Task<ApiResponse<int>> ChangeStatus(int userId, bool isManager, int companyId, int leadId, StatusChangeDto dto);
         Task<ApiResponse<int>> Reassign(int userId, bool isManager, int companyId, int leadId, ReassignDto dto);
         Task<ApiResponse<int>> AddFollowUp(int userId, bool isManager, int companyId, int leadId, FollowUpSaveDto dto);
@@ -41,6 +43,7 @@ namespace EncryptzBL.Infrastructure.Crm
 
         Task<ApiResponse<CrmBoardDto>> GetBoard(int userId, bool isManager, int companyId, int? ownerUserId);
         Task<ApiResponse<PagedResult<QuotationListRowDto>>> GetQuotations(int userId, bool isManager, int companyId, QuotationFilterDto f);
+        Task<ApiResponse<List<LeadStatusCountDto>>> GetQuotationStatusCounts(int userId, bool isManager, int companyId, QuotationFilterDto f);
         Task<ApiResponse<List<CrmPipelineRowDto>>> PipelineReport(int userId, bool isManager, int companyId, int? ownerUserId);
         Task<ApiResponse<List<CrmSourceRowDto>>> SourcesReport(int userId, bool isManager, int companyId, DateTime? from, DateTime? to);
         Task<ApiResponse<List<CrmTeamRowDto>>> TeamReport(int userId, bool isManager, int companyId, DateTime? from, DateTime? to, int? ownerUserId);

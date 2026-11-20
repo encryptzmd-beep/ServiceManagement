@@ -17,20 +17,20 @@ import { WalletService } from '../../Services/wallet-service';
   `,
   styles: [`
     /* the same box as the notification bell beside it: 38px high, 10px corners */
-    :host { display: inline-flex; font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif; }
+    :host { display: inline-flex; font-family: var(--app-font, 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif); }
     .wc-chip {
-      display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px 0 5px;
+      display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 10px 0 4px;
       box-sizing: border-box; border: 1px solid #e6eaf0; border-radius: 10px; background: #fff;
       text-decoration: none; white-space: nowrap; line-height: 1;
       transition: background 0.12s, border-color 0.12s;
     }
     .wc-icon {
-      display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px;
+      display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px;
       border-radius: 7px; background: #eef4fb; color: #2f6fb3;
     }
     .wc-icon .material-icons { font-size: 17px; }
-    .wc-num { font-size: 14px; font-weight: 700; color: #111827; font-variant-numeric: tabular-nums; }
-    .wc-unit { font-size: 12.5px; font-weight: 500; color: #6b7280; }
+    .wc-num { font-size: 13px; font-weight: 700; color: #111827; font-variant-numeric: tabular-nums; }
+    .wc-unit { font-size: 12px; font-weight: 500; color: #6b7280; }
     .wc-chip:hover { background: #eef4fb; border-color: #cfdcec; }
     .wc-chip:hover .wc-icon { background: #fff; }
     .wc-chip:focus-visible { outline: 2px solid #2f6fb3; outline-offset: 2px; }

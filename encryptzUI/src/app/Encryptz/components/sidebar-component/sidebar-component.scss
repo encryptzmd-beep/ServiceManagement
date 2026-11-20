@@ -9,9 +9,9 @@
   --brand-navy: #1B4A7A;
 
   width: 230px;
-  height: calc(100vh - 60px);
+  height: calc(100vh - 52px);
   position: fixed;
-  top: 60px; left: 0;
+  top: 52px; left: 0;
   background: var(--sidebar-bg);
   border-right: none;
   z-index: 900;
@@ -234,7 +234,7 @@
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 .qa-panel {
-  position: fixed; top: 60px; left: 60px; bottom: 0; width: 260px;
+  position: fixed; top: 52px; left: 60px; bottom: 0; width: 260px;
   background: #fff; z-index: 1101;
   box-shadow: 4px 0 24px rgba(0,0,0,.1);
   border-right: 1px solid #e2e8f0;

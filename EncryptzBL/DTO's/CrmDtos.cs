@@ -120,6 +120,13 @@ namespace EncryptzBL.DTO_s
     }
 
     /// <summary>The lead list filters. Status may be several, comma separated.</summary>
+    /// <summary>One status tab of the lead list: the status and how many leads have it under the list's filters.</summary>
+    public class LeadStatusCountDto
+    {
+        public string Status { get; set; } = string.Empty;
+        public int Count { get; set; }
+    }
+
     public class LeadFilterDto
     {
         public string? Search { get; set; }

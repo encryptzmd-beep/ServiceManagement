@@ -40,6 +40,28 @@ namespace EncryptzBL.Infrastructure.Crm
                 return ApiResponse<PagedResult<LeadListDto>>.Ok(new PagedResult<LeadListDto>(items, total, page, size, pages), "Success", total);
             });
 
+        /// <summary>Leads per status for the list's status tabs: the list's filters except the status (crm.sp_Lead_StatusCounts).</summary>
+        public Task<ApiResponse<List<LeadStatusCountDto>>> GetLeadStatusCounts(int userId, bool isManager, int companyId, LeadFilterDto f)
+            => Guard(async () =>
+            {
+                f ??= new LeadFilterDto();
+                var due = (f.Due ?? "").Trim();
+                if (due.Length > 0)
+                {
+                    due = new[] { "Today", "Overdue", "Pending" }.FirstOrDefault(d => string.Equals(d, due, StringComparison.OrdinalIgnoreCase)) ?? "";
+                    if (due.Length == 0) return ApiResponse<List<LeadStatusCountDto>>.Fail("Choose Today, Overdue or Pending");
+                }
+
+                var dt = await GetDataTableAsync("crm.sp_Lead_StatusCounts", new[]
+                {
+                    In("@CompanyId", companyId), In("@UserId", userId), In("@IsManager", isManager), In("@LocationId", LocationId),
+                    In("@Search", f.Search), In("@SourceId", f.SourceId), In("@OwnerUserId", f.OwnerUserId),
+                    In("@From", f.From?.Date), In("@To", f.To?.Date), In("@Due", due.Length > 0 ? due : null),
+                    In("@ClosedFrom", f.ClosedFrom?.Date), In("@ClosedTo", f.ClosedTo?.Date)
+                });
+                return ApiResponse<List<LeadStatusCountDto>>.Ok(dt.ToList<LeadStatusCountDto>());
+            });
+
         public Task<ApiResponse<LeadDetailDto>> GetLead(int userId, bool isManager, int companyId, int leadId)
             => Guard(async () =>
             {
@@ -69,11 +91,32 @@ namespace EncryptzBL.Infrastructure.Crm
                 In("@IsManager", isManager), In("@LocationId", LocationId)
             };
 
+        /// <summary>
+        /// Whether the caller may see the lead: crm.sp_Lead_Get finds it (it skips deleted leads,
+        /// 22_CRM_Lead_Delete.sql). Guards the changes that would otherwise reach a deleted lead by its id.
+        /// </summary>
+        private async Task<bool> LeadVisible(int userId, bool isManager, int companyId, int leadId)
+            => (await GetDataTableAsync("crm.sp_Lead_Get", LeadScope(userId, isManager, companyId, leadId))).Rows.Count > 0;
+
+        /// <summary>
+        /// Soft delete (crm.sp_Lead_Delete): the owner or a manager; never a converted lead or one being converted.
+        /// The lead and its follow-ups, history and quotations stay in the database, hidden everywhere.
+        /// </summary>
+        public Task<ApiResponse<int>> DeleteLead(int userId, bool isManager, int companyId, int leadId)
+            => Guard(async () =>
+            {
+                if (leadId <= 0) return ApiResponse<int>.Fail(LeadNotFound);
+                var dt = await GetDataTableAsync("crm.sp_Lead_Delete", LeadScope(userId, isManager, companyId, leadId));
+                return ToResponse(Answer(dt));
+            });
+
         public Task<ApiResponse<int>> SaveLead(int userId, bool isManager, int companyId, LeadSaveDto dto)
             => Guard(async () =>
             {
                 var problem = CrmRules.LeadProblem(dto);
                 if (problem != null) return ApiResponse<int>.Fail(problem);
+                if (dto.LeadId > 0 && !await LeadVisible(userId, isManager, companyId, dto.LeadId))
+                    return ApiResponse<int>.Fail(LeadNotFound);
 
                 // only a manager gives a new lead to someone else; the owner of an existing lead changes through Reassign
                 var owner = isManager && dto.LeadId == 0 ? dto.OwnerUserId : null;
@@ -121,6 +164,7 @@ namespace EncryptzBL.Infrastructure.Crm
             {
                 if (!isManager) return ApiResponse<int>.Fail(ManagerOnly);
                 if (dto == null || dto.OwnerUserId <= 0) return ApiResponse<int>.Fail("Choose a member of the sales team");
+                if (!await LeadVisible(userId, isManager, companyId, leadId)) return ApiResponse<int>.Fail(LeadNotFound);
 
                 var dt = await GetDataTableAsync("crm.sp_Lead_Reassign", new[]
                 {
@@ -140,6 +184,7 @@ namespace EncryptzBL.Infrastructure.Crm
             {
                 var problem = CrmRules.FollowUpProblem(dto);
                 if (problem != null) return ApiResponse<int>.Fail(problem);
+                if (!await LeadVisible(userId, isManager, companyId, leadId)) return ApiResponse<int>.Fail(LeadNotFound);
 
                 // the procedure moves a New lead to Contacted (CrmRules.AutoStatusAfterFollowUp)
                 var dt = await GetDataTableAsync("crm.sp_FollowUp_Add", new[]

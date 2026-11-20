@@ -7,7 +7,7 @@ import {
   ConversionReportFilter, ConvertPreviewDto, ConvertRequestDto, ConvertResultDto, CrmConversionRowDto,
   CrmBoardDto, CrmDashboardDto, CrmFollowUpReportRowDto, CrmLostReasonRowDto, CrmMasterDto, CrmMasterKind, CrmMe,
   CrmMemberDto, CrmMemberListDto, CrmPipelineRowDto, CrmProductDto, CrmSourceRowDto, CrmTeamRowDto,
-  FollowUpReportFilter, FollowUpSaveDto, LeadDetailDto, LeadFilterDto, LeadListDto, LeadSaveDto,
+  FollowUpReportFilter, FollowUpSaveDto, LeadDetailDto, LeadFilterDto, LeadListDto, LeadSaveDto, LeadStatusCountDto,
   LinkOrderDto, QuotationDto, QuotationFilterDto, QuotationListRowDto, QuotationSaveDto, ReassignDto, StatusChangeDto,
 } from '../Models/CrmModels';
 
@@ -40,6 +40,17 @@ export class CrmService {
 
   saveLead(dto: LeadSaveDto): Observable<ApiResponse<number>> {
     return this.http.post<ApiResponse<number>>(`${this.base}/leads`, dto);
+  }
+
+  /** Leads per status under the list's filters (the status itself and paging are ignored). */
+  getLeadStatusCounts(filter: LeadFilterDto = {}): Observable<ApiResponse<LeadStatusCountDto[]>> {
+    const { status, page, pageSize, ...rest } = filter;
+    return this.http.get<ApiResponse<LeadStatusCountDto[]>>(`${this.base}/leads/status-counts`, { params: this.params(rest) });
+  }
+
+  /** Soft delete: the owner or a manager; a converted lead cannot be deleted. */
+  deleteLead(id: number): Observable<ApiResponse<number>> {
+    return this.http.delete<ApiResponse<number>>(`${this.base}/leads/${id}`);
   }
 
   changeStatus(id: number, dto: StatusChangeDto): Observable<ApiResponse<number>> {
@@ -140,6 +151,12 @@ export class CrmService {
   getQuotations(filter: QuotationFilterDto = {}): Observable<ApiResponse<PagedResult<QuotationListRowDto>>> {
     return this.http.get<ApiResponse<PagedResult<QuotationListRowDto>>>(`${this.base}/quotations`,
       { params: this.params(filter) });
+  }
+
+  /** Quotations per status under the list's filters (the status itself and paging are ignored). */
+  getQuotationStatusCounts(filter: QuotationFilterDto = {}): Observable<ApiResponse<LeadStatusCountDto[]>> {
+    const { status, page, pageSize, ...rest } = filter;
+    return this.http.get<ApiResponse<LeadStatusCountDto[]>>(`${this.base}/quotations/status-counts`, { params: this.params(rest) });
   }
 
   pipelineReport(ownerUserId?: number): Observable<ApiResponse<CrmPipelineRowDto[]>> {

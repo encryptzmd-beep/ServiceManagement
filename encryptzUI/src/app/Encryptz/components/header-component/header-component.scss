@@ -6,8 +6,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 60px;
-  padding: 0 24px;
+  height: 52px;
+  padding: 0 20px;
   background: #ffffff;
   border-bottom: 1px solid #e2e8f0;
   position: fixed;
@@ -50,7 +50,7 @@
 }
 
 .brand-text {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
   color: #1a2332;
   letter-spacing: -0.2px;
@@ -162,8 +162,8 @@
 }
 
 .avatar {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: var(--brand-navy);
   color: #fff;
@@ -171,7 +171,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 11px;
   order: 2;
 }
 
@@ -183,18 +183,18 @@
 }
 
 .user-name {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
   color: #1a2332;
   line-height: 1.2;
 }
 
 .user-role {
-  font-size: 11px;
+  font-size: 10.5px;
   color: #8a9ab0;
   text-transform: capitalize;
   line-height: 1.2;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .user-menu .material-icons {

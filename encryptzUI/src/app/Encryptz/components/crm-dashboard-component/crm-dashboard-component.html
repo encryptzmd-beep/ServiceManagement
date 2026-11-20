@@ -3,15 +3,17 @@
 } @else {
   <div class="crm-board-page">
     <header class="crm-page-head">
-      <div>
-        <h1>Dashboard</h1>
+      <div class="crm-head-main">
+        <div class="crm-head-title">
+          <h1>Dashboard</h1>
+          @if (board(); as b) {
+            <div class="crm-month">
+              <span class="crm-month-fig good"><strong>{{ b.counts.convertedThisMonth }}</strong> converted this month</span>
+              <span class="crm-month-fig bad"><strong>{{ b.counts.lostThisMonth }}</strong> lost this month</span>
+            </div>
+          }
+        </div>
         <p>Your open leads by stage. Drag a card to change its status.</p>
-        @if (board(); as b) {
-          <div class="crm-month">
-            <span class="crm-month-fig good"><strong>{{ b.counts.convertedThisMonth }}</strong> converted this month</span>
-            <span class="crm-month-fig bad"><strong>{{ b.counts.lostThisMonth }}</strong> lost this month</span>
-          </div>
-        }
       </div>
       <div class="crm-page-actions">
         @if (isManager()) {
@@ -62,7 +64,7 @@
               <div class="crm-col-body" cdkDropList [cdkDropListData]="col.status" [cdkDropListSortingDisabled]="true" (cdkDropListDropped)="dropped($event)">
                 @for (card of col.cards; track card.leadId) {
                   <a class="crm-kcard" [routerLink]="['/crm/leads', card.leadId]"
-                     cdkDrag [cdkDragData]="card" [cdkDragStartDelay]="dragDelay" [cdkDragDisabled]="!!pending()"
+                     cdkDrag cdkDragPreviewContainer="parent" [cdkDragData]="card" [cdkDragStartDelay]="dragDelay" [cdkDragDisabled]="!!pending()"
                      (cdkDragStarted)="dragStarted()" (cdkDragEnded)="dragEnded()">
                     <span class="crm-kcard-top">
                       <strong>{{ card.contactName }}</strong>

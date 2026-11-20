@@ -36,6 +36,7 @@ describe('CrmLeadsComponent', () => {
       me: () => ok({ userId: 1, fullName: 'A', isManager }),
       getMasters: () => ok([{ id: 2, name: 'Walk-in', sortOrder: 1, isActive: true }]),
       getMembers: () => ok({ members: [{ userId: 1, fullName: 'Anu', isManager: true, isActive: true }], available: [] }),
+      getLeadStatusCounts: () => ok([{ status: rowStatus, count: 1 }]),
       getLeads: (f: any) => {
         asked.push(f);
         return ok({ items: [{ leadId: 12, leadNo: 'LD-0012', leadDate: '2026-11-01', contactName: 'Ravi', mobile: '9876543210', email: '',
@@ -57,6 +58,14 @@ describe('CrmLeadsComponent', () => {
     expect(create({}).querySelector('.crm-owner-filter')).toBeNull();
     isManager = true;
     expect(create({}).querySelector('.crm-owner-filter')).not.toBeNull();
+  });
+
+  it('shows the status tabs with their counts, the status of the address marked', () => {
+    crm.getLeadStatusCounts = () => ok([{ status: 'New', count: 3 }, { status: 'Lost', count: 2 }]);
+    const el = create({ status: 'Lost' });
+    const tabs = Array.from(el.querySelectorAll('.crm-stab')).map(t => t.textContent!.replace(/\s+/g, ' ').trim());
+    expect(tabs).toEqual(expect.arrayContaining(['All5', 'New3', 'Lost2', 'Contacted0']));
+    expect(el.querySelector('.crm-stab.on')!.textContent).toContain('Lost');
   });
 
   it('hides next follow-up of closed leads', () => {

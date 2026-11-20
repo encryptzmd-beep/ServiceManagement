@@ -142,5 +142,21 @@ namespace EncryptzBL.Infrastructure.Crm
                 var pages = total == 0 ? 0 : (int)Math.Ceiling(total / (double)size);
                 return ApiResponse<PagedResult<QuotationListRowDto>>.Ok(new PagedResult<QuotationListRowDto>(items, total, page, size, pages), "Success", total);
             });
+
+        /// <summary>Quotations per status for the list's status tabs: the list's filters except the status (crm.sp_Quotation_StatusCounts).</summary>
+        public Task<ApiResponse<List<LeadStatusCountDto>>> GetQuotationStatusCounts(int userId, bool isManager, int companyId, QuotationFilterDto f)
+            => Guard(async () =>
+            {
+                f ??= new QuotationFilterDto();
+                if (f.From.HasValue && f.To.HasValue && f.From.Value.Date > f.To.Value.Date)
+                    return ApiResponse<List<LeadStatusCountDto>>.Fail("The From date is after the To date");
+
+                var dt = await GetDataTableAsync("crm.sp_Quotation_StatusCounts", new[]
+                {
+                    In("@CompanyId", companyId), In("@UserId", userId), In("@IsManager", isManager), In("@LocationId", LocationId),
+                    In("@Search", f.Search), In("@From", f.From?.Date), In("@To", f.To?.Date)
+                });
+                return ApiResponse<List<LeadStatusCountDto>>.Ok(dt.ToList<LeadStatusCountDto>());
+            });
     }
 }

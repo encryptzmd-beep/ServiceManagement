@@ -40,6 +40,22 @@ export class CrmQuotationsComponent {
   error = signal('');
   readonly pages = computed(() => Math.max(1, Math.ceil(this.total() / PAGE_SIZE)));
 
+  /** Quotations per status under the other filters; null until read (the tabs then show no counts). */
+  statusCounts = signal<Record<string, number> | null>(null);
+  /** The status the list shows ('' = all), as last read. */
+  shownStatus = signal('');
+  readonly tabs = computed(() => {
+    const counts = this.statusCounts();
+    const shown = this.shownStatus();
+    return [
+      { key: '', label: 'All', count: counts ? Object.values(counts).reduce((a, b) => a + b, 0) : null, on: shown === '' },
+      ...this.statuses.map(s => ({ key: s, label: s, count: counts ? counts[s] ?? 0 : null, on: shown === s })),
+    ];
+  });
+  readonly shownFrom = computed(() => (this.total() === 0 ? 0 : (this.page() - 1) * PAGE_SIZE + 1));
+  readonly shownTo = computed(() => Math.min(this.total(), this.page() * PAGE_SIZE));
+  readonly filtered = computed(() => !!(this.search().trim() || this.from() || this.to()));
+
   /** The "New quotation" dialog: a small lead form, because a quotation belongs to a lead. */
   newOpen = signal(false);
   nq = signal({ contactName: '', mobile: '', city: '', productCategory: '', productMasterId: null as number | null });
@@ -102,6 +118,12 @@ export class CrmQuotationsComponent {
     if (this.status()) asked['status'] = this.status();
     if (this.from()) asked['from'] = this.from();
     if (this.to()) asked['to'] = this.to();
+    this.shownStatus.set(this.status());
+    // the tab counts: the same filters, every status (a failure only hides the counts)
+    this.crm.getQuotationStatusCounts(asked).subscribe({
+      next: res => this.statusCounts.set(res.success ? Object.fromEntries((res.data ?? []).map(c => [c.status, c.count])) : null),
+      error: () => this.statusCounts.set(null),
+    });
     this.crm.getQuotations(asked).subscribe({
       next: res => {
         if (!res.success) { this.rows.set([]); this.total.set(0); this.error.set(res.message || 'The quotations could not be read'); return; }
@@ -115,4 +137,24 @@ export class CrmQuotationsComponent {
   }
 
   goTo(page: number): void { this.apply(Math.min(Math.max(1, page), this.pages())); }
+
+  /** A status tab: the other filters stay. */
+  pickTab(status: string): void {
+    this.status.set(status);
+    this.apply();
+  }
+
+  /** A date changed: show the result at once (the search waits for Enter). */
+  setDate(which: 'from' | 'to', value: string): void {
+    (which === 'from' ? this.from : this.to).set(value || '');
+    this.apply();
+  }
+
+  /** Clears search and dates; the status tab stays. */
+  clear(): void {
+    this.search.set('');
+    this.from.set('');
+    this.to.set('');
+    this.apply();
+  }
 }

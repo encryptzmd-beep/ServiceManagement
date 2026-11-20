@@ -32,6 +32,9 @@ export interface LeadSaveDto {
   remarks?: string | null;
 }
 
+/** One status tab of the lead list: how many leads have the status under the list's other filters. */
+export interface LeadStatusCountDto { status: string; count: number; }
+
 export interface LeadListDto {
   leadId: number;
   leadNo: string;

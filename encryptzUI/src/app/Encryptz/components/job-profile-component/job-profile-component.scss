@@ -1,10 +1,10 @@
 /* the look of the workspace: its blue, its fonts, soft round cards */
 :host {
   display: block;
-  font-family: 'DM Sans', 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--app-font);
 }
 
-$display: 'Outfit', 'DM Sans', sans-serif;
+$display: var(--app-font);
 $ink: #141b34;
 $text: #3b4357;
 $muted: #6b7489;

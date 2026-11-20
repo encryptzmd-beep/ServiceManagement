@@ -328,7 +328,7 @@ import { CustomerAuthService, CustomerTenantProject } from '../../Services/custo
 
       display: block;
       min-height: 100dvh;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: var(--app-font);
       background: #050d24;
       color: var(--text-main);
       overflow-x: hidden;

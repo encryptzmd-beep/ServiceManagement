@@ -1,6 +1,6 @@
 /* The pages of jobs. The cards, buttons, dialogs and chips come from the profile page. */
 
-$display: 'Outfit', 'DM Sans', sans-serif;
+$display: var(--app-font);
 $ink: #141b34;
 $text: #3b4357;
 $muted: #6b7489;

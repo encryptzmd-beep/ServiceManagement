@@ -1,8 +1,8 @@
 @if (error() === forbidden) {
   <app-crm-refused />
 } @else {
-  <div class="crm-page">
-    <header class="crm-page-head">
+  <div class="crm-page ld-page">
+    <header class="crm-page-head ld-head">
       <div>
         <h1>Leads</h1>
         <p>{{ isManager() ? 'All the leads of the team.' : 'The leads you own.' }}</p>
@@ -12,99 +12,150 @@
       </div>
     </header>
 
-    <section class="crm-table-card">
-      <form class="crm-table-toolbar crm-lead-filters" (ngSubmit)="apply()">
-        <div class="crm-toolbar-left">
-          <span class="crm-table-title">All leads</span>
-          <span class="crm-count-pill">{{ total() }}</span>
+    <section class="crm-listcard">
+      <div class="crm-stabs" role="tablist" aria-label="Status">
+        @for (t of tabs(); track t.key) {
+          <button type="button" role="tab" class="crm-stab" [class.on]="t.on" [attr.aria-selected]="t.on" (click)="pickTab(t.key)">
+            {{ t.label }}@if (t.count !== null) { <span class="crm-stab-count">{{ t.count }}</span> }
+          </button>
+        }
+      </div>
+
+      <form class="crm-filterbar" (ngSubmit)="apply()">
+        <label class="crm-search">
+          <span class="material-icons" aria-hidden="true">search</span>
+          <input type="search" name="search" aria-label="Search" placeholder="Search name, mobile, city or lead no."
+                 [ngModel]="filter().search ?? ''" (ngModelChange)="set('search', $event)" />
+        </label>
+        <select name="sourceId" aria-label="Source" [ngModel]="filter().sourceId ?? ''" (ngModelChange)="setAndApply('sourceId', $event ? +$event : undefined)">
+          <option value="">All sources</option>
+          @for (s of sources(); track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+        </select>
+        @if (isManager()) {
+          <select name="ownerUserId" aria-label="Owner" class="crm-owner-filter" [ngModel]="filter().ownerUserId ?? ''" (ngModelChange)="setAndApply('ownerUserId', $event ? +$event : undefined)">
+            <option value="">Everyone</option>
+            @for (m of owners(); track m.userId) { <option [value]="m.userId">{{ m.fullName }}</option> }
+          </select>
+        }
+        <select name="due" aria-label="Follow-up" [ngModel]="filter().due ?? ''" (ngModelChange)="setAndApply('due', $event)">
+          <option value="">Any follow-up</option>
+          <option value="Today">Due today</option>
+          <option value="Overdue">Overdue</option>
+          <option value="Pending">Pending</option>
+        </select>
+        <div class="crm-range" role="group" aria-label="Lead date">
+          <span class="material-icons" aria-hidden="true">event</span>
+          <input type="date" name="from" aria-label="Lead date from" [ngModel]="filter().from ?? ''" (change)="setAndApply('from', $any($event.target).value)" />
+          <span aria-hidden="true">–</span>
+          <input type="date" name="to" aria-label="Lead date to" [ngModel]="filter().to ?? ''" (change)="setAndApply('to', $any($event.target).value)" />
         </div>
-        <div class="crm-toolbar-right">
-          <label class="crm-search">
-            <span class="material-icons" aria-hidden="true">search</span>
-            <input type="search" name="search" aria-label="Search" placeholder="Name, mobile, lead no." [ngModel]="filter().search ?? ''" (ngModelChange)="set('search', $event)" />
-          </label>
-          <select name="status" aria-label="Status" [ngModel]="filter().status ?? ''" (ngModelChange)="set('status', $event)">
-            <option value="">All statuses</option>
-            @if (extraStatus()) { <option [value]="extraStatus()">{{ extraStatus().split(',').join(' + ') }}</option> }
-            @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
-          </select>
-          <select name="sourceId" aria-label="Source" [ngModel]="filter().sourceId ?? ''" (ngModelChange)="set('sourceId', $event ? +$event : undefined)">
-            <option value="">All sources</option>
-            @for (s of sources(); track s.id) { <option [value]="s.id">{{ s.name }}</option> }
-          </select>
-          @if (isManager()) {
-            <select name="ownerUserId" aria-label="Owner" class="crm-owner-filter" [ngModel]="filter().ownerUserId ?? ''" (ngModelChange)="set('ownerUserId', $event ? +$event : undefined)">
-              <option value="">Everyone</option>
-              @for (m of owners(); track m.userId) { <option [value]="m.userId">{{ m.fullName }}</option> }
-            </select>
-          }
-          <select name="due" aria-label="Follow-up" [ngModel]="filter().due ?? ''" (ngModelChange)="set('due', $event)">
-            <option value="">Any follow-up</option>
-            <option value="Today">Due today</option>
-            <option value="Overdue">Overdue</option>
-            <option value="Pending">Pending</option>
-          </select>
-          <label class="crm-date"><span>Lead date from</span><input type="date" name="from" aria-label="Lead date from" [ngModel]="filter().from ?? ''" (ngModelChange)="set('from', $event)" /></label>
-          <label class="crm-date"><span>to</span><input type="date" name="to" aria-label="Lead date to" [ngModel]="filter().to ?? ''" (ngModelChange)="set('to', $event)" /></label>
-          <button type="submit" class="crm-btn navy">Apply</button>
-          <button type="button" class="crm-btn" (click)="clear()">Clear</button>
-        </div>
+        <span class="crm-spacer"></span>
+        <span class="crm-result">{{ total() }} {{ total() === 1 ? 'lead' : 'leads' }}</span>
+        @if (filtered()) { <button type="button" class="crm-btn ghost" (click)="clear()">Clear filters</button> }
+        <button type="submit" class="ld-hidden-submit" tabindex="-1" aria-hidden="true">Search</button>
       </form>
       @if (filter().closedFrom || filter().closedTo) {
         <p class="crm-closed-note">Closed between {{ showDate(filter().closedFrom) || 'the start' }} and {{ showDate(filter().closedTo) || 'today' }}.
           <button type="button" class="crm-link" (click)="set('closedFrom', undefined); set('closedTo', undefined); apply()">Remove</button></p>
       }
 
-      @if (rows() === null) {
-        <div class="crm-empty">Loading…</div>
-      } @else {
-        @if (error()) { <p class="crm-error">{{ error() }}</p> }
-        <div class="crm-table-wrap crm-cards-sm">
-          <table class="crm-table">
-            <thead>
-              <tr>
-                <th>Lead</th><th>Contact</th><th>Product</th><th>Source</th><th>Owner</th><th>Next follow-up</th><th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
+      @if (error()) { <p class="crm-error">{{ error() }}</p> }
+      <div class="crm-datagrid crm-cards-sm">
+        <table>
+          <thead>
+            <tr>
+              <th>Lead</th><th>Contact</th><th>Interest</th><th>Owner</th><th>Next follow-up</th><th>Priority</th><th>Status</th>
+              <th class="crm-actions-col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (rows() === null) {
+              <tr><td colspan="8" class="crm-empty">Loading…</td></tr>
+            } @else {
               @for (r of rows(); track r.leadId) {
                 <tr class="crm-lead-row">
-                  <td data-label="Lead"><span class="crm-cell"><a [routerLink]="['/crm/leads', r.leadId]">{{ r.leadNo }}</a><span class="crm-muted">{{ showDate(r.leadDate) }}</span></span></td>
-                  <td data-label="Contact"><span class="crm-cell">{{ r.contactName }}<span class="crm-muted">{{ r.mobile }}@if (r.city) { · {{ r.city }} }</span></span></td>
-                  <td data-label="Product">{{ r.productCategory }}</td>
-                  <td data-label="Source">{{ r.sourceName }}</td>
-                  <td data-label="Owner">{{ r.ownerName }}</td>
+                  <td data-label="Lead">
+                    <div class="crm-main" [title]="r.contactName">{{ r.contactName }}</div>
+                    <div class="crm-sub"><a [routerLink]="['/crm/leads', r.leadId]">{{ r.leadNo }}</a> · {{ showDate(r.leadDate) }}</div>
+                  </td>
+                  <td data-label="Contact">
+                    <div class="crm-plain">{{ r.mobile }}</div>
+                    <div class="crm-sub">{{ r.city || '—' }}</div>
+                  </td>
+                  <td data-label="Interest">
+                    <div [class.crm-plain]="!!r.productCategory" [class.crm-none]="!r.productCategory">{{ r.productCategory || '—' }}</div>
+                    <div class="crm-sub">{{ r.sourceName || '—' }}</div>
+                  </td>
+                  <td data-label="Owner" class="crm-plain">{{ r.ownerName }}</td>
                   <td data-label="Next follow-up">
                     @if (followUpOf(r); as when) {
-                      <span [class]="isOverdue(r) ? 'crm-badge red' : ''">{{ when }}</span>
+                      @if (isOverdue(r)) { <span class="crm-overdue">{{ when }}</span> } @else { <span class="crm-due">{{ when }}</span> }
+                    } @else if (r.status !== 'Converted' && r.status !== 'Lost') {
+                      <span class="crm-none">Not set</span>
                     }
                   </td>
+                  <td data-label="Priority"><span [class]="'crm-prio ' + (r.priority || '').toLowerCase()">{{ r.priority }}</span></td>
                   <td data-label="Status">
-                    <span class="crm-cell">
-                      <span>
-                        <span [class]="pill(r.status)">{{ r.status }}</span>
-                        @if (r.priority === 'High') { <span class="crm-pill red">High</span> }
-                      </span>
-                      @if (r.orderNo) { <span class="crm-muted">{{ r.orderNo }}</span> }
+                    <span [class]="'crm-status ' + (r.status || '').toLowerCase()">{{ r.status }}</span>
+                    @if (r.orderNo) { <div class="crm-sub">{{ r.orderNo }}</div> }
+                  </td>
+                  <td data-label="Actions" class="crm-actions-col">
+                    <span class="crm-row-actions">
+                      <a class="fx-action-btn" [routerLink]="['/crm/leads', r.leadId]" title="View" [attr.aria-label]="'View ' + r.leadNo">
+                        <span class="material-icons" aria-hidden="true">visibility</span>
+                      </a>
+                      <a class="fx-action-btn" [routerLink]="['/crm/leads/new']" [queryParams]="{ id: r.leadId }" title="Edit" [attr.aria-label]="'Edit ' + r.leadNo">
+                        <span class="material-icons" aria-hidden="true">edit</span>
+                      </a>
+                      @if (canDelete(r)) {
+                        <button type="button" class="fx-action-btn is-danger" title="Delete" [attr.aria-label]="'Delete ' + r.leadNo" (click)="askDelete(r)">
+                          <span class="material-icons" aria-hidden="true">delete</span>
+                        </button>
+                      } @else {
+                        <span class="crm-act-gap" aria-hidden="true"></span>
+                      }
                     </span>
                   </td>
                 </tr>
               } @empty {
-                <tr><td colspan="7" class="crm-empty">No lead matches. @if (dueLabel(filter().due)) { ({{ dueLabel(filter().due) }}) }</td></tr>
+                <tr><td colspan="8" class="crm-empty">No lead matches. @if (dueLabel(filter().due)) { ({{ dueLabel(filter().due) }}) }</td></tr>
               }
-            </tbody>
-          </table>
-        </div>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="crm-listfoot">
+        <span>@if (total() > 0) { Showing {{ shownFrom() }}–{{ shownTo() }} of {{ total() }} {{ total() === 1 ? 'lead' : 'leads' }} } @else { No leads }</span>
         @if (pages() > 1) {
-          <div class="crm-pager">
-            <span>{{ total() }} leads · page {{ page() }} of {{ pages() }}</span>
-            <span>
-              <button type="button" class="crm-btn small" [disabled]="page() <= 1" (click)="apply(page() - 1)">Previous</button>
-              <button type="button" class="crm-btn small" [disabled]="page() >= pages()" (click)="apply(page() + 1)">Next</button>
-            </span>
-          </div>
+          <span class="crm-pages">
+            <button type="button" class="crm-page-btn" [disabled]="page() <= 1" (click)="apply(page() - 1)">Previous</button>
+            <span class="crm-page-btn on" aria-current="page">{{ page() }}</span>
+            <span>of {{ pages() }}</span>
+            <button type="button" class="crm-page-btn" [disabled]="page() >= pages()" (click)="apply(page() + 1)">Next</button>
+          </span>
         }
-      }
+      </div>
     </section>
   </div>
+
+  @if (deleting(); as d) {
+    <div class="ld-modal-backdrop" (click)="cancelDelete()">
+      <div class="ld-modal" role="alertdialog" aria-modal="true" aria-labelledby="ld-del-title" aria-describedby="ld-del-text"
+           (click)="$event.stopPropagation()" (keydown.escape)="cancelDelete()">
+        <div class="ld-modal-icon"><span class="material-icons" aria-hidden="true">delete_outline</span></div>
+        <h2 id="ld-del-title">Delete lead {{ d.leadNo }}?</h2>
+        <p id="ld-del-text">
+          <strong>{{ d.contactName }}</strong> will be removed from leads, the board and reports.
+          Its follow-ups and quotations are kept but hidden.
+        </p>
+        @if (deleteError()) { <p class="ld-modal-error" role="alert">{{ deleteError() }}</p> }
+        <div class="ld-modal-actions">
+          <button type="button" class="crm-btn" (click)="cancelDelete()" [disabled]="deleteBusy()">Cancel</button>
+          <button type="button" class="crm-btn ld-danger" (click)="confirmDelete()" [disabled]="deleteBusy()">
+            {{ deleteBusy() ? 'Deleting…' : 'Delete lead' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 }
