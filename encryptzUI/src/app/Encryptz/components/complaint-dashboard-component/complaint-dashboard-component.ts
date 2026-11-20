@@ -188,14 +188,62 @@ private _scrollTileTop(): void {
     const ip = rc['inprogress']   ?? s.inProgressComplaints;
     const wc = rc['workcompleted']?? s.resolvedComplaints;
     const cl = rc['closed']       ?? (s.closedComplaints ?? 0);
+    const hd = rc['hold'] ?? 0;
     return [
-      { label:'New',           count:n,  pct:(n/total)*100,  color:'#7c3aed', statusId: this.sid('new') },
-      { label:'In Progress',   count:ip, pct:(ip/total)*100, color:'#f59e0b', statusId: this.sid('inprogress') },
-      { label:'Work Completed',count:wc, pct:(wc/total)*100, color:'#10b981', statusId: this.sid('workcompleted') },
-      { label:'Closed',        count:cl, pct:(cl/total)*100, color:'#6b7280', statusId: this.sid('closed') },
-      { label:'SLA Breach',    count:s.slaBreached, pct:(s.slaBreached/total)*100, color:'#ef4444' },
+      { key:'new',           label:'New',            count:n,  pct:(n/total)*100,  color:'#6d8fd6', statusId: this.sid('new') },
+      { key:'inprogress',    label:'In Progress',    count:ip, pct:(ip/total)*100, color:'#e8b15c', statusId: this.sid('inprogress') },
+      { key:'hold',          label:'On Hold',        count:hd, pct:(hd/total)*100, color:'#e39a7b', statusId: this.sid('hold') },
+      { key:'workcompleted', label:'Work Completed', count:wc, pct:(wc/total)*100, color:'#5fb89a', statusId: this.sid('workcompleted') },
+      { key:'closed',        label:'Closed',         count:cl, pct:(cl/total)*100, color:'#a3aebd', statusId: this.sid('closed') },
     ];
   });
+
+  /** Complaints received per day over the chosen period, for the trend chart. */
+  trend = computed(() => {
+    const pts = this.chartData()?.complaintsByDate ?? [];
+    const max = Math.max(1, ...pts.map(p => p.count));
+    const total = pts.reduce((sum, p) => sum + p.count, 0);
+    const step = Math.max(1, Math.ceil(pts.length / 7));      // about 7 date labels, whatever the period
+    return {
+      total, max,
+      avg: pts.length ? total / pts.length : 0,
+      bars: pts.map((p, i) => ({
+        date: p.date, count: p.count,
+        h: p.count ? Math.max(8, (p.count / max) * 100) : 0,
+        showLabel: i % step === 0,
+      })),
+    };
+  });
+
+  /** "Today at a glance": the day-to-day tiles, each opening its list. */
+  glance = computed(() => {
+    const byKey = new Map(this.statCards().map(c => [c.key, c] as const));
+    return [
+      { key:'schedules',   icon:'event',             tone:'teal',  label:"Today's schedules" },
+      { key:'new',         icon:'fiber_new',         tone:'blue',  label:'New, not yet assigned' },
+      { key:'hold',        icon:'pause_circle',      tone:'amber', label:'On hold' },
+      { key:'sla',         icon:'timer_off',         tone:'rose',  label:'SLA breached' },
+    ].map(g => ({ ...g, value: byKey.get(g.key)?.value ?? 0, card: byKey.get(g.key) }))
+     .filter(g => !!g.card);
+  });
+
+  /** The latest complaints, newest first. */
+  recentComplaints = signal<any[] | null>(null);
+
+  openCard(key: string): void {
+    const card = this.statCards().find(c => c.key === key);
+    if (card) this.onTileClick(card);
+  }
+
+  loadRecentComplaints(): void {
+    this.recentComplaints.set(null);
+    this.api.getComplaints({ pageNumber: 1, pageSize: 6 })
+      .pipe(takeUntilDestroyed(this._destroyRef))
+      .subscribe({
+        next: (r: any) => this.recentComplaints.set(r?.items ?? []),
+        error: () => this.recentComplaints.set([]),
+      });
+  }
 
   ngOnInit(): void {
     this.loadData();
@@ -220,6 +268,7 @@ private _scrollTileTop(): void {
       error: () => { this.dashboardData.set(null); this.loading.set(false); },
     });
     this.loadChartData();
+    this.loadRecentComplaints();
   }
 
   /** The status ids of this tenant first, then one count per status tile. */

@@ -270,6 +270,121 @@
   </div>
   }
 
+  <!-- ═══ INSIGHTS: trend, status mix, latest complaints, today ═══ -->
+  @if (!loading()) {
+  <section class="insights" aria-label="Insights">
+
+    <article class="ins-card ins-wide">
+      <header class="ins-head">
+        <div>
+          <h3>Complaints received</h3>
+          <p>Last {{ chartDays }} days</p>
+        </div>
+        @if (chartData() && trend().total) {
+        <div class="ins-figures">
+          <div><strong>{{ trend().total }}</strong><span>Total</span></div>
+          <div><strong>{{ trend().avg | number:'1.0-1' }}</strong><span>Per day</span></div>
+          <div><strong>{{ trend().max }}</strong><span>Busiest day</span></div>
+        </div>
+        }
+      </header>
+      @if (!chartData()) {
+        <div class="ins-loading"><div class="mini-spinner"></div></div>
+      } @else if (!trend().total) {
+        <div class="ins-empty"><span class="material-icons" aria-hidden="true">insights</span><p>No complaints received in this period.</p></div>
+      } @else {
+        <div class="trend-chart" role="img" [attr.aria-label]="trend().total + ' complaints in the last ' + chartDays + ' days'">
+          @for (b of trend().bars; track b.date) {
+          <div class="trend-col" [title]="(b.date | date:'dd MMM') + ': ' + b.count">
+            <div class="trend-track">
+              <div class="trend-bar" [style.height.%]="b.h"></div>
+            </div>
+            <span class="trend-label">{{ b.showLabel ? (b.date | date:'dd MMM') : '' }}</span>
+          </div>
+          }
+        </div>
+      }
+    </article>
+
+    <article class="ins-card">
+      <header class="ins-head">
+        <div>
+          <h3>Status breakdown</h3>
+          <p>Share of all complaints</p>
+        </div>
+      </header>
+      @if (statusItems().length) {
+      <ul class="st-list">
+        @for (s of statusItems(); track s.key) {
+        <li>
+          <button type="button" class="st-row" (click)="openCard(s.key)">
+            <span class="st-dot" [style.background]="s.color"></span>
+            <span class="st-label">{{ s.label }}</span>
+            <span class="st-count">{{ s.count }}</span>
+            <span class="st-track"><span class="st-fill" [style.width.%]="s.pct" [style.background]="s.color"></span></span>
+          </button>
+        </li>
+        }
+      </ul>
+      }
+    </article>
+
+    <article class="ins-card ins-wide">
+      <header class="ins-head">
+        <div>
+          <h3>Latest complaints</h3>
+          <p>The most recently registered</p>
+        </div>
+        <a class="ins-link" routerLink="/complaints/list">View all <span class="material-icons" aria-hidden="true">arrow_forward</span></a>
+      </header>
+      @if (recentComplaints() === null) {
+        <div class="ins-loading"><div class="mini-spinner"></div></div>
+      } @else {
+        <ul class="rc-list">
+          @for (c of recentComplaints(); track c.complaintId) {
+          <li>
+            <button type="button" class="rc-row" (click)="openComplaintDetails(c.complaintId, $event)">
+              <span class="rc-avatar" aria-hidden="true">{{ (c.customerName || '?').charAt(0) }}</span>
+              <span class="rc-main">
+                <span class="rc-subject">{{ c.subject || 'No subject' }}</span>
+                <span class="rc-meta">{{ c.complaintNumber }} · {{ c.customerName || 'Unknown customer' }}</span>
+              </span>
+              <span class="rc-status"
+                [style.background]="c.statusColor ? c.statusColor + '1a' : null"
+                [style.color]="c.statusColor || null">{{ c.statusName }}</span>
+              <span class="rc-date">{{ c.createdAt | date:'dd MMM' }}</span>
+            </button>
+          </li>
+          } @empty {
+          <li class="ins-empty"><span class="material-icons" aria-hidden="true">inbox</span><p>No complaints yet. New ones will show up here.</p></li>
+          }
+        </ul>
+      }
+    </article>
+
+    <article class="ins-card">
+      <header class="ins-head">
+        <div>
+          <h3>At a glance</h3>
+          <p>What the team is handling</p>
+        </div>
+      </header>
+      <ul class="gl-list">
+        @for (g of glance(); track g.key) {
+        <li>
+          <button type="button" class="gl-row" [class]="'gl-row tone-' + g.tone" (click)="openCard(g.key)">
+            <span class="gl-icon"><span class="material-icons" aria-hidden="true">{{ g.icon }}</span></span>
+            <span class="gl-label">{{ g.label }}</span>
+            <span class="gl-value">{{ g.value }}</span>
+          </button>
+        </li>
+        }
+      </ul>
+    </article>
+
+  </section>
+  }
+
 </div>
 
 <!-- ═══ ASSIGN PANEL ══════════════════════════════════════ -->
