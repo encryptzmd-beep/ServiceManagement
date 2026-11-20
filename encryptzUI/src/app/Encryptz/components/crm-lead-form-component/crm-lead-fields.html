@@ -1,0 +1,91 @@
+@let f = form();
+<div class="lf-columns">
+  <!-- who -->
+  <section class="lf-card">
+    <header class="lf-card-head"><h2>Contact</h2>@if (leadNo()) { <span class="lf-sub">{{ leadNo() }}</span> }</header>
+    @if (readonly()) {
+      <dl class="lf-facts">
+        <div class="span-2"><dt>Contact name</dt><dd class="lf-strong">{{ f.contactName }}</dd></div>
+        <div><dt>Mobile</dt><dd>@if (f.mobile) { <a [href]="'tel:' + f.mobile">{{ f.mobile }}</a> } @else { <span class="lf-none">—</span> }</dd></div>
+        <div><dt>E-mail</dt><dd>@if (f.email) { <a [href]="'mailto:' + f.email">{{ f.email }}</a> } @else { <span class="lf-none">—</span> }</dd></div>
+        <div class="span-2"><dt>Address</dt><dd>{{ addressLine() || '—' }}</dd></div>
+      </dl>
+    } @else {
+      <div class="lf-grid">
+        <label class="crm-field span-2"><span>Contact name <em>*</em></span>
+          <input name="contactName" maxlength="200" autocomplete="name" placeholder="Full name or company"
+                 [ngModel]="f.contactName" (ngModelChange)="set('contactName', $event)" /></label>
+        <label class="crm-field"><span>Mobile <em>*</em></span>
+          <input name="mobile" inputmode="tel" maxlength="20" autocomplete="tel" placeholder="10-digit number"
+                 [ngModel]="f.mobile" (ngModelChange)="set('mobile', $event)" /></label>
+        <label class="crm-field"><span>E-mail</span>
+          <input name="email" type="email" maxlength="256" autocomplete="email" placeholder="name@example.com"
+                 [ngModel]="f.email" (ngModelChange)="set('email', $event)" /></label>
+        <label class="crm-field span-2"><span>Address</span>
+          <textarea name="address" maxlength="500" rows="2" placeholder="House / street / area"
+                    [ngModel]="f.address" (ngModelChange)="set('address', $event)"></textarea></label>
+        <label class="crm-field"><span>City</span>
+          <input name="city" maxlength="100" [ngModel]="f.city" (ngModelChange)="set('city', $event)" /></label>
+        <label class="crm-field"><span>State</span>
+          <input name="state" maxlength="100" [ngModel]="f.state" (ngModelChange)="set('state', $event)" /></label>
+        <label class="crm-field"><span>Pin code</span>
+          <input name="pinCode" inputmode="numeric" maxlength="10" [ngModel]="f.pinCode" (ngModelChange)="set('pinCode', $event)" /></label>
+        <label class="crm-field"><span>Landmark</span>
+          <input name="landmark" maxlength="200" [ngModel]="f.landmark" (ngModelChange)="set('landmark', $event)" /></label>
+      </div>
+    }
+  </section>
+
+  <!-- what they want -->
+  <section class="lf-card">
+    <header class="lf-card-head"><h2>Requirement</h2></header>
+    @if (readonly()) {
+      <dl class="lf-facts">
+        <div><dt>Lead date</dt><dd>{{ showDate(f.leadDate) }}</dd></div>
+        <div><dt>Source</dt><dd>{{ sourceName() || '—' }}</dd></div>
+        <div><dt>Product category</dt><dd>{{ f.productCategory || '—' }}</dd></div>
+        <div><dt>Product</dt><dd>{{ productName() || '—' }}</dd></div>
+        <div><dt>Estimated quantity</dt><dd>{{ f.estimatedQty ?? '—' }}</dd></div>
+        <div><dt>Expected purchase</dt><dd>{{ showDate(f.expectedPurchaseDate) || '—' }}</dd></div>
+        <div><dt>Priority</dt><dd><span [class]="'lf-prio ' + (f.priority || '').toLowerCase()">{{ f.priority }}</span></dd></div>
+        <div><dt>Owner</dt><dd>{{ ownerName() || '—' }}</dd></div>
+        <div class="span-2"><dt>Model / requirement</dt><dd>{{ f.modelRequirement || '—' }}</dd></div>
+        <div class="span-2"><dt>Remarks</dt><dd class="lf-pre">{{ f.remarks || '—' }}</dd></div>
+      </dl>
+    } @else {
+      <div class="lf-grid">
+        <label class="crm-field"><span>Lead date</span>
+          <input name="leadDate" type="date" [ngModel]="f.leadDate" (ngModelChange)="set('leadDate', $event)" /></label>
+        <label class="crm-field"><span>Source</span>
+          <select name="leadSourceId" [ngModel]="f.leadSourceId ?? ''" (ngModelChange)="set('leadSourceId', $event ? +$event : null)">
+            <option value="">Not known</option>
+            @for (s of sources(); track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+          </select></label>
+        <div class="lf-picker span-2">
+          <app-crm-product-picker [category]="f.productCategory" [productMasterId]="f.productMasterId" [productName]="productName()"
+            (categoryChange)="set('productCategory', $event)" (productMasterIdChange)="set('productMasterId', $event); productPicked.emit()" />
+        </div>
+        <label class="crm-field"><span>Estimated quantity</span>
+          <input name="estimatedQty" type="number" min="1" placeholder="1" [ngModel]="f.estimatedQty" (ngModelChange)="set('estimatedQty', $event)" /></label>
+        <label class="crm-field"><span>Expected purchase</span>
+          <input name="expectedPurchaseDate" type="date" [ngModel]="f.expectedPurchaseDate ?? ''" (ngModelChange)="set('expectedPurchaseDate', $event || null)" /></label>
+        <label class="crm-field"><span>Priority</span>
+          <select name="priority" [ngModel]="f.priority" (ngModelChange)="set('priority', $event)">
+            @for (p of priorities; track p) { <option [value]="p">{{ p }}</option> }
+          </select></label>
+        @if (isManager()) {
+          <label class="crm-field"><span>Owner</span>
+            <select name="ownerUserId" [ngModel]="ownerValue()" (ngModelChange)="set('ownerUserId', $event ? +$event : null)">
+              <option value="">Me</option>
+              @for (m of owners(); track m.userId) { <option [value]="m.userId">{{ m.fullName }}</option> }
+            </select></label>
+        }
+        <label class="crm-field span-2"><span>Model / requirement</span>
+          <textarea name="modelRequirement" maxlength="500" rows="2" placeholder="Model, size, budget…"
+                    [ngModel]="f.modelRequirement" (ngModelChange)="set('modelRequirement', $event)"></textarea></label>
+        <label class="crm-field span-2"><span>Remarks</span>
+          <textarea name="remarks" maxlength="2000" rows="2" [ngModel]="f.remarks" (ngModelChange)="set('remarks', $event)"></textarea></label>
+      </div>
+    }
+  </section>
+</div>

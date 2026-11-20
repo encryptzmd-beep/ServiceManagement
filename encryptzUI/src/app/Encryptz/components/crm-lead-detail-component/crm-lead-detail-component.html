@@ -32,6 +32,18 @@
       </div>
     </header>
 
+    <app-transaction-toolbar
+      [mode]="mode()" [label]="l.leadNo" [status]="l.status"
+      [canEdit]="!isClosed()" [canSave]="editing()" [canCancel]="false"
+      [previousId]="null" [nextId]="null" [busy]="busy()"
+      (newDoc)="onNew()" (edit)="onEdit()" (discard)="onDiscard()" (save)="onSave()" (print)="onPrint()" (find)="onFind()" />
+
+    @if (findOpen()) {
+      <app-transaction-find title="Find a lead" placeholder="Name, mobile, city or lead no."
+        [rows]="findRows()" [loading]="findLoading()"
+        (search)="onFindSearch($event)" (pick)="onFindPick($event)" (close)="findOpen.set(false)" />
+    }
+
     @if (needsCheck()) {
       <p class="crm-error crm-needs-check">A convert of this lead may have made a sales order. A manager must check the sales orders for this lead first, then link the order or cancel the convert.</p>
     }
@@ -46,34 +58,20 @@
       <p class="crm-error">Lost{{ l.lostAt ? ' on ' + showDate(l.lostAt) : '' }}: {{ l.lostReasonName }}@if (l.lostNote) { · {{ l.lostNote }} }</p>
     }
 
+    @if (fieldsForm(); as ff) {
+      <app-crm-lead-fields [form]="ff" [readonly]="!editing()" [sources]="sources()" [owners]="owners()" [isManager]="isManager()"
+        [productName]="editing() ? editProductName() : (l.productName || '')" [leadNo]="l.leadNo"
+        [ownerName]="l.ownerName" [sourceName]="l.sourceName"
+        (changed)="setField($event.key, $event.value)" (productPicked)="editProductName.set('')" />
+    }
+
     <section class="crm-table-card ld-card">
       <nav class="crm-tabs" role="tablist">
-        <button type="button" role="tab" [class.active]="tab() === 'details'" (click)="tab.set('details')">Details</button>
         <button type="button" role="tab" [class.active]="tab() === 'timeline'" (click)="tab.set('timeline')">Timeline ({{ timeline().length }})</button>
         <button type="button" role="tab" [class.active]="tab() === 'quotations'" (click)="tab.set('quotations')">Quotations ({{ l.quotations.length }})</button>
       </nav>
 
       @switch (tab()) {
-        @case ('details') {
-          <dl class="ld-facts">
-            <div><dt>Lead no.</dt><dd>{{ l.leadNo }}</dd></div>
-            <div><dt>Lead date</dt><dd>{{ showDate(l.leadDate) }}</dd></div>
-            <div><dt>Source</dt><dd>{{ l.sourceName || '–' }}</dd></div>
-            <div><dt>Priority</dt><dd>{{ l.priority }}</dd></div>
-            <div><dt>Mobile</dt><dd><a [href]="'tel:' + l.mobile">{{ l.mobile }}</a></dd></div>
-            <div><dt>E-mail</dt><dd>{{ l.email || '–' }}</dd></div>
-            <div class="wide"><dt>Address</dt><dd>{{ join(l.address, l.landmark, l.city, l.state, l.pinCode) || '–' }}</dd></div>
-            <div><dt>Product category</dt><dd>{{ l.productCategory || '–' }}</dd></div>
-            <div><dt>Product</dt><dd>{{ l.productName || '–' }}</dd></div>
-            <div><dt>Estimated quantity</dt><dd>{{ l.estimatedQty ?? '–' }}</dd></div>
-            <div><dt>Expected purchase</dt><dd>{{ showDate(l.expectedPurchaseDate) || '–' }}</dd></div>
-            <div class="wide"><dt>Model / requirement</dt><dd>{{ l.modelRequirement || '–' }}</dd></div>
-            <div class="wide"><dt>Remarks</dt><dd>{{ l.remarks || '–' }}</dd></div>
-          </dl>
-          @if (!isClosed()) {
-            <div class="crm-actions"><a class="crm-btn" routerLink="/crm/leads/new" [queryParams]="{ id: l.leadId }">Change details</a></div>
-          }
-        }
         @case ('timeline') {
           <ol class="ld-timeline">
             @for (e of timeline(); track e.key) {

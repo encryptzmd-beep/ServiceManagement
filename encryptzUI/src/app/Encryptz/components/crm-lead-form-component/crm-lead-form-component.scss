@@ -1,17 +1,17 @@
-:host { display: block; min-width: 0; }
-.crm-form-card {
-  padding: 22px 24px;
-  h2 { margin: 0 0 14px; font-size: 15px; font-weight: 600; color: #1a2332; }
-  h2 + .crm-grid + h2 { margin-top: 26px; }
-  .crm-field > span { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8a9ab0; }
-  input, select, textarea { padding: 9px 12px; border-radius: 9px; border-color: #e2e8f0; &:focus { outline: none; border-color: #4a7ab5; } }
-}
-.crm-form-error { margin-top: 14px; }
-.crm-form-card .crm-actions .crm-btn { height: auto; padding: 10px 18px; border-radius: 10px; font-size: 13.5px; font-weight: 500; }
-@media (max-width: 640px) {
-  .crm-form-card { padding: 16px 14px; }
-  .crm-form-card .crm-actions { .crm-btn { flex: 1 1 auto; } }
-}
+/* New / change lead: the toolbar of the documents and the lead's two cards (crm-lead-fields). */
+$text: #1a2332;
+$faint: #8a9ab0;
+$navy: #1B4A7A;
 
-/* the product picker's labels look like the other labels of this form */
-:host ::ng-deep app-crm-product-picker .crm-field > span { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8a9ab0; }
+:host { display: block; min-width: 0; }
+
+.lf-page { gap: 14px; }
+.lf-head h1 { margin: 2px 0 0; font-size: 22px; font-weight: 600; color: $text; letter-spacing: -0.01em; }
+.lf-crumb {
+  display: flex; align-items: center; gap: 6px; font-size: 13px; color: $faint;
+  a { color: $navy; font-weight: 500; text-decoration: none; &:hover { text-decoration: underline; } }
+}
+.lf-form { min-width: 0; }
+.lf-error { margin: 0; }
+// Enter in a field saves; the button itself is not shown (the toolbar has Save)
+.lf-hidden-submit { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }

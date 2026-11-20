@@ -1,72 +1,30 @@
 @if (error() === forbidden) {
   <app-crm-refused />
 } @else {
-  <div class="crm-page">
-    <header class="crm-page-head">
-      <div>
-        <h1>{{ form().leadId ? 'Change lead' : 'New lead' }}</h1>
-        <p><a class="crm-link" routerLink="/crm/leads">Leads</a></p>
-      </div>
+  <div class="crm-page lf-page">
+    <header class="lf-head">
+      <nav class="lf-crumb" aria-label="Breadcrumb"><a routerLink="/crm/leads">Leads</a><span aria-hidden="true">/</span></nav>
+      <h1>{{ form().leadId ? 'Change lead' : 'New lead' }}</h1>
     </header>
 
-    <form class="crm-table-card crm-form-card" (ngSubmit)="save()">
-      <h2>Contact</h2>
-      <div class="crm-grid">
-        <label class="crm-field"><span>Contact name *</span>
-          <input name="contactName" maxlength="200" [ngModel]="form().contactName" (ngModelChange)="set('contactName', $event)" /></label>
-        <label class="crm-field"><span>Mobile *</span>
-          <input name="mobile" inputmode="tel" maxlength="20" [ngModel]="form().mobile" (ngModelChange)="set('mobile', $event)" /></label>
-        <label class="crm-field"><span>E-mail</span>
-          <input name="email" type="email" maxlength="256" [ngModel]="form().email" (ngModelChange)="set('email', $event)" /></label>
-        <label class="crm-field wide"><span>Address</span>
-          <textarea name="address" maxlength="500" rows="2" [ngModel]="form().address" (ngModelChange)="set('address', $event)"></textarea></label>
-        <label class="crm-field"><span>City</span>
-          <input name="city" maxlength="100" [ngModel]="form().city" (ngModelChange)="set('city', $event)" /></label>
-        <label class="crm-field"><span>State</span>
-          <input name="state" maxlength="100" [ngModel]="form().state" (ngModelChange)="set('state', $event)" /></label>
-        <label class="crm-field"><span>Pin code</span>
-          <input name="pinCode" maxlength="10" [ngModel]="form().pinCode" (ngModelChange)="set('pinCode', $event)" /></label>
-        <label class="crm-field"><span>Landmark</span>
-          <input name="landmark" maxlength="200" [ngModel]="form().landmark" (ngModelChange)="set('landmark', $event)" /></label>
-      </div>
+    <app-transaction-toolbar
+      [mode]="form().leadId ? 'edit' : 'new'" [label]="form().leadId ? leadNo() : ''" [status]="''"
+      [canEdit]="false" [canSave]="true" [canCancel]="false" [previousId]="null" [nextId]="null" [busy]="saving()"
+      (newDoc)="onNew()" (discard)="cancel()" (save)="save()" (find)="onFind()" />
 
-      <h2>Requirement</h2>
-      <div class="crm-grid">
-        <label class="crm-field"><span>Lead date</span>
-          <input name="leadDate" type="date" [ngModel]="form().leadDate" (ngModelChange)="set('leadDate', $event)" /></label>
-        <label class="crm-field"><span>Source</span>
-          <select name="leadSourceId" [ngModel]="form().leadSourceId ?? ''" (ngModelChange)="set('leadSourceId', $event ? +$event : null)">
-            <option value="">–</option>
-            @for (s of sources(); track s.id) { <option [value]="s.id">{{ s.name }}</option> }
-          </select></label>
-        <label class="crm-field"><span>Priority</span>
-          <select name="priority" [ngModel]="form().priority" (ngModelChange)="set('priority', $event)">
-            @for (p of priorities; track p) { <option [value]="p">{{ p }}</option> }
-          </select></label>
-        <app-crm-product-picker [category]="form().productCategory" [productMasterId]="form().productMasterId" [productName]="productName()"
-          (categoryChange)="set('productCategory', $event)" (productMasterIdChange)="set('productMasterId', $event); productName.set('')" />
-        <label class="crm-field"><span>Estimated quantity</span>
-          <input name="estimatedQty" type="number" min="1" [ngModel]="form().estimatedQty" (ngModelChange)="set('estimatedQty', $event)" /></label>
-        <label class="crm-field"><span>Expected purchase</span>
-          <input name="expectedPurchaseDate" type="date" [ngModel]="form().expectedPurchaseDate ?? ''" (ngModelChange)="set('expectedPurchaseDate', $event || null)" /></label>
-        <label class="crm-field wide"><span>Model / requirement</span>
-          <textarea name="modelRequirement" maxlength="500" rows="2" [ngModel]="form().modelRequirement" (ngModelChange)="set('modelRequirement', $event)"></textarea></label>
-        @if (isManager()) {
-          <label class="crm-field"><span>Owner</span>
-            <select name="ownerUserId" [ngModel]="form().ownerUserId ?? ''" (ngModelChange)="set('ownerUserId', $event ? +$event : null)">
-              <option value="">Me</option>
-              @for (m of owners(); track m.userId) { <option [value]="m.userId">{{ m.fullName }}</option> }
-            </select></label>
-        }
-        <label class="crm-field wide"><span>Remarks</span>
-          <textarea name="remarks" maxlength="2000" rows="2" [ngModel]="form().remarks" (ngModelChange)="set('remarks', $event)"></textarea></label>
-      </div>
+    @if (findOpen()) {
+      <app-transaction-find title="Find a lead" placeholder="Name, mobile, city or lead no."
+        [rows]="findRows()" [loading]="findLoading()"
+        (search)="onFindSearch($event)" (pick)="onFindPick($event)" (close)="findOpen.set(false)" />
+    }
 
-      @if (error()) { <p class="crm-error crm-form-error">{{ error() }}</p> }
-      <div class="crm-actions">
-        <button type="button" class="crm-btn" (click)="cancel()">Cancel</button>
-        <button type="submit" class="crm-btn navy" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save lead' }}</button>
-      </div>
+    @if (error()) { <p class="crm-error lf-error" role="alert">{{ error() }}</p> }
+
+    <form class="lf-form" (ngSubmit)="save()">
+      <app-crm-lead-fields [form]="form()" [sources]="sources()" [owners]="owners()" [isManager]="isManager()"
+        [productName]="productName()" [leadNo]="leadNo()"
+        (changed)="set($any($event.key), $event.value)" (productPicked)="productName.set('')" />
+      <button type="submit" class="lf-hidden-submit" tabindex="-1" aria-hidden="true">Save</button>
     </form>
   </div>
 }

@@ -95,25 +95,5 @@
         }
       </div>
     </section>
-    @if (newOpen()) {
-      <div class="crm-overlay" (click)="closeNew()">
-        <div class="crm-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-          <h2>New quotation</h2>
-          <label class="crm-field"><span>Contact name *</span>
-            <input name="nqName" maxlength="150" [ngModel]="nq().contactName" (ngModelChange)="setNq('contactName', $event)" /></label>
-          <label class="crm-field"><span>Mobile *</span>
-            <input name="nqMobile" type="tel" maxlength="20" [ngModel]="nq().mobile" (ngModelChange)="setNq('mobile', $event)" /></label>
-          <label class="crm-field"><span>City</span>
-            <input name="nqCity" maxlength="100" [ngModel]="nq().city" (ngModelChange)="setNq('city', $event)" /></label>
-          <app-crm-product-picker [category]="nq().productCategory" [productMasterId]="nq().productMasterId"
-            (categoryChange)="setNq('productCategory', $event)" (productMasterIdChange)="setNq('productMasterId', $event)" />
-          @if (nqError()) { <p class="crm-error">{{ nqError() }}</p> }
-          <div class="crm-actions">
-            <button type="button" class="crm-btn" [disabled]="nqSaving()" (click)="closeNew()">Cancel</button>
-            <button type="button" class="crm-btn primary" [disabled]="nqSaving()" (click)="saveNew()">Create and quote</button>
-          </div>
-        </div>
-      </div>
-    }
   </div>
 }

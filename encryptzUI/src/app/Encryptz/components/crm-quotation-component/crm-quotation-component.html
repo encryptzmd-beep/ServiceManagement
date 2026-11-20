@@ -5,8 +5,8 @@
     <header class="crm-page-head">
       <div>
         <p class="q-crumb">
-          <a class="crm-link" routerLink="/crm/leads">Leads</a>
-          @if (leadId()) { / <a class="crm-link" [routerLink]="['/crm/leads', leadId()]">{{ leadTitle() || 'Lead' }}</a> }
+          <a class="crm-link" routerLink="/crm/quotations">Quotations</a>
+          @if (leadId() && leadTitle()) { / <a class="crm-link" [routerLink]="['/crm/leads', leadId()]">{{ leadTitle() }}</a> }
         </p>
         <h1>
           @if (saved(); as q) { Quotation {{ q.quotationNo }} / R{{ q.revisionNo }} <span [class]="pill(q.status)">{{ q.status }}</span> }
@@ -55,19 +55,102 @@
     @if (error()) { <p class="crm-error">{{ error() }}</p> }
 
     @if (loaded()) {
-      <section class="crm-card">
-        <div class="crm-grid">
-          <label class="crm-field"><span>Quotation date</span>
-            <input type="date" [disabled]="!editable()" [ngModel]="head().quoteDate" (ngModelChange)="setHead('quoteDate', $event)" /></label>
-          <label class="crm-field"><span>Valid until</span>
-            <input type="date" [disabled]="!editable()" [ngModel]="head().validUntil" (ngModelChange)="setHead('validUntil', $event)" /></label>
-          <label class="crm-field"><span>Supply</span>
-            <select [disabled]="!editable()" [ngModel]="head().isInterState" (ngModelChange)="setHead('isInterState', $event === true || $event === 'true')">
-              <option [ngValue]="false">Within the state (CGST + SGST)</option>
-              <option [ngValue]="true">Another state (IGST)</option>
-            </select></label>
-        </div>
-      </section>
+      <div class="q-head">
+        <!-- who the quotation is for -->
+        <section class="crm-card q-cust">
+          <header class="q-card-head">
+            <h2>Customer
+              @if (customer(); as c) { <span class="q-head-sub">{{ c.leadNo }}</span> <span [class]="pill(c.leadStatus)">{{ c.leadStatus }}</span> }
+            </h2>
+            @if (customer(); as c) {
+              @if (canChangeCustomer() && mode() === 'new') {
+                <button type="button" class="crm-link q-change" (click)="changeCustomer()">Change</button>
+              } @else {
+                <a class="crm-link" [routerLink]="['/crm/leads', c.leadId]">Open lead</a>
+              }
+            }
+          </header>
+
+          @if (customer(); as c) {
+            <dl class="q-facts">
+              <div class="span-2"><dt>Name</dt><dd class="q-strong">{{ c.name }}</dd></div>
+              <div><dt>Mobile</dt><dd>@if (c.mobile) { <a [href]="'tel:' + c.mobile">{{ c.mobile }}</a> } @else { <span class="q-none-val">—</span> }</dd></div>
+              <div class="span-2"><dt>E-mail</dt><dd>@if (c.email) { <a [href]="'mailto:' + c.email">{{ c.email }}</a> } @else { <span class="q-none-val">—</span> }</dd></div>
+              <div class="span-3"><dt>Address</dt><dd>{{ addressLine() || '—' }}</dd></div>
+            </dl>
+          } @else if (canChangeCustomer()) {
+            <div class="q-seg" role="tablist" aria-label="Customer">
+              <button type="button" role="tab" [class.on]="custMode() === 'pick'" [attr.aria-selected]="custMode() === 'pick'" (click)="custMode.set('pick')">Existing lead</button>
+              <button type="button" role="tab" [class.on]="custMode() === 'new'" [attr.aria-selected]="custMode() === 'new'" (click)="custMode.set('new')">New customer</button>
+            </div>
+            @if (custMode() === 'pick') {
+              <div class="q-lead-search">
+                <label class="crm-field"><span>Search a lead</span>
+                  <input type="search" placeholder="Name, mobile, city or lead no." [value]="leadTerm()" (input)="searchLeads(text($event))" /></label>
+                @if (leadResults().length) {
+                  <ul class="q-results q-lead-results">
+                    @for (l of leadResults(); track l.leadId) {
+                      <li><button type="button" (click)="useLead(l.leadId)">
+                        <strong>{{ l.contactName }}</strong>
+                        <span class="crm-muted">{{ l.leadNo }} · {{ l.mobile }}@if (l.city) { · {{ l.city }} }</span>
+                        <span [class]="pill(l.status)">{{ l.status }}</span>
+                      </button></li>
+                    }
+                  </ul>
+                } @else if (leadTerm().trim().length >= 2 && !leadSearching()) {
+                  <p class="crm-muted q-none">No open lead matches. <button type="button" class="crm-link" (click)="custMode.set('new')">Add a new customer</button></p>
+                }
+              </div>
+            } @else {
+              <div class="q-grid">
+                <label class="crm-field span-2"><span>Name <em>*</em></span>
+                  <input maxlength="200" [ngModel]="newCust().contactName" (ngModelChange)="setCust('contactName', $event)" placeholder="Full name or company" /></label>
+                <label class="crm-field"><span>Mobile <em>*</em></span>
+                  <input inputmode="tel" maxlength="20" [ngModel]="newCust().mobile" (ngModelChange)="setCust('mobile', $event)" placeholder="10-digit number" /></label>
+                <label class="crm-field"><span>E-mail</span>
+                  <input type="email" maxlength="256" [ngModel]="newCust().email" (ngModelChange)="setCust('email', $event)" /></label>
+                <label class="crm-field span-2"><span>Address</span>
+                  <input maxlength="500" [ngModel]="newCust().address" (ngModelChange)="setCust('address', $event)" /></label>
+                <label class="crm-field"><span>City</span>
+                  <input maxlength="100" [ngModel]="newCust().city" (ngModelChange)="setCust('city', $event)" /></label>
+                <label class="crm-field"><span>State</span>
+                  <input maxlength="100" [ngModel]="newCust().state" (ngModelChange)="setCust('state', $event)" /></label>
+                <label class="crm-field"><span>Pin code</span>
+                  <input inputmode="numeric" maxlength="10" [ngModel]="newCust().pinCode" (ngModelChange)="setCust('pinCode', $event)" /></label>
+              </div>
+              <p class="crm-muted q-hint">A lead is made for this customer when the quotation is saved.</p>
+            }
+          } @else {
+            <p class="crm-muted">Loading the customer…</p>
+          }
+        </section>
+
+        <!-- the document -->
+        <section class="crm-card q-doc">
+          <header class="q-card-head">
+            <h2>Quotation</h2>
+            <span [class]="pill(status())">{{ saved() ? status() : 'New' }}</span>
+          </header>
+          <div class="q-grid q-grid-3">
+            <div class="crm-field"><span>Number</span>
+              <div class="q-ro">@if (saved(); as q) { {{ q.quotationNo }} / R{{ q.revisionNo }} } @else { <span class="q-none-val">Given on save</span> }</div></div>
+            <label class="crm-field"><span>Quotation date</span>
+              <input type="date" [disabled]="!editable()" [ngModel]="head().quoteDate" (ngModelChange)="setHead('quoteDate', $event)" /></label>
+            <label class="crm-field"><span>Valid until</span>
+              <input type="date" [disabled]="!editable()" [min]="head().quoteDate" [ngModel]="head().validUntil" (ngModelChange)="setHead('validUntil', $event)" /></label>
+            <label class="crm-field span-2"><span>Supply</span>
+              <select [disabled]="!editable()" [ngModel]="head().isInterState" (ngModelChange)="setHead('isInterState', $event === true || $event === 'true')">
+                <option [ngValue]="false">Within the state (CGST + SGST)</option>
+                <option [ngValue]="true">Another state (IGST)</option>
+              </select></label>
+            <div class="crm-field"><span>Prepared by</span>
+              <div class="q-ro">@if (saved(); as q) { {{ q.createdByName || '—' }} } @else { <span class="q-none-val">You</span> }</div></div>
+          </div>
+          @if (saved(); as q) {
+            <p class="q-stamp">Created {{ showDate(q.createdAt) }} · last changed {{ showDate(q.updatedAt) }}</p>
+          }
+        </section>
+      </div>
 
       <section class="crm-table-card">
         @if (editable()) {

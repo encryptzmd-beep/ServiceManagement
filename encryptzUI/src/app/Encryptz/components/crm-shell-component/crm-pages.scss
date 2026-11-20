@@ -36,7 +36,7 @@ $p-amber-light: #fef3e2;
 
 :host { display: block; color: $text; font-size: 14px; }
 
-.crm-page { display: flex; flex-direction: column; gap: 16px; max-width: 1240px; margin: 0 auto; }
+.crm-page { display: flex; flex-direction: column; gap: 16px; width: 100%; min-width: 0; }   // uses the full content width, like the other modules
 
 .crm-head {
   display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap;
@@ -462,25 +462,28 @@ textarea { resize: vertical; min-height: 64px; }
   .crm-datagrid .crm-main, .crm-datagrid .crm-sub { max-width: 60vw; }
 }
 
-/* ── text size: 10.5px is the CRM default (crm-shell .crm-layout); the list pieces follow it ── */
-.crm-stab { font-size: 11px; height: 38px; .crm-stab-count { font-size: 9.5px; min-width: 16px; height: 16px; } }
+/* ── text size of the list pages: compact, but never below 11px (column headings) ── */
+.crm-stab { font-size: 13px; height: 42px; .crm-stab-count { font-size: 11px; } }
 .crm-filterbar {
-  select, input[type="date"], .crm-search input, .crm-btn { font-size: 10.5px; }
-  .crm-result { font-size: 10.5px; }
-  select, .crm-search, .crm-btn { height: 30px; }
+  select, input[type="date"], .crm-search input, .crm-btn { font-size: 13px; }
+  .crm-result { font-size: 12.5px; }
+  select, .crm-search, .crm-btn { height: 36px; }
 }
-.crm-range { height: 30px; input[type="date"] { font-size: 10.5px; height: 26px; } }
+.crm-range { height: 36px; input[type="date"] { font-size: 13px; height: 32px; } }
 .crm-datagrid {
-  table { font-size: 10.5px; }
-  th { font-size: 9.5px; padding-top: 7px; padding-bottom: 7px; }
-  td { font-size: 10.5px; padding-top: 7px; padding-bottom: 7px; }
-  .crm-sub { font-size: 9.5px; }
-  .crm-status { font-size: 9.5px; height: 19px; padding: 0 7px; }
-  .crm-prio, .crm-due { font-size: 10.5px; }
-  .crm-overdue { font-size: 10px; height: 19px; }
-  .crm-empty { font-size: 10.5px; }
+  table { font-size: 13px; }
+  th { font-size: 11px; padding-top: 10px; padding-bottom: 10px; }
+  td { font-size: 13px; padding-top: 11px; padding-bottom: 11px; }
+  .crm-sub { font-size: 12px; }
+  .crm-status { font-size: 12px; height: 24px; padding: 0 9px; }
+  .crm-prio, .crm-due { font-size: 13px; }
+  .crm-overdue { font-size: 12px; height: 24px; }
+  .crm-empty { font-size: 13px; }
+  .crm-main { max-width: 300px; }
+  .crm-row-actions .fx-action-btn { width: 32px; height: 32px; .material-icons { font-size: 17px; } }
+  .crm-act-gap { width: 32px; height: 32px; }
 }
-.crm-listfoot { font-size: 10px; .crm-page-btn { font-size: 10px; height: 26px; min-width: 26px; } }
-.crm-page-head h1 { font-size: 16px; }
-.crm-page-head p { font-size: 10.5px; }
-.crm-page-head .crm-btn { font-size: 10.5px; height: 30px; }
+.crm-listfoot { font-size: 12.5px; .crm-page-btn { font-size: 12.5px; height: 30px; min-width: 30px; } }
+.crm-page-head h1 { font-size: 22px; }
+.crm-page-head p { font-size: 13px; }
+.crm-page-head .crm-btn { font-size: 13px; height: 36px; }

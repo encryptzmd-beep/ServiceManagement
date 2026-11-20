@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { ConvertResultDto, CrmProductDto, LeadDetailDto, QuotationDto, QuotationItemDto } from '../../Models/CrmModels';
+import { ConvertResultDto, CrmProductDto, LeadDetailDto, LeadListDto, LeadSaveDto, QuotationDto, QuotationItemDto } from '../../Models/CrmModels';
 import { CrmService } from '../../Services/crm-service';
 import { CrmConvertDialogComponent } from '../crm-shell-component/crm-convert-dialog-component';
 import { CrmRefusedComponent } from '../crm-shell-component/crm-refused';
@@ -20,6 +20,10 @@ const blankLine = (sortOrder: number): QuotationItemDto => ({
 
 /** The header of the quotation being edited. */
 interface Head { quoteDate: string; validUntil: string; isInterState: boolean; terms: string; }
+
+/** A customer typed on a new quotation; it becomes a lead when the quotation is saved. */
+interface NewCustomer { contactName: string; mobile: string; email: string; address: string; city: string; state: string; pinCode: string; }
+const blankCustomer = (): NewCustomer => ({ contactName: '', mobile: '', email: '', address: '', city: '', state: '', pinCode: '' });
 
 /**
  * /crm/quotations/:id (and /crm/quotations/new?leadId=5): the line editor. The amounts are worked out while typing
@@ -112,24 +116,135 @@ export class CrmQuotationComponent {
 
   constructor() {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
-    if (id === 'new') {
-      const leadId = Number(this.route.snapshot.queryParamMap?.get('leadId') ?? 0);
-      this.leadId.set(leadId);
-      this.lines.set([blankLine(1)]);
-      this.loaded.set(true);
-      this.markSaved();
-      this.crm.quotationNeighbours(0)?.subscribe({
-        next: r => this.neighbours.set({ previousId: r?.data?.previousId ?? null, nextId: null }),
-        error: () => {},
-      });
-      if (leadId > 0) this.crm.getLead(leadId).subscribe({
-        next: res => { if (!res.success || !res.data) return; this.leadTitle.set(`${res.data.leadNo} · ${res.data.contactName}`); this.startWithProduct(res.data); },
-        error: err => this.fail(err),
-      });
-      else this.error.set('Open the quotation from its lead');
-    } else {
-      this.load(Number(id));
-    }
+    if (id === 'new') this.startNew(Number(this.route.snapshot.queryParamMap?.get('leadId') ?? 0));
+    else this.load(Number(id));
+  }
+
+  /** A blank quotation; with a lead, its customer and product are filled in, without one the customer is chosen here. */
+  private startNew(leadId: number): void {
+    this.quotationId.set(0);
+    this.saved.set(null);
+    this.editing.set(false);
+    this.head.set({ quoteDate: isoDate(new Date()), validUntil: '', isInterState: false, terms: '' });
+    this.lines.set([blankLine(1)]);
+    this.lead.set(null);
+    this.leadLoaded.set(false);
+    this.leadId.set(0);
+    this.leadTitle.set('');
+    this.custMode.set('pick');
+    this.newCust.set(blankCustomer());
+    this.leadTerm.set('');
+    this.leadResults.set([]);
+    this.loaded.set(true);
+    this.markSaved();
+    this.crm.quotationNeighbours(0)?.subscribe({
+      next: r => this.neighbours.set({ previousId: r?.data?.previousId ?? null, nextId: null }),
+      error: () => {},
+    });
+    if (leadId > 0) this.useLead(leadId, true);
+  }
+
+  // ── customer: the quotation is always for a lead; a new quotation picks one or makes one ──
+
+  /** "Pick" an existing lead, or type a "new" customer (the lead is made when the quotation is saved). */
+  custMode = signal<'pick' | 'new'>('pick');
+  newCust = signal<NewCustomer>(blankCustomer());
+  leadTerm = signal('');
+  leadResults = signal<LeadListDto[]>([]);
+  leadSearching = signal(false);
+
+  /** What the Customer card shows: the saved quotation's copy, or the lead of a new one. */
+  readonly customer = computed(() => {
+    const q = this.saved();
+    if (q) return { leadId: q.leadId, leadNo: q.leadNo, name: q.contactName, mobile: q.mobile, email: q.email,
+      address: q.address, city: q.city, state: q.state, pinCode: q.pinCode, leadStatus: q.leadStatus };
+    const l = this.lead();
+    if (l) return { leadId: l.leadId, leadNo: l.leadNo, name: l.contactName, mobile: l.mobile, email: l.email,
+      address: l.address, city: l.city, state: l.state, pinCode: l.pinCode, leadStatus: l.status };
+    return null;
+  });
+  readonly addressLine = computed(() => {
+    const c = this.customer();
+    return c ? [c.address, c.city, c.state, c.pinCode].filter(x => !!(x ?? '').toString().trim()).join(', ') : '';
+  });
+  /** Only a new quotation may change its customer. */
+  readonly canChangeCustomer = computed(() => !this.quotationId());
+
+  searchLeads(term: string): void {
+    this.leadTerm.set(term);
+    if (term.trim().length < 2) { this.leadResults.set([]); return; }
+    this.leadSearching.set(true);
+    this.crm.getLeads({ search: term.trim(), page: 1, pageSize: 8 }).subscribe({
+      next: res => {
+        this.leadSearching.set(false);
+        if (this.leadTerm() !== term) return;
+        // a converted or lost lead takes no new quotation
+        this.leadResults.set((res.success ? res.data?.items ?? [] : []).filter(l => !['Converted', 'Lost'].includes(l.status)));
+      },
+      error: () => { this.leadSearching.set(false); this.leadResults.set([]); },
+    });
+  }
+
+  /** Reads the lead into the Customer card; on a fresh quotation its product starts the first line. */
+  useLead(leadId: number, withProduct = this.lines().every(l => !l.productName.trim())): void {
+    this.leadId.set(leadId);
+    this.leadResults.set([]);
+    this.leadTerm.set('');
+    this.error.set('');
+    this.crm.getLead(leadId).subscribe({
+      next: res => {
+        this.leadLoaded.set(true);
+        if (!res.success || !res.data) { this.error.set(res.message || 'Lead not found'); return; }
+        this.lead.set(res.data);
+        this.leadTitle.set(`${res.data.leadNo} · ${res.data.contactName}`);
+        if (withProduct) this.startWithProduct(res.data);
+      },
+      error: err => { this.leadLoaded.set(true); this.fail(err); },
+    });
+  }
+
+  changeCustomer(): void {
+    if (!this.canChangeCustomer()) return;
+    this.leadId.set(0);
+    this.lead.set(null);
+    this.leadTitle.set('');
+    this.custMode.set('pick');
+  }
+
+  setCust<K extends keyof NewCustomer>(key: K, value: NewCustomer[K]): void {
+    this.newCust.update(c => ({ ...c, [key]: value }));
+  }
+
+  /** The customer problem of a new quotation, or null when it has one. */
+  private customerProblem(): string | null {
+    if (this.leadId()) return null;
+    if (this.custMode() === 'pick') return 'Choose the customer (search a lead) or add a new customer';
+    const c = this.newCust();
+    if (!c.contactName.trim()) return 'Enter the customer name';
+    if (c.mobile.replace(/\D/g, '').length < 10) return 'Enter a valid 10-digit mobile number';
+    return null;
+  }
+
+  /** A new customer becomes a lead first; then the quotation is saved against it. */
+  private withLead(next: () => void): void {
+    if (this.leadId()) { next(); return; }
+    const c = this.newCust();
+    const dto: LeadSaveDto = {
+      leadId: 0, leadDate: this.head().quoteDate || isoDate(new Date()), contactName: c.contactName.trim(), mobile: c.mobile.trim(),
+      email: c.email.trim() || null, address: c.address.trim() || null, city: c.city.trim() || null,
+      state: c.state.trim() || null, pinCode: c.pinCode.trim() || null, priority: 'Medium', remarks: 'Created from a quotation',
+    };
+    this.busy.set(true);
+    this.crm.saveLead(dto).subscribe({
+      next: res => {
+        this.busy.set(false);
+        if (!res.success || !res.data) { this.error.set(res.message || 'The customer could not be saved'); return; }
+        this.leadId.set(res.data);
+        this.useLead(res.data, false);
+        next();
+      },
+      error: err => { this.busy.set(false); this.fail(err); },
+    });
   }
 
   /** A lead with a chosen product: the empty first line starts with it, at its MRP, warranty and HSN. */
@@ -197,7 +312,14 @@ export class CrmQuotationComponent {
     this.load(id);
   }
 
-  onNew(): void { this.leave(() => this.router.navigate(['/crm/quotations'], { queryParams: { new: 1 } })); }
+  /** A blank quotation in this same screen; the customer is chosen on it. */
+  onNew(): void {
+    this.leave(() => {
+      this.router.navigate(['/crm/quotations', 'new'], { replaceUrl: true });
+      this.error.set(''); this.notice.set(''); this.warning.set(''); this.convertedOrderNo.set('');
+      this.startNew(0);
+    });
+  }
 
   async onEdit(): Promise<void> {
     if (!this.canEditDoc()) return;
@@ -327,8 +449,12 @@ export class CrmQuotationComponent {
   }
 
   save(then?: () => void): void {
-    const problem = this.problem();
+    const problem = this.customerProblem() ?? this.problem();
     if (problem) { this.error.set(problem); return; }
+    this.withLead(() => this.saveQuotation(then));
+  }
+
+  private saveQuotation(then?: () => void): void {
     const h = this.head();
     const t = this.totals();
     this.error.set('');

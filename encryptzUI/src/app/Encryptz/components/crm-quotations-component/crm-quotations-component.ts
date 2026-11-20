@@ -1,11 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { LeadSaveDto, QuotationListRowDto } from '../../Models/CrmModels';
+import { QuotationListRowDto } from '../../Models/CrmModels';
 import { CrmService } from '../../Services/crm-service';
 import { CrmRefusedComponent } from '../crm-shell-component/crm-refused';
-import { CrmProductPickerComponent } from '../crm-shell-component/crm-product-picker-component';
-import { FORBIDDEN, isoDate, pill, refusalOf, rupees, showDate } from '../crm-shell-component/crm-ui';
+import { FORBIDDEN, pill, refusalOf, rupees, showDate } from '../crm-shell-component/crm-ui';
 
 const PAGE_SIZE = 20;
 
@@ -13,7 +12,7 @@ const PAGE_SIZE = 20;
 @Component({
   selector: 'app-crm-quotations',
   standalone: true,
-  imports: [FormsModule, RouterLink, CrmRefusedComponent, CrmProductPickerComponent],
+  imports: [FormsModule, RouterLink, CrmRefusedComponent],
   templateUrl: './crm-quotations-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-quotations-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -57,55 +56,15 @@ export class CrmQuotationsComponent {
   readonly filtered = computed(() => !!(this.search().trim() || this.from() || this.to()));
 
   /** The "New quotation" dialog: a small lead form, because a quotation belongs to a lead. */
-  newOpen = signal(false);
-  nq = signal({ contactName: '', mobile: '', city: '', productCategory: '', productMasterId: null as number | null });
-  nqError = signal('');
-  nqSaving = signal(false);
-
   constructor() {
     this.apply();
-    // the toolbar "New" of a quotation comes here with ?new=1: open the New quotation form
+    // an older link to the list with ?new=1 opens the new quotation screen
     if (this.route?.snapshot?.queryParamMap?.get('new') === '1') this.openNew();
   }
 
+  /** New quotation: the quotation screen, where the customer is picked or typed. */
   openNew(): void {
-    this.nq.set({ contactName: '', mobile: '', city: '', productCategory: '', productMasterId: null });
-    this.nqError.set('');
-    this.nqSaving.set(false);
-    this.newOpen.set(true);
-  }
-
-  closeNew(): void { if (!this.nqSaving()) this.newOpen.set(false); }
-
-  setNq<K extends keyof ReturnType<typeof this.nq>>(key: K, value: ReturnType<typeof this.nq>[K]): void {
-    this.nq.update(f => ({ ...f, [key]: value }));
-  }
-
-  /** Creates the lead behind the quotation, then opens the quotation editor on it. */
-  saveNew(): void {
-    if (this.nqSaving()) return;
-    const f = this.nq();
-    if (!f.contactName.trim()) { this.nqError.set('Enter the contact name'); return; }
-    if (f.mobile.replace(/\D/g, '').length < 10) { this.nqError.set('Enter a valid 10-digit mobile number'); return; }
-    this.nqError.set('');
-    this.nqSaving.set(true);
-    // No owner: the server makes the caller the owner.
-    const dto: LeadSaveDto = {
-      leadId: 0, leadDate: isoDate(new Date()), contactName: f.contactName.trim(), mobile: f.mobile.trim(), city: f.city.trim(),
-      productCategory: f.productCategory || null, productMasterId: f.productMasterId, priority: 'Medium', remarks: 'Created from a quotation',
-    };
-    this.crm.saveLead(dto).subscribe({
-      next: res => {
-        if (res.success && res.data) {
-          // Stay locked while navigating; a refused navigation unlocks the dialog.
-          this.router.navigate(['/crm/quotations/new'], { queryParams: { leadId: res.data } }).then(ok => { if (!ok) this.nqSaving.set(false); });
-          return;
-        }
-        this.nqSaving.set(false);
-        this.nqError.set(res.message || 'The lead could not be saved');
-      },
-      error: err => { this.nqSaving.set(false); this.nqError.set(refusalOf(err)); },
-    });
+    this.router.navigate(['/crm/quotations/new']);
   }
 
   /** Reads page 1 (or the page asked) with the filter as it stands. */

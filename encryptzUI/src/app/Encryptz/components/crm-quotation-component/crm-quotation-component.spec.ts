@@ -444,4 +444,55 @@ describe('CrmQuotationComponent', () => {
     expect(tb(f, 'edit').disabled).toBe(true);
     expect(tb(f, 'cancel').disabled).toBe(true);
   });
+
+  describe('a new quotation without a lead', () => {
+    const withLine = (f: any) => f.componentInstance.lines.update((l: any[]) => l.map(x => ({ ...x, productName: 'Battery', rate: 100 })));
+
+    it('asks for a customer before it saves', () => {
+      params = { id: 'new' };
+      const f = create();
+      withLine(f);
+      f.componentInstance.save();
+      f.detectChanges();
+      expect(crm.saveQuotation).not.toHaveBeenCalled();
+      expect(f.nativeElement.textContent).toContain('Choose the customer');
+    });
+
+    it('a new customer needs a name and a 10-digit mobile', () => {
+      params = { id: 'new' };
+      crm.saveLead = vi.fn(() => ok(77));
+      const f = create();
+      withLine(f);
+      f.componentInstance.custMode.set('new');
+      f.componentInstance.save();
+      expect(f.componentInstance.error()).toContain('customer name');
+      f.componentInstance.setCust('contactName', 'Ravi');
+      f.componentInstance.setCust('mobile', '12345');
+      f.componentInstance.save();
+      expect(f.componentInstance.error()).toContain('mobile');
+      expect(crm.saveLead).not.toHaveBeenCalled();
+    });
+
+    it('a new customer becomes a lead, then the quotation is saved for it', () => {
+      params = { id: 'new' };
+      crm.saveLead = vi.fn(() => ok(77));
+      const f = create();
+      withLine(f);
+      f.componentInstance.custMode.set('new');
+      f.componentInstance.setCust('contactName', 'Ravi');
+      f.componentInstance.setCust('mobile', '98765 43210');
+      f.componentInstance.save();
+      expect(crm.saveLead).toHaveBeenCalledWith(expect.objectContaining({ leadId: 0, contactName: 'Ravi', mobile: '98765 43210', remarks: 'Created from a quotation' }));
+      expect(crm.saveQuotation).toHaveBeenCalledWith(expect.objectContaining({ quotationId: 0, leadId: 77 }));
+    });
+
+    it('a picked lead fills the customer card', () => {
+      params = { id: 'new' };
+      const f = create();
+      f.componentInstance.useLead(5);
+      f.detectChanges();
+      expect(f.componentInstance.customer()?.name).toBe('Meera');
+      expect(f.nativeElement.querySelector('.q-facts')!.textContent).toContain('Meera');
+    });
+  });
 });

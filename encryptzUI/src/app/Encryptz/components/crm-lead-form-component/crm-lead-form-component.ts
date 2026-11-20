@@ -3,7 +3,9 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CrmMasterDto, CrmMemberDto, LeadSaveDto } from '../../Models/CrmModels';
 import { CrmService } from '../../Services/crm-service';
-import { CrmProductPickerComponent } from '../crm-shell-component/crm-product-picker-component';
+import { TransactionToolbarComponent } from '../shared/transaction-toolbar/transaction-toolbar';
+import { FindQuery, FindRow, TransactionFindComponent } from '../shared/transaction-toolbar/transaction-find';
+import { CrmLeadFieldsComponent } from './crm-lead-fields';
 import { CrmRefusedComponent } from '../crm-shell-component/crm-refused';
 import { FORBIDDEN, isoDate, refusalOf } from '../crm-shell-component/crm-ui';
 
@@ -20,7 +22,7 @@ const blank = (): LeadSaveDto => ({
 @Component({
   selector: 'app-crm-lead-form',
   standalone: true,
-  imports: [FormsModule, RouterLink, CrmRefusedComponent, CrmProductPickerComponent],
+  imports: [FormsModule, RouterLink, CrmRefusedComponent, CrmLeadFieldsComponent, TransactionToolbarComponent, TransactionFindComponent],
   templateUrl: './crm-lead-form-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-lead-form-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,7 +33,6 @@ export class CrmLeadFormComponent {
   private router = inject(Router);
 
   readonly forbidden = FORBIDDEN;
-  readonly priorities = ['Low', 'Medium', 'High'];
 
   form = signal<LeadSaveDto>(blank());
   isManager = signal(false);
@@ -40,6 +41,11 @@ export class CrmLeadFormComponent {
   productName = signal('');
   error = signal('');
   saving = signal(false);
+  /** The number of the lead being changed (empty for a new one). */
+  leadNo = signal('');
+  findOpen = signal(false);
+  findRows = signal<FindRow[]>([]);
+  findLoading = signal(false);
 
   constructor() {
     const id = Number(this.route.snapshot.queryParamMap.get('id') ?? 0);
@@ -59,6 +65,7 @@ export class CrmLeadFormComponent {
           const l = res.data;
           if (!res.success || !l) { this.error.set(res.message || 'Lead not found'); return; }
           this.productName.set(l.productName ?? '');
+          this.leadNo.set(l.leadNo);
           this.form.set({
             leadId: l.leadId, leadDate: (l.leadDate ?? '').slice(0, 10), contactName: l.contactName, mobile: l.mobile, email: l.email,
             address: l.address, city: l.city, state: l.state, pinCode: l.pinCode, landmark: l.landmark, leadSourceId: l.leadSourceId ?? null,
@@ -101,6 +108,35 @@ export class CrmLeadFormComponent {
       },
       error: err => { this.saving.set(false); this.fail(err); },
     });
+  }
+
+  /** Toolbar New: a blank lead in this screen. */
+  onNew(): void {
+    this.router.navigate(['/crm/leads/new'], { replaceUrl: true });
+    this.form.set(blank());
+    this.productName.set('');
+    this.leadNo.set('');
+    this.error.set('');
+  }
+
+  onFind(): void { this.findRows.set([]); this.findOpen.set(true); }
+
+  onFindSearch(q: FindQuery): void {
+    this.findLoading.set(true);
+    this.crm.getLeads({ search: q.term || undefined, from: q.from || undefined, to: q.to || undefined, page: 1, pageSize: 30 }).subscribe({
+      next: res => {
+        this.findLoading.set(false);
+        this.findRows.set((res.success ? res.data?.items ?? [] : []).map(l => ({
+          id: l.leadId, number: l.leadNo, date: l.leadDate, party: l.contactName, amount: 0, status: l.status,
+        })));
+      },
+      error: () => { this.findLoading.set(false); this.findRows.set([]); },
+    });
+  }
+
+  onFindPick(id: number): void {
+    this.findOpen.set(false);
+    this.router.navigate(['/crm/leads', id]);
   }
 
   cancel(): void {

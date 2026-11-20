@@ -2,15 +2,19 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
-  ConvertResultDto, CrmMasterDto, CrmMemberDto, FollowUpSaveDto, LEAD_STATUSES, LeadDetailDto, QuotationSummaryDto,
+  ConvertResultDto, CrmMasterDto, CrmMemberDto, FollowUpSaveDto, LEAD_STATUSES, LeadDetailDto, LeadSaveDto, QuotationSummaryDto,
 } from '../../Models/CrmModels';
+import { CrmLeadFieldsComponent } from '../crm-lead-form-component/crm-lead-fields';
+import { TransactionMode, TransactionToolbarComponent } from '../shared/transaction-toolbar/transaction-toolbar';
+import { FindQuery, FindRow, TransactionFindComponent } from '../shared/transaction-toolbar/transaction-find';
+import { DialogService } from '../../Services/dialog-service';
 import { CrmService } from '../../Services/crm-service';
 import { CrmConvertDialogComponent } from '../crm-shell-component/crm-convert-dialog-component';
 import { CrmRefusedComponent } from '../crm-shell-component/crm-refused';
 import { FORBIDDEN, amount, isoDateTime, pill, refusalOf, showDate, showDateTime } from '../crm-shell-component/crm-ui';
 
 type Dialog = 'followup' | 'status' | 'lost' | 'reassign' | 'convert' | 'link' | 'cancel-convert' | null;
-type Tab = 'details' | 'timeline' | 'quotations';
+type Tab = 'timeline' | 'quotations';
 
 interface TimelineEntry { key: string; at: string; kind: 'followup' | 'status'; title: string; text: string; by: string; next?: string; }
 
@@ -26,7 +30,7 @@ const OPEN_FOR_CONVERT = ['Quotation', 'Negotiation'];
 @Component({
   selector: 'app-crm-lead-detail',
   standalone: true,
-  imports: [FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent],
+  imports: [FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent, CrmLeadFieldsComponent, TransactionToolbarComponent, TransactionFindComponent],
   templateUrl: './crm-lead-detail-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-lead-detail-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,6 +39,7 @@ export class CrmLeadDetailComponent {
   private crm = inject(CrmService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private confirmDialog = inject(DialogService);
 
   readonly forbidden = FORBIDDEN;
   readonly followUpTypes = FOLLOW_UP_TYPES;
@@ -43,7 +48,8 @@ export class CrmLeadDetailComponent {
   readonly showDate = showDate;
   readonly showDateTime = showDateTime;
 
-  readonly leadId = Number(this.route.snapshot.paramMap.get('id') ?? 0);
+  /** The lead shown; Find replaces it in this same screen. */
+  leadId = Number(this.route.snapshot.paramMap.get('id') ?? 0);
 
   lead = signal<LeadDetailDto | null>(null);
   error = signal('');
@@ -53,7 +59,21 @@ export class CrmLeadDetailComponent {
   isManager = signal(false);
   lostReasons = signal<CrmMasterDto[]>([]);
   owners = signal<CrmMemberDto[]>([]);
-  tab = signal<Tab>('details');
+  tab = signal<Tab>('timeline');
+  sources = signal<CrmMasterDto[]>([]);
+
+  // ── toolbar (New · Edit · Save · Print · Find), as on the quotation ──
+  /** The lead opens read-only; Edit turns the two cards into inputs. */
+  editing = signal(false);
+  editForm = signal<LeadSaveDto | null>(null);
+  editProductName = signal('');
+  readonly mode = computed<TransactionMode>(() => this.editing() ? 'edit' : 'view');
+  findOpen = signal(false);
+  findRows = signal<FindRow[]>([]);
+  findLoading = signal(false);
+
+  /** The lead as the cards show it: the edit in progress, or the saved lead. */
+  readonly fieldsForm = computed<LeadSaveDto | null>(() => this.editForm() ?? (this.lead() ? this.toSave(this.lead()!) : null));
 
   dialog = signal<Dialog>(null);
   dialogError = signal('');
@@ -143,6 +163,9 @@ export class CrmLeadDetailComponent {
         next: m => this.owners.set(m.success ? (m.data?.members ?? []).filter(x => x.isActive) : []), error: () => {},
       });
     }, error: () => {} });
+    this.crm.getMasters('sources').subscribe({
+      next: res => this.sources.set(res.success ? (res.data ?? []).filter(s => s.isActive) : []), error: () => {},
+    });
     this.crm.getMasters('lost-reasons').subscribe({
       next: res => this.lostReasons.set(res.success ? (res.data ?? []).filter(r => r.isActive) : []), error: () => {},
     });
@@ -276,5 +299,102 @@ export class CrmLeadDetailComponent {
   convertForbidden(): void {
     this.dialog.set(null);
     this.error.set(FORBIDDEN);
+  }
+
+  // ── edit in place ──
+  private toSave(l: LeadDetailDto): LeadSaveDto {
+    return {
+      leadId: l.leadId, leadDate: (l.leadDate ?? '').slice(0, 10), contactName: l.contactName, mobile: l.mobile, email: l.email,
+      address: l.address, city: l.city, state: l.state, pinCode: l.pinCode, landmark: l.landmark, leadSourceId: l.leadSourceId ?? null,
+      productCategory: l.productCategory, productMasterId: l.productMasterId ?? null, modelRequirement: l.modelRequirement,
+      estimatedQty: l.estimatedQty ?? null, expectedPurchaseDate: l.expectedPurchaseDate ? l.expectedPurchaseDate.slice(0, 10) : null,
+      ownerUserId: l.ownerUserId, priority: l.priority || 'Medium', remarks: l.remarks,
+    };
+  }
+
+  setField(key: keyof LeadSaveDto, value: any): void {
+    this.editForm.update(f => (f ? { ...f, [key]: value } : f));
+  }
+
+  onEdit(): void {
+    const l = this.lead();
+    if (!l || this.isClosed()) return;
+    this.editForm.set(this.toSave(l));
+    this.editProductName.set(l.productName ?? '');
+    this.pageError.set('');
+    this.notice.set('');
+    this.editing.set(true);
+  }
+
+  private isDirty(): boolean {
+    const f = this.editForm(), l = this.lead();
+    return this.editing() && !!f && !!l && JSON.stringify(f) !== JSON.stringify(this.toSave(l));
+  }
+
+  /** Runs the action, after "Discard the changes?" when an edit is not saved. */
+  private async leave(action: () => void): Promise<void> {
+    if (this.isDirty() && !(await this.confirmDialog.confirm({ message: 'Discard the changes to this lead?', kind: 'danger', okText: 'Discard' }))) return;
+    action();
+  }
+
+  onDiscard(): void { this.leave(() => { this.editing.set(false); this.editForm.set(null); this.pageError.set(''); }); }
+
+  onSave(): void {
+    const f = this.editForm();
+    if (!f) return;
+    if (!f.contactName?.trim()) { this.pageError.set('Enter the contact name'); return; }
+    if ((f.mobile ?? '').replace(/\D/g, '').length < 10) { this.pageError.set('Enter a valid 10-digit mobile number'); return; }
+    this.pageError.set('');
+    this.busy.set(true);
+    this.crm.saveLead({
+      ...f,
+      leadSourceId: f.leadSourceId ? Number(f.leadSourceId) : null,
+      ownerUserId: f.ownerUserId ? Number(f.ownerUserId) : null,
+      estimatedQty: f.estimatedQty ? Number(f.estimatedQty) : null,
+      expectedPurchaseDate: f.expectedPurchaseDate || null,
+    }).subscribe({
+      next: res => {
+        this.busy.set(false);
+        if (!res.success) { this.pageError.set(res.message || 'The lead could not be saved'); return; }
+        this.editing.set(false);
+        this.editForm.set(null);
+        this.notice.set('Lead saved');
+        this.load();
+      },
+      error: err => { this.busy.set(false); this.pageError.set(refusalOf(err)); },
+    });
+  }
+
+  onNew(): void { this.leave(() => this.router.navigate(['/crm/leads/new'])); }
+
+  onPrint(): void { window.print(); }
+
+  onFind(): void { this.findRows.set([]); this.findOpen.set(true); }
+
+  onFindSearch(q: FindQuery): void {
+    this.findLoading.set(true);
+    this.crm.getLeads({ search: q.term || undefined, from: q.from || undefined, to: q.to || undefined, page: 1, pageSize: 30 }).subscribe({
+      next: res => {
+        this.findLoading.set(false);
+        this.findRows.set((res.success ? res.data?.items ?? [] : []).map(l => ({
+          id: l.leadId, number: l.leadNo, date: l.leadDate, party: l.contactName, amount: 0, status: l.status,
+        })));
+      },
+      error: () => { this.findLoading.set(false); this.findRows.set([]); },
+    });
+  }
+
+  /** Shows another lead in this same screen (the route is reused). */
+  onFindPick(id: number): void {
+    this.findOpen.set(false);
+    if (id === this.leadId) return;
+    this.leave(() => {
+      this.router.navigate(['/crm/leads', id], { replaceUrl: true });
+      this.leadId = id;
+      this.editing.set(false); this.editForm.set(null);
+      this.notice.set(''); this.pageError.set(''); this.tab.set('timeline');
+      this.lead.set(null);
+      this.load();
+    });
   }
 }

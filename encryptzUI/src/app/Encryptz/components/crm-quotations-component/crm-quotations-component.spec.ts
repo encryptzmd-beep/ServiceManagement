@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { of, Subject } from 'rxjs';
+import { of } from 'rxjs';
 import { CrmService } from '../../Services/crm-service';
 import { CrmQuotationsComponent } from './crm-quotations-component';
 
@@ -70,89 +70,11 @@ describe('CrmQuotationsComponent', () => {
     expect(el.querySelector('.crm-count-pill')!.textContent).toContain('0');
   });
 
-  const open = async () => { (el.querySelector('.crm-page-head .crm-btn.primary') as HTMLButtonElement).click(); await flush(); };
-  const fill = async (name: string, mobile: string) => {
-    for (const [sel, v] of [['input[name="nqName"]', name], ['input[name="nqMobile"]', mobile]]) {
-      const i = el.querySelector(sel) as HTMLInputElement; i.value = v; i.dispatchEvent(new Event('input'));
-    }
+  it('New quotation opens the quotation screen, where the customer is chosen', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    (el.querySelector('.crm-page-head .crm-btn.primary') as HTMLButtonElement).click();
     await flush();
-  };
-  const submit = async () => { (el.querySelector('.crm-dialog .crm-btn.primary') as HTMLButtonElement).click(); await flush(); };
-
-  it('New quotation opens the form', async () => {
+    expect(navigate).toHaveBeenCalledWith(['/crm/quotations/new']);
     expect(el.querySelector('.crm-dialog')).toBeNull();
-    await open();
-    expect(el.querySelector('.crm-dialog')).not.toBeNull();
-    expect(el.querySelector('app-crm-product-picker')).not.toBeNull();
-  });
-
-  it('name and mobile are required', async () => {
-    await open();
-    await submit();
-    expect(crm.saveLead).not.toHaveBeenCalled();
-    expect(el.querySelector('.crm-dialog .crm-error')!.textContent).toContain('contact name');
-    await fill('Ravi', '');
-    await submit();
-    expect(crm.saveLead).not.toHaveBeenCalled();
-    expect(el.querySelector('.crm-dialog .crm-error')!.textContent).toContain('mobile');
-  });
-
-  it('saving creates the lead and opens the quotation editor', async () => {
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    await open();
-    await fill('Ravi', '9876543210');
-    await submit();
-    expect(crm.saveLead).toHaveBeenCalledWith(expect.objectContaining({ leadId: 0, contactName: 'Ravi', mobile: '9876543210', priority: 'Medium', remarks: 'Created from a quotation' }));
-    expect(navigate).toHaveBeenCalledWith(['/crm/quotations/new'], { queryParams: { leadId: 77 } });
-  });
-
-  it('saving twice creates one lead', async () => {
-    const pending = new Subject<any>();
-    crm.saveLead = vi.fn(() => pending);
-    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    await open();
-    await fill('Ravi', '9876543210');
-    await submit();
-    fixture.componentInstance.saveNew();
-    await submit();
-    expect(crm.saveLead).toHaveBeenCalledTimes(1);
-  });
-
-  it('a server refusal shows the message', async () => {
-    crm.saveLead = vi.fn(() => of({ success: false, message: 'Mobile already used', data: 0 }));
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    await open();
-    await fill('Ravi', '9876543210');
-    await submit();
-    expect(el.querySelector('.crm-dialog .crm-error')!.textContent).toContain('Mobile already used');
-    expect(navigate).not.toHaveBeenCalled();
-  });
-
-  it('rejects mobiles that are not 10 digits, with no request', async () => {
-    for (const bad of ['12345', 'abcdefghij', '+91 98765 43']) {
-      await open();
-      await fill('Ravi', bad);
-      await submit();
-      expect(crm.saveLead).not.toHaveBeenCalled();
-      expect(el.querySelector('.crm-dialog .crm-error')!.textContent).toContain('mobile');
-      fixture.componentInstance.newOpen.set(false);
-      await flush();
-    }
-  });
-
-  it('accepts a mobile with spaces and sends it as typed', async () => {
-    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    await open();
-    await fill('Ravi', '98765 43210');
-    await submit();
-    expect(crm.saveLead).toHaveBeenCalledWith(expect.objectContaining({ mobile: '98765 43210' }));
-  });
-
-  it('unlocks the dialog when the navigation is refused', async () => {
-    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(false);
-    await open();
-    await fill('Ravi', '9876543210');
-    await submit();
-    expect(fixture.componentInstance.nqSaving()).toBe(false);
   });
 });

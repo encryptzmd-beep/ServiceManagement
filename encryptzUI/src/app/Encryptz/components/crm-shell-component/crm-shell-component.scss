@@ -65,6 +65,9 @@
   white-space: nowrap; overflow: hidden; position: relative;
   &:hover { background: var(--sidebar-hover); color: #fff; }
   &.active { background: var(--brand-navy); color: #fff; .nav-icon { color: #fff; } }
+  // a click leaves no ring; keyboard focus still shows one
+  &:focus { outline: none; }
+  &:focus-visible { outline: 2px solid rgba(255,255,255,0.55); outline-offset: -2px; }
 }
 .nav-arrow { font-size: 16px; color: rgba(255,255,255,0.4); flex-shrink: 0; }
 .nav-group-header { width: calc(100% - 16px); }
