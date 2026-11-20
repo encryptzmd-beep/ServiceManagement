@@ -4,10 +4,13 @@
   <div class="fx-page-header page-header">
     <div class="header-left">
       <div class="fx-page-title">Complaint Dashboard</div>
-      <div class="fx-page-sub">Overview of all complaints and service metrics</div>
+      <div class="fx-page-sub">What needs attention now, then the key numbers</div>
     </div>
     <div class="header-right">
-      <button class="fx-btn-new" (click)="openBlankPanel()">
+      <a class="fx-btn-new" routerLink="/complaints/register">
+        <span class="material-icons" style="font-size:18px;">add_task</span> Register Complaint
+      </a>
+      <button class="fx-btn-navy" (click)="openBlankPanel()">
         <span class="material-icons" style="font-size:18px;">person_add</span> Assign Technician
       </button>
       <select [(ngModel)]="chartDays" (ngModelChange)="loadChartData()" class="fx-filter-select">
@@ -28,55 +31,56 @@
     <p>Loading dashboard...</p>
   </div>
 
-  <!-- Stats Tiles -->
-  <div class="stats-grid" *ngIf="!loading()">
-    <div class="stat-card" *ngFor="let card of statCards()"
-         [class.active]="activeTile()?.key === card.key"
-         [style.--accent]="card.accent"
-         (click)="onTileClick(card)"
-         title="Click to filter">
-      <div class="stat-icon" [style.background]="card.bg"><span>{{ card.icon }}</span></div>
-      <div class="stat-info">
-        <h3>{{ card.value }}</h3>
-        <p>{{ card.label }}</p>
+  <!-- Needs attention now (each item opens the list of its tile) -->
+  <section class="attention" *ngIf="!loading() && statCards().length" aria-labelledby="att-title">
+    <h2 id="att-title" class="attention-title">
+      <span class="material-icons" aria-hidden="true">notifications_active</span> Needs attention now
+    </h2>
+    @if (attention().length) {
+      <div class="attention-list">
+        @for (a of attention(); track a.card.key) {
+          <button type="button" class="att-item" [class]="'att-item tone-' + a.tone"
+            [class.active]="activeTile()?.key === a.card.key" (click)="onTileClick(a.card)">
+            <span class="material-icons att-icon" aria-hidden="true">{{ a.icon }}</span>
+            <span class="att-value">{{ a.card.value }}</span>
+            <span class="att-hint">{{ a.hint }}</span>
+            <span class="material-icons att-go" aria-hidden="true">chevron_right</span>
+          </button>
+        }
       </div>
-      <div class="tile-bar"></div>
-      <span class="tile-chevron material-icons">
-        {{ activeTile()?.key===card.key ? 'expand_less' : 'expand_more' }}
-      </span>
-    </div>
-  </div>
-
-  <!-- ═══ SPARE SUMMARY BAR ════════════════════════════════ -->
-  @if (spareSummary() && !loading()) {
-  <div class="spare-summary-bar">
-    <div class="ssb-item pending">
-      <span class="material-icons">pending_actions</span>
-      <div><span class="ssb-val">{{ spareSummary().pendingCount }}</span><span class="ssb-lbl">Pending</span></div>
-    </div>
-    @if (spareSummary().criticalPending > 0) {
-    <div class="ssb-item critical">
-      <span class="material-icons">priority_high</span>
-      <div><span class="ssb-val">{{ spareSummary().criticalPending }}</span><span class="ssb-lbl">Critical</span></div>
-    </div>
+    } @else {
+      <p class="attention-clear"><span class="material-icons" aria-hidden="true">task_alt</span> All clear. Nothing is waiting right now.</p>
     }
-    <div class="ssb-item approved">
-      <span class="material-icons">check_circle</span>
-      <div><span class="ssb-val">{{ spareSummary().approvedCount }}</span><span class="ssb-lbl">Approved</span></div>
-    </div>
-    <div class="ssb-item dispatched">
-      <span class="material-icons">local_shipping</span>
-      <div><span class="ssb-val">{{ spareSummary().dispatchedCount }}</span><span class="ssb-lbl">Dispatched</span></div>
-    </div>
-    <div class="ssb-sep"></div>
-    <button class="ssb-manage-btn" (click)="openSparePanel()">
-      <span class="material-icons">manage_accounts</span>
-      Manage Spare Requests
-      @if (spareSummary().pendingCount > 0) {
-      <span class="ssb-pending-dot">{{ spareSummary().pendingCount }}</span>
+  </section>
+
+  <!-- Key numbers (each opens its list, as before) -->
+  <section class="kpi-strip" *ngIf="!loading() && kpis().length" aria-label="Key numbers">
+    @for (card of kpis(); track card.key) {
+      <button type="button" class="kpi" [class.active]="activeTile()?.key === card.key"
+        [attr.aria-pressed]="activeTile()?.key === card.key" (click)="onTileClick(card)">
+        <span class="kpi-label">{{ card.label }}</span>
+        <span class="kpi-value">{{ card.value | number }}</span>
+        <span class="kpi-action">{{ activeTile()?.key === card.key ? 'Hide list' : 'View list' }}</span>
+      </button>
+    }
+  </section>
+
+  <!-- ═══ SPARE REQUESTS (always shown: the panel opens from here even at 0) ═══ -->
+  @if (!loading()) {
+  <section class="spare-strip" aria-label="Spare requests">
+    <span class="spare-title">Spare requests</span>
+    <dl class="spare-counts">
+      <div><dt>Pending</dt><dd>{{ spareSummary()?.pendingCount ?? 0 }}</dd></div>
+      @if ((spareSummary()?.criticalPending ?? 0) > 0) {
+      <div class="critical"><dt>Critical</dt><dd>{{ spareSummary()?.criticalPending }}</dd></div>
       }
+      <div><dt>Approved</dt><dd>{{ spareSummary()?.approvedCount ?? 0 }}</dd></div>
+      <div><dt>Dispatched</dt><dd>{{ spareSummary()?.dispatchedCount ?? 0 }}</dd></div>
+    </dl>
+    <button type="button" class="spare-manage" (click)="openSparePanel()">
+      Manage spare requests <span class="material-icons" aria-hidden="true">arrow_forward</span>
     </button>
-  </div>
+  </section>
   }
 
   <!-- ═══ TILE SECTION ═════════════════════════════════ -->
@@ -264,6 +268,121 @@
 }
     }
   </div>
+  }
+
+  <!-- ═══ INSIGHTS: trend, status mix, latest complaints, today ═══ -->
+  @if (!loading()) {
+  <section class="insights" aria-label="Insights">
+
+    <article class="ins-card ins-wide">
+      <header class="ins-head">
+        <div>
+          <h3>Complaints received</h3>
+          <p>Last {{ chartDays }} days</p>
+        </div>
+        @if (chartData() && trend().total) {
+        <div class="ins-figures">
+          <div><strong>{{ trend().total }}</strong><span>Total</span></div>
+          <div><strong>{{ trend().avg | number:'1.0-1' }}</strong><span>Per day</span></div>
+          <div><strong>{{ trend().max }}</strong><span>Busiest day</span></div>
+        </div>
+        }
+      </header>
+      @if (!chartData()) {
+        <div class="ins-loading"><div class="mini-spinner"></div></div>
+      } @else if (!trend().total) {
+        <div class="ins-empty"><span class="material-icons" aria-hidden="true">insights</span><p>No complaints received in this period.</p></div>
+      } @else {
+        <div class="trend-chart" role="img" [attr.aria-label]="trend().total + ' complaints in the last ' + chartDays + ' days'">
+          @for (b of trend().bars; track b.date) {
+          <div class="trend-col" [title]="(b.date | date:'dd MMM') + ': ' + b.count">
+            <div class="trend-track">
+              <div class="trend-bar" [style.height.%]="b.h"></div>
+            </div>
+            <span class="trend-label">{{ b.showLabel ? (b.date | date:'dd MMM') : '' }}</span>
+          </div>
+          }
+        </div>
+      }
+    </article>
+
+    <article class="ins-card">
+      <header class="ins-head">
+        <div>
+          <h3>Status breakdown</h3>
+          <p>Share of all complaints</p>
+        </div>
+      </header>
+      @if (statusItems().length) {
+      <ul class="st-list">
+        @for (s of statusItems(); track s.key) {
+        <li>
+          <button type="button" class="st-row" (click)="openCard(s.key)">
+            <span class="st-dot" [style.background]="s.color"></span>
+            <span class="st-label">{{ s.label }}</span>
+            <span class="st-count">{{ s.count }}</span>
+            <span class="st-track"><span class="st-fill" [style.width.%]="s.pct" [style.background]="s.color"></span></span>
+          </button>
+        </li>
+        }
+      </ul>
+      }
+    </article>
+
+    <article class="ins-card ins-wide">
+      <header class="ins-head">
+        <div>
+          <h3>Latest complaints</h3>
+          <p>The most recently registered</p>
+        </div>
+        <a class="ins-link" routerLink="/complaints/list">View all <span class="material-icons" aria-hidden="true">arrow_forward</span></a>
+      </header>
+      @if (recentComplaints() === null) {
+        <div class="ins-loading"><div class="mini-spinner"></div></div>
+      } @else {
+        <ul class="rc-list">
+          @for (c of recentComplaints(); track c.complaintId) {
+          <li>
+            <button type="button" class="rc-row" (click)="openComplaintDetails(c.complaintId, $event)">
+              <span class="rc-avatar" aria-hidden="true">{{ (c.customerName || '?').charAt(0) }}</span>
+              <span class="rc-main">
+                <span class="rc-subject">{{ c.subject || 'No subject' }}</span>
+                <span class="rc-meta">{{ c.complaintNumber }} · {{ c.customerName || 'Unknown customer' }}</span>
+              </span>
+              <span class="rc-status"
+                [style.background]="c.statusColor ? c.statusColor + '1a' : null"
+                [style.color]="c.statusColor || null">{{ c.statusName }}</span>
+              <span class="rc-date">{{ c.createdAt | date:'dd MMM' }}</span>
+            </button>
+          </li>
+          } @empty {
+          <li class="ins-empty"><span class="material-icons" aria-hidden="true">inbox</span><p>No complaints yet. New ones will show up here.</p></li>
+          }
+        </ul>
+      }
+    </article>
+
+    <article class="ins-card">
+      <header class="ins-head">
+        <div>
+          <h3>At a glance</h3>
+          <p>What the team is handling</p>
+        </div>
+      </header>
+      <ul class="gl-list">
+        @for (g of glance(); track g.key) {
+        <li>
+          <button type="button" class="gl-row" [class]="'gl-row tone-' + g.tone" (click)="openCard(g.key)">
+            <span class="gl-icon"><span class="material-icons" aria-hidden="true">{{ g.icon }}</span></span>
+            <span class="gl-label">{{ g.label }}</span>
+            <span class="gl-value">{{ g.value }}</span>
+          </button>
+        </li>
+        }
+      </ul>
+    </article>
+
+  </section>
   }
 
 </div>

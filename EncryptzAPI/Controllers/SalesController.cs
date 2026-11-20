@@ -73,6 +73,11 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetOrders([FromQuery] SalesOrderFilterDto filter)
             => Ok(await _svc.GetOrders(filter));
 
+        // previous / next of the toolbar; id 0 = from a new bill
+        [HttpGet("orders/{id:int}/neighbours")]
+        public async Task<IActionResult> GetOrderNeighbours(int id)
+            => Ok(await _svc.GetOrderNeighbours(id));
+
         [HttpGet("orders/{id:int}")]
         public async Task<IActionResult> GetOrder(int id)
         {

@@ -1,7 +1,7 @@
 :host {
-  --red: #e8001c;
+  --red: var(--fx-brand-red, #D42B2B);
   --red-deep: #c0001a;
-  --red-glow: rgba(232, 0, 28, 0.24);
+  --red-glow: transparent;  /* no glow under red elements */
   --red-soft: #fef2f4;
 
   --ink-900: #0f172a;
@@ -17,7 +17,7 @@
 
   display: block;
   width: 100%;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--app-font);
   color: var(--ink-900);
 }
 
@@ -860,4 +860,13 @@
   .products-grid {
     grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   }
+}
+
+/* the header button turns into a quiet Cancel while the form is open */
+.page-header .btn-primary.is-cancel {
+  background: #fff;
+  color: var(--fx-text-primary, #1a2332);
+  border: 1px solid var(--fx-border, #e2e8f0);
+  box-shadow: none;
+  &:hover { background: #f8fafc; transform: none; box-shadow: none; }
 }

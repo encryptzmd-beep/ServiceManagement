@@ -149,6 +149,28 @@ export const routes: Routes = [
     canActivate: [authGuard],
     data: { title: 'Job Consultancy' },
   },
+  // CRM Lead Management. Works on the company database after select-branch + set-scope, like
+  // Service, but has its own shell (top navigation) instead of the main layout. Pages are filled in
+  // by the CRM screens; until then each is a one-line placeholder component.
+  { path: 'crm', redirectTo: 'crm/dashboard', pathMatch: 'full' },
+  { path: 'crm/quotations/:id/print', loadComponent: () => import('./Encryptz/components/crm-quotation-print-component/crm-quotation-print-component').then(m => m.CrmQuotationPrintComponent), canActivate: [authGuard], data: { title: 'Quotation' } },
+  {
+    path: 'crm',
+    canActivate: [authGuard],
+    loadComponent: () => import('./Encryptz/components/crm-shell-component/crm-shell-component')
+      .then(m => m.CrmShellComponent),
+    children: [
+      { path: 'dashboard', loadComponent: () => import('./Encryptz/components/crm-dashboard-component/crm-dashboard-component').then(m => m.CrmDashboardComponent), canActivate: [authGuard], data: { title: 'CRM Dashboard' } },
+      { path: 'leads', loadComponent: () => import('./Encryptz/components/crm-leads-component/crm-leads-component').then(m => m.CrmLeadsComponent), canActivate: [authGuard], data: { title: 'Leads' } },
+      { path: 'leads/new', loadComponent: () => import('./Encryptz/components/crm-lead-form-component/crm-lead-form-component').then(m => m.CrmLeadFormComponent), canActivate: [authGuard], data: { title: 'New lead' } },
+      { path: 'leads/:id', loadComponent: () => import('./Encryptz/components/crm-lead-detail-component/crm-lead-detail-component').then(m => m.CrmLeadDetailComponent), canActivate: [authGuard], data: { title: 'Lead' } },
+      { path: 'quotations', loadComponent: () => import('./Encryptz/components/crm-quotations-component/crm-quotations-component').then(m => m.CrmQuotationsComponent), canActivate: [authGuard], data: { title: 'Quotations' } },
+      { path: 'quotations/:id', loadComponent: () => import('./Encryptz/components/crm-quotation-component/crm-quotation-component').then(m => m.CrmQuotationComponent), canActivate: [authGuard], data: { title: 'Quotation' } },
+      { path: 'reports', redirectTo: 'reports/followups', pathMatch: 'full' },
+      { path: 'reports/:report', loadComponent: () => import('./Encryptz/components/crm-reports-component/crm-reports-component').then(m => m.CrmReportsComponent), canActivate: [authGuard], data: { title: 'CRM Reports' } },
+      { path: 'settings', loadComponent: () => import('./Encryptz/components/crm-settings-component/crm-settings-component').then(m => m.CrmSettingsComponent), canActivate: [authGuard], data: { title: 'CRM Settings' } },
+    ],
+  },
   // Protected routes (with layout)
   {
     path: '',
@@ -329,6 +351,16 @@ export const routes: Routes = [
           ),
         canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
       },
+      {
+        // office staff register a complaint for a customer (quick access on the dashboard)
+        path: 'complaints/register',
+        loadComponent: () =>
+          import('../app/Encryptz/components/staff-complaint-register-component/staff-complaint-register-component').then(
+            (m) => m.StaffComplaintRegisterComponent,
+          ),
+        canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
+        data: { title: 'Register Complaint' },
+      },
 
       // 2. Customer Portal
       // {
@@ -442,6 +474,14 @@ export const routes: Routes = [
   path: 'products',
   loadComponent: () => import('./Encryptz/components/product-list-component/product-list-component')
     .then(m => m.ProductListComponent)
+},
+  {
+  // the category / sub category master (Products › Manage categories)
+  path: 'products/categories',
+  loadComponent: () => import('./Encryptz/components/product-categories-component/product-categories-component')
+    .then(m => m.ProductCategoriesComponent),
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
+  data: { title: 'Product Categories' }
 },
 
  {

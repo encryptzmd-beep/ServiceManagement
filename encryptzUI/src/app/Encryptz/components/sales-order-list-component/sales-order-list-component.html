@@ -5,10 +5,14 @@
       <div class="fx-page-title">Sales Orders</div>
       <div class="fx-page-sub">Bills raised against customers · saved bills go on to Despatch, which creates the installation job and starts the warranty</div>
     </div>
-    <button class="fx-btn-new" (click)="newOrder()">
+    <button class="fx-btn-new" (click)="newOrder()" [hidden]="refused()">
       <span class="material-icons" style="font-size:18px">add</span> New Sales Order
     </button>
   </div>
+
+  @if (refused()) {
+  <app-module-refused moduleName="Service Management" />
+  } @else {
 
   <div class="fx-stats-row">
     <div class="fx-stat-card">
@@ -136,10 +140,11 @@
       </div>
     }
   </div>
+  }
 </div>
 
 @if (toast(); as t) {
   <div class="toast" [class.success]="t.type === 'success'" [class.error]="t.type === 'error'">
     <span class="material-icons">{{ t.type === 'success' ? 'check_circle' : 'error' }}</span>{{ t.text }}
-  </div>
+</div>
 }

@@ -109,7 +109,7 @@ namespace EncryptzAPI.Controllers
                 var technicianId = User.GetTechnicianId();
                 if (!await _technicians.IsComplaintAssignedTo(request.ComplaintId, technicianId))
                     return this.Forbidden("This complaint is not assigned to you");
-                if (!await _technicians.IsCheckedIn(technicianId))
+                if (await _technicians.NeedsCheckIn(technicianId))
                     return BadRequest(new { success = false, message = "Please check in before recording a payment" });
             }
 

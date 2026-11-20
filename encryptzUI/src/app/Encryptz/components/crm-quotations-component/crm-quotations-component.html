@@ -1,0 +1,99 @@
+@if (error() === forbidden) {
+  <app-crm-refused />
+} @else {
+  <div class="crm-page">
+    <header class="crm-page-head">
+      <div>
+        <h1>Quotations</h1>
+        <p>Every quotation sent from a lead, with its status.</p>
+      </div>
+      <div class="crm-page-actions"><button type="button" class="crm-btn primary" (click)="openNew()">New quotation</button></div>
+    </header>
+
+    <section class="crm-listcard">
+      <div class="crm-stabs" role="tablist" aria-label="Status">
+        @for (t of tabs(); track t.key) {
+          <button type="button" role="tab" class="crm-stab" [class.on]="t.on" [attr.aria-selected]="t.on" (click)="pickTab(t.key)">
+            {{ t.label }}@if (t.count !== null) { <span class="crm-stab-count">{{ t.count }}</span> }
+          </button>
+        }
+      </div>
+
+      <form class="crm-filterbar" (ngSubmit)="apply()">
+        <label class="crm-search">
+          <span class="material-icons" aria-hidden="true">search</span>
+          <input type="search" name="search" aria-label="Search" placeholder="Search quote no., lead, contact or mobile"
+                 [ngModel]="search()" (ngModelChange)="search.set($event)" />
+        </label>
+        <div class="crm-range" role="group" aria-label="Quote date">
+          <span class="material-icons" aria-hidden="true">event</span>
+          <input type="date" name="from" aria-label="From" [ngModel]="from()" (change)="setDate('from', $any($event.target).value)" />
+          <span aria-hidden="true">–</span>
+          <input type="date" name="to" aria-label="To" [ngModel]="to()" (change)="setDate('to', $any($event.target).value)" />
+        </div>
+        <span class="crm-spacer"></span>
+        <span class="crm-result"><span class="crm-count-pill">{{ total() }}</span> {{ total() === 1 ? 'quotation' : 'quotations' }}</span>
+        @if (filtered()) { <button type="button" class="crm-btn ghost" (click)="clear()">Clear filters</button> }
+        <button type="submit" class="qt-hidden-submit" tabindex="-1" aria-hidden="true">Search</button>
+      </form>
+
+      @if (error()) { <p class="crm-error">{{ error() }}</p> }
+      <div class="crm-datagrid crm-cards-sm">
+        <table>
+          <thead>
+            <tr>
+              <th>Quotation</th><th>Lead / owner</th><th class="num">Total</th><th>Status</th><th class="num">Age</th>
+              <th class="crm-actions-col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (rows() === null) {
+              <tr><td colspan="6" class="crm-empty">Loading…</td></tr>
+            } @else {
+              @for (r of rows(); track r.quotationId) {
+                <tr>
+                  <td data-label="Quotation">
+                    <div class="crm-main" [title]="r.contactName">{{ r.contactName }}</div>
+                    <div class="crm-sub">
+                      <a [routerLink]="['/crm/quotations', r.quotationId]">{{ r.quotationNo }}</a>@if (r.revisionNo > 1) { <span> rev {{ r.revisionNo }}</span> } · {{ showDate(r.quoteDate) }}
+                    </div>
+                  </td>
+                  <td data-label="Lead / owner">
+                    <div class="crm-plain"><a class="qt-lead" [routerLink]="['/crm/leads', r.leadId]">{{ r.leadNo }}</a></div>
+                    <div class="crm-sub">{{ r.ownerName }}</div>
+                  </td>
+                  <td data-label="Total" class="num crm-plain">{{ rupees(r.grandTotal) }}</td>
+                  <td data-label="Status"><span [class]="'crm-status ' + (r.status || '').toLowerCase()">{{ r.status }}</span></td>
+                  <td data-label="Age" class="num"><span class="crm-due">{{ r.ageDays }} d</span></td>
+                  <td data-label="Actions" class="crm-actions-col">
+                    <span class="crm-row-actions">
+                      <a class="fx-action-btn" [routerLink]="['/crm/quotations', r.quotationId]" title="Open quotation" [attr.aria-label]="'Open ' + r.quotationNo">
+                        <span class="material-icons" aria-hidden="true">visibility</span>
+                      </a>
+                      <a class="fx-action-btn" [routerLink]="['/crm/leads', r.leadId]" title="Open lead" [attr.aria-label]="'Open lead ' + r.leadNo">
+                        <span class="material-icons" aria-hidden="true">person_search</span>
+                      </a>
+                    </span>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="6" class="crm-empty">No quotation matches.</td></tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="crm-listfoot">
+        <span>@if (total() > 0) { Showing {{ shownFrom() }}–{{ shownTo() }} of {{ total() }} {{ total() === 1 ? 'quotation' : 'quotations' }} } @else { No quotations }</span>
+        @if (pages() > 1) {
+          <span class="crm-pages">
+            <button type="button" class="crm-page-btn" [disabled]="page() <= 1" (click)="goTo(page() - 1)">Previous</button>
+            <span class="crm-page-btn on" aria-current="page">{{ page() }}</span>
+            <span>of {{ pages() }}</span>
+            <button type="button" class="crm-page-btn" [disabled]="page() >= pages()" (click)="goTo(page() + 1)">Next</button>
+          </span>
+        }
+      </div>
+    </section>
+  </div>
+}

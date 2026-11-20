@@ -1,5 +1,6 @@
 import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
 import { NotificationBellComponent } from '../notification-bell-component/notification-bell-component';
+import { moduleLanding, moduleRoute } from '../shared/module-route';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Subscription, finalize, interval, timeout } from 'rxjs';
@@ -7,7 +8,7 @@ import { AuthService, Company } from '../../Auth/auth-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LocationDto, ModuleDto, PersonalApp } from '../../Models/ApiModels';
-import { branchDecision, landingRouteForRole, moduleCaption } from '../../Auth/scope-flow';
+import { branchDecision, moduleCaption } from '../../Auth/scope-flow';
 import {
   anyProvisioning, canEnter, CompanyCreationState, emptyCompanyForm, NewCompanyForm, POLL_LIMIT_MS, POLL_MS,
   provisionLabel, requestErrorMessage, suggestCompanyCode, validateNewCompany
@@ -33,13 +34,6 @@ interface OrbitItem {
 /** The search box shows only when there are more companies than this. */
 const SEARCH_ABOVE = 6;
 
-/**
- * Commercial applications whose pages need no branch (they do not work on the database
- * of the company): opening one goes straight to its first page.
- */
-const MODULE_HOME: Record<string, string> = {
-  JOBCONSULTANCY: '/consultancy/dashboard',
-};
 
 @Component({
   selector: 'app-company-selector-component',
@@ -516,7 +510,6 @@ export class CompanySelectorComponent {
     const co = this.activeCompany();
     if (!co || !this.enterable(co)) {
       this.businessModules.set([]);
-      setTimeout(() => document.getElementById('ws-business-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
       return;
     }
     if (!force && this.businessCompanyId === co.companyId && this.businessModules().length > 0) return;
@@ -598,8 +591,8 @@ export class CompanySelectorComponent {
     return { x: cx + Math.sqrt(r * r - dy * dy), y: cy - dy };
   }
 
-  orbitItemX(i: number): number { return this.orbitPos(i).x - 28; }
-  orbitItemY(i: number): number { return this.orbitPos(i).y - 28; }
+  orbitItemX(i: number): number { return this.orbitPos(i).x - 22; }
+  orbitItemY(i: number): number { return this.orbitPos(i).y - 22; }
   orbitDotCx(i: number): string { return this.orbitPos(i).x.toFixed(1); }
   orbitDotCy(i: number): string { return this.orbitPos(i).y.toFixed(1); }
 
@@ -676,6 +669,16 @@ export class CompanySelectorComponent {
     return h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
   }
 
+  greetingIcon(): string {
+    const h = new Date().getHours();
+    return h < 12 ? 'wb_sunny' : h < 17 ? 'light_mode' : 'dark_mode';
+  }
+
+  /** e.g. "Friday, 20 November" */
+  todayLabel(): string {
+    return new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+  }
+
   firstName(): string {
     return this.userName().trim().split(/\s+/)[0] || '';
   }
@@ -721,11 +724,9 @@ export class CompanySelectorComponent {
   openModule(module: ModuleDto): void {
     if (module.state !== 'Available') return;
 
-    // an application whose pages need no branch opens at once
-    const home = MODULE_HOME[module.moduleKey?.toUpperCase()];
-    if (home) { this.router.navigate([home]); return; }
-
-    this.router.navigate(['/select-branch'], { queryParams: { module: module.moduleKey } });
+    // an application whose pages need no branch opens at once; the others ask for the branch
+    const to = moduleRoute(module);
+    this.router.navigate(to.commands, to.queryParams ? { queryParams: to.queryParams } : undefined);
   }
 
   /** Administrators of a company can work on it before any module can be opened. */
@@ -780,7 +781,7 @@ export class CompanySelectorComponent {
       next: (res) => {
         this.loading.set(false);
         if (res.success && res.data) {
-          this.router.navigate([landingRouteForRole(res.data.role)], extras);
+          this.router.navigate([moduleLanding(this.moduleKey, res.data.role)], extras);
           return;
         }
         // leave the "entering" spinner so the reason and the list are visible

@@ -4,9 +4,9 @@
 }
 
 .main-content {
-  margin-top: 60px;
+  margin-top: 52px;
   margin-left: 60px;             /* collapsed sidebar width */
-  min-height: calc(100vh - 60px);
+  min-height: calc(100vh - 52px);
   display: flex;
   flex-direction: column;
   transition: margin-left 0.3s ease;

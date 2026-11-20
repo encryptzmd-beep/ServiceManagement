@@ -8,7 +8,7 @@
    align-items: center;
    gap: 20px;
    padding: 22px 28px;
-   background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+   background: #f8fafc;
    border: 1px solid #e2e8f0;
    border-radius: 16px;
    margin-bottom: 24px;
@@ -16,7 +16,7 @@
  }
 
  .status-banner.active {
-   background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+   background: #f0fdf4;
    border-color: #bbf7d0;
  }
 
@@ -147,15 +147,15 @@
  }
 
  .green-bg {
-   background: linear-gradient(135deg, #22c55e, #16a34a);
+   background: #22c55e;
  }
 
  .red-bg {
-   background: linear-gradient(135deg, #ef4444, #dc2626);
+   background: #ef4444;
  }
 
  .blue-bg {
-   background: linear-gradient(135deg, #3b82f6, #2563eb);
+   background: #3b82f6;
  }
 
  .ac-body {
@@ -255,7 +255,7 @@
  }
 
  .green-btn {
-   background: linear-gradient(135deg, #22c55e, #16a34a);
+   background: #22c55e;
    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.25);
  }
 
@@ -265,7 +265,7 @@
  }
 
  .red-btn {
-   background: linear-gradient(135deg, #ef4444, #dc2626);
+   background: #ef4444;
    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
  }
 
@@ -275,7 +275,7 @@
  }
 
  .blue-btn {
-   background: linear-gradient(135deg, #3b82f6, #2563eb);
+   background: #3b82f6;
    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
  }
 
@@ -377,7 +377,7 @@
    align-items: center;
    gap: 4px;
    padding: 8px 16px;
-   background: #2563eb;
+   background: #1B4A7A;
    color: #fff;
    border: none;
    border-radius: 8px;
@@ -387,7 +387,7 @@
  }
 
  .search-btn:hover {
-   background: #1d4ed8;
+   background: #163d65;
  }
 
  .search-btn .material-icons {
@@ -445,7 +445,7 @@
    width: 30px;
    height: 30px;
    border-radius: 50%;
-   background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+   background: #8b5cf6;
    color: #fff;
    display: flex;
    align-items: center;
@@ -640,9 +640,9 @@
 .ta-avatar {
   width: 34px; height: 34px; border-radius: 50%; display: flex;
   align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: #fff; flex-shrink: 0;
-  &.av { background: linear-gradient(135deg,#10b981,#059669); }
-  &.busy { background: linear-gradient(135deg,#ef4444,#dc2626); }
-  &.leave { background: linear-gradient(135deg,#9ca3af,#6b7280); }
+  &.av { background: #10b981; }
+  &.busy { background: #ef4444; }
+  &.leave { background: #9ca3af; }
 }
 .ta-info { flex: 1; min-width: 0;
   strong { display: block; font-size: 13px; color: #1e293b; }
@@ -660,15 +660,15 @@
 /* Selected technician banner */
 .selected-tech-banner {
   display: flex; align-items: center; gap: 12px; padding: 12px 14px;
-  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+  background: #eff6ff;
   border: 1.5px solid #bfdbfe; border-radius: 10px;
 }
 .stb-avatar {
   width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center;
   justify-content: center; font-weight: 800; font-size: 16px; color: #fff; flex-shrink: 0;
-  &.av { background: linear-gradient(135deg,#10b981,#059669); }
-  &.busy { background: linear-gradient(135deg,#ef4444,#dc2626); }
-  &.leave { background: linear-gradient(135deg,#9ca3af,#6b7280); }
+  &.av { background: #10b981; }
+  &.busy { background: #ef4444; }
+  &.leave { background: #9ca3af; }
 }
 .stb-info { flex: 1;
   strong { display: block; font-size: 14px; color: #1e293b; }
@@ -741,7 +741,7 @@
 /* Selected complaint mini-card */
 .site-selected-card {
   margin-top: 8px; padding: 10px 12px;
-  background: linear-gradient(135deg, #eff6ff, #f0f9ff);
+  background: #eff6ff;
   border: 1px solid #bfdbfe; border-radius: 8px;
 }
 .ssc-top {
@@ -799,7 +799,7 @@
   align-items: center;
   gap: 14px;
   padding: 12px 18px;
-  background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
+  background: #ecfdf5;
   border: 1.5px solid #bbf7d0;
   border-radius: 12px;
   margin-bottom: 16px;
@@ -862,4 +862,89 @@
   font-size: 11px;
   color: #dc2626;
   .material-icons { font-size: 14px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Calm layout: no coloured blocks on top of the cards, a small tinted
+   icon beside each title. Kept last so it wins over the rules above.
+   ═══════════════════════════════════════════════════════════════════ */
+.action-card {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+}
+.action-card:hover { box-shadow: none; }
+.ac-icon {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 8px;
+}
+.ac-icon .material-icons { font-size: 20px; }
+.green-bg { background: #ecfdf5; }
+.green-bg .material-icons { color: #15803d; }
+.red-bg { background: #fef2f2; }
+.red-bg .material-icons { color: #b91c1c; }
+.blue-bg { background: #eef4fb; }
+.blue-bg .material-icons { color: var(--fx-brand-navy, #1B4A7A); }
+.ac-body { padding: 0; min-width: 0; gap: 10px; }
+.ac-body p { margin: 0; }
+.ac-btn { min-height: 44px; border-radius: 8px; }
+
+/* status: a quiet strip, the pulse ring is enough to show "checked in" */
+.status-banner { border-radius: 12px; box-shadow: none; }
+
+@media (max-width: 600px) {
+  .status-banner {
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+    gap: 12px;
+    padding: 14px;
+  }
+  .status-banner h2 { font-size: 16px; }
+  .status-right { text-align: right; margin-left: auto; }
+  .status-right .time-val { font-size: 15px; }
+
+  .action-grid { gap: 10px; }
+
+  /* filters: two dates side by side, the button underneath */
+  .hist-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .hist-filters .input-wrap.sm { width: 100%; }
+  .hist-filters .inp { font-size: 16px; min-height: 42px; }
+  .hist-filters .search-btn { grid-column: 1 / -1; justify-content: center; min-height: 42px; }
+
+  /* records: one card per day instead of a sideways-scrolling table */
+  .table-card { background: transparent; border: 0; box-shadow: none; }
+  .table-responsive { overflow: visible; }
+  .data-table, .data-table tbody { display: block; width: 100%; min-width: 0; }
+  .data-table thead { display: none; }
+  .data-table tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: #fff;
+    border: 1px solid var(--fx-border, #e2e8f0);
+    border-radius: 10px;
+  }
+  .data-table td { display: block; padding: 0; border: 0; min-width: 0; font-size: 13px; }
+  .data-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--fx-text-muted, #8a9ab0);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 2px;
+  }
+  .data-table td.tech-td { grid-column: 1 / -1; }
+  .data-table td.loc-cell { display: block !important; grid-column: 1 / -1; white-space: normal; max-width: none; }
+  .data-table td.empty-cell { grid-column: 1 / -1; text-align: center; }
+  .data-table th:nth-child(4), .data-table th:nth-child(6) { display: none; }
 }

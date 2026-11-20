@@ -5,12 +5,17 @@
       <div class="page-sub">Manage product master data, pricing, and availability</div>
     </div>
 
-    <button class="btn-new" (click)="openProductForm()">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-        <path d="M7 1v12M1 7h12" stroke="#fff" stroke-width="2" stroke-linecap="round" />
-      </svg>
-      Add Product
-    </button>
+    <div class="header-buttons">
+      <a class="fx-btn-navy" routerLink="/products/categories">
+        <span class="material-icons" style="font-size:18px;" aria-hidden="true">category</span> Manage categories
+      </a>
+      <button class="btn-new" (click)="openProductForm()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M7 1v12M1 7h12" stroke="#fff" stroke-width="2" stroke-linecap="round" />
+        </svg>
+        Add Product
+      </button>
+    </div>
   </div>
 
   <div class="stats-row">

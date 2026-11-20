@@ -7,32 +7,77 @@
     </div>
 
     <!-- Company selector (stage=company only) -->
-    @if (stage() === 'company' && companies().length > 0) {
+    @if (stage() === 'company' && !loading()) {
       <div class="ws-company-selector" (click)="$event.stopPropagation()">
         <button type="button" class="ws-company-btn" (click)="toggleCompanyMenu($event)"
-                [attr.aria-expanded]="companyMenuOpen()">
-          <div class="ws-company-dot" [attr.data-tone]="tone(0)">
-            {{ (activeCompany()?.companyName || companies()[0]?.companyName || 'C').charAt(0).toUpperCase() }}
-          </div>
-          <span class="ws-company-name">{{ activeCompany()?.companyName || companies()[0]?.companyName || 'Select Company' }}</span>
-          <span class="material-icons ws-chevron-icon">expand_more</span>
+                aria-haspopup="true" [attr.aria-expanded]="companyMenuOpen()">
+          @if (companies().length > 0) {
+            <div class="ws-company-dot" [attr.data-tone]="tone(0)">
+              {{ (activeCompany()?.companyName || companies()[0]?.companyName || 'C').charAt(0).toUpperCase() }}
+            </div>
+            <span class="ws-company-name">{{ activeCompany()?.companyName || companies()[0]?.companyName || 'Select Company' }}</span>
+          } @else {
+            <div class="ws-company-dot ws-company-dot-empty"><span class="material-icons">add_business</span></div>
+            <span class="ws-company-name">Set up a company</span>
+          }
+          <span class="material-icons ws-chevron-icon" [class.open]="companyMenuOpen()">expand_more</span>
         </button>
         @if (companyMenuOpen()) {
-          <div class="ws-company-menu">
-            @for (co of companies(); track co.companyId) {
-              <button type="button" class="ws-company-menu-item"
-                      [class.active]="activeCompany()?.companyId === co.companyId"
-                      [class.disabled]="!enterable(co)"
-                      (click)="pickCompany(co, $event)">
-                <div class="ws-company-dot sm" [attr.data-tone]="tone($index)">
-                  {{ (co.companyName || 'C').charAt(0).toUpperCase() }}
-                </div>
-                <span class="ws-company-menu-name">{{ co.companyName }}</span>
-                @if (activeCompany()?.companyId === co.companyId) {
-                  <span class="material-icons" style="font-size:18px;color:#2563EB;margin-left:auto">check</span>
+          <div class="ws-company-menu" role="menu">
+            @if (companies().length > 0) {
+              <div class="ws-menu-label">Your companies</div>
+              <div class="ws-menu-list">
+                @for (co of companies(); track co.companyId) {
+                  <button type="button" class="ws-company-menu-item" role="menuitem"
+                          [class.active]="activeCompany()?.companyId === co.companyId"
+                          [class.disabled]="!enterable(co)"
+                          [attr.aria-disabled]="!enterable(co)"
+                          (click)="pickCompany(co, $event)">
+                    <div class="ws-company-dot sm" [attr.data-tone]="tone($index)">
+                      {{ (co.companyName || 'C').charAt(0).toUpperCase() }}
+                    </div>
+                    <span class="ws-menu-text">
+                      <span class="ws-company-menu-name" [title]="co.companyName">{{ co.companyName }}</span>
+                      <span class="ws-company-menu-sub">
+                        {{ co.companyCode }}
+                        @if (co.roleInCompany) { · {{ co.roleInCompany }} }
+                        @if (companyStatus(co)) { · <em>{{ companyStatus(co) }}</em> }
+                      </span>
+                      @if (co.provisionStatus === 'Failed') {
+                        @if (co.isCreator) {
+                          <span class="retry-btn-inline" role="button" tabindex="0"
+                                (click)="retry(co, $event)" (keydown.enter)="retry(co, $event)">
+                            {{ retrying() === co.companyId ? 'Retrying…' : 'Retry set-up' }}
+                          </span>
+                        } @else {
+                          <small class="small">Ask the company creator to retry.</small>
+                        }
+                      }
+                    </span>
+                    @if (activeCompany()?.companyId === co.companyId) {
+                      <span class="material-icons ws-menu-check">check</span>
+                    }
+                  </button>
                 }
-              </button>
+              </div>
+              <div class="ws-menu-divider"></div>
             }
+            <button type="button" class="ws-menu-action" role="menuitem"
+                    (click)="openCreate()" [disabled]="!creation()?.canCreate">
+              <span class="material-icons">add_business</span>
+              <span class="ws-menu-text">
+                <span>Create Company</span>
+                @if (creation() && !creation()!.canCreate) {
+                  <small>{{ creation()!.message }}</small>
+                } @else if (creationFailed() && !creation()) {
+                  <small>Could not check whether you can create a company.</small>
+                }
+              </span>
+            </button>
+            <button type="button" class="ws-menu-action" role="menuitem" (click)="openInvitations()">
+              <span class="material-icons">group_add</span>
+              <span class="ws-menu-text"><span>Join a Company</span><small>Invitations &amp; join requests</small></span>
+            </button>
           </div>
         }
       </div>
@@ -91,24 +136,39 @@
               <button (click)="reload()" class="retry-btn">Refresh</button>
             </div>
           }
-          <p class="greeting-line">Welcome Back,</p>
+          <span class="ws-eyebrow">
+            <span class="material-icons" aria-hidden="true">{{ greetingIcon() }}</span>
+            {{ greeting() }} · {{ todayLabel() }}
+          </span>
+          <p class="greeting-line">Welcome back,</p>
           <h1 class="user-name-big">{{ userName() }}</h1>
           <div class="red-accent-line"></div>
           <p class="choose-line">
             @switch (mode()) {
-              @case ('personal') { Your personal applications }
-              @case ('business') { Modules of {{ activeCompany()?.companyName || 'your company' }} }
-              @default { Choose an application to get started }
+              @case ('personal') { Your personal applications, all in one place. }
+              @case ('business') {
+                Modules of <strong>{{ activeCompany()?.companyName || 'your company' }}</strong>
+              }
+              @default { Choose an application to get started. }
             }
           </p>
-          <div class="ws-action-row">
-            <button class="btn-app btn-personal" [class.active]="mode() === 'personal'" (click)="setMode('personal')">
+          <div class="ws-segment" role="group" aria-label="Application type">
+            <span class="ws-segment-thumb" [attr.data-pos]="mode()"></span>
+            <button class="btn-app btn-personal" [class.active]="mode() === 'personal'"
+                    [attr.aria-pressed]="mode() === 'personal'" (click)="setMode('personal')">
               <span class="material-icons">person</span> Personal Apps
             </button>
-            <button class="btn-app btn-business" [class.active]="mode() === 'business'" (click)="setMode('business')">
+            <button class="btn-app btn-business" [class.active]="mode() === 'business'"
+                    [attr.aria-pressed]="mode() === 'business'" (click)="setMode('business')">
               <span class="material-icons">business_center</span> Business Apps
             </button>
-          </div>
+          </div>          @if (pollStopped()) {
+            <p class="notice">
+              <span class="material-icons" aria-hidden="true">hourglass_top</span>
+              Still setting up. Come back in a few minutes.
+              <button class="link-back" (click)="reload()">Refresh</button>
+            </p>
+          }
         </div>
 
         <!-- Right: orbital display -->
@@ -116,15 +176,29 @@
           <div class="ws-orbital">
             <!-- Arc SVG -->
             <svg class="orbital-svg" viewBox="0 0 520 480" aria-hidden="true">
+              <defs>
+                <linearGradient id="wsArcGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#60A5FA" />
+                  <stop offset="50%" stop-color="#2563EB" />
+                  <stop offset="100%" stop-color="#22C55E" />
+                </linearGradient>
+              </defs>
+              <!-- soft concentric rings behind the avatar -->
+              <circle cx="160" cy="240" r="120" class="orbital-ring" />
+              <circle cx="160" cy="240" r="250" class="orbital-ring faint" />
               <path [attr.d]="orbitArcD()" class="orbital-arc" />
               @for (item of orbitItems(); track item.key; let i = $index) {
-                <circle [attr.cx]="orbitDotCx(i)" [attr.cy]="orbitDotCy(i)" r="5" class="orbital-dot" />
+                <circle [attr.cx]="orbitDotCx(i)" [attr.cy]="orbitDotCy(i)" r="4" class="orbital-dot" />
               }
             </svg>
 
             <!-- Center user avatar -->
             <div class="orbital-center">
+              <span class="orbital-halo" aria-hidden="true"></span>
               <span class="orbital-initials">{{ (userName() || '?').charAt(0).toUpperCase() }}</span>
+              <span class="orbital-badge" [attr.title]="mode() === 'business' ? 'Business' : 'Personal'">
+                <span class="material-icons">{{ mode() === 'business' ? 'business_center' : 'person' }}</span>
+              </span>
             </div>
 
             <!-- Bubbles: the two choices, the personal apps or the business modules -->
@@ -134,13 +208,18 @@
                    (click)="openOrbitItem(item)" role="button"
                    [attr.tabindex]="item.disabled ? -1 : 0" [attr.aria-disabled]="item.disabled"
                    (keydown.enter)="openOrbitItem(item)"
-                   (keydown.space)="openOrbitItem(item); $event.preventDefault()">
-                <div class="orbit-circle"><span class="material-icons">{{ item.icon }}</span></div>
-                <span class="orbit-vsep"></span>
+                   (keydown.space)="openOrbitItem(item); $event.preventDefault()"
+                   [style.animation-delay.ms]="120 + i * 60">
+                <div class="orbit-circle" [attr.data-tone]="item.disabled ? null : tone(i)">
+                  <span class="material-icons">{{ item.icon }}</span>
+                </div>
                 <span class="orbit-label">
-                  {{ item.label }}
+                  <span class="orbit-label-text">{{ item.label }}</span>
                   @if (item.note) { <small class="orbit-note">{{ item.note }}</small> }
                 </span>
+                @if (!item.disabled) {
+                  <span class="material-icons orbit-go" aria-hidden="true">arrow_forward</span>
+                }
               </div>
             }
 
@@ -152,8 +231,30 @@
                 } @else if (mode() === 'business' && businessError()) {
                   <span>{{ businessError() }}</span>
                   <button class="retry-btn" (click)="retryBusiness()">Retry</button>
+                } @else if (mode() === 'business' && loading()) {
+                  <div class="spinner"></div><span>Loading your companies…</span>
                 } @else if (mode() === 'business' && !hasBusinessCompany()) {
-                  <span>Select or create a company below.</span>
+                  <div class="orbit-cta">
+                    <span class="orbit-cta-icon"><span class="material-icons">domain_add</span></span>
+                    @if (companies().length === 0) {
+                      <strong>You are not in a company yet</strong>
+                      <span class="small">Create your own, or join one you were invited to.</span>
+                    } @else {
+                      <strong>Pick a company</strong>
+                      <span class="small">Choose a ready company from the menu at the top.</span>
+                    }
+                    <div class="orbit-cta-actions">
+                      <button type="button" class="btn-cta primary" (click)="openCreate()" [disabled]="!creation()?.canCreate">
+                        <span class="material-icons">add_business</span> Create
+                      </button>
+                      <button type="button" class="btn-cta" (click)="openInvitations()">
+                        <span class="material-icons">group_add</span> Join
+                      </button>
+                    </div>
+                    @if (creation() && !creation()!.canCreate) {
+                      <span class="small">{{ creation()!.message }}</span>
+                    }
+                  </div>
                 } @else if (mode() === 'business') {
                   <span>No modules for this company yet.</span>
                 } @else {
@@ -164,106 +265,6 @@
           </div>
         </div>
       </section>
-
-      <!-- BUSINESS PANEL: appears when Business Apps is clicked -->
-      @if (mode() === 'business') {
-        <div class="ws-business-panel" id="ws-business-panel">
-          <div class="ws-panel-inner">
-            @if (loading()) {
-              <div class="loading-state">
-                <div class="spinner"></div><span>Loading your companies…</span>
-              </div>
-            }
-
-            @if (!loading() && companies().length > 0) {
-              <section class="ws-block">
-                <div class="ws-block-head">
-                  <h2>Your Companies</h2>
-                  @if (showSearch()) {
-                    <label class="ws-search">
-                      <span class="material-icons">search</span>
-                      <input type="search" placeholder="Search companies…" aria-label="Search companies"
-                             [ngModel]="search()" (ngModelChange)="search.set($event)" />
-                    </label>
-                  }
-                </div>
-                <div class="company-list">
-                  @for (company of filteredCompanies(); track company.companyId; let i = $index) {
-                    <div class="company-row"
-                         [class.disabled]="!enterable(company)"
-                         [attr.aria-disabled]="!enterable(company)"
-                         (click)="selectCompany(company)"
-                         role="button"
-                         [attr.tabindex]="enterable(company) ? 0 : -1"
-                         (keydown.enter)="onRowKey(company, $event)"
-                         (keydown.space)="onRowKey(company, $event, true)">
-                      <span class="ws-item-icon" [attr.data-tone]="tone(i + 1)">
-                        <span class="material-icons">apartment</span>
-                      </span>
-                      <div class="company-info">
-                        <h3 [title]="company.companyName">{{ company.companyName }}</h3>
-                        <small class="company-code">{{ company.companyCode }}</small>
-                        @if (companyStatus(company)) {
-                          <span class="status-badge">{{ companyStatus(company) }}</span>
-                        }
-                        @if (company.provisionStatus === 'Failed') {
-                          @if (company.isCreator) {
-                            <button class="retry-btn-inline" (click)="retry(company, $event)"
-                                    [disabled]="retrying() !== null">
-                              {{ retrying() === company.companyId ? 'Retrying…' : 'Retry' }}
-                            </button>
-                          } @else {
-                            <small class="small">Ask the company creator to retry.</small>
-                          }
-                        }
-                      </div>
-                      <span class="role-badge" [class]="getRoleClass(company.roleInCompany)">{{ company.roleInCompany }}</span>
-                      <span class="material-icons arrow-icon">chevron_right</span>
-                    </div>
-                  } @empty {
-                    <div class="ws-empty-line">No company matches "{{ search() }}".</div>
-                  }
-                </div>
-              </section>
-            }
-
-            @if (!loading() && !error() && companies().length === 0) {
-              <div class="empty-state">
-                <span class="material-icons">domain</span>
-                <p>You are not in a company yet.</p>
-                <p class="small">Create your own or join one you were invited to.</p>
-                <button class="link-back" (click)="openInvitations()">View Invitations &amp; Requests</button>
-              </div>
-            }
-
-            @if (pollStopped()) {
-              <p class="notice">Still setting up. Come back in a few minutes.
-                <button class="link-back" (click)="reload()">Refresh</button>
-              </p>
-            }
-
-            <div class="ws-company-actions">
-              <button type="button" class="btn-create" (click)="openCreate()" [disabled]="!creation()?.canCreate">
-                <span class="material-icons">add_business</span> Create Company
-              </button>
-              @if (companies().length > 0) {
-                <button type="button" class="btn-create outline" (click)="openInvitations()">
-                  <span class="material-icons">group_add</span> Join a Company
-                </button>
-              }
-            </div>
-
-            @if (creation() && !creation()!.canCreate) {
-              <p class="notice">{{ creation()!.message }}</p>
-            }
-            @if (creationFailed() && !creation()) {
-              <p class="notice">Could not check whether you can create a company.
-                <button class="link-back" (click)="reload()">Refresh</button>
-              </p>
-            }
-          </div>
-        </div>
-      }
     }
 
     <!-- ══════ CREATE COMPANY ══════ -->

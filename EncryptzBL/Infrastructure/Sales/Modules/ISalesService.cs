@@ -16,6 +16,8 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
         Task<string> GetNextOrderNumber();
         Task<ApiResponse<SalesOrderSaveResultDto>> SaveOrder(SalesOrderSaveDto dto, int userId);
         Task<ApiResponse> CancelOrder(int salesOrderId, int userId);
+        /// <summary>Previous / next sales order (0 = from a new one).</summary>
+        Task<ApiResponse<NeighboursDto>> GetOrderNeighbours(int salesOrderId);
         Task<PagedResult<SalesOrderListDto>> GetOrders(SalesOrderFilterDto filter);
         Task<ApiResponse<SalesOrderDetailDto>> GetOrder(int salesOrderId);
 

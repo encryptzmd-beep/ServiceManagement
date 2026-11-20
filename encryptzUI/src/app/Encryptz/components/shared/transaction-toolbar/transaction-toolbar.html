@@ -1,0 +1,43 @@
+<div class="tb" role="toolbar" aria-label="Document actions">
+  <div class="tb-group">
+    <button type="button" class="tb-btn" data-tb="new" [disabled]="busy()" (click)="newDoc.emit()" title="New">
+      <span class="material-icons" aria-hidden="true">add</span><span class="tb-text">New</span>
+    </button>
+    @if (mode() === 'edit') {
+      <button type="button" class="tb-btn" data-tb="discard" [disabled]="busy()" (click)="discard.emit()" title="Discard the changes">
+        <span class="material-icons" aria-hidden="true">undo</span><span class="tb-text">Discard</span>
+      </button>
+    } @else if (mode() === 'view') {
+      <button type="button" class="tb-btn" data-tb="edit" [disabled]="!editOn()" (click)="edit.emit()" [title]="editLabel()">
+        <span class="material-icons" aria-hidden="true">edit</span><span class="tb-text">{{ editLabel() }}</span>
+      </button>
+    }
+    <button type="button" class="tb-btn primary" data-tb="save" [disabled]="!saveOn()" (click)="save.emit()" title="Save">
+      <span class="material-icons" aria-hidden="true">save</span><span class="tb-text">Save</span>
+    </button>
+    <button type="button" class="tb-btn" data-tb="print" [disabled]="!printOn()" (click)="print.emit()" title="Print">
+      <span class="material-icons" aria-hidden="true">print</span><span class="tb-text">Print</span>
+    </button>
+    <button type="button" class="tb-btn danger" data-tb="cancel" [disabled]="!cancelOn()" (click)="cancelDoc.emit()" title="Cancel (void) this document">
+      <span class="material-icons" aria-hidden="true">block</span><span class="tb-text">Cancel</span>
+    </button>
+  </div>
+
+  <div class="tb-group">
+    <button type="button" class="tb-btn icon" data-tb="previous" [disabled]="!previousOn()" (click)="previous.emit()" title="Previous" aria-label="Previous">
+      <span class="material-icons" aria-hidden="true">chevron_left</span>
+    </button>
+    <button type="button" class="tb-btn icon" data-tb="next" [disabled]="!nextOn()" (click)="next.emit()" title="Next" aria-label="Next">
+      <span class="material-icons" aria-hidden="true">chevron_right</span>
+    </button>
+    <button type="button" class="tb-btn" data-tb="find" [disabled]="busy()" (click)="find.emit()" title="Find a document">
+      <span class="material-icons" aria-hidden="true">search</span><span class="tb-text">Find</span>
+    </button>
+  </div>
+
+  <div class="tb-doc">
+    <span class="tb-no">{{ label() || 'New' }}</span>
+    @if (status()) { <span class="tb-status" [attr.data-status]="status()">{{ status() }}</span> }
+    @if (mode() === 'edit') { <span class="tb-editing">Editing</span> }
+  </div>
+</div>

@@ -84,6 +84,13 @@ loadReport(): void {
     return this.data().reduce((s, d) => s + d.breached, 0);
   }
 
+  /** Average resolution over all priorities, weighted by how many complaints each has. */
+  getOverallAvgHours(): number | null {
+    const total = this.getTotalComplaints();
+    if (total === 0) return null;
+    return this.data().reduce((s, d) => s + (d.avgResolutionHours || 0) * d.total, 0) / total;
+  }
+
   getComplianceClass(pct: number | null): string {
     if (pct == null) return 'none';
     if (pct >= 90) return 'good';

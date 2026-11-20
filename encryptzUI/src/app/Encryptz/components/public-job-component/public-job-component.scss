@@ -1,6 +1,6 @@
 /* One public job. Cards, chips and buttons come from the profile and the job pages. */
 
-$display: 'Outfit', 'DM Sans', sans-serif;
+$display: var(--app-font);
 $ink: #141b34;
 $text: #3b4357;
 $muted: #6b7489;

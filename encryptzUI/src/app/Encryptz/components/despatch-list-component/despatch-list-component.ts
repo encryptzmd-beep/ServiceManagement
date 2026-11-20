@@ -3,12 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { ApiService } from '../../Services/API/api-service';
+import { ModuleRefusedComponent, isModuleRefusal } from '../shared/module-refused';
 import { DespatchFilter, DespatchListItem, SalesOrderListItem } from '../../Models/ApiModels';
 
 @Component({
   selector: 'app-despatch-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, ModuleRefusedComponent],
   templateUrl: './despatch-list-component.html',
   styleUrls: ['./despatch-list-component.scss'],
 })
@@ -33,6 +34,8 @@ export class DespatchListComponent implements OnInit {
   pendingPageSize = 20;
   readonly pageSizes = [10, 20, 50, 100];
 
+  /** The API refused (403): the session was opened for another module. */
+  refused = signal(false);
   loading = signal(false);
 
   inWarranty = computed(() => this.despatches().filter(d => d.warrantyStatus === 'In Warranty').length);
@@ -53,7 +56,7 @@ export class DespatchListComponent implements OnInit {
         this.totalCount.set(total);
         this.totalPages.set(Math.max(1, Math.ceil(total / this.filter.pageSize)));
       },
-      error: () => { this.loading.set(false); this.despatches.set([]); },
+      error: e => { this.loading.set(false); this.refused.set(isModuleRefusal(e)); this.despatches.set([]); },
     });
   }
 

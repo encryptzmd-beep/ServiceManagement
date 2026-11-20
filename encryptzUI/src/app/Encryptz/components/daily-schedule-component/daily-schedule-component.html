@@ -75,7 +75,48 @@
               @for (tech of technicians(); track tech.technicianId) {
                <td class="schedule-cell">
   @for (item of getItemsForSlot(tech.items, slot.key); track item.scheduleId) {
+    <ng-container *ngTemplateOutlet="scheduleCard; context: { $implicit: item }" />
+  }
 
+  @if (getItemsForSlot(tech.items, slot.key).length === 0) {
+    <div class="empty-slot">
+      No schedule
+    </div>
+  }
+</td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- phone: one technician after another, slots as small headings (the table needs 1200px) -->
+  @if (!loading() && technicians().length > 0) {
+    <div class="board-list">
+      @for (tech of technicians(); track tech.technicianId) {
+        <section class="bl-tech">
+          <header class="bl-tech-head">
+            <span class="bl-tech-name">{{ tech.technicianName }}</span>
+            <span class="bl-tech-count">{{ tech.items.length }} {{ tech.items.length === 1 ? 'schedule' : 'schedules' }}</span>
+          </header>
+          @for (slot of timeSlots; track slot.key) {
+            @if (getItemsForSlot(tech.items, slot.key).length > 0) {
+              <div class="bl-slot">{{ slot.label }}</div>
+              @for (item of getItemsForSlot(tech.items, slot.key); track item.scheduleId) {
+                <ng-container *ngTemplateOutlet="scheduleCard; context: { $implicit: item }" />
+              }
+            }
+          }
+          @if (tech.items.length === 0) { <div class="empty-slot">No schedule</div> }
+        </section>
+      }
+    </div>
+  }
+</div>
+
+<ng-template #scheduleCard let-item>
     <div class="schedule-card" [ngClass]="getCardClass(item)">
 
       @if (item.isFree) {
@@ -154,19 +195,4 @@
         }
       }
     </div>
-  }
-
-  @if (getItemsForSlot(tech.items, slot.key).length === 0) {
-    <div class="empty-slot">
-      No schedule
-    </div>
-  }
-</td>
-              }
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-  }
-</div>
+</ng-template>

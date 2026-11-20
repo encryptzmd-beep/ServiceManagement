@@ -1,0 +1,37 @@
+:host { display: block; }
+
+.tb {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 10px; margin-bottom: 14px;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+}
+.tb-group { display: flex; align-items: center; gap: 4px; padding-right: 10px; border-right: 1px solid #e2e8f0; }
+.tb-btn {
+  display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 11px;
+  border: 1px solid transparent; border-radius: 8px; background: none; color: #1B4A7A;
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .12s, border-color .12s;
+  .material-icons { font-size: 18px; }
+  &:hover:not(:disabled) { background: #e8eef5; }
+  &:focus-visible { outline: 2px solid #1B4A7A; outline-offset: 1px; }
+  &:disabled { color: #a3b0c2; cursor: not-allowed; }
+  &.icon { width: 34px; padding: 0; justify-content: center; }
+  &.primary:not(:disabled) { background: #1B4A7A; color: #fff; &:hover { background: #163d65; } }
+  &.danger:not(:disabled) { color: #D42B2B; &:hover { background: #f9e8e8; } }
+}
+.tb-doc { margin-left: auto; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tb-no { font-size: 14px; font-weight: 700; color: #1a2332; white-space: nowrap; }
+.tb-status {
+  padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: #e8eef5; color: #1B4A7A;
+  &[data-status="Cancelled"], &[data-status="Rejected"] { background: #f9e8e8; color: #D42B2B; }
+  &[data-status="Despatched"], &[data-status="Accepted"] { background: #ecfdf5; color: #047857; }
+  &[data-status="Sent"] { background: #fff7ed; color: #c2410c; }
+}
+.tb-editing { font-size: 12px; font-weight: 600; color: #c2410c; }
+
+@media (max-width: 640px) {
+  .tb { gap: 6px; }
+  .tb-group { border-right: none; padding-right: 0; }
+  .tb-text { display: none; }
+  .tb-btn { width: 36px; padding: 0; justify-content: center; }
+  .tb-doc { margin-left: 0; width: 100%; }
+}

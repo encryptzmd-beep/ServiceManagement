@@ -1,0 +1,196 @@
+@if (error() === forbidden) {
+  <app-crm-refused />
+} @else if (error() && !lead()) {
+  <div class="crm-state"><span class="material-icons" aria-hidden="true">error_outline</span><p>{{ error() }}</p>
+    <a class="crm-link" routerLink="/crm/leads">Back to the leads</a></div>
+} @else if (!lead()) {
+  <div class="crm-state"><p>Loading…</p></div>
+} @else {
+  @let l = lead()!;
+  <div class="crm-page">
+    <header class="crm-page-head">
+      <div>
+        <p><a class="crm-link" routerLink="/crm/leads">Leads</a> / {{ l.leadNo }}</p>
+        <h1>{{ l.contactName }} <span [class]="pill(l.status)">{{ l.status }}</span>@for (a of attention(); track a.label) { <span class="crm-badge ld-attention" [class.red]="a.tone === 'red'" [class.amber]="a.tone === 'amber'">{{ a.label }}</span> }</h1>
+        <p>{{ l.mobile }}@if (l.city) { · {{ l.city }} } · owner {{ l.ownerName }}
+          @if (l.nextFollowUpAt && !isClosed()) { · next follow-up {{ showDateTime(l.nextFollowUpAt) }} }</p>
+      </div>
+      <div class="crm-page-actions ld-actions">
+        @if (!isClosed()) {
+          <button type="button" class="crm-btn crm-add-follow-up" (click)="open('followup')"><span class="material-icons" aria-hidden="true">add_call</span>Add follow-up</button>
+          <button type="button" class="crm-btn" (click)="open('status')">Change status</button>
+          <button type="button" class="crm-btn danger" (click)="open('lost')">Mark lost</button>
+          @if (isManager()) { <button type="button" class="crm-btn crm-reassign" (click)="open('reassign')">Reassign</button> }
+          <button type="button" class="crm-btn" (click)="newQuotation()">New quotation</button>
+          @if (canConvert()) {
+            <button type="button" class="crm-btn navy crm-convert" (click)="openConvert()"><span class="material-icons" aria-hidden="true">shopping_cart_checkout</span>Convert to Sale</button>
+          }
+        }
+        @if (l.status === 'Lost' && isManager()) { <button type="button" class="crm-btn" (click)="reopen()">Reopen</button> }
+        @if (canLinkOrder()) { <button type="button" class="crm-btn crm-link-order" (click)="open('link')">Link existing order</button> }
+        @if (canCancelConvert()) { <button type="button" class="crm-btn crm-cancel-convert" (click)="open('cancel-convert')">Cancel convert</button> }
+      </div>
+    </header>
+
+    <app-transaction-toolbar
+      [mode]="mode()" [label]="l.leadNo" [status]="l.status"
+      [canEdit]="!isClosed()" [canSave]="editing()" [canCancel]="false"
+      [previousId]="null" [nextId]="null" [busy]="busy()"
+      (newDoc)="onNew()" (edit)="onEdit()" (discard)="onDiscard()" (save)="onSave()" (print)="onPrint()" (find)="onFind()" />
+
+    @if (findOpen()) {
+      <app-transaction-find title="Find a lead" placeholder="Name, mobile, city or lead no."
+        [rows]="findRows()" [loading]="findLoading()"
+        (search)="onFindSearch($event)" (pick)="onFindPick($event)" (close)="findOpen.set(false)" />
+    }
+
+    @if (needsCheck()) {
+      <p class="crm-error crm-needs-check">A convert of this lead may have made a sales order. A manager must check the sales orders for this lead first, then link the order or cancel the convert.</p>
+    }
+
+    @if (notice()) { <p class="crm-ok">{{ notice() }}</p> }
+    @if (pageError()) { <p class="crm-error">{{ pageError() }}</p> }
+    @if (l.status === 'Converted') {
+      <p class="crm-ok">Converted{{ l.convertedAt ? ' on ' + showDate(l.convertedAt) : '' }}.
+        @if (l.orderNo) { Sales order <strong>{{ l.orderNo }}</strong>. } Despatch and installation are done in the Sales screens of Service Management (switch module at the top).</p>
+    }
+    @if (l.status === 'Lost') {
+      <p class="crm-error">Lost{{ l.lostAt ? ' on ' + showDate(l.lostAt) : '' }}: {{ l.lostReasonName }}@if (l.lostNote) { · {{ l.lostNote }} }</p>
+    }
+
+    @if (fieldsForm(); as ff) {
+      <app-crm-lead-fields [form]="ff" [readonly]="!editing()" [sources]="sources()" [owners]="owners()" [isManager]="isManager()"
+        [productName]="editing() ? editProductName() : (l.productName || '')" [leadNo]="l.leadNo"
+        [ownerName]="l.ownerName" [sourceName]="l.sourceName"
+        (changed)="setField($event.key, $event.value)" (productPicked)="editProductName.set('')" />
+    }
+
+    <section class="crm-table-card ld-card">
+      <nav class="crm-tabs" role="tablist">
+        <button type="button" role="tab" [class.active]="tab() === 'timeline'" (click)="tab.set('timeline')">Timeline ({{ timeline().length }})</button>
+        <button type="button" role="tab" [class.active]="tab() === 'quotations'" (click)="tab.set('quotations')">Quotations ({{ l.quotations.length }})</button>
+      </nav>
+
+      @switch (tab()) {
+        @case ('timeline') {
+          <ol class="ld-timeline">
+            @for (e of timeline(); track e.key) {
+              <li [class]="e.kind">
+                <span class="material-icons" aria-hidden="true">{{ e.kind === 'followup' ? 'forum' : 'flag' }}</span>
+                <div>
+                  <div class="crm-item-title">{{ e.title }}</div>
+                  @if (e.text) { <div>{{ e.text }}</div> }
+                  @if (e.next) { <div class="crm-item-meta">{{ e.next }}</div> }
+                  <div class="crm-item-meta">{{ showDateTime(e.at) }} · {{ e.by }}</div>
+                </div>
+              </li>
+            } @empty {
+              <li class="crm-empty">Nothing yet. Add the first follow-up.</li>
+            }
+          </ol>
+        }
+        @case ('quotations') {
+          <div class="crm-table-wrap crm-cards-sm">
+            <table class="crm-table">
+              <thead><tr><th>Quotation</th><th>Date</th><th>Valid until</th><th class="num">Taxable</th><th class="num">Total</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                @for (q of l.quotations; track q.quotationId) {
+                  <tr>
+                    <td data-label="Quotation"><a [routerLink]="['/crm/quotations', q.quotationId]">{{ q.quotationNo }} / R{{ q.revisionNo }}</a></td>
+                    <td data-label="Date">{{ showDate(q.quoteDate) }}</td>
+                    <td data-label="Valid until">{{ showDate(q.validUntil) || '–' }}</td>
+                    <td class="num" data-label="Taxable">{{ amount(q.taxableTotal) }}</td>
+                    <td class="num" data-label="Total">{{ amount(q.grandTotal) }}</td>
+                    <td data-label="Status"><span [class]="pill(q.status)">{{ q.status }}</span>@if (q.isInterState) { <span class="crm-muted"> IGST</span> }</td>
+                    <td class="num" data-label="Print"><a [routerLink]="['/crm/quotations', q.quotationId, 'print']" target="_blank">Print</a></td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="7" class="crm-empty">No quotation yet.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          @if (!isClosed()) { <div class="crm-actions"><button type="button" class="crm-btn" (click)="newQuotation()">New quotation</button></div> }
+        }
+      }
+    </section>
+  </div>
+
+  @if (dialog() === 'convert') {
+    <app-crm-convert-dialog [leadId]="leadId" [quotationId]="convertQuotationId()" [quotations]="convertible()" [mobile]="l.mobile"
+      (converted)="converted($event)" (cancelled)="close()" (forbidden)="convertForbidden()" />
+  } @else if (dialog()) {
+    <div class="crm-overlay" (click)="close()">
+      <div class="crm-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+        @switch (dialog()) {
+          @case ('followup') {
+            <h2>Add follow-up</h2>
+            <label class="crm-field"><span>When</span>
+              <input type="datetime-local" [ngModel]="followUp().followUpAt" (ngModelChange)="setFollowUp('followUpAt', $event)" /></label>
+            <label class="crm-field"><span>Type</span>
+              <select [ngModel]="followUp().type" (ngModelChange)="setFollowUp('type', $event)">
+                @for (t of followUpTypes; track t) { <option [value]="t">{{ t }}</option> }
+              </select></label>
+            <label class="crm-field"><span>Notes</span>
+              <textarea maxlength="2000" [ngModel]="followUp().notes" (ngModelChange)="setFollowUp('notes', $event)"></textarea></label>
+            <label class="crm-field"><span>Next follow-up</span>
+              <input type="datetime-local" [ngModel]="followUp().nextFollowUpAt ?? ''" (ngModelChange)="setFollowUp('nextFollowUpAt', $event || null)" /></label>
+            <label class="crm-field"><span>Next action</span>
+              <input maxlength="500" [ngModel]="followUp().nextAction" (ngModelChange)="setFollowUp('nextAction', $event)" /></label>
+            <label class="crm-field"><span>Remarks</span>
+              <input maxlength="1000" [ngModel]="followUp().remarks" (ngModelChange)="setFollowUp('remarks', $event)" /></label>
+          }
+          @case ('status') {
+            <h2>Change status</h2>
+            <label class="crm-field"><span>New status</span>
+              <select [ngModel]="statusTo()" (ngModelChange)="statusTo.set($event)">
+                @for (s of statusChoices(); track s) { <option [value]="s">{{ s }}</option> }
+              </select></label>
+            <label class="crm-field"><span>Note</span>
+              <textarea maxlength="1000" [ngModel]="statusNote()" (ngModelChange)="statusNote.set($event)"></textarea></label>
+          }
+          @case ('lost') {
+            <h2>Mark lost</h2>
+            <label class="crm-field"><span>Why was it lost? *</span>
+              <select [ngModel]="lostReasonId() ?? ''" (ngModelChange)="lostReasonId.set($event ? +$event : null)">
+                <option value="">Choose…</option>
+                @for (r of lostReasons(); track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+              </select></label>
+            <label class="crm-field"><span>Note</span>
+              <textarea maxlength="1000" [ngModel]="statusNote()" (ngModelChange)="statusNote.set($event)"></textarea></label>
+          }
+          @case ('reassign') {
+            <h2>Reassign lead</h2>
+            <label class="crm-field"><span>New owner</span>
+              <select [ngModel]="newOwner() ?? ''" (ngModelChange)="newOwner.set($event ? +$event : null)">
+                @for (m of owners(); track m.userId) { <option [value]="m.userId">{{ m.fullName }}</option> }
+              </select></label>
+            <p class="crm-muted">The new owner is told in the app.</p>
+          }
+          @case ('link') {
+            <h2>Link existing order</h2>
+            <p class="crm-muted">When a convert made the sales order but could not update the lead, enter that order's number.</p>
+            <label class="crm-field"><span>Order no.</span>
+              <input maxlength="30" [ngModel]="orderNo()" (ngModelChange)="orderNo.set($event)" /></label>
+          }
+          @case ('cancel-convert') {
+            <h2>Cancel convert</h2>
+            <p class="crm-muted">Do this only when the sales orders show no order for this lead. The lead can then be converted again.</p>
+          }
+        }
+        @if (dialogError()) { <p class="crm-error">{{ dialogError() }}</p> }
+        <div class="crm-actions">
+          <button type="button" class="crm-btn" (click)="close()">Cancel</button>
+          @switch (dialog()) {
+            @case ('followup') { <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="saveFollowUp()">Save follow-up</button> }
+            @case ('status') { <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="saveStatus()">Change status</button> }
+            @case ('lost') { <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="saveLost()">Mark lost</button> }
+            @case ('reassign') { <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="saveReassign()">Reassign</button> }
+            @case ('link') { <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="saveLink()">Link order</button> }
+            @case ('cancel-convert') { <button type="button" class="crm-btn primary crm-confirm-cancel-convert" [disabled]="busy()" (click)="saveCancelConvert()">Cancel convert</button> }
+          }
+        </div>
+      </div>
+    </div>
+  }
+}

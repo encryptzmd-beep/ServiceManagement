@@ -3,13 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { ApiService } from '../../Services/API/api-service';
+import { ModuleRefusedComponent, isModuleRefusal } from '../shared/module-refused';
 import { SalesOrderFilter, SalesOrderListItem } from '../../Models/ApiModels';
 import { DialogService } from '../../Services/dialog-service';
 
 @Component({
   selector: 'app-sales-order-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, ModuleRefusedComponent],
   templateUrl: './sales-order-list-component.html',
   styleUrls: ['./sales-order-list-component.scss'],
 })
@@ -21,6 +22,8 @@ export class SalesOrderListComponent implements OnInit {
   orders = signal<SalesOrderListItem[]>([]);
   totalCount = signal(0);
   totalPages = signal(1);
+  /** The API refused (403): the session was opened for another module. */
+  refused = signal(false);
   loading = signal(false);
   toast = signal<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -44,7 +47,7 @@ export class SalesOrderListComponent implements OnInit {
         this.totalCount.set(total);
         this.totalPages.set(Math.max(1, Math.ceil(total / this.filter.pageSize)));
       },
-      error: () => { this.loading.set(false); this.orders.set([]); this.totalCount.set(0); this.totalPages.set(1); },
+      error: e => { this.loading.set(false); this.refused.set(isModuleRefusal(e)); this.orders.set([]); this.totalCount.set(0); this.totalPages.set(1); },
     });
   }
 

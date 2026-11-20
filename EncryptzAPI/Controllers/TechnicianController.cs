@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.IO;
 using System.Security.Claims;
 using EncryptzBL.Common;
+using EncryptzBL.Common.Service;
 
 
 
@@ -48,10 +49,56 @@ namespace EncryptzAPI.Controllers
             if (owner != User.GetTechnicianId())
                 return this.Forbidden("This work order is assigned to another technician");
 
-            if (requireCheckIn && !await _service.IsCheckedIn(owner.Value))
+            if (requireCheckIn && await _service.NeedsCheckIn(owner.Value))
                 return BadRequest(new { success = false, message = CheckInRequired });
 
             return null;
+        }
+
+        // GET api/technician/attendance-required  (Technicians page: check-in required per technician)
+        [HttpGet("attendance-required")]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<IActionResult> GetAttendanceRules()
+            => Ok(new { success = true, data = await _service.GetAttendanceRules() });
+
+        // PUT api/technician/attendance-required  { technicianId, required }
+        [HttpPut("attendance-required")]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<IActionResult> SetAttendanceRequired([FromBody] AttendanceRequiredSetDto dto)
+        {
+            if (dto == null || dto.TechnicianId <= 0)
+                return BadRequest(new { success = false, message = "Technician not found" });
+
+            var result = await _service.SetAttendanceRequired(dto.TechnicianId, dto.Required);
+            return result.Success
+                ? Ok(new { success = true, message = result.Message })
+                : BadRequest(new { success = false, message = result.Message });
+        }
+
+        // GET api/technician/my-attendance-rule  (work orders: must the caller check in?)
+        [HttpGet("my-attendance-rule")]
+        public async Task<IActionResult> GetMyAttendanceRule()
+        {
+            var technicianId = User.GetTechnicianId();
+            var required = technicianId <= 0 || await _service.IsAttendanceRequired(technicianId);
+            return Ok(new { success = true, data = new { attendanceRequired = required } });
+        }
+
+        // GET api/technician/completion-rules?assignmentId=  (Settings > Service Workflow, for the complete dialog)
+        [HttpGet("completion-rules")]
+        public async Task<IActionResult> GetCompletionRules([FromQuery] int? assignmentId)
+        {
+            if (assignmentId is > 0)
+            {
+                var denied = await GuardAssignment(assignmentId.Value);
+                if (denied != null) return denied;
+            }
+
+            var rules = await _service.GetCompletionRules(assignmentId);
+            // the minimum update-status will enforce for this caller: none for back office or with the switch off
+            if (!(RequireCompletionPhoto && User.IsTechnicianScoped()))
+                rules.MinPhotos = 0;
+            return Ok(new { success = true, data = rules });
         }
 
         [HttpGet]
@@ -183,8 +230,14 @@ namespace EncryptzAPI.Controllers
                     return BadRequest(new { success = false, message = "Work performed is required to complete a work order" });
 
                 // the screen uploads the photos first, then completes
-                if (RequireCompletionPhoto && User.IsTechnicianScoped() && !await _service.HasServiceImage(dto.AssignmentId))
-                    return BadRequest(new { success = false, message = "Upload at least one service photo before completing the work order" });
+                // how many: Settings > Service Workflow (default 1, as before)
+                if (RequireCompletionPhoto && User.IsTechnicianScoped())
+                {
+                    var rules = await _service.GetCompletionRules(null);
+                    var problem = ServiceWorkflowRules.PhotoProblem(await _service.CountServiceImages(dto.AssignmentId), rules.MinPhotos);
+                    if (problem != null)
+                        return BadRequest(new { success = false, message = problem });
+                }
             }
 
             var result = await _service.UpdateAssignmentStatus(dto, UserId);

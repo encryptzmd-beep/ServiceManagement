@@ -1,0 +1,7 @@
+/* The board's status dialog: the shared .crm-overlay / .crm-dialog / .crm-field, full screen on a phone. */
+:host { display: contents; }
+.crm-status-dialog { max-width: 440px; }
+@media (max-width: 640px) {
+  .crm-overlay { padding: 0; align-items: stretch; }
+  .crm-status-dialog { max-width: none; border-radius: 0; min-height: 100%; }
+}

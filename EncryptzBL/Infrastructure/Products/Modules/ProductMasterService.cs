@@ -12,6 +12,41 @@ namespace EncryptzBL.Infrastructure.Products.Modules
         public ProductMasterService(DbHelper db) : base(db) { }
 
 
+        // ── category / sub category master (21_Product_Categories.sql) ──
+        public async Task<ApiResponse<List<ProductCategoryDto>>> GetCategories()
+        {
+            try
+            {
+                var dt = await GetDataTableAsync("sp_ProductCategory_List");
+                return ApiResponse<List<ProductCategoryDto>>.Ok(dt != null && dt.Rows.Count > 0 ? dt.ToList<ProductCategoryDto>() : new());
+            }
+            catch (Microsoft.Data.SqlClient.SqlException e) when (e.Number == 2812 || e.Number == 208)
+            {
+                return ApiResponse<List<ProductCategoryDto>>.Fail("The category master is not set up in this company yet");
+            }
+        }
+
+        public async Task<ApiResponse<int>> SaveCategory(ProductCategorySaveDto dto)
+        {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Name)) return ApiResponse<int>.Fail("Enter the name");
+            var invalid = InputSanitizer.Validate(("Name", dto.Name));
+            if (invalid != null) return ApiResponse<int>.Fail(invalid);
+
+            var dt = await GetDataTableAsync("sp_ProductCategory_Save", new[]
+            {
+                SqlParameterHelper.Input("@CategoryId", dto.CategoryId),
+                SqlParameterHelper.Input("@ParentId", dto.ParentId is > 0 ? dto.ParentId : null),
+                SqlParameterHelper.Input("@Name", dto.Name.Trim()),
+                SqlParameterHelper.Input("@IsActive", dto.IsActive)
+            });
+            if (dt == null || dt.Rows.Count == 0) return ApiResponse<int>.Fail("The category could not be saved");
+            var row = dt.Rows[0];
+            var message = row["Message"]?.ToString() ?? "";
+            return Convert.ToBoolean(row["Success"])
+                ? ApiResponse<int>.Ok(Convert.ToInt32(row["CategoryId"]), message)
+                : ApiResponse<int>.Fail(message);
+        }
+
         public async Task<ApiResponse<ProductMaster>> CreateProduct(ProductMasterRequestDto dto)
         {
             var parameters = new[]

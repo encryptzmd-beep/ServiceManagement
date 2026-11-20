@@ -1,0 +1,144 @@
+@if (error() === forbidden) {
+  <app-crm-refused />
+} @else {
+  <div class="crm-board-page">
+    <header class="crm-page-head">
+      <div class="crm-head-main">
+        <div class="crm-head-title">
+          <h1>Dashboard</h1>
+          @if (board(); as b) {
+            <div class="crm-month">
+              <span class="crm-month-fig good"><strong>{{ b.counts.convertedThisMonth }}</strong> converted this month</span>
+              <span class="crm-month-fig bad"><strong>{{ b.counts.lostThisMonth }}</strong> lost this month</span>
+            </div>
+          }
+        </div>
+        <p>Your open leads by stage. Drag a card to change its status.</p>
+      </div>
+      <div class="crm-page-actions">
+        <div class="crm-density" role="group" aria-label="Card size">
+          <button type="button" [class.on]="density() === 'comfortable'" [attr.aria-pressed]="density() === 'comfortable'"
+                  title="Comfortable cards" (click)="setDensity('comfortable')">
+            <span class="material-icons" aria-hidden="true">view_agenda</span><span class="crm-density-txt">Comfortable</span>
+          </button>
+          <button type="button" [class.on]="density() === 'compact'" [attr.aria-pressed]="density() === 'compact'"
+                  title="Compact cards: the most leads on screen" (click)="setDensity('compact')">
+            <span class="material-icons" aria-hidden="true">view_headline</span><span class="crm-density-txt">Compact</span>
+          </button>
+        </div>
+        @if (isManager()) {
+          <select class="crm-owner-filter" aria-label="Owner" [value]="ownerUserId() ?? ''" (change)="setOwner($any($event.target).value)">
+            <option value="">All owners</option>
+            @for (m of owners(); track m.userId) { <option [value]="m.userId">{{ m.fullName }}</option> }
+          </select>
+        }
+        <a class="crm-btn navy" routerLink="/crm/leads"><span class="material-icons" aria-hidden="true">list</span>All leads</a>
+        <a class="crm-btn primary" routerLink="/crm/leads/new"><span class="material-icons" aria-hidden="true">add</span>New lead</a>
+      </div>
+    </header>
+
+    @if (error()) {
+      <p class="crm-error">{{ error() }}</p>
+    } @else if (!board()) {
+      <div class="crm-attn-strip" aria-hidden="true">
+        @for (a of attention; track a.key) { <span class="crm-skeleton crm-attn-skel"></span> }
+      </div>
+      <div class="crm-board" aria-hidden="true">
+        @for (c of columnNames; track c) { <span class="crm-skeleton crm-col-skel"></span> }
+      </div>
+    } @else {
+      <section class="crm-attn-strip" aria-label="Attention required">
+        @for (a of attention; track a.key) {
+          <button type="button" class="crm-attn" [class]="'crm-attn ' + a.tone" [class.active]="filter() === a.key"
+                  [attr.data-key]="a.key" [attr.aria-pressed]="filter() === a.key" (click)="toggleFilter(a.key)">
+            <strong>{{ countOf(a.key) }}</strong>
+            <span>{{ a.label }}</span>
+          </button>
+        }
+      </section>
+
+      @if (board()!.truncated) {
+        <p class="crm-truncated">The board shows the first 500 open leads. <a routerLink="/crm/leads">See all leads</a></p>
+      }
+      @if (message()) { <p class="crm-error crm-board-msg" role="alert">{{ message() }}</p> }
+
+      <div class="crm-board-wrap" cdkDropListGroup>
+        <div class="crm-board" [class.compact]="density() === 'compact'" cdkScrollable>
+          @for (col of columns(); track col.status) {
+            <section class="crm-col" [attr.data-status]="col.status">
+              <header class="crm-col-head">
+                <span [class]="pill(col.status)">{{ col.status }}</span>
+                <span class="crm-col-count">{{ col.cards.length }}</span>
+                <span class="crm-col-value">{{ rupees(col.value) }}</span>
+              </header>
+              <div class="crm-col-body" cdkDropList [cdkDropListData]="col.status" [cdkDropListSortingDisabled]="true" (cdkDropListDropped)="dropped($event)">
+                @for (card of col.cards; track card.leadId) {
+                  <a class="crm-kcard" [routerLink]="['/crm/leads', card.leadId]" [attr.data-prio]="(card.priority || '').toLowerCase()"
+                     [title]="card.contactName + ' · ' + card.leadNo + (card.quotationNo ? ' · ' + card.quotationNo : '')"
+                     cdkDrag cdkDragPreviewContainer="parent" [cdkDragData]="card" [cdkDragStartDelay]="dragDelay" [cdkDragDisabled]="!!pending()"
+                     (cdkDragStarted)="dragStarted()" (cdkDragEnded)="dragEnded()">
+                    <!-- line 1: who, and what it is worth (or the lead no.) -->
+                    <span class="crm-kcard-top">
+                      <strong>{{ card.contactName }}</strong>
+                      @if (card.quotationValue !== null) {
+                        <span class="crm-kcard-amt">{{ rupees(card.quotationValue) }}</span>
+                      } @else {
+                        <span class="crm-kcard-no">{{ card.leadNo }}</span>
+                      }
+                    </span>
+
+                    @if (density() === 'comfortable') {
+                      <!-- line 2: priority, place, time in stage -->
+                      <span class="crm-kcard-row">
+                        <span class="crm-kcard-priority" [class]="pill(card.priority)">{{ card.priority }}</span>
+                        @if (card.city) { <span class="crm-kcard-city"><span class="material-icons" aria-hidden="true">place</span>{{ card.city }}</span> }
+                        <span class="crm-kcard-days">{{ card.daysInStage }} d in stage</span>
+                      </span>
+                      <!-- line 3: owner and the next follow-up -->
+                      <span class="crm-kcard-foot">
+                        <span class="crm-kcard-owner"><span class="crm-avatar" aria-hidden="true">{{ initials(card.ownerName) }}</span><span class="crm-kcard-owner-name">{{ card.ownerName }}</span></span>
+                        <span class="crm-kcard-when" [class.overdue]="card.isOverdue" [class.today]="card.isDueToday" [class.none]="!card.nextFollowUpAt">
+                          <span class="material-icons" aria-hidden="true">{{ card.isOverdue ? 'alarm' : card.nextFollowUpAt ? 'event' : 'event_busy' }}</span>
+                          {{ card.nextFollowUpAt ? (card.isDueToday ? 'Today' : card.isOverdue ? 'Overdue' : '') + (card.isDueToday || card.isOverdue ? ' · ' : '') + shortWhen(card.nextFollowUpAt) : 'No follow-up' }}
+                        </span>
+                      </span>
+                      @if (otherBadges(card); as badges) {
+                        @if (badges.length) {
+                          <span class="crm-kcard-badges">
+                            @for (b of badges; track b.label) { <span class="crm-badge" [class]="'crm-badge ' + b.tone">{{ b.label }}</span> }
+                          </span>
+                        }
+                      }
+                    } @else {
+                      <!-- compact: one line of details -->
+                      <span class="crm-kcard-line">
+                        <span class="crm-kcard-when" [class.overdue]="card.isOverdue" [class.today]="card.isDueToday" [class.none]="!card.nextFollowUpAt">
+                          {{ card.nextFollowUpAt ? (card.isDueToday ? 'Today' : card.isOverdue ? 'Overdue' : shortWhen(card.nextFollowUpAt)) : 'No follow-up' }}
+                        </span>
+                        @if (card.city) { <span class="crm-kcard-sep">{{ card.city }}</span> }
+                        <span class="crm-kcard-sep">{{ card.ownerName }}</span>
+                        <span class="crm-kcard-days">{{ card.daysInStage }}d</span>
+                      </span>
+                    }
+                  </a>
+                } @empty {
+                  <p class="crm-col-empty">No leads</p>
+                }
+              </div>
+            </section>
+          }
+        </div>
+        <!-- always in the DOM so CDK finds it in the group when a drag starts; only shown (.open) while dragging -->
+        <div class="crm-lost-zone" [class.open]="dragging()" [attr.aria-hidden]="!dragging()"
+             cdkDropList cdkDropListData="Lost" [cdkDropListAutoScrollDisabled]="true" (cdkDropListDropped)="dropped($event)">
+          <span class="material-icons" aria-hidden="true">block</span>Drop here to mark lost
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (pending(); as p) {
+    <app-crm-status-dialog [mode]="p.mode" [leadNo]="p.card.leadNo" [toStatus]="p.toStatus" [lostReasons]="lostReasons()"
+                           [busy]="busy()" (confirmed)="confirmMove($event)" (cancelled)="cancelMove()" />
+  }
+}

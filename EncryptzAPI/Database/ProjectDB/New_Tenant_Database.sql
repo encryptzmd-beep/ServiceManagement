@@ -17421,6 +17421,8 @@ BEGIN
     INNER JOIN N ON N.n <= i.Qty
     LEFT JOIN @Sent s ON s.SalesOrderItemId = i.SalesOrderItemId AND s.Seq = N.n
     WHERE i.SalesOrderId = @SalesOrderId
+      -- a service line (no product from the master, no warranty) gets no serial number
+      AND (i.ProductMasterId IS NOT NULL OR i.WarrantyMonths > 0)
     ORDER BY i.SortOrder, i.SalesOrderItemId, N.n;
 
     IF NOT EXISTS (SELECT 1 FROM @Units)
@@ -17807,7 +17809,9 @@ BEGIN
         CAST(ISNULL(c.IsWarranty, 0) AS BIT) AS IsWarranty,
         ta.AssignmentRole,
         ta.Status,
-        ta.AssignedAt,
+        -- AssignedAt is stored in UTC (column default GETUTCDATE()); show it in IST like
+        -- sp_WorkOrder_GetDetails does. CompletedAt is already written in IST.
+        DATEADD(MINUTE, 330, ta.AssignedAt) AS AssignedAt,
         ta.CompletedAt,
         ta.ScheduledDate,
         ta.StartTime,

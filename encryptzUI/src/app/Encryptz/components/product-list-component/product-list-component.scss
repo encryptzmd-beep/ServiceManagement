@@ -850,3 +850,6 @@
   border-color: #b82424 !important;
   color: #fff !important;
 }
+
+.header-buttons { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.header-buttons a.fx-btn-navy { text-decoration: none; }

@@ -1,0 +1,137 @@
+@if (error() === forbidden) {
+  <app-crm-refused />
+} @else {
+  <div class="crm-reports">
+    <!-- one toolbar row: the title on the left, the filters and the exports on the right -->
+    <header class="crm-page-head rp-bar">
+      <div class="rp-title">
+        <h1>{{ current().label }}</h1>
+        <p>· {{ isManager() ? 'The whole team' : 'Your own leads' }}</p>
+      </div>
+      <form class="rp-filters" (ngSubmit)="run()">
+        @if (current().dates) {
+          <div class="crm-range" role="group" aria-label="Dates">
+            <span class="material-icons" aria-hidden="true">event</span>
+            <input type="date" name="from" aria-label="From" [ngModel]="from()" (change)="setFilter('from', $any($event.target).value)" />
+            <span aria-hidden="true">–</span>
+            <input type="date" name="to" aria-label="To" [ngModel]="to()" (change)="setFilter('to', $any($event.target).value)" />
+          </div>
+        } @else {
+          <span class="rp-now"><span class="material-icons" aria-hidden="true">schedule</span>Open leads as they stand now</span>
+        }
+        @if (showOwner()) {
+          <select name="owner" aria-label="Owner" [ngModel]="ownerUserId() ?? ''" (ngModelChange)="setFilter('owner', $event)">
+            <option value="">Owner: Everyone</option>
+            @for (m of owners(); track m.userId) { <option [value]="m.userId">{{ m.fullName }}</option> }
+          </select>
+        }
+        @if (tab() === 'conversion') {
+          <select name="groupBy" aria-label="Group by" [ngModel]="groupBy()" (ngModelChange)="groupBy.set($event); run()">
+            <option value="source">By source</option>
+            <option value="owner">By owner</option>
+            <option value="month">By month</option>
+          </select>
+        }
+        <span class="rp-sep" aria-hidden="true"></span>
+        <button type="button" class="crm-btn crm-excel" [disabled]="!view() || !!error()" (click)="excel()">
+          <span class="material-icons" aria-hidden="true">grid_on</span>Excel</button>
+        <button type="button" class="crm-btn crm-pdf" [disabled]="!view() || !!error()" (click)="pdf()">
+          <span class="material-icons" aria-hidden="true">picture_as_pdf</span>PDF</button>
+      </form>
+    </header>
+
+    @if (error()) { <p class="crm-error" role="alert">{{ error() }}</p> }
+
+    @if (view(); as v) {
+     @if (!error()) {
+      <!-- one summary strip: the figures, then the breakdown as one stacked bar -->
+      @if (v.stats.length || segments().length) {
+        <section class="rp-summary" aria-label="Summary">
+          @for (s of v.stats; track s.label; let i = $index) {
+            <div class="crm-stat rp-kpi" [attr.data-tone]="i % 4">
+              <div class="rp-kpi-val">{{ s.value }}</div>
+              <div class="rp-kpi-label">{{ s.label }}</div>
+            </div>
+          }
+          @if (segments().length) {
+            <div class="rp-break">
+              <div class="rp-break-head"><span>{{ v.barTitle }}</span><span class="rp-break-total">{{ segmentTotal() }}</span></div>
+              <div class="rp-stack" role="img" [attr.aria-label]="v.barTitle">
+                @for (s of segments(); track s.label) {
+                  <span class="crm-bar-fill rp-seg" [style.width.%]="s.pct" [style.background]="s.color" [title]="s.label + ': ' + s.text"></span>
+                }
+              </div>
+              <div class="rp-legend">
+                @for (s of segments(); track s.label) {
+                  <span class="rp-leg"><span class="rp-dot" [style.background]="s.color"></span>{{ s.label }} <strong>{{ s.text }}</strong></span>
+                }
+              </div>
+            </div>
+          }
+        </section>
+      }
+
+      <!-- the report: the rest of the screen -->
+      <section class="crm-listcard rp-table">
+        <div class="rp-tablehead">
+          <span class="rp-tabletitle">{{ v.title }}</span>
+          <span class="crm-count-pill">{{ shownRows().length }}</span>
+          <span class="rp-grow"></span>
+          @if (v.rows.length) {
+            <label class="crm-search rp-search">
+              <span class="material-icons" aria-hidden="true">search</span>
+              <input type="search" name="q" aria-label="Search in this report" placeholder="Search in this report"
+                     [ngModel]="query()" (ngModelChange)="query.set($event)" />
+            </label>
+          }
+        </div>
+        @if (v.note) { <p class="crm-report-note">{{ v.note }}</p> }
+        @if (v.rows.length) {
+          <div class="crm-datagrid crm-cards-sm">
+            <table>
+              <thead><tr>
+                @for (c of v.cols; track c.key) { <th [class.num]="c.kind">{{ c.title }}</th> }
+              </tr></thead>
+              <tbody>
+                @for (r of shownRows(); track $index) {
+                  <tr>
+                    @for (c of v.cols; track c.key) {
+                      <td [attr.data-label]="c.title" [class.num]="c.kind">
+                        @if (c.link) {
+                          <a class="crm-rlink" [routerLink]="c.link(r)">{{ cell(r, c) }}</a>
+                        } @else if (c.pill) {
+                          <span [class]="'crm-status ' + (r[c.key] || '').toString().toLowerCase()">{{ cell(r, c) }}</span>
+                        } @else if (c.kind) {
+                          <span class="crm-plain">{{ cell(r, c) }}</span>
+                        } @else {
+                          <div class="crm-text" [title]="cell(r, c)">{{ cell(r, c) }}</div>
+                        }
+                        @if (c.sub && r[c.sub]) { <div class="crm-sub" [title]="r[c.sub]">{{ r[c.sub] }}</div> }
+                      </td>
+                    }
+                  </tr>
+                } @empty {
+                  <tr><td [attr.colspan]="v.cols.length" class="crm-empty">Nothing matches "{{ query() }}".</td></tr>
+                }
+              </tbody>
+              @if (v.footer; as f) {
+                <tfoot>
+                  <tr>
+                    @for (c of v.cols; track c.key) {
+                      <td [attr.data-label]="c.title" [class.num]="c.kind"><b>{{ cell(f, c) }}</b></td>
+                    }
+                  </tr>
+                </tfoot>
+              }
+            </table>
+          </div>
+        } @else {
+          <div class="crm-empty"><span class="material-icons" aria-hidden="true">insights</span>{{ v.empty }}</div>
+        }
+      </section>
+     }
+    } @else {
+      <section class="crm-listcard"><div class="crm-empty"><span class="crm-skeleton crm-report-loading"></span>Loading…</div></section>
+    }
+  </div>
+}

@@ -1,0 +1,36 @@
+/* The lead page: the facts, the timeline and its dialogs (Convert to Sale is app-crm-convert-dialog). */
+
+.crm-page-head h1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ld-attention { font-size: 11.5px; }
+.ld-card { padding: 18px 20px; }
+.ld-actions { max-width: 100%; }
+.crm-page-head .ld-actions .crm-btn { padding: 8px 14px; font-size: 13px; }
+.crm-page > .crm-error, .crm-page > .crm-ok { overflow-wrap: anywhere; }
+
+.ld-facts {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 20px; margin: 0;
+  > div { min-width: 0; }
+  .wide { grid-column: span 2; }
+  dt { font-size: 12px; font-weight: 600; color: #64748b; }
+  dd { margin: 2px 0 0; color: #0f172a; overflow-wrap: anywhere; }
+  a { color: #2563eb; text-decoration: none; }
+}
+
+.ld-timeline {
+  list-style: none; margin: 0; padding: 0;
+  li { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+  li:last-child { border-bottom: none; }
+  .material-icons { font-size: 18px; color: #2563eb; margin-top: 2px; }
+  li.status .material-icons { color: #b45309; }
+}
+
+@media (max-width: 900px) { .ld-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+  .ld-card { padding: 14px; }
+  .crm-overlay { padding: 0; }
+  .crm-dialog { max-width: 100vw; width: 100vw; min-height: 100vh; border-radius: 0; box-sizing: border-box; }
+  .crm-dialog .crm-actions .crm-btn { flex: 1 1 auto; }
+}
+@media (max-width: 560px) {
+  .ld-facts { grid-template-columns: minmax(0, 1fr); .wide { grid-column: auto; } }
+}

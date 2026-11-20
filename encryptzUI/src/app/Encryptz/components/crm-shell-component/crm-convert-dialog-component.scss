@@ -1,0 +1,15 @@
+/* Convert to Sale: the shared .crm-overlay / .crm-dialog.wide / .crm-choice, full screen on a phone. */
+:host { display: contents; }
+.cv-choices { display: flex; flex-direction: column; gap: 8px; }
+.cv-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cv-totals { margin: 0; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.crm-error { overflow-wrap: anywhere; }
+
+@media (max-width: 640px) {
+  .crm-overlay { padding: 0; align-items: stretch; }
+  .crm-dialog.cv-dialog { max-width: 100vw; width: 100vw; min-height: 100vh; border-radius: 0; box-sizing: border-box; }
+  .crm-dialog .crm-actions .crm-btn { flex: 1 1 auto; }
+}
+@media (max-width: 560px) {
+  .cv-two { grid-template-columns: minmax(0, 1fr); }
+}

@@ -1,0 +1,162 @@
+// Shared layout of the Service reports (SLA, Productivity, …):
+// header with the date range on the right · one summary strip · one card with a table.
+// Colours: --fx-* tokens from styles.scss; green/amber/red only for results.
+// Use from a component stylesheet:  @use '../shared/report-page';
+
+:host {
+  display: block;
+  --text: var(--fx-text-primary, #1a2332);
+  --muted: var(--fx-text-secondary, #5a6a7e);
+  --faint: var(--fx-text-muted, #8a9ab0);
+  --line: var(--fx-border, #e2e8f0);
+  --navy: var(--fx-brand-navy, #1B4A7A);
+  --good: #16a34a;
+  --warn: #d97706;
+  --bad: #dc2626;
+}
+
+.page { color: var(--text); }
+
+// ── header + date range ──
+.page-header { align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+
+.range { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
+.range-field {
+  display: flex; flex-direction: column; gap: 4px;
+  span { font-size: 12px; font-weight: 600; color: var(--muted); }
+}
+.input {
+  height: 38px; padding: 0 10px;
+  border: 1px solid var(--line); border-radius: 8px; background: #fff;
+  font: inherit; font-size: 14px; color: var(--text);
+  &:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(27, 74, 122, .12); }
+}
+.btn-primary {
+  height: 38px; padding: 0 16px;
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 0; border-radius: 8px; background: var(--navy); color: #fff;
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+  .material-icons { font-size: 18px; }
+  &:hover:not(:disabled) { background: #163d65; }
+  &:disabled { opacity: .6; cursor: not-allowed; }
+}
+
+// ── summary strip: one wide figure, then four small ones ──
+.summary {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.6fr) repeat(4, minmax(0, 1fr));
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+.sum-main, .sum-item { padding: 16px 20px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sum-item { border-left: 1px solid var(--line); justify-content: center; }
+.sum-label { font-size: 12px; font-weight: 600; color: var(--faint); text-transform: uppercase; letter-spacing: .04em; }
+.sum-big { font-size: 30px; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; }
+.sum-num {
+  font-size: 22px; font-weight: 700; line-height: 1.2;
+  small { font-size: 14px; font-weight: 600; color: var(--muted); margin-left: 2px; }
+  &.ok { color: var(--good); }
+  &.warn { color: var(--warn); }
+  &.bad { color: var(--bad); }
+}
+.sum-note { font-size: 13px; color: var(--muted); }
+.sum-main .bar-track { margin: 6px 0 2px; }
+
+[data-tone="good"]     { color: var(--good); }
+[data-tone="warn"]     { color: var(--warn); }
+[data-tone="critical"] { color: var(--bad); }
+
+.bar-track { height: 8px; border-radius: 4px; background: #eef2f7; overflow: hidden; }
+.bar-track.sm { height: 6px; flex: 1; min-width: 60px; }
+.bar-fill { height: 100%; border-radius: inherit; background: var(--faint); transition: width .3s ease; }
+.bar-fill[data-tone="good"]     { background: var(--good); }
+.bar-fill[data-tone="warn"]     { background: var(--warn); }
+.bar-fill[data-tone="critical"] { background: var(--bad); }
+
+.cell-bar { display: flex; align-items: center; gap: 10px; }
+.pct { min-width: 40px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+// ── the card holding the table ──
+.card { background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.card-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 14px 20px; border-bottom: 1px solid var(--line);
+  h3 { font-size: 15px; font-weight: 700; margin: 0; }
+}
+.card-sub { font-size: 13px; color: var(--faint); }
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  th {
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 12px; font-weight: 600; color: var(--faint);
+    text-transform: uppercase; letter-spacing: .04em;
+    background: #f8fafc; border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: #fafbfc; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+}
+
+.ok { color: var(--good); }
+.warn { color: var(--warn); font-weight: 600; }
+.bad { color: var(--bad); font-weight: 600; }
+.muted { color: var(--faint); }
+
+// ── empty / loading ──
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 56px 16px; text-align: center;
+  background: #fff; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted);
+  h3 { font-size: 16px; color: var(--text); margin: 4px 0 0; }
+  p { margin: 0; font-size: 14px; }
+}
+.empty-icon { font-size: 40px; color: #cbd5e1; }
+
+.spinner {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, .45); border-top-color: #fff;
+  animation: report-spin .7s linear infinite;
+  &.dark { width: 22px; height: 22px; border-color: #cbd5e1; border-top-color: var(--navy); }
+}
+@keyframes report-spin { to { transform: rotate(360deg); } }
+
+// ── narrower screens ──
+@media (max-width: 1100px) {
+  .summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .sum-main { grid-column: 1 / -1; border-bottom: 1px solid var(--line); }
+  .sum-item:nth-child(2) { border-left: 0; }
+}
+
+@media (max-width: 720px) {
+  .range { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+  .range .input { width: 100%; font-size: 16px; }
+  .range .btn-primary { grid-column: 1 / -1; justify-content: center; height: 42px; }
+
+  .summary { grid-template-columns: 1fr 1fr; }
+  .sum-item { border-left: 0; border-top: 1px solid var(--line); padding: 12px 16px; }
+  .sum-item:nth-child(odd) { border-left: 1px solid var(--line); }
+  .sum-main { border-bottom: 0; }
+  .card-head { padding: 12px 16px; }
+
+  // tables become one card per row; each page places its cells on a 4-column grid
+  .report-table, .report-table tbody { display: block; }
+  .report-table thead { display: none; }
+  .report-table tr {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
+    padding: 14px 16px; border-bottom: 1px solid var(--line);
+  }
+  .report-table td { padding: 0; border: 0; text-align: left !important; min-width: 0; }
+  .report-table td[data-label]::before {
+    content: attr(data-label); display: block; margin-bottom: 2px;
+    font-size: 11px; font-weight: 600; color: var(--faint); text-transform: uppercase; letter-spacing: .03em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+}

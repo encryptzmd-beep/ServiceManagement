@@ -10,6 +10,9 @@ import { AuthService } from '../../Auth/auth-service';
 import { GpsTracking } from '../../Services/gps-tracking';
 import { GeocodeService } from '../../Services/API/geocode-service';
 import { DialogService } from '../../Services/dialog-service';
+import { CompletionRules, morePhotosHint, photoCategoriesOf, photosStillNeeded } from './completion-photos';
+import { canWorkWithoutCheckIn } from './attendance-rule';
+import { isNoChargeJob } from './no-charge-job';
 type SpareCartItem = {
   part?: any;                 // for master item
   isCustom: boolean;          // flag
@@ -41,6 +44,9 @@ constructor() {}
 
 // ── Check-in/out state ──────────────────────────────────
 isCheckedIn  = signal(false);
+/** Technicians › detail: false when this technician may work without checking in (default true, as before). */
+attendanceRequired = signal(true);
+canWork = computed(() => canWorkWithoutCheckIn(this.isAdmin(), this.isCheckedIn(), this.attendanceRequired()));
 checkInTime  = signal<Date | null>(null);
 currentCoords = signal('');
 checkInBusy  = signal(false);
@@ -335,6 +341,11 @@ ngOnInit(): void {
     this.techId = this.auth.technicianId();
     this.load();
     this.loadCheckInStatus();
+    // a failed call keeps "required", the safe and old behaviour
+    this.api.getMyAttendanceRule().subscribe({
+      next: (r: any) => this.attendanceRequired.set(r?.data?.attendanceRequired !== false),
+      error: () => this.attendanceRequired.set(true)
+    });
   }
   this.spareSubject.pipe(
   debounceTime(300),
@@ -644,11 +655,25 @@ private showCheckInMsg(m: string, err: boolean): void {
           .filter((o: any) => this.isActiveAssignmentStatus(o?.status));
         this.orders.set(list);
         this.loading.set(false);
+        this.refreshSelectedTech();
       },
       error: () => {
         this.loading.set(false);
         this.show('Failed to load work orders.', true);
       },
+    });
+  }
+
+  /** Admin: the chosen technician's Available/Busy chip follows the jobs just started or completed. */
+  private refreshSelectedTech(): void {
+    const t = this.selectedTech();
+    if (!this.isAdmin() || !t?.fullName) return;
+    this.api.getTechnicians({ searchTerm: t.fullName, pageNumber: 1, pageSize: 10 } as any).subscribe({
+      next: (d: any) => {
+        const fresh = (d?.items || d || []).find((x: any) => x.technicianId === t.technicianId);
+        if (fresh && this.selectedTech()?.technicianId === t.technicianId) this.selectedTech.set(fresh);
+      },
+      error: () => { /* keep the chip as it was */ }
     });
   }
 
@@ -1660,6 +1685,15 @@ completeMsgErr         = signal(false);
 completePaymentStep    = signal(false);
 completePaymentLoading = signal(false);
 completePayments       = signal<any[]>([]);
+/** Warranty / installation job: the payment step may be skipped. */
+completeNoCharge       = computed(() => isNoChargeJob(this.completeWo()));
+
+/** Warranty / installation: nothing to collect, go straight to the completion form. */
+skipCompletionPayment(): void {
+  if (!this.completeNoCharge()) return;
+  this.paymentMsg.set('');
+  this.completePaymentStep.set(false);
+}
 
 get completeBalanceDue(): number {
   const payments = this.completePayments();
@@ -1681,7 +1715,13 @@ completeForm = {
 // ── Image Upload ────────────────────────────────────────
 uploadQueue    = signal<{ file: File; preview: string; type: string; status: string; error?: string }[]>([]);
 uploadProgress = signal(0);
-imageTypes     = ['Before', 'After', 'Part', 'Signature', 'Other'];
+/** Settings › Service Workflow for this job; null until loaded or when the call fails (then as before). */
+completionRules = signal<CompletionRules | null>(null);
+imageTypes      = computed(() => photoCategoriesOf(this.completionRules()));
+/** Photos to add before Complete; the API sends 0 when it will not check this caller. */
+photosStillNeeded = computed(() =>
+  photosStillNeeded(this.completionRules(), this.uploadQueue(), true));
+morePhotosHint = morePhotosHint;
 
 // ── Open complete dialog ────────────────────────────────
 openCompleteDialog(wo: WorkOrder, event?: Event): void {
@@ -1695,6 +1735,14 @@ openCompleteDialog(wo: WorkOrder, event?: Event): void {
   this.completePaymentStep.set(false);
   this.completePayments.set([]);
   this.showCompleteDialog.set(true);
+  this.completionRules.set(null);
+  this.api.getCompletionRules(wo.assignmentId).subscribe({
+    next: (r: any) => {
+      // the dialog may have been closed or moved to another job meanwhile
+      if (this.completeWo()?.assignmentId === wo.assignmentId && r?.data) this.completionRules.set(r.data);
+    },
+    error: () => this.completionRules.set(null)
+  });
   this.completePaymentLoading.set(true);
   this.api.getComplaintPayments(wo.complaintId).subscribe({
     next: (res: any) => {
@@ -1751,7 +1799,8 @@ private async addFiles(files: File[]): Promise<void> {
   const items = compressed.map(f => ({
     file: f,
     preview: URL.createObjectURL(f),
-    type: 'After',
+    // 'After' as before; a company with its own photo types starts at the first one
+    type: this.imageTypes().includes('After') ? 'After' : this.imageTypes()[0],
     status: 'pending'
   }));
   this.uploadQueue.update(q => [...q, ...items]);

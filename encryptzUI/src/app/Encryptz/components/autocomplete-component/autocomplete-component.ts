@@ -6,6 +6,8 @@ export interface AutocompleteOption<T = unknown> {
   value: T;
   label: string;
   sub?: string;
+  /** Shown at the right of the choice, e.g. a rate. */
+  aside?: string;
 }
 
 let nextId = 0;

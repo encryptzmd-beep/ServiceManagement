@@ -250,7 +250,7 @@ import { CustomerAuthService } from '../../Services/customer-auth-service';
       display: inline-block;
       margin-top: 12px;
       padding: 10px 20px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #667eea;
       color: white;
       text-decoration: none;
       border-radius: 8px;

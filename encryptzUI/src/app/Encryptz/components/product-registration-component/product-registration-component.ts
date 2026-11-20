@@ -58,13 +58,17 @@ export class ProductRegistrationComponent implements OnInit {
     }
   }
 
+  /** True once the first load answered: the empty state waits for it. */
+  loaded = signal(false);
+
   loadProducts(): void {
     this.api.getProducts().subscribe({
       next: (res: any) => {
         if (res.data) this.products.set(res.data);
         else if (Array.isArray(res)) this.products.set(res);
+        this.loaded.set(true);
       },
-      error: () => this.errorMsg.set('Failed to load products'),
+      error: () => { this.loaded.set(true); this.errorMsg.set('Failed to load products'); },
     });
   }
 

@@ -1,0 +1,41 @@
+.scr-page { max-width: 920px; }
+.scr-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+.scr-back { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: #475569; text-decoration: none;
+  .material-icons { font-size: 18px; } &:hover { color: #0f172a; } }
+
+.scr-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px; box-shadow: 0 1px 2px rgba(15, 23, 42, .04); }
+.scr-section { margin: 0 0 12px; font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #64748b;
+  &:not(:first-child) { margin-top: 22px; } }
+.scr-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.scr-field { display: flex; flex-direction: column; gap: 5px; min-width: 0;
+  > span { font-size: 12px; font-weight: 600; color: #475569; }
+  &.wide { grid-column: 1 / -1; }
+  input, select, textarea { width: 100%; box-sizing: border-box; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 9px;
+    font: inherit; font-size: 13.5px; background: #fff;
+    &:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, .15); } }
+  textarea { resize: vertical; }
+}
+.scr-who { justify-content: flex-end; padding-bottom: 6px; }
+.scr-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 12.5px;
+  .material-icons { font-size: 16px; }
+  &.ok { background: #ecfdf5; color: #047857; }
+  &.new { background: #eff6ff; color: #1d4ed8; } }
+.scr-muted { font-size: 12.5px; color: #64748b; }
+.scr-photo { display: flex; align-items: center; gap: 8px; font-size: 13px; .material-icons { font-size: 18px; color: #64748b; } }
+.scr-error { margin: 16px 0 0; padding: 10px 12px; border-radius: 9px; background: #fef2f2; color: #b91c1c; font-size: 13px; }
+.scr-footer { display: flex; justify-content: flex-end; align-items: center; gap: 16px; margin-top: 20px; }
+.scr-link { background: none; border: none; padding: 0; font: inherit; font-size: 13px; color: #2563eb; cursor: pointer; text-decoration: none; }
+
+.scr-done { display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  h2 { margin: 0 0 4px; font-size: 17px; color: #0f172a; }
+  p { margin: 0; font-size: 13px; color: #64748b; } }
+.scr-done-icon { font-size: 40px; color: #059669; }
+.scr-actions { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+
+@media (max-width: 640px) {
+  .scr-card { padding: 16px; }
+  .scr-grid { grid-template-columns: minmax(0, 1fr); }
+  .scr-who { padding-bottom: 0; }
+  .scr-footer { flex-direction: column-reverse; align-items: stretch; button { justify-content: center; } }
+  .scr-actions { margin-left: 0; width: 100%; }
+}

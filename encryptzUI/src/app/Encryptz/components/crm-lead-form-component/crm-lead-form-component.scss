@@ -1,0 +1,17 @@
+/* New / change lead: the toolbar of the documents and the lead's two cards (crm-lead-fields). */
+$text: #1a2332;
+$faint: #8a9ab0;
+$navy: #1B4A7A;
+
+:host { display: block; min-width: 0; }
+
+.lf-page { gap: 14px; }
+.lf-head h1 { margin: 2px 0 0; font-size: 22px; font-weight: 600; color: $text; letter-spacing: -0.01em; }
+.lf-crumb {
+  display: flex; align-items: center; gap: 6px; font-size: 13px; color: $faint;
+  a { color: $navy; font-weight: 500; text-decoration: none; &:hover { text-decoration: underline; } }
+}
+.lf-form { min-width: 0; }
+.lf-error { margin: 0; }
+// Enter in a field saves; the button itself is not shown (the toolbar has Save)
+.lf-hidden-submit { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }

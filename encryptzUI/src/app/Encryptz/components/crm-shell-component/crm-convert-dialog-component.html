@@ -1,0 +1,61 @@
+<div class="crm-overlay" (click)="cancel()">
+  <div class="crm-dialog wide cv-dialog" role="dialog" aria-modal="true" aria-labelledby="crm-convert-dialog-title"
+       (click)="$event.stopPropagation()" (keydown.escape)="cancel()">
+    <h2 id="crm-convert-dialog-title">Convert to Sale</h2>
+    @if (quotations().length > 1) {
+      <label class="crm-field"><span>Quotation</span>
+        <select class="cv-quotation" [ngModel]="convertQuotationId()" (ngModelChange)="open(+$event)">
+          @for (q of quotations(); track q.quotationId) { <option [value]="q.quotationId">{{ q.quotationNo }} / R{{ q.revisionNo }} · {{ amount(q.grandTotal) }}</option> }
+        </select></label>
+    }
+    @if (busy() && !preview()) { <p class="crm-muted">Reading the quotation…</p> }
+    @if (preview(); as p) {
+      <div>
+        <div class="crm-field"><span>Customer</span></div>
+        @if (p.matches.length === 0) {
+          <p class="crm-muted">No customer has the mobile {{ mobile() || p.quotation.mobile }}. A new customer is made from the lead.</p>
+        } @else if (p.matches.length === 1) {
+          <p>The customer <strong>{{ p.matches[0].customerName }}</strong> ({{ p.matches[0].mobileNumber }}) has this mobile; the order is made for them.</p>
+        } @else {
+          <p class="crm-muted">More than one customer has this mobile. Choose one.</p>
+          <div class="cv-choices">
+            @for (c of p.matches; track c.customerId) {
+              <label class="crm-choice" [class.chosen]="chosenCustomerId() === c.customerId">
+                <input type="radio" name="convert-customer" [checked]="chosenCustomerId() === c.customerId" (change)="chooseCustomer(c.customerId)" />
+                <span><strong>{{ c.customerName }}</strong> · {{ c.mobileNumber }}
+                  <span class="crm-item-meta"><br />{{ join(c.address, c.city) }}@if (c.totalProducts) { · {{ c.totalProducts }} products }</span></span>
+              </label>
+            }
+          </div>
+        }
+      </div>
+      <div class="crm-grid cv-two">
+        <label class="crm-field"><span>Order date</span>
+          <input type="date" [ngModel]="orderDate()" (ngModelChange)="orderDate.set($event)" /></label>
+        <label class="crm-field"><span>Payment mode</span>
+          <select [ngModel]="paymentMode()" (ngModelChange)="paymentMode.set($event)">
+            @for (m of paymentModes; track m) { <option [value]="m">{{ m }}</option> }
+          </select></label>
+      </div>
+      <div class="crm-table-wrap">
+        <table class="crm-table">
+          <thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">GST %</th><th class="num">Total</th></tr></thead>
+          <tbody>
+            @for (i of p.quotation.items; track $index) {
+              <tr><td>{{ i.productName }}</td><td class="num">{{ i.qty }}</td><td class="num">{{ amount(i.rate) }}</td>
+                <td class="num">{{ i.gstPercent }}</td><td class="num">{{ amount(i.lineTotal) }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="cv-totals">Taxable {{ amount(p.quotation.taxableTotal) }}
+        @if (p.quotation.isInterState) { · IGST {{ amount(p.quotation.igst) }} } @else { · CGST {{ amount(p.quotation.cgst) }} · SGST {{ amount(p.quotation.sgst) }} }
+        · <strong>Total {{ amount(p.quotation.grandTotal) }}</strong></p>
+    }
+    @if (error()) { <p class="crm-error">{{ error() }}</p> }
+    <div class="crm-actions">
+      <button type="button" class="crm-btn cv-cancel" [disabled]="converting()" (click)="cancel()">Cancel</button>
+      <button type="button" class="crm-btn primary crm-confirm-convert" [disabled]="confirmDisabled()" (click)="confirm()">Confirm</button>
+    </div>
+  </div>
+</div>

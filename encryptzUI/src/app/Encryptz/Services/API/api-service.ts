@@ -159,6 +159,39 @@ getTechnicians(filter?: any): Observable<M.ApiResponse<M.PagedResponse<M.Technic
   //   fd.append('imageType', imageType);
   //   return this.http.post<M.ApiResponse<string>>(`${this.api}/technician/${techId}/service-images`, fd);
   // }
+/** Register Complaint (staff): is there a customer with this mobile? { success, data: { found, customerName, email } } */
+staffCustomerLookup(mobile: string): Observable<any> {
+  return this.http.get(`${this.api}/staff-complaints/customer`, { params: { mobile } });
+}
+
+/** Register Complaint (staff): the customer is found by mobile or created, then the complaint. */
+staffRegisterComplaint(dto: {
+  mobileNumber: string; fullName?: string; email?: string; subject: string; category?: string;
+  brandName?: string; modelNumber?: string; description?: string; locationName?: string;
+  imageBase64?: string; imageName?: string; contentType?: string;
+}): Observable<any> {
+  return this.http.post(`${this.api}/staff-complaints`, dto);
+}
+
+/** Attendance check-in required per technician: { success, data: [{ userId, technicianId, attendanceRequired }] } */
+getAttendanceRules(): Observable<any> {
+  return this.http.get(`${this.api}/technician/attendance-required`);
+}
+
+setAttendanceRequired(technicianId: number, required: boolean): Observable<any> {
+  return this.http.put(`${this.api}/technician/attendance-required`, { technicianId, required });
+}
+
+/** Must the signed-in technician check in? { success, data: { attendanceRequired } } */
+getMyAttendanceRule(): Observable<any> {
+  return this.http.get(`${this.api}/technician/my-attendance-rule`);
+}
+
+/** Settings › Service Workflow for completing this job: { success, data: { minPhotos, photoCategories, photosUploaded } } */
+getCompletionRules(assignmentId: number): Observable<any> {
+  return this.http.get(`${this.api}/technician/completion-rules`, { params: { assignmentId } });
+}
+
 uploadServiceImage(technicianId: number, formData: FormData): Observable<any> {
   return this.http.post(`${this.api}/technician/${technicianId}/upload-image`, formData);
 }
@@ -1106,6 +1139,11 @@ getSalesOrder(id: number): Observable<M.ApiResponse<M.SalesOrderDetail>> {
 
 saveSalesOrder(dto: M.SalesOrderSave): Observable<M.ApiResponse<M.SalesOrderSaveResult>> {
   return this.post<M.ApiResponse<M.SalesOrderSaveResult>>('Sales/orders', dto);
+}
+
+/** Toolbar previous / next of a bill (0 = from a new one): { previousId, nextId } */
+getSalesOrderNeighbours(id: number): Observable<M.ApiResponse<{ previousId: number | null; nextId: number | null }>> {
+  return this.get<M.ApiResponse<{ previousId: number | null; nextId: number | null }>>(`Sales/orders/${id}/neighbours`);
 }
 
 cancelSalesOrder(id: number): Observable<M.ApiResponse> {

@@ -1,6 +1,6 @@
 /* Messages: the conversations on the left, the open one on the right. Colours of the Job Portal pages. */
 
-$display: 'Outfit', 'DM Sans', sans-serif;
+$display: var(--app-font);
 $ink: #141b34;
 $text: #3b4357;
 $muted: #6b7489;

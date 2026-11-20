@@ -1,0 +1,43 @@
+<div class="tf-overlay" (click)="close.emit()">
+  <div class="tf-dialog" role="dialog" aria-modal="true" [attr.aria-label]="title()" (click)="$event.stopPropagation()">
+    <div class="tf-head">
+      <h2>{{ title() }}</h2>
+      <button type="button" class="tf-close" (click)="close.emit()" aria-label="Close">
+        <span class="material-icons" aria-hidden="true">close</span>
+      </button>
+    </div>
+
+    <form class="tf-filters" (submit)="run($event)">
+      <label class="tf-field grow"><span>Search</span>
+        <input name="term" type="search" autocomplete="off" [placeholder]="placeholder()" [value]="term()" (input)="term.set($any($event.target).value)" /></label>
+      <label class="tf-field"><span>From</span>
+        <input name="from" type="date" [value]="from()" (input)="from.set($any($event.target).value)" /></label>
+      <label class="tf-field"><span>To</span>
+        <input name="to" type="date" [value]="to()" (input)="to.set($any($event.target).value)" /></label>
+      <button type="submit" class="tf-search"><span class="material-icons" aria-hidden="true">search</span>Search</button>
+    </form>
+
+    <div class="tf-body">
+      @if (loading()) {
+        <p class="tf-empty">Searching…</p>
+      } @else if (!rows().length) {
+        <p class="tf-empty">Nothing found</p>
+      } @else {
+        <table class="tf-table">
+          <thead><tr><th>Number</th><th>Date</th><th>Customer</th><th class="num">Amount</th><th>Status</th></tr></thead>
+          <tbody>
+            @for (r of rows(); track r.id) {
+              <tr tabindex="0" (click)="pick.emit(r.id)" (keydown.enter)="pick.emit(r.id)">
+                <td class="tf-no">{{ r.number }}</td>
+                <td>{{ date(r.date) }}</td>
+                <td>{{ r.party }}</td>
+                <td class="num">{{ amount(r.amount) }}</td>
+                <td><span class="tf-status" [attr.data-status]="r.status">{{ r.status }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </div>
+</div>

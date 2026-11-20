@@ -1,0 +1,88 @@
+<div class="scr-page">
+  <div class="scr-head">
+    <div>
+      <div class="fx-page-title">Register Complaint</div>
+      <div class="fx-page-sub">For a customer who calls or walks in</div>
+    </div>
+    <a class="scr-back" routerLink="/complaints/dashboard">
+      <span class="material-icons" aria-hidden="true">arrow_back</span> Dashboard
+    </a>
+  </div>
+
+  @if (done(); as number) {
+    <section class="scr-card scr-done" role="status">
+      <span class="material-icons scr-done-icon" aria-hidden="true">check_circle</span>
+      <div>
+        <h2>Complaint {{ number }} registered</h2>
+        <p>The service team can now assign a technician to it.</p>
+      </div>
+      <div class="scr-actions">
+        <button type="button" class="fx-btn-navy scr-another" (click)="another()">
+          <span class="material-icons" aria-hidden="true">add</span> Register another
+        </button>
+        <a class="scr-link" routerLink="/complaints/dashboard">Go to dashboard</a>
+      </div>
+    </section>
+  } @else {
+    <form class="scr-card" (submit)="submit($event)" novalidate>
+      <h2 class="scr-section">Customer</h2>
+      <div class="scr-grid">
+        <label class="scr-field"><span>Mobile number *</span>
+          <input name="mobile" type="tel" inputmode="numeric" maxlength="16" autocomplete="off" placeholder="10-digit mobile"
+            [value]="form().mobile" (input)="set('mobile', $any($event.target).value)" /></label>
+        <div class="scr-field scr-who" aria-live="polite">
+          @if (lookingUp()) { <span class="scr-muted">Looking up…</span> }
+          @else if (customer()?.found) {
+            <span class="scr-chip ok"><span class="material-icons" aria-hidden="true">person</span>Existing customer: <strong>{{ customer()!.customerName }}</strong></span>
+          } @else if (isNew()) {
+            <span class="scr-chip new"><span class="material-icons" aria-hidden="true">person_add</span>New customer</span>
+          }
+        </div>
+        @if (isNew()) {
+          <label class="scr-field"><span>Customer name *</span>
+            <input name="fullName" maxlength="100" [value]="form().fullName" (input)="set('fullName', $any($event.target).value)" /></label>
+          <label class="scr-field"><span>Email</span>
+            <input name="email" type="email" maxlength="100" [value]="form().email" (input)="set('email', $any($event.target).value)" /></label>
+        }
+      </div>
+
+      <h2 class="scr-section">Complaint</h2>
+      <div class="scr-grid">
+        <label class="scr-field"><span>Category</span>
+          <select name="category" [value]="form().category" (change)="set('category', $any($event.target).value)">
+            <option value="">–</option>
+            @for (c of categories(); track c) { <option [value]="c">{{ c }}</option> }
+          </select></label>
+        <label class="scr-field"><span>Subject *</span>
+          <input name="subject" maxlength="200" placeholder="e.g. AC not cooling" [value]="form().subject" (input)="set('subject', $any($event.target).value)" /></label>
+        <label class="scr-field"><span>Brand</span>
+          <input name="brandName" maxlength="100" [value]="form().brandName" (input)="set('brandName', $any($event.target).value)" /></label>
+        <label class="scr-field"><span>Model</span>
+          <input name="modelNumber" maxlength="100" [value]="form().modelNumber" (input)="set('modelNumber', $any($event.target).value)" /></label>
+        <label class="scr-field wide"><span>Problem description</span>
+          <textarea name="description" rows="3" maxlength="2000" [value]="form().description" (input)="set('description', $any($event.target).value)"></textarea></label>
+        <label class="scr-field wide"><span>Location / address</span>
+          <input name="locationName" maxlength="500" [value]="form().locationName" (input)="set('locationName', $any($event.target).value)" /></label>
+        <div class="scr-field wide"><span>Photo</span>
+          @if (photo(); as p) {
+            <div class="scr-photo"><span class="material-icons" aria-hidden="true">image</span>{{ p.name }}
+              <button type="button" class="scr-link" (click)="removePhoto()">Remove</button></div>
+          } @else {
+            <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" (change)="onPhoto($event)" />
+          }
+        </div>
+      </div>
+
+      @if (error()) { <p class="scr-error" role="alert">{{ error() }}</p> }
+
+      <div class="scr-footer">
+        <a class="scr-link" routerLink="/complaints/dashboard">Cancel</a>
+        <button type="submit" class="fx-btn-new" [disabled]="saving()">
+          @if (saving()) { Registering… } @else {
+            <span class="material-icons" aria-hidden="true">add_task</span> Register complaint
+          }
+        </button>
+      </div>
+    </form>
+  }
+</div>

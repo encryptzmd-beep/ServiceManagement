@@ -14,7 +14,7 @@ declare var L: any;
   template: `
     <!-- Quick Complaint Button -->
     <button class="quick-complaint-btn" (click)="openModal()" [class.floating]="position === 'floating'">
-      <span class="material-icons">flash_on</span>
+      <span class="material-icons">edit_note</span>
       <span>Quick Complaint</span>
     </button>
 
@@ -299,20 +299,21 @@ declare var L: any;
       align-items: center;
       gap: 8px;
       padding: 10px 20px;
-      background: linear-gradient(135deg, #ff6b35, #ff4d1e);
-      color: white;
-      border: none;
-      border-radius: 50px;
+      background: #fff;
+      color: var(--fx-brand-navy, #1B4A7A);
+      border: 1px solid var(--fx-border, #e2e8f0);
+      border-radius: 8px;
       font-weight: 600;
       font-size: 14px;
       cursor: pointer;
       transition: all 0.3s ease;
-      box-shadow: 0 2px 8px rgba(255, 77, 30, 0.3);
+      box-shadow: none;
+      min-height: 40px;
       -webkit-tap-highlight-color: transparent;
 
       &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(255, 77, 30, 0.4);
+        background: #f8fafc;
+        border-color: #cbd5e1;
       }
 
       &.floating {
@@ -376,7 +377,7 @@ declare var L: any;
     /* ===== HEADER ===== */
     .modal-header {
       padding: 16px 20px;
-      background: linear-gradient(135deg, #fff5f0, #fff);
+      background: #fff5f0;
       border-bottom: 1px solid #f0f0f0;
       display: flex;
       align-items: center;
@@ -400,7 +401,7 @@ declare var L: any;
     .header-icon {
       width: 44px;
       height: 44px;
-      background: linear-gradient(135deg, #ff6b35, #ff4d1e);
+      background: #ff6b35;
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -568,7 +569,7 @@ declare var L: any;
       position: absolute;
       bottom: 0; left: 0; right: 0;
       padding: 12px;
-      background: linear-gradient(transparent, rgba(0,0,0,0.6));
+      background: transparent;
       display: flex;
       justify-content: flex-end;
     }
@@ -624,7 +625,7 @@ declare var L: any;
 
     .upload-progress-fill {
       height: 100%;
-      background: linear-gradient(90deg, #ff6b35, #ff4d1e);
+      background: #ff6b35;
       border-radius: 4px;
       transition: width 0.3s ease;
     }
@@ -809,7 +810,7 @@ declare var L: any;
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #ff6b35, #ff4d1e);
+      background: #ff6b35;
       color: white;
 
       .material-icons { font-size: 20px; }

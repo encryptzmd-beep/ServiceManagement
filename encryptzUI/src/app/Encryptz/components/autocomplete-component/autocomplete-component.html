@@ -19,6 +19,7 @@
             [attr.aria-selected]="i === active()" (mousedown)="$event.preventDefault()" (click)="pick(r.value)" (mouseenter)="active.set(i)">
           <span class="ac-label">{{ r.label }}</span>
           @if (r.sub) { <span class="ac-sub">{{ r.sub }}</span> }
+          @if ($any(r).aside) { <span class="ac-aside">{{ $any(r).aside }}</span> }
         </li>
       } @empty {
         <li class="ac-empty" role="option" aria-disabled="true">{{ emptyText() }}</li>

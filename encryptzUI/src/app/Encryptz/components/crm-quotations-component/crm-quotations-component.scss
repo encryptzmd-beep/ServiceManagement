@@ -1,0 +1,16 @@
+:host { display: block; min-width: 0; }
+@media (min-width: 641px) { .crm-table-toolbar .crm-search { width: 220px; } }
+
+/* The New quotation dialog is full screen on a phone. */
+@media (max-width: 640px) {
+  .crm-overlay { padding: 0; }
+  .crm-dialog { max-width: 100vw; width: 100vw; min-height: 100vh; border-radius: 0; box-sizing: border-box; }
+  .crm-dialog .crm-actions .crm-btn { flex: 1 1 auto; }
+}
+
+/* the list is the shared CRM list (crm-pages.scss, .crm-list); here only the page's own pieces */
+.crm-page-head { align-items: flex-end; margin-bottom: 16px; h1 { font-size: 20px; letter-spacing: -0.01em; } p { font-size: 12.5px; } }
+.qt-lead { font-weight: 600; color: #1b4a7a; text-decoration: none; &:hover { text-decoration: underline; } }
+.crm-result .crm-count-pill { margin-right: 2px; }
+// Enter in the search box submits the form; the button itself is not shown
+.qt-hidden-submit { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }

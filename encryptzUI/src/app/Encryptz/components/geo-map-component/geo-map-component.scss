@@ -88,7 +88,7 @@
   &.active {
     border-color: #2563eb;
     color: #fff;
-    background: #2563eb;
+    background: #1B4A7A;
   }
 }
 
@@ -98,7 +98,7 @@
   align-items: center;
   gap: 8px;
   padding: 10px 22px;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: #1B4A7A;
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -229,13 +229,13 @@
   color: #fff;
   flex-shrink: 0;
   &.av {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: #10b981;
   }
   &.busy {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
+    background: #ef4444;
   }
   &.leave {
-    background: linear-gradient(135deg, #9ca3af, #6b7280);
+    background: #9ca3af;
   }
 }
 .ta-info {
@@ -294,7 +294,7 @@
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+  background: #eff6ff;
   border: 1.5px solid #bfdbfe;
   border-radius: 10px;
   cursor: default;
@@ -310,9 +310,9 @@
   font-size: 15px;
   color: #fff;
   flex-shrink: 0;
-  &.av   { background: linear-gradient(135deg, #10b981, #059669); }
-  &.busy { background: linear-gradient(135deg, #ef4444, #dc2626); }
-  &.leave{ background: linear-gradient(135deg, #9ca3af, #6b7280); }
+  &.av   { background: #10b981; }
+  &.busy { background: #ef4444; }
+  &.leave{ background: #9ca3af; }
 }
 .stc-info {
   flex: 1;
@@ -397,7 +397,7 @@
   align-items: center;
   gap: 16px;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  background: #f0fdf4;
   border: 1.5px solid #bbf7d0;
   border-radius: 14px;
   margin-bottom: 20px;
@@ -552,28 +552,28 @@
 
 /* Event color classes */
 .ev-green {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
+  background: #22c55e;
 }
 .ev-red {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: #ef4444;
 }
 .ev-blue {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: #3b82f6;
 }
 .ev-amber {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
+  background: #f59e0b;
 }
 .ev-purple {
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  background: #8b5cf6;
 }
 .ev-slate {
-  background: linear-gradient(135deg, #64748b, #475569);
+  background: #64748b;
 }
 .ev-teal {
-  background: linear-gradient(135deg, #14b8a6, #0d9488);
+  background: #14b8a6;
 }
 .ev-orange {
-  background: linear-gradient(135deg, #f97316, #ea580c);
+  background: #f97316;
 }
 
 /* ═══════════════════════════════════════════════════════

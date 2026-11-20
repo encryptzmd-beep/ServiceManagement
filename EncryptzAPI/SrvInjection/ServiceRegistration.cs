@@ -5,6 +5,7 @@ using EncryptzBL.Common;
 using EncryptzBL.Common.Provisioning;
 using EncryptzBL.Common.Tenant;
 using EncryptzAPI.Hubs;
+using EncryptzBL.Infrastructure.Crm;
 using EncryptzBL.Infrastructure.Jobs;
 using EncryptzBL.Infrastructure.LoginAds;
 using EncryptzBL.Infrastructure.Notifications;
@@ -94,6 +95,7 @@ namespace EncryptzAPI.SrvInjection
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<ISalesService, SalesService>();                      // sales order -> despatch -> warranty
+            services.AddScoped<ICrmService, CrmService>();                          // CRM lead management (company database, schema crm)
 
             return services;
         }

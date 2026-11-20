@@ -5,6 +5,11 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
 import { ApiService } from '../../Services/API/api-service';
+import { AutocompleteComponent } from '../autocomplete-component/autocomplete-component';
+import { salesProductOptions } from './sales-product-options';
+import { TransactionMode, TransactionToolbarComponent } from '../shared/transaction-toolbar/transaction-toolbar';
+import { FindQuery, FindRow, TransactionFindComponent } from '../shared/transaction-toolbar/transaction-find';
+import { DialogService } from '../../Services/dialog-service';
 import { AuthService } from '../../Auth/auth-service';
 import {
   INDIAN_STATES, ProductMasterDTO, SALES_GST_RATES, SALES_PAYMENT_MODES,
@@ -32,7 +37,7 @@ interface BillLine {
 @Component({
   selector: 'app-sales-order-entry',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, AutocompleteComponent, TransactionToolbarComponent, TransactionFindComponent],
   templateUrl: './sales-order-entry-component.html',
   styleUrls: ['./sales-order-entry-component.scss'],
 })
@@ -42,6 +47,7 @@ export class SalesOrderEntryComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
+  private dialog = inject(DialogService);
 
   readonly paymentModes = SALES_PAYMENT_MODES;
   readonly gstRates = SALES_GST_RATES;
@@ -80,6 +86,8 @@ export class SalesOrderEntryComponent implements OnInit {
 
   // ── products ──
   products = signal<ProductMasterDTO[]>([]);
+  /** The products as autocomplete choices, each with its rate. */
+  productOptions = computed(() => salesProductOptions(this.products()));
   lines = signal<BillLine[]>([]);
 
   // ── despatch info of a saved bill ──
@@ -105,8 +113,23 @@ export class SalesOrderEntryComponent implements OnInit {
   error = signal('');
   toast = signal<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  isEditable = computed(() => this.status() === 'Billed');
   isNew = computed(() => this.salesOrderId() === 0);
+
+  // ── toolbar (New · Edit · Save · Print · Cancel · Previous · Next · Find) ──
+  /** An existing bill opens read-only; Edit unlocks it. */
+  editing = signal(false);
+  mode = computed<TransactionMode>(() => this.isNew() ? 'new' : this.editing() ? 'edit' : 'view');
+  /** The fields can be changed now: a Billed bill that is new or being edited. */
+  isEditable = computed(() => this.status() === 'Billed' && this.mode() !== 'view');
+  canEditBill = computed(() => !this.isNew() && this.status() === 'Billed');
+  /** Only a bill not yet despatched can be cancelled (as sp_SalesOrder_Cancel decides). */
+  canCancelBill = computed(() => !this.isNew() && this.status() === 'Billed');
+  neighbours = signal<{ previousId: number | null; nextId: number | null }>({ previousId: null, nextId: null });
+  findOpen = signal(false);
+  findRows = signal<FindRow[]>([]);
+  findLoading = signal(false);
+  /** The form as last loaded or saved: a change from it is unsaved work. */
+  private savedSnapshot = '';
 
   // ── totals (same arithmetic as sp_SalesOrder_Save) ──
   private isInterStateSig = signal(false);
@@ -137,8 +160,10 @@ export class SalesOrderEntryComponent implements OnInit {
         this.printSettings.set(s);
         // Settings > Sales: IGST ticked by default on a NEW bill
         if (id === 0 && this.salesOrderId() === 0) {
+          const untouched = !this.isDirty();
           this.isInterState = ['true', '1', 'yes'].includes((s['Sales.DefaultInterState'] || '').trim().toLowerCase());
           this.isInterStateSig.set(this.isInterState);
+          if (untouched) this.markSaved();   // the default is not a change of the user
         }
       },
       error: () => this.printSettings.set({}),
@@ -147,12 +172,116 @@ export class SalesOrderEntryComponent implements OnInit {
     if (id > 0) {
       this.load(id);
     } else {
-      this.api.getNextSalesOrderNumber().subscribe({
-        next: r => this.orderNo.set(r?.data || ''),
-        error: () => this.orderNo.set(''),
-      });
-      this.addLine();
+      this.resetNew();
     }
+  }
+
+  // =====================================================================
+  // toolbar
+  // =====================================================================
+  /** Everything that a save would send, to tell unsaved work. */
+  private snapshot(): string {
+    return JSON.stringify([this.orderDate, this.paymentMode, this.referenceNo, this.contactNumber, this.gstin, this.billingAddress,
+      this.city, this.state, this.pinCode, this.isInterState, this.notes, this.customer()?.customerId ?? null,
+      this.lines().map(l => [l.productMasterId, l.productName, l.hsnSac, l.qty, l.rate, l.discountAmount, l.gstPercent, l.warrantyMonths])]);
+  }
+
+  private markSaved(): void { this.savedSnapshot = this.snapshot(); }
+
+  isDirty(): boolean { return this.mode() !== 'view' && this.snapshot() !== this.savedSnapshot; }
+
+  /** Runs the action, after "Discard the changes?" when there is unsaved work. */
+  private async leave(action: () => void): Promise<void> {
+    if (this.isDirty() && !(await this.dialog.confirm({ message: 'Discard the changes to this bill?', kind: 'danger', okText: 'Discard' }))) return;
+    action();
+  }
+
+  private loadNeighbours(id: number): void {
+    this.api.getSalesOrderNeighbours(id).subscribe({
+      next: r => this.neighbours.set({ previousId: r?.data?.previousId ?? null, nextId: r?.data?.nextId ?? null }),
+      error: () => this.neighbours.set({ previousId: null, nextId: null }),
+    });
+  }
+
+  /** A blank bill, as a new page shows it. */
+  private resetNew(): void {
+    this.salesOrderId.set(0); this.orderNo.set(''); this.status.set('Billed'); this.detail.set(null);
+    this.editing.set(false); this.error.set('');
+    this.orderDate = this.todayInput(); this.paymentMode = 'Cash'; this.referenceNo = ''; this.contactNumber = '';
+    this.gstin = ''; this.billingAddress = ''; this.city = ''; this.state = 'Kerala'; this.pinCode = ''; this.notes = '';
+    this.isInterState = ['true', '1', 'yes'].includes((this.printSettings()['Sales.DefaultInterState'] || '').trim().toLowerCase());
+    this.isInterStateSig.set(this.isInterState);
+    this.customer.set(null);
+    this.lines.set([]);
+    this.addLine();
+    this.api.getNextSalesOrderNumber().subscribe({
+      next: r => this.orderNo.set(r?.data || ''),
+      error: () => this.orderNo.set(''),
+    });
+    this.loadNeighbours(0);
+    this.markSaved();
+  }
+
+  /** Opens a bill in this screen (the route is reused, so it loads by itself). */
+  private open(id: number): void {
+    const onIdRoute = !!this.route.snapshot.paramMap.get('id');
+    // replace the address: the screen is reused, so Back must not show another bill under this one's address
+    this.router.navigate(['/sales/orders', id], { replaceUrl: onIdRoute });
+    if (onIdRoute) this.load(id);
+  }
+
+  onNew(): void {
+    this.leave(() => this.isNew() ? this.resetNew() : this.router.navigate(['/sales/orders/new']));
+  }
+
+  onEdit(): void { if (this.canEditBill()) this.editing.set(true); }
+
+  onDiscard(): void { this.leave(() => this.load(this.salesOrderId())); }
+
+  onSave(): void { this.save(false); }
+
+  onPrevious(): void { const id = this.neighbours().previousId; if (id) this.leave(() => this.open(id)); }
+
+  onNext(): void { const id = this.neighbours().nextId; if (id) this.leave(() => this.open(id)); }
+
+  async onCancelBill(): Promise<void> {
+    const id = this.salesOrderId();
+    if (!id) return;
+    const ok = await this.dialog.confirm({
+      message: `Cancel bill ${this.orderNo()}? It cannot be used again.`, kind: 'danger', okText: 'Cancel bill', cancelText: 'Keep it',
+    });
+    if (!ok) return;
+    this.saving.set(true);
+    this.api.cancelSalesOrder(id).subscribe({
+      next: r => {
+        this.saving.set(false);
+        if (r?.success === false) { this.showToast('error', r.message || 'The bill could not be cancelled'); return; }
+        this.showToast('success', r?.message || `Bill ${this.orderNo()} cancelled`);
+        this.load(id);
+      },
+      error: e => { this.saving.set(false); this.showToast('error', e?.error?.message || 'The bill could not be cancelled'); },
+    });
+  }
+
+  onFind(): void { this.findRows.set([]); this.findOpen.set(true); }
+
+  onFindSearch(q: FindQuery): void {
+    this.findLoading.set(true);
+    this.api.getSalesOrders({ searchTerm: q.term || undefined, fromDate: q.from || undefined, toDate: q.to || undefined, pageNumber: 1, pageSize: 30 })
+      .subscribe({
+        next: r => {
+          this.findLoading.set(false);
+          this.findRows.set((r?.items ?? []).map(o => ({
+            id: o.salesOrderId, number: o.orderNo, date: o.orderDate, party: o.customerName, amount: o.grandTotal, status: o.status,
+          })));
+        },
+        error: () => { this.findLoading.set(false); this.findRows.set([]); },
+      });
+  }
+
+  onFindPick(id: number): void {
+    this.findOpen.set(false);
+    if (id !== this.salesOrderId()) this.leave(() => this.open(id));
   }
 
   // =====================================================================
@@ -196,6 +325,11 @@ export class SalesOrderEntryComponent implements OnInit {
           warrantyMonths: i.warrantyMonths,
           serialNumbers: i.serialNumbers, warrantyEndDate: i.warrantyEndDate,
         })));
+        // a loaded bill opens read-only; Edit unlocks it
+        this.editing.set(false);
+        this.error.set('');
+        this.markSaved();
+        this.loadNeighbours(o.salesOrderId);
       },
       error: e => { this.loading.set(false); this.error.set(e?.error?.message || 'Could not load the bill'); },
     });
@@ -408,12 +542,17 @@ export class SalesOrderEntryComponent implements OnInit {
       next: r => {
         this.saving.set(false);
         if (!r?.success || !r.data) { this.error.set(r?.message || 'Could not save the bill'); this.showToast('error', this.error()); return; }
+        const wasNew = this.isNew();
         this.salesOrderId.set(r.data.salesOrderId);
         this.orderNo.set(r.data.orderNo);
         this.showToast('success', r.message || `Bill ${r.data.orderNo} saved`);
+        this.markSaved();
         if (andDespatch) {
           // the bill goes straight on to despatch
           setTimeout(() => this.router.navigate(['/sales/despatch', r.data!.salesOrderId]), 500);
+        } else if (wasNew) {
+          // the address of the saved bill (a new page that loads it)
+          this.router.navigate(['/sales/orders', r.data.salesOrderId], { replaceUrl: true });
         } else {
           this.load(r.data.salesOrderId);
         }

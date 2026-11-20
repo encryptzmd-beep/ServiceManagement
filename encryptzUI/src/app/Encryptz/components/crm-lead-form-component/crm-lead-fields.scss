@@ -1,0 +1,79 @@
+/* The Contact and Requirement cards of a lead: side by side on a wide screen,
+   one under the other below 1100px. Inputs while editing, the values as text otherwise. */
+$text: #1a2332;
+$muted: #5a6a7e;
+$faint: #8a9ab0;
+$line: #e2e8f0;
+$navy: #1B4A7A;
+
+:host { display: block; min-width: 0; }
+
+.lf-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
+@media (max-width: 1100px) { .lf-columns { grid-template-columns: minmax(0, 1fr); } }
+
+.lf-card { background: #fff; border: 1px solid $line; border-radius: 12px; padding: 16px 20px 18px; min-width: 0; }
+.lf-card-head {
+  display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px;
+  h2 { margin: 0; font-size: 15px; font-weight: 600; color: $text; }
+}
+.lf-sub { font-size: 13px; color: $faint; }
+
+.lf-grid, .lf-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+.span-2 { grid-column: 1 / -1; }
+
+/* inputs: sentence-case labels, every control the same height */
+.crm-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.crm-field > span { font-size: 13px; font-weight: 600; color: $text; text-transform: none; letter-spacing: 0; }
+em { font-style: normal; color: #d42b2b; }
+
+.lf-card input, .lf-card select, .lf-card textarea {
+  width: 100%; box-sizing: border-box;
+  height: 38px; padding: 0 12px;
+  border: 1px solid $line; border-radius: 8px; background: #fff;
+  font: inherit; font-size: 14px; color: $text;
+  transition: border-color .15s, box-shadow .15s;
+  &::placeholder { color: #a7b3c2; }
+  &:hover { border-color: #cbd5e1; }
+  &:focus { outline: none; border-color: #4a7ab5; box-shadow: 0 0 0 3px rgba(74, 122, 181, 0.15); }
+}
+.lf-card textarea { height: auto; min-height: 60px; padding: 9px 12px; line-height: 1.45; resize: vertical; }
+
+/* the product picker brings two fields (category + product): two columns */
+.lf-picker { min-width: 0; }
+:host ::ng-deep .lf-picker app-crm-product-picker {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px;
+  .crm-field > span { font-size: 13px; font-weight: 600; color: $text; text-transform: none; letter-spacing: 0; }
+  select.pp-category, .pp-box input {
+    width: 100%; box-sizing: border-box; height: 38px; font-size: 14px;
+    border: 1px solid $line; border-radius: 8px; background-color: #fff; color: $text;
+  }
+  select.pp-category { padding: 0 12px; }
+  .pp-box input { padding-left: 34px; }
+  .pp-note { grid-column: 1 / -1; margin: 0; }
+}
+
+/* text: label above, value below */
+.lf-facts {
+  margin: 0;
+  div { min-width: 0; }
+  dt { font-size: 12.5px; font-weight: 600; color: $muted; }
+  dd { margin: 3px 0 0; font-size: 14px; color: $text; overflow-wrap: anywhere; }
+  a { color: $navy; text-decoration: none; &:hover { text-decoration: underline; } }
+}
+.lf-strong { font-size: 16px !important; font-weight: 600; }
+.lf-none { color: #a7b3c2; }
+.lf-pre { white-space: pre-line; }
+.lf-prio {
+  display: inline-flex; align-items: center; gap: 6px;
+  &::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #94a3b8; }
+  &.high::before { background: #ea580c; }
+  &.medium::before { background: #ca8a04; }
+  &.low::before { background: #16a34a; }
+}
+
+@media (max-width: 640px) {
+  .lf-card { padding: 14px; }
+  .lf-grid, .lf-facts { grid-template-columns: minmax(0, 1fr); }
+  :host ::ng-deep .lf-picker app-crm-product-picker { grid-template-columns: minmax(0, 1fr); }
+  .lf-card input, .lf-card select { font-size: 16px; }
+}
