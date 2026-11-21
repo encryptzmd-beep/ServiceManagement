@@ -15,6 +15,12 @@ namespace EncryptzBL.Infrastructure.Crm
         Task<ApiResponse<List<LeadStatusCountDto>>> GetLeadStatusCounts(int userId, bool isManager, int companyId, LeadFilterDto f);
         Task<ApiResponse<LeadDetailDto>> GetLead(int userId, bool isManager, int companyId, int leadId);
         Task<ApiResponse<int>> SaveLead(int userId, bool isManager, int companyId, LeadSaveDto dto);
+        Task<ApiResponse<LeadDataAccessDto>> GetLeadDataAccess(int userId, bool isManager, int companyId, bool isAdmin);
+        Task<ApiResponse<int>> RequestLeadData(int userId, bool isManager, int companyId, LeadDataRequestDto dto);
+        Task<ApiResponse<List<LeadDataRequestRowDto>>> GetLeadDataRequests(int userId, bool isManager, int companyId, bool isAdmin);
+        Task<ApiResponse<int>> DecideLeadData(int userId, bool isManager, int companyId, bool isAdmin, int requestId, LeadDataDecisionDto dto);
+        Task<ApiResponse<List<LeadExportRowDto>>> ExportLeads(int userId, bool isManager, int companyId, bool isAdmin);
+        Task<ApiResponse<LeadImportResultDto>> ImportLeads(int userId, bool isManager, int companyId, bool isAdmin, List<LeadImportRowDto> rows);
         Task<ApiResponse<int>> DeleteLead(int userId, bool isManager, int companyId, int leadId);
         Task<ApiResponse<int>> ChangeStatus(int userId, bool isManager, int companyId, int leadId, StatusChangeDto dto);
         Task<ApiResponse<int>> Reassign(int userId, bool isManager, int companyId, int leadId, ReassignDto dto);

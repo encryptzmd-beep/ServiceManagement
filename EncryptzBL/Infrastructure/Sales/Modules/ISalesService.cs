@@ -11,6 +11,8 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
         // customer master (from the bill)
         Task<List<SalesCustomerDto>> SearchCustomers(string? searchTerm, int top = 50);
         Task<ApiResponse<SalesCustomerSaveResultDto>> SaveCustomer(SalesCustomerSaveDto dto);
+        Task<List<TransporterDto>> GetTransporters(bool includeInactive);
+        Task<ApiResponse<int>> SaveTransporter(TransporterDto dto);
 
         // sales order
         Task<string> GetNextOrderNumber();

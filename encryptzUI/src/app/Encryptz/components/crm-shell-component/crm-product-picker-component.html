@@ -12,7 +12,7 @@
       [attr.aria-activedescendant]="active() >= 0 ? listId + '-' + active() : null"
       [placeholder]="category() ? 'Search in ' + category() : 'Search by name, code or model'"
       [value]="displayValue()"
-      (focus)="onFocus()" (blur)="onBlur()" (input)="onInput($any($event.target).value)" (keydown)="onKey($event)" />
+      (focus)="onFocus()" (click)="onFocus()" (blur)="onBlur()" (input)="onInput($any($event.target).value)" (keydown)="onKey($event)" />
     @if (panelOpen()) {
     <div class="pp-panel">
     @if (showList()) {
@@ -33,8 +33,6 @@
       <div class="pp-results pp-none">No product matches</div>
     } @else if (open() && searching()) {
       <div class="pp-results pp-none">Searching…</div>
-    } @else if (showHint()) {
-      <div class="pp-results pp-none">Type {{ minSearch }} or more letters, or choose a category</div>
     }
     @if (canCreate()) {
       <button type="button" class="pp-create" [class.active]="active() === results().length"
@@ -47,7 +45,7 @@
   </div>
 </div>
 @if (loadFailed()) { <p class="crm-error pp-note">The products could not be loaded</p> }
-@else if (products().length >= limit) { <p class="pp-note">Showing the first {{ limit }} products</p> }
+@else if (capped()) { <p class="pp-note">Showing the first {{ limit }} products. Type to find the others.</p> }
 @if (newProduct()) {
   <app-product-form source="crm" [isEditMode]="false" [initialCategory]="category() ?? ''" [initialName]="newProductName()" (close)="closeNewProduct($event)" />
 }

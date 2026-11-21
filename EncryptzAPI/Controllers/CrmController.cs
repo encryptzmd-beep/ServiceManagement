@@ -42,6 +42,9 @@ namespace EncryptzAPI.Controllers
 
         private IActionResult Answer<T>(ApiResponse<T> result) => result.Success ? Ok(result) : BadRequest(result);
 
+        /// <summary>Decided by the token's role, never by the request.</summary>
+        private bool IsCompanyAdmin() => ModuleAccess.IsCompanyAdminRole(User.FindFirst(ClaimTypes.Role)?.Value);
+
         [HttpGet("me")]
         public async Task<IActionResult> Me()
             => Ok(ApiResponse<object>.Ok(new
@@ -59,6 +62,34 @@ namespace EncryptzAPI.Controllers
         [HttpGet("leads/status-counts")]
         public async Task<IActionResult> GetLeadStatusCounts([FromQuery] LeadFilterDto filter)
             => Answer(await _crm.GetLeadStatusCounts(Caller(), await Manager(), Company(), filter));
+
+        /// <summary>What the caller may do with the lead Excel files now.</summary>
+        [HttpGet("leads/data-access")]
+        public async Task<IActionResult> GetLeadDataAccess()
+            => Answer(await _crm.GetLeadDataAccess(Caller(), await Manager(), Company(), IsCompanyAdmin()));
+
+        [MenuRight("/crm/leads", MenuRightKind.Create)]
+        [HttpPost("leads/data-requests")]
+        public async Task<IActionResult> RequestLeadData([FromBody] LeadDataRequestDto dto)
+            => Answer(await _crm.RequestLeadData(Caller(), await Manager(), Company(), dto));
+
+        [HttpGet("leads/data-requests")]
+        public async Task<IActionResult> GetLeadDataRequests()
+            => Answer(await _crm.GetLeadDataRequests(Caller(), await Manager(), Company(), IsCompanyAdmin()));
+
+        [MenuRight("/crm/leads", MenuRightKind.Edit)]
+        [HttpPost("leads/data-requests/{id:int}/decide")]
+        public async Task<IActionResult> DecideLeadData(int id, [FromBody] LeadDataDecisionDto dto)
+            => Answer(await _crm.DecideLeadData(Caller(), await Manager(), Company(), IsCompanyAdmin(), id, dto));
+
+        [HttpGet("leads/export")]
+        public async Task<IActionResult> ExportLeads()
+            => Answer(await _crm.ExportLeads(Caller(), await Manager(), Company(), IsCompanyAdmin()));
+
+        [MenuRight("/crm/leads", MenuRightKind.Create)]
+        [HttpPost("leads/import")]
+        public async Task<IActionResult> ImportLeads([FromBody] List<LeadImportRowDto> rows)
+            => Answer(await _crm.ImportLeads(Caller(), await Manager(), Company(), IsCompanyAdmin(), rows));
 
         [HttpGet("leads/{id:int}")]
         public async Task<IActionResult> GetLead(int id)

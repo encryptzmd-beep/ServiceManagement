@@ -210,17 +210,37 @@ describe('AuthService scope', () => {
   describe('changes made in another tab', () => {
     const fire = (init: StorageEventInit) => window.dispatchEvent(new StorageEvent('storage', init));
     const watch = (loggedIn = true, path = '/complaints/dashboard') => {
-      if (loggedIn) localStorage.setItem('encryptz_user', JSON.stringify({ token: 't', userId: 5, role: 'Admin', menus: [] }));
+      if (loggedIn) {
+        localStorage.setItem('encryptz_token', 't');
+        localStorage.setItem('encryptz_user', JSON.stringify({ token: 't', userId: 5, role: 'Admin', menus: [] }));
+      }
       const auth = create();
       vi.spyOn(auth as any, 'currentPath').mockReturnValue(path);
       const spy = vi.spyOn(auth as any, 'reloadPage').mockImplementation(() => {});
       return spy;
     };
 
-    it('reloads when the branch changed', () => {
+    it('keeps its own module and branch when another tab changes them', () => {
       const spy = watch();
       fire({ key: 'selected_location_id', oldValue: '1', newValue: '2' });
+      fire({ key: 'selected_module_key', oldValue: 'SERVICE', newValue: 'CRM' });
+      fire({ key: 'encryptz_token', oldValue: 't', newValue: 'crm-token' });
+      expect(spy).not.toHaveBeenCalled();
+      expect(sessionStorage.getItem('encryptz_token')).toBe('t');
+    });
+
+    it('ends this tab too when another tab logs out', () => {
+      const spy = watch();
+      fire({ key: 'encryptz_token', oldValue: 't', newValue: null });
       expect(spy).toHaveBeenCalledTimes(1);
+      expect(sessionStorage.getItem('encryptz_token')).toBeNull();
+    });
+
+    it('does not keep the old person when another person logs in', () => {
+      const spy = watch();
+      fire({ key: 'encryptz_user', newValue: JSON.stringify({ userId: 9 }) });
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(sessionStorage.getItem('encryptz_token')).toBeNull();
     });
 
     it('reloads when the storage was cleared', () => {

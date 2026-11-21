@@ -1,3 +1,4 @@
+import { UppercaseInputDirective } from '../shared/uppercase-input';
 import { ProductFormComponent, ProductFormResult } from '../product-form-component/product-form-component';
 import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { AppRightDirective } from '../shared/app-right/app-right';
@@ -43,7 +44,7 @@ interface BillLine {
 @Component({
   selector: 'app-sales-order-entry',
   standalone: true,
-  imports: [ProductFormComponent, AppToastComponent, AppRightDirective, CommonModule, FormsModule, RouterModule, AutocompleteComponent, TransactionToolbarComponent, TransactionFindComponent, SalesDocumentsComponent],
+  imports: [UppercaseInputDirective, ProductFormComponent, AppToastComponent, AppRightDirective, CommonModule, FormsModule, RouterModule, AutocompleteComponent, TransactionToolbarComponent, TransactionFindComponent, SalesDocumentsComponent],
   templateUrl: './sales-order-entry-component.html',
   styleUrls: ['./sales-order-entry-component.scss'],
 })

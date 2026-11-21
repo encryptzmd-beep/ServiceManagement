@@ -1171,6 +1171,14 @@ addDespatchDetails(despatchId: number, dto: M.DespatchDetailsSave): Observable<M
   return this.post<M.ApiResponse>(`Sales/despatches/${despatchId}/details`, dto);
 }
 
+getTransporters(includeInactive = false): Observable<M.ApiResponse<M.TransporterDto[]>> {
+  return this.get<M.ApiResponse<M.TransporterDto[]>>('Sales/transporters', { includeInactive });
+}
+
+saveTransporter(dto: M.TransporterSave): Observable<M.ApiResponse<number>> {
+  return this.post<M.ApiResponse<number>>('Sales/transporters', dto);
+}
+
 getServiceDespatches(filter: M.ServiceDespatchFilter): Observable<M.ApiResponse<M.PagedResult<M.ServiceDespatchItem>>> {
   return this.get<M.ApiResponse<M.PagedResult<M.ServiceDespatchItem>>>('Sales/service-despatches', filter as any);
 }

@@ -8,6 +8,7 @@
         <p>{{ isManager() ? 'All the leads of the team.' : 'The leads you own.' }}</p>
       </div>
       <div class="crm-page-actions">
+        <app-crm-lead-data (imported)="reload()" />
         <a appRight="create" appRightMenu="/crm/leads" class="crm-btn primary" routerLink="/crm/leads/new"><span class="material-icons" aria-hidden="true">add</span>New lead</a>
       </div>
     </header>

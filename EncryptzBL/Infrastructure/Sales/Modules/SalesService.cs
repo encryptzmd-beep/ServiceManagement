@@ -41,7 +41,7 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
             var p = new[]
             {
                 SqlParameterHelper.Input("@CustomerId", dto.CustomerId),
-                SqlParameterHelper.Input("@CustomerName", dto.CustomerName.Trim()),
+                SqlParameterHelper.Input("@CustomerName", dto.CustomerName.Trim().ToUpperInvariant()),
                 SqlParameterHelper.Input("@MobileNumber", mobile),
                 SqlParameterHelper.Input("@Email", Clean(dto.Email)),
                 SqlParameterHelper.Input("@AlternatePhone", Clean(dto.AlternatePhone)),
@@ -79,6 +79,47 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
             result.Customer = list.FirstOrDefault(c => c.CustomerId == customerId);
 
             return ApiResponse<SalesCustomerSaveResultDto>.Ok(result, row["Message"]?.ToString() ?? "Saved");
+        }
+
+        // =====================================================================
+        // Transporter master
+        // =====================================================================
+        public async Task<List<TransporterDto>> GetTransporters(bool includeInactive)
+            => await GetListAsync<TransporterDto>("sp_Transporter_List", new[] { SqlParameterHelper.Input("@IncludeInactive", includeInactive) });
+
+        public async Task<ApiResponse<int>> SaveTransporter(TransporterDto dto)
+        {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.TransporterName)) return ApiResponse<int>.Fail("Enter the transporter name.");
+            var name = dto.TransporterName.Trim();
+            if (name.Length > 150) return ApiResponse<int>.Fail("The transporter name is too long.");
+            var mobile = (dto.Mobile ?? "").Trim();
+            if (mobile.Length > 0)
+            {
+                mobile = EncryptzBL.Common.Sales.SalesInputRules.NormalizeMobile(mobile) ?? "";
+                if (mobile.Length == 0) return ApiResponse<int>.Fail("Enter a valid 10-digit mobile number.");
+            }
+            var gstin = (dto.GSTIN ?? "").Trim().ToUpperInvariant();
+            if (gstin.Length > 0 && !System.Text.RegularExpressions.Regex.IsMatch(gstin, "^[0-9A-Z]{15}$"))
+                return ApiResponse<int>.Fail("GSTIN must be 15 characters.");
+            if ((dto.ContactPerson ?? "").Length > 150 || (dto.Address ?? "").Length > 400)
+                return ApiResponse<int>.Fail("The contact person or the address is too long.");
+
+            var dt = await GetDataTableAsync("sp_Transporter_Save", new[]
+            {
+                SqlParameterHelper.Input("@TransporterId", dto.TransporterId),
+                SqlParameterHelper.Input("@TransporterName", name),
+                SqlParameterHelper.Input("@ContactPerson", dto.ContactPerson ?? ""),
+                SqlParameterHelper.Input("@Mobile", mobile),
+                SqlParameterHelper.Input("@GSTIN", gstin),
+                SqlParameterHelper.Input("@Address", dto.Address ?? ""),
+                SqlParameterHelper.Input("@IsActive", dto.IsActive)
+            });
+            if (dt == null || dt.Rows.Count == 0) return ApiResponse<int>.Fail("No response from the database.");
+            var row = dt.Rows[0];
+            var message = row["Message"]?.ToString() ?? "";
+            return Convert.ToInt32(row["Success"]) == 1
+                ? ApiResponse<int>.Ok(Convert.ToInt32(row["TransporterId"]), message)
+                : ApiResponse<int>.Fail(message);
         }
 
         // =====================================================================

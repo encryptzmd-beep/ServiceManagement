@@ -54,6 +54,19 @@ namespace EncryptzAPI.Controllers
             return Ok(ApiResponse<Dictionary<string, string>>.Ok(map));
         }
 
+        // ---------------- transporter master ----------------
+        [HttpGet("transporters")]
+        public async Task<IActionResult> GetTransporters([FromQuery] bool includeInactive = false)
+            => Ok(ApiResponse<List<TransporterDto>>.Ok(await _svc.GetTransporters(includeInactive)));
+
+        [MenuRight("/sales/despatch", MenuRightKind.Save, IdProperty = "TransporterId", AllowRole = "Storekeeper")]
+        [HttpPost("transporters")]
+        public async Task<IActionResult> SaveTransporter([FromBody] TransporterDto dto)
+        {
+            var result = await _svc.SaveTransporter(dto);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
         // ---------------- customer master ----------------
         [HttpGet("customers")]
         public async Task<IActionResult> SearchCustomers([FromQuery] string? search = null, [FromQuery] int top = 50)

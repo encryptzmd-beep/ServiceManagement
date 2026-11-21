@@ -34,6 +34,7 @@ describe('CrmLeadsComponent', () => {
     rowNext = null;
     crm = {
       me: () => ok({ userId: 1, fullName: 'A', isManager }),
+      leadDataAccess: () => ok({ isAdmin: false, canImport: false, canExport: false, importApproved: false, exportApproved: false, importPending: false, exportPending: false, pendingCount: 0 }),
       getMasters: () => ok([{ id: 2, name: 'Walk-in', sortOrder: 1, isActive: true }]),
       getMembers: () => ok({ members: [{ userId: 1, fullName: 'Anu', isManager: true, isActive: true }], available: [] }),
       getLeadStatusCounts: () => ok([{ status: rowStatus, count: 1 }]),

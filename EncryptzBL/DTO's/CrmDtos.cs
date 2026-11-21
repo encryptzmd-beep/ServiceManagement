@@ -22,6 +22,110 @@ namespace EncryptzBL.DTO_s
         public int? OwnerUserId { get; set; }
         public string? Priority { get; set; }
         public string? Remarks { get; set; }
+        /// <summary>The products of the lead, first one first. Null leaves them as they are.</summary>
+        public List<LeadProductSaveDto>? Products { get; set; }
+    }
+
+    public class LeadProductSaveDto
+    {
+        public int ProductMasterId { get; set; }
+        public int Qty { get; set; } = 1;
+    }
+
+    /// <summary>What this person may do with the lead Excel files now.</summary>
+    public class LeadDataAccessDto
+    {
+        public bool IsAdmin { get; set; }
+        public bool CanImport { get; set; }
+        public bool CanExport { get; set; }
+        public bool ImportApproved { get; set; }
+        public bool ExportApproved { get; set; }
+        public bool ImportPending { get; set; }
+        public bool ExportPending { get; set; }
+        public int PendingCount { get; set; }
+    }
+
+    public class LeadDataRequestDto
+    {
+        public string? RequestType { get; set; }
+        public string? Note { get; set; }
+    }
+
+    public class LeadDataDecisionDto
+    {
+        public bool Approve { get; set; }
+        public string? Note { get; set; }
+    }
+
+    public class LeadDataRequestRowDto
+    {
+        public int RequestId { get; set; }
+        public string RequestType { get; set; } = string.Empty;
+        public int RequestedBy { get; set; }
+        public string RequestedByName { get; set; } = string.Empty;
+        public DateTime RequestedAt { get; set; }
+        public string Note { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string DecidedByName { get; set; } = string.Empty;
+        public DateTime? DecidedAt { get; set; }
+        public string DecisionNote { get; set; } = string.Empty;
+        public DateTime? UsedAt { get; set; }
+    }
+
+    public class LeadExportRowDto
+    {
+        public string LeadNo { get; set; } = string.Empty;
+        public DateTime LeadDate { get; set; }
+        public string ContactName { get; set; } = string.Empty;
+        public string Mobile { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string State { get; set; } = string.Empty;
+        public string PinCode { get; set; } = string.Empty;
+        public string Landmark { get; set; } = string.Empty;
+        public string SourceName { get; set; } = string.Empty;
+        public string ProductCategory { get; set; } = string.Empty;
+        public string Products { get; set; } = string.Empty;
+        public string ModelRequirement { get; set; } = string.Empty;
+        public int? EstimatedQty { get; set; }
+        public DateTime? ExpectedPurchaseDate { get; set; }
+        public string OwnerName { get; set; } = string.Empty;
+        public string Priority { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string Remarks { get; set; } = string.Empty;
+    }
+
+    public class LeadImportRowDto
+    {
+        public int RowNumber { get; set; }
+        public string? ContactName { get; set; }
+        public string? Mobile { get; set; }
+        public string? Email { get; set; }
+        public string? Address { get; set; }
+        public string? City { get; set; }
+        public string? State { get; set; }
+        public string? PinCode { get; set; }
+        public string? Landmark { get; set; }
+        public string? ProductCategory { get; set; }
+        public string? ModelRequirement { get; set; }
+        public string? Priority { get; set; }
+        public string? Remarks { get; set; }
+    }
+
+    public class LeadImportProblemDto
+    {
+        public int RowNumber { get; set; }
+        public string ContactName { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+    }
+
+    public class LeadImportResultDto
+    {
+        public int Created { get; set; }
+        public int Skipped { get; set; }
+        public int Failed { get; set; }
+        public List<LeadImportProblemDto> Problems { get; set; } = new();
     }
 
     /// <summary>One row of the lead list.</summary>
@@ -64,6 +168,7 @@ namespace EncryptzBL.DTO_s
         public string ProductCategory { get; set; } = string.Empty;
         public int? ProductMasterId { get; set; }
         public string? ProductName { get; set; }
+        public List<LeadProductDto> Products { get; set; } = new();
         public string ModelRequirement { get; set; } = string.Empty;
         public int? EstimatedQty { get; set; }
         public DateTime? ExpectedPurchaseDate { get; set; }
@@ -274,6 +379,12 @@ namespace EncryptzBL.DTO_s
         public string? HsnSac { get; set; }
     }
 
+    /// <summary>A product of a lead, with its quantity.</summary>
+    public class LeadProductDto : CrmProductDto
+    {
+        public int Qty { get; set; } = 1;
+    }
+
     /// <summary>A lead source or a lost reason.</summary>
     public class CrmMasterDto
     {
@@ -318,6 +429,8 @@ namespace EncryptzBL.DTO_s
         public int? CustomerId { get; set; }
         public DateTime OrderDate { get; set; } = DateTime.Today;
         public string? PaymentMode { get; set; }
+        /// <summary>Delivery instructions and the like: printed in the Notes of the invoice.</summary>
+        public string? Comment { get; set; }
     }
 
     /// <summary>A manager links a sales order that exists already (made by a convert that could not finish).</summary>

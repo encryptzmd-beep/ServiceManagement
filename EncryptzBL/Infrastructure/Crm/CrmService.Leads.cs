@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text.Json;
 using EncryptzBL.Common;
 using EncryptzBL.Common.Crm;
 using EncryptzBL.DTO_s;
@@ -78,6 +79,7 @@ namespace EncryptzBL.Infrastructure.Crm
             })).ToList<LeadDetailDto>().FirstOrDefault();
             if (lead == null) return null;
 
+            lead.Products = (await GetDataTableAsync("crm.sp_LeadProducts_List", LeadScope(userId, isManager, companyId, leadId))).ToList<LeadProductDto>();
             lead.FollowUps = (await GetDataTableAsync("crm.sp_FollowUp_List", LeadScope(userId, isManager, companyId, leadId))).ToList<FollowUpDto>();
             lead.History = (await GetDataTableAsync("crm.sp_Lead_History", LeadScope(userId, isManager, companyId, leadId))).ToList<LeadHistoryDto>();
             lead.Quotations = (await GetDataTableAsync("crm.sp_Quotation_ListForLead", LeadScope(userId, isManager, companyId, leadId))).ToList<QuotationSummaryDto>();
@@ -136,6 +138,16 @@ namespace EncryptzBL.Infrastructure.Crm
                 var answer = Answer(dt);
                 if (answer.Success && dto.LeadId == 0 && owner.HasValue && owner.Value > 0 && owner.Value != userId)
                     await NotifyAssigned(isManager, userId, companyId, answer.Id, owner.Value);
+
+                if (answer.Success && dto.Products != null)
+                {
+                    var items = JsonSerializer.Serialize(dto.Products.Select(p => new { productMasterId = p.ProductMasterId, qty = p.Qty }));
+                    var products = Answer(await GetDataTableAsync("crm.sp_LeadProducts_Save",
+                        LeadScope(userId, isManager, companyId, answer.Id).Append(In("@Items", items)).ToArray()));
+                    // the lead itself is saved: the page opens it, with the reason
+                    if (!products.Success)
+                        return ApiResponse<int>.Ok(answer.Id, "The lead was saved, but not its products: " + products.Message);
+                }
                 return ToResponse(answer);
             });
 

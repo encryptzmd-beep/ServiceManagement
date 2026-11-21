@@ -39,9 +39,15 @@ namespace EncryptzBL.Infrastructure.Provisioning
             }
         }
 
+        private static CreateCompanyRequest WithUppercaseName(CreateCompanyRequest req)
+        {
+            if (req?.CompanyName != null) req.CompanyName = req.CompanyName.Trim().ToUpperInvariant();
+            return req!;
+        }
+
         public Task<ApiResponse<CompanyCreatedDto>> CreateCompany(CreateCompanyRequest req, int userId, bool isPlatformAdmin)
             => WhenInstalledAsync(
-                () => CreateCompanyCore(req, userId, isPlatformAdmin),
+                () => CreateCompanyCore(WithUppercaseName(req), userId, isPlatformAdmin),
                 () => ApiResponse<CompanyCreatedDto>.Fail(CompanyCreateRules.NotAvailableMessage),
                 _logger, "sp_Company_Create");
 

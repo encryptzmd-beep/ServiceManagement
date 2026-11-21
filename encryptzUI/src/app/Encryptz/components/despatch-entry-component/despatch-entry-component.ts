@@ -1,3 +1,4 @@
+import { TransporterPickerComponent } from '../transporter-component/transporter-component';
 import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
@@ -40,7 +41,7 @@ interface UnitRow {
 @Component({
   selector: 'app-despatch-entry',
   standalone: true,
-  imports: [AppToastComponent, AppRightDirective, CommonModule, FormsModule, RouterModule, ComplaintDetailPopupComponent, SalesDocumentsComponent],
+  imports: [TransporterPickerComponent, AppToastComponent, AppRightDirective, CommonModule, FormsModule, RouterModule, ComplaintDetailPopupComponent, SalesDocumentsComponent],
   templateUrl: './despatch-entry-component.html',
   styleUrls: ['./despatch-entry-component.scss'],
 })

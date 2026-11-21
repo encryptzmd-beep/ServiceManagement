@@ -450,3 +450,15 @@ export const INDIAN_STATES = [
   'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Andaman and Nicobar Islands', 'Chandigarh',
   'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
 ];
+
+/** A registered transporter (Despatch › Transporters). */
+export interface TransporterDto {
+  transporterId: number;
+  transporterName: string;
+  contactPerson: string;
+  mobile: string;
+  gstin: string;
+  address: string;
+  isActive: boolean;
+}
+export type TransporterSave = TransporterDto;

@@ -5,7 +5,13 @@
       <div class="fx-page-title">Despatch</div>
       <div class="fx-page-sub">Sales orders, approved spare parts and repaired parts, all despatched from one place</div>
     </div>
+    @if (!refused()) {
+      <button type="button" class="fx-btn-outline tr-open" (click)="transportersOpen.set(true)">
+        <span class="material-icons" aria-hidden="true">local_shipping</span>Transporters
+      </button>
+    }
   </div>
+  @if (transportersOpen()) { <app-transporter-master (closed)="transportersOpen.set(false)" /> }
 
   @if (refused()) {
   <app-module-refused moduleName="Service Management" />
@@ -460,7 +466,7 @@
             </label>
             <label>{{ sdMode().reference }} *<input type="text" maxlength="100" required [(ngModel)]="sd.referenceNo" /></label>
             <label>Reference date<input type="date" [(ngModel)]="sd.referenceDate" [max]="today" /></label>
-            @if (sdMode().carrier) { <label>{{ sd.despatchMode === 'Courier' ? 'Courier company' : 'Transporter' }}<input type="text" maxlength="150" [(ngModel)]="sd.transporterName" /></label> }
+            @if (sdMode().carrier) { <div class="sd-field"><span>{{ sd.despatchMode === 'Courier' ? 'Courier company' : 'Transporter' }}</span><app-transporter-picker [value]="sd.transporterName" [label]="sd.despatchMode === 'Courier' ? 'Courier company' : 'Transporter'" (valueChange)="sd.transporterName = $event" /></div> }
             @if (sdMode().vehicle) {
               <label>Vehicle no<input type="text" maxlength="50" placeholder="KL-07-AB-1234" [(ngModel)]="sd.vehicleNo" /></label>
               <label>Driver<input type="text" maxlength="150" [(ngModel)]="sd.driverName" /></label>

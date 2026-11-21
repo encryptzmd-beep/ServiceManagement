@@ -38,7 +38,7 @@ describe('CrmProductPickerComponent', () => {
       productCategories: () => ok(['Inverter', 'Treadmill']),
       searchProducts: vi.fn((t?: string, c?: string) =>
         ok(c === 'Treadmill' ? [prod(9, 'T-10C', 45000), prod(10, 'T-20', 1250.5)]
-          : t ? [prod(21, 'Inverter 900VA', 7800, 'Inverter')] : [])),
+          : [prod(21, 'Inverter 900VA', 7800, 'Inverter')])),
     };
   });
 
@@ -64,18 +64,27 @@ describe('CrmProductPickerComponent', () => {
     expect(rows(f).map(x => x.querySelector('.pp-name')!.textContent!.trim())).toEqual(['T-20']);
   });
 
-  it('searches every product when no category is chosen', () => {
+  it('shows every product as soon as the box opens, with no category and nothing typed', () => {
     const f = create();
-    type(f, 'in');
-    expect(crm.searchProducts).toHaveBeenCalledWith('in', undefined, 20);
+    type(f, '');
+    expect(crm.searchProducts).toHaveBeenCalledWith(undefined, undefined, 100);
     expect(rows(f).map(x => x.querySelector('.pp-name')!.textContent!.trim())).toEqual(['Inverter 900VA']);
   });
 
-  it('waits for two letters before searching every product', () => {
+  it('filters the whole list from the first letter', () => {
     const f = create();
     type(f, 'i');
-    expect(crm.searchProducts).not.toHaveBeenCalled();
+    expect(rows(f).length).toBe(1);
+    type(f, 'zzz');
     expect(rows(f).length).toBe(0);
+  });
+
+  it('asks the server when there are more products than the list holds', () => {
+    crm.searchProducts = vi.fn((t?: string) => ok(t ? [prod(500, 'Rare inverter')] : Array.from({ length: 100 }, (_, i) => prod(i + 1, 'P' + i))));
+    const f = create();
+    type(f, 'r');
+    expect(crm.searchProducts).toHaveBeenCalledWith('r', undefined, 20);
+    expect(rows(f).map(x => x.querySelector('.pp-name')!.textContent!.trim())).toEqual(['Rare inverter']);
   });
 
   it('picking a product fills its category when none is chosen', () => {

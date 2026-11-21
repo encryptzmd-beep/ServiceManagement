@@ -1,3 +1,4 @@
+import { TransporterMasterComponent, TransporterPickerComponent } from '../transporter-component/transporter-component';
 import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { statusText } from '../shared/sales-input-rules';
 import { AppRightDirective } from '../shared/app-right/app-right';
@@ -18,7 +19,7 @@ type DespatchSource = 'sales' | 'spare' | 'repair';
 @Component({
   selector: 'app-despatch-list',
   standalone: true,
-  imports: [AppToastComponent, AppRightDirective, CommonModule, FormsModule, RouterModule, ModuleRefusedComponent, ComplaintDetailPopupComponent],
+  imports: [TransporterMasterComponent, TransporterPickerComponent, AppToastComponent, AppRightDirective, CommonModule, FormsModule, RouterModule, ModuleRefusedComponent, ComplaintDetailPopupComponent],
   templateUrl: './despatch-list-component.html',
   styleUrls: ['./despatch-list-component.scss'],
 })
@@ -47,6 +48,7 @@ export class DespatchListComponent implements OnInit {
   serviceLoading = signal(false);
   serviceError = signal('');
   serviceToast = signal('');
+  transportersOpen = signal(false);
   serviceSearch = '';
   serviceFrom = '';
   serviceTo = '';

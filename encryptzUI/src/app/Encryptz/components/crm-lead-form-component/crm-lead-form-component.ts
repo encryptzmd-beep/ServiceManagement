@@ -6,14 +6,14 @@ import { CrmMasterDto, CrmMemberDto, LeadSaveDto } from '../../Models/CrmModels'
 import { CrmService } from '../../Services/crm-service';
 import { TransactionToolbarComponent } from '../shared/transaction-toolbar/transaction-toolbar';
 import { FindQuery, FindRow, TransactionFindComponent } from '../shared/transaction-toolbar/transaction-find';
-import { CrmLeadFieldsComponent } from './crm-lead-fields';
+import { CrmLeadFieldsComponent, leadProductsForSave } from './crm-lead-fields';
 import { CrmRefusedComponent } from '../crm-shell-component/crm-refused';
 import { FORBIDDEN, isoDate, refusalOf } from '../crm-shell-component/crm-ui';
 
 const blank = (): LeadSaveDto => ({
   leadId: 0, leadDate: isoDate(new Date()), contactName: '', mobile: '', email: '', address: '', city: '', state: '',
   pinCode: '', landmark: '', leadSourceId: null, productCategory: '', productMasterId: null, modelRequirement: '', estimatedQty: null,
-  expectedPurchaseDate: null, ownerUserId: null, priority: 'Medium', remarks: '',
+  expectedPurchaseDate: null, ownerUserId: null, priority: 'Medium', remarks: '', products: [],
 });
 
 /**
@@ -72,7 +72,7 @@ export class CrmLeadFormComponent {
             address: l.address, city: l.city, state: l.state, pinCode: l.pinCode, landmark: l.landmark, leadSourceId: l.leadSourceId ?? null,
             productCategory: l.productCategory, productMasterId: l.productMasterId ?? null, modelRequirement: l.modelRequirement, estimatedQty: l.estimatedQty ?? null,
             expectedPurchaseDate: l.expectedPurchaseDate ? l.expectedPurchaseDate.slice(0, 10) : null, ownerUserId: l.ownerUserId,
-            priority: l.priority || 'Medium', remarks: l.remarks,
+            priority: l.priority || 'Medium', remarks: l.remarks, products: l.products ?? [],
           });
         },
         error: err => this.fail(err),
@@ -98,8 +98,8 @@ export class CrmLeadFormComponent {
       ...f,
       leadSourceId: f.leadSourceId ? Number(f.leadSourceId) : null,
       ownerUserId: f.ownerUserId ? Number(f.ownerUserId) : null,
-      estimatedQty: f.estimatedQty ? Number(f.estimatedQty) : null,
       expectedPurchaseDate: f.expectedPurchaseDate || null,
+      ...leadProductsForSave(f),
     };
     this.crm.saveLead(dto).subscribe({
       next: res => {

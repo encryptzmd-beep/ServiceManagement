@@ -83,8 +83,8 @@
         </div>
         @if (modeInfo().carrier) {
           <div class="field">
-            <label for="dspCarrier">{{ despatchMode() === 'Courier' ? 'Courier Company' : 'Transporter' }}</label>
-            <input id="dspCarrier" type="text" maxlength="150" [(ngModel)]="transporterName" />
+            <label>{{ despatchMode() === 'Courier' ? 'Courier Company' : 'Transporter' }}</label>
+            <app-transporter-picker [value]="transporterName" [label]="despatchMode() === 'Courier' ? 'Courier Company' : 'Transporter'" (valueChange)="transporterName = $event" />
           </div>
         }
         @if (modeInfo().vehicle) {

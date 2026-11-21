@@ -13,7 +13,7 @@
     } @else {
       <div class="lf-grid">
         <label class="crm-field span-2"><span>Contact name <em>*</em></span>
-          <input name="contactName" maxlength="200" autocomplete="name" placeholder="Full name or company"
+          <input appUppercase name="contactName" maxlength="200" autocomplete="name" placeholder="Full name or company"
                  [ngModel]="f.contactName" (ngModelChange)="set('contactName', $event)" /></label>
         <label class="crm-field"><span>Mobile <em>*</em></span>
           <input name="mobile" inputmode="tel" maxlength="20" autocomplete="tel" placeholder="10-digit number"
@@ -44,7 +44,15 @@
         <div><dt>Lead date</dt><dd>{{ showDate(f.leadDate) }}</dd></div>
         <div><dt>Source</dt><dd>{{ sourceName() || '—' }}</dd></div>
         <div><dt>Product category</dt><dd>{{ f.productCategory || '—' }}</dd></div>
-        <div><dt>Product</dt><dd>{{ productName() || '—' }}</dd></div>
+        @if (f.products?.length) {
+          <div class="span-2"><dt>Products</dt><dd>
+            <ul class="lf-products-read">
+              @for (p of f.products; track p.productMasterId) { <li><span>{{ p.productName }}</span><strong>× {{ p.qty }}</strong></li> }
+            </ul>
+          </dd></div>
+        } @else {
+          <div><dt>Product</dt><dd>{{ productName() || '—' }}</dd></div>
+        }
         <div><dt>Estimated quantity</dt><dd>{{ f.estimatedQty ?? '—' }}</dd></div>
         <div><dt>Expected purchase</dt><dd>{{ showDate(f.expectedPurchaseDate) || '—' }}</dd></div>
         <div><dt>Priority</dt><dd><span [class]="'lf-prio ' + (f.priority || '').toLowerCase()">{{ f.priority }}</span></dd></div>
@@ -62,11 +70,26 @@
             @for (s of sources(); track s.id) { <option [value]="s.id">{{ s.name }}</option> }
           </select></label>
         <div class="lf-picker span-2">
-          <app-crm-product-picker [category]="f.productCategory" [productMasterId]="f.productMasterId" [productName]="productName()"
-            (categoryChange)="set('productCategory', $event)" (productMasterIdChange)="set('productMasterId', $event); productPicked.emit()" />
+          <app-crm-product-picker [multi]="true" [category]="f.productCategory" [productMasterId]="null" productName=""
+            (categoryChange)="set('productCategory', $event)" (productPicked)="addProduct($event)" />
         </div>
-        <label class="crm-field"><span>Estimated quantity</span>
-          <input name="estimatedQty" type="number" min="1" placeholder="1" [ngModel]="f.estimatedQty" (ngModelChange)="set('estimatedQty', $event)" /></label>
+        @if (f.products?.length) {
+          <div class="lf-products span-2">
+            @for (p of f.products; track p.productMasterId; let i = $index) {
+              <div class="lf-product">
+                <div class="lf-product-name"><strong>{{ p.productName }}</strong><small>{{ p.productCode }}@if (p.category) { · {{ p.category }} }</small></div>
+                <label class="lf-product-qty"><span>Qty</span>
+                  <input type="number" min="1" [attr.aria-label]="'Quantity of ' + p.productName" [value]="p.qty" (change)="setProductQty(i, $any($event.target).value)" /></label>
+                <button type="button" class="lf-product-remove" [attr.aria-label]="'Remove ' + p.productName" (click)="removeProduct(i)">
+                  <span class="material-icons" aria-hidden="true">close</span>
+                </button>
+              </div>
+            }
+          </div>
+        } @else {
+          <label class="crm-field"><span>Estimated quantity</span>
+            <input name="estimatedQty" type="number" min="1" placeholder="1" [ngModel]="f.estimatedQty" (ngModelChange)="set('estimatedQty', $event)" /></label>
+        }
         <label class="crm-field"><span>Expected purchase</span>
           <input name="expectedPurchaseDate" type="date" [ngModel]="f.expectedPurchaseDate ?? ''" (ngModelChange)="set('expectedPurchaseDate', $event || null)" /></label>
         <label class="crm-field"><span>Priority</span>
