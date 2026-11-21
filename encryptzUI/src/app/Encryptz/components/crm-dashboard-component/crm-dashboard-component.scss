@@ -1,3 +1,5 @@
+@use 'sass:list';
+
 /* The CRM Kanban board: attention strip, open-status columns, cards and the "Mark lost" drop zone. */
 $p-text: #1a2332;
 $p-text-2: #5a6a7e;
@@ -99,7 +101,7 @@ $attn-tones: (
   }
   // one colour per tile, so each reads at a glance
   @each $key, $tone in $attn-tones {
-    &[data-key='#{$key}'] { --tone: #{nth($tone, 1)}; --tone-bg: #{nth($tone, 2)}; }
+    &[data-key='#{$key}'] { --tone: #{list.nth($tone, 1)}; --tone-bg: #{list.nth($tone, 2)}; }
   }
 
   strong { font-family: $display; font-size: 19px; line-height: 1; font-weight: 600; color: var(--tone); font-variant-numeric: tabular-nums; }

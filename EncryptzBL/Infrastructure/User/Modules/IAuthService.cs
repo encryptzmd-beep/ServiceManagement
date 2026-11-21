@@ -65,10 +65,10 @@ namespace EncryptzBL.Infrastructure.User.Modules
         Task<ApiResponse<bool>> RemoveUserFromCompany(int companyId, int userId, int removedBy);
         Task<ApiResponse<List<InvitationDetailDto>>> GetPendingInvitationsForCompany(int companyId);
         Task<ApiResponse<bool>> CancelInvitation(int invitationId, int cancelledBy, int companyId);
-        Task<ApiResponse<JoinRequestDto>> CreateJoinRequest(int userId, int companyId, string requestedRole, string remarks = null);
+        Task<ApiResponse<JoinRequestDto>> CreateJoinRequest(int userId, int companyId, string requestedRole, string? remarks = null);
         Task<ApiResponse<List<JoinRequestDto>>> GetPendingJoinRequests(int companyId);
         Task<ApiResponse<bool>> ApproveJoinRequest(int requestId, int companyId, int reviewedBy);
-        Task<ApiResponse<bool>> RejectJoinRequest(int requestId, int companyId, int reviewedBy, string reason = null);
+        Task<ApiResponse<bool>> RejectJoinRequest(int requestId, int companyId, int reviewedBy, string? reason = null);
         Task<ApiResponse<List<CompanyInfoDto>>> GetAllCompaniesForUser(int userId);
         Task<ApiResponse<List<MyJoinRequestDto>>> GetMyJoinRequests(int userId);
         Task<ApiResponse<bool>> CancelJoinRequest(int requestId, int userId);

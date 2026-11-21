@@ -217,7 +217,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 await _emailService.SendEmailAsync(dto.Email, subject, body);
                 return ApiResponse<string>.Ok(null, "OTP sent to email successfully");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Log exception if needed
                 return ApiResponse<string>.Fail("Failed to send email. Please try again later.");
@@ -255,7 +255,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
         public async Task<ApiResponse<string>> ChangePasswordAsync(ChangePasswordRequestDto dto)
         {
-            DataTable dt = null;
+            DataTable dt = null!;
             if (dto.UserId > 0)
             {
                 var parametersCheck = new[] { SqlParameterHelper.Input("@UserId", dto.UserId) };
@@ -653,9 +653,9 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 CompanyId = Convert.ToInt32(r["CompanyId"]),
                 CompanyName = r["CompanyName"]?.ToString() ?? "",
                 CompanyCode = r["CompanyCode"]?.ToString() ?? "",
-                Address = r["Address"]?.ToString(),
-                City = r["City"]?.ToString(),
-                PhoneNumber = r["PhoneNumber"]?.ToString(),
+                Address = r["Address"]?.ToString()!,
+                City = r["City"]?.ToString()!,
+                PhoneNumber = r["PhoneNumber"]?.ToString()!,
                 RoleInCompany = r["RoleInCompany"]?.ToString() ?? "",
                 IsLinked = Convert.ToBoolean(r["IsLinked"]),
                 ProvisionStatus = CompanyResponseDto.StatusFrom(
@@ -1187,7 +1187,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 ProjectId = Convert.ToInt32(r["ProjectId"]),
                 CompanyName = r["CompanyName"]?.ToString() ?? "",
                 RoleInCompany = r["RoleInCompany"]?.ToString() ?? "",
-                Token = Guid.Parse(r["Token"]?.ToString()),
+                Token = Guid.Parse(r["Token"]?.ToString()!),
                 ExpiresAt = Convert.ToDateTime(r["ExpiresAt"]),
                 InvitedByName = r["InvitedByName"]?.ToString() ?? "System"
             }).ToList();
@@ -1214,7 +1214,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             {
                 Exists = true,
                 UserId = Convert.ToInt32(row["UserId"]),
-                FullName = row["FullName"]?.ToString()
+                FullName = row["FullName"]?.ToString()!
             }, "User found");
         }
 
@@ -1375,8 +1375,8 @@ namespace EncryptzBL.Infrastructure.User.Modules
                     FullName = row["FullName"]?.ToString() ?? "",
                     Email = row["Email"]?.ToString() ?? "",
                     MobileNumber = row["MobileNumber"]?.ToString() ?? "",
-                    Address = row["Address"]?.ToString(),
-                    City = row["City"]?.ToString()
+                    Address = row["Address"]?.ToString()!,
+                    City = row["City"]?.ToString()!
                 };
             }
 
@@ -1409,7 +1409,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             if (string.IsNullOrEmpty(jwtKey))
                 throw new Exception("JWT Key not configured in appsettings.json");
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!));
 
             var claims = new[]
             {
@@ -1437,7 +1437,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
             if (string.IsNullOrEmpty(jwtKey))
                 throw new Exception("JWT Key not configured");
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!));
 
             var claims = new List<Claim>
             {
@@ -1468,7 +1468,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
         private string GenerateCustomerJwtToken(int customerPortalId, string email, string fullName)
         {
             var jwtKey = _config["Jwt:Key"];
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!));
 
             var claims = new[]
             {
@@ -1656,7 +1656,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
 
         #region Join Requests
 
-        public async Task<ApiResponse<JoinRequestDto>> CreateJoinRequest(int userId, int companyId, string requestedRole, string remarks = null)
+        public async Task<ApiResponse<JoinRequestDto>> CreateJoinRequest(int userId, int companyId, string requestedRole, string? remarks = null)
         {
             var parameters = new[]
             {
@@ -1709,7 +1709,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 UserEmail = r["UserEmail"]?.ToString() ?? "",
                 MobileNumber = r["MobileNumber"]?.ToString() ?? "",
                 RequestedRole = r["RequestedRole"]?.ToString() ?? "",
-                Remarks = r["Remarks"]?.ToString(),
+                Remarks = r["Remarks"]?.ToString()!,
                 RequestedAt = Convert.ToDateTime(r["RequestedAt"]),
                 Status = r["Status"]?.ToString() ?? ""
             }).ToList();
@@ -1743,7 +1743,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                            : ApiResponse<bool>.Fail(row["Message"]?.ToString());
         }
 
-        public async Task<ApiResponse<bool>> RejectJoinRequest(int requestId, int companyId, int reviewedBy, string reason = null)
+        public async Task<ApiResponse<bool>> RejectJoinRequest(int requestId, int companyId, int reviewedBy, string? reason = null)
         {
             var parameters = new[]
             {
@@ -1780,7 +1780,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 CompanyId = Convert.ToInt32(r["CompanyId"]),
                 CompanyName = r["CompanyName"]?.ToString() ?? "",
                 CompanyCode = r["CompanyCode"]?.ToString() ?? "",
-                City = r["City"]?.ToString(),
+                City = r["City"]?.ToString()!,
                 UserStatus = r["UserStatus"]?.ToString() ?? "Available"
             }).ToList();
 
@@ -1813,7 +1813,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
                 CompanyId = Convert.ToInt32(r["CompanyId"]),
                 CompanyName = r["CompanyName"]?.ToString() ?? "",
                 RequestedRole = r["RequestedRole"]?.ToString() ?? "",
-                Remarks = r["Remarks"]?.ToString(),
+                Remarks = r["Remarks"]?.ToString()!,
                 RequestedAt = Convert.ToDateTime(r["RequestedAt"]),
                 Status = r["Status"]?.ToString() ?? ""
             }).ToList();

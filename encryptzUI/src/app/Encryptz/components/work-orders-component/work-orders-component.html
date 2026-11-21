@@ -290,7 +290,7 @@
 
 <div class="customer-section">
   <div class="customer-avatar customer-avatar-initials">
-    {{ wo.customerName?.charAt(0) || 'C' }}
+    {{ $any(wo.customerName)?.charAt(0) || 'C' }}
   </div>
 
   <div class="customer-details">

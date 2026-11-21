@@ -34,7 +34,7 @@ namespace EncryptzBL.DTO_s
         public int UserId { get; set; }
         public int? technicianId { get; set; } 
         public string mobileNumber { get; set; } = string.Empty;
-        public string Email { get; set; }
+        public string Email { get; set; } = null!;
         public List<MenuDto> Menus { get; set; } = new();
 
         // Scope currently baked into the token (Company -> Module -> Branch).
@@ -510,9 +510,9 @@ namespace EncryptzBL.DTO_s
     public class TechnicianDto
     {
         public int TechnicianId { get; set; }    // ← maps to UserId AS TechnicianId
-        public string FullName { get; set; }
+        public string FullName { get; set; } = null!;
         public string? Email { get; set; }
-        public string MobileNumber { get; set; }
+        public string MobileNumber { get; set; } = null!;
         public string? Specialization { get; set; }
         public bool IsAvailable { get; set; }
     }
@@ -763,14 +763,14 @@ namespace EncryptzBL.DTO_s
     public class ApiResponse
     {
         public bool Success { get; set; }
-        public string Message { get; set; }
+        public string Message { get; set; } = null!;
 
         public ApiResponse() { }
 
-        public ApiResponse(bool success, string message)
+        public ApiResponse(bool success, string? message)
         {
             Success = success;
-            Message = message;
+            Message = message!;
         }
     }
 
@@ -792,29 +792,29 @@ namespace EncryptzBL.DTO_s
     public class RecentComplaint
     {
         public int ComplaintId { get; set; }
-        public string ComplaintNo { get; set; }
-        public string Subject { get; set; }
+        public string ComplaintNo { get; set; } = null!;
+        public string Subject { get; set; } = null!;
         public DateTime CreatedDate { get; set; }
         public int StatusId { get; set; }
         public int? PriorityId { get; set; }
-        public string CustomerName { get; set; }
-        public string TechnicianName { get; set; }
+        public string CustomerName { get; set; } = null!;
+        public string TechnicianName { get; set; } = null!;
     }
 
     public class SLABreachItem
     {
-        public string ComplaintNo { get; set; }
-        public string Subject { get; set; }
+        public string ComplaintNo { get; set; } = null!;
+        public string Subject { get; set; } = null!;
         public DateTime SLADeadline { get; set; }
         public int HoursOverdue { get; set; }
-        public string CustomerName { get; set; }
+        public string CustomerName { get; set; } = null!;
     }
 
     public class DashboardResponse
     {
-        public DashboardStats Stats { get; set; }
-        public List<RecentComplaint> RecentComplaints { get; set; }
-        public List<SLABreachItem> SLABreaches { get; set; }
+        public DashboardStats Stats { get; set; } = null!;
+        public List<RecentComplaint> RecentComplaints { get; set; } = null!;
+        public List<SLABreachItem> SLABreaches { get; set; } = null!;
     }
 
     public class ChartDataPoint
@@ -831,23 +831,23 @@ namespace EncryptzBL.DTO_s
 
     public class DashboardChartData
     {
-        public List<ChartDataPoint> ComplaintsByDate { get; set; }
-        public List<StatusCount> ComplaintsByStatus { get; set; }
-        public List<StatusCount> ComplaintsByPriority { get; set; }
+        public List<ChartDataPoint> ComplaintsByDate { get; set; } = null!;
+        public List<StatusCount> ComplaintsByStatus { get; set; } = null!;
+        public List<StatusCount> ComplaintsByPriority { get; set; } = null!;
     }
 
 
     public class TechnicianListItem
     {
         public int TechnicianId { get; set; }           // ✅ maps to "UserId AS TechnicianId"
-        public string FullName { get; set; }
-        public string Email { get; set; }
-        public string MobileNumber { get; set; }        // ✅ maps to "MobileNumber"
-        public string Specialization { get; set; }
+        public string FullName { get; set; } = null!;
+        public string Email { get; set; } = null!;
+        public string MobileNumber { get; set; } = null!;        // ✅ maps to "MobileNumber"
+        public string Specialization { get; set; } = null!;
         public int AvailabilityStatus { get; set; }
         public bool IsActive { get; set; }
         public int ProfileId { get; set; }
-        public string EmployeeCode { get; set; }
+        public string EmployeeCode { get; set; } = null!;
         public int ExperienceYears { get; set; }
         public decimal Rating { get; set; }
         public int TotalCompletedJobs { get; set; }
@@ -863,21 +863,21 @@ namespace EncryptzBL.DTO_s
 
     public class TechnicianDetail : TechnicianListItem
     {
-        public string ProfileImage { get; set; }
-        public string CertificationDetails { get; set; }
+        public string ProfileImage { get; set; } = null!;
+        public string CertificationDetails { get; set; } = null!;
         public int TotalAssigned { get; set; }
         public int TotalResolved { get; set; }
         public double? AvgResolutionHours { get; set; }
-        public List<dynamic> Skills { get; set; }
-        public List<ScheduleListItem> RecentSchedules { get; set; }
+        public List<dynamic> Skills { get; set; } = null!;
+        public List<ScheduleListItem> RecentSchedules { get; set; } = null!;
     }
 
     public class TechnicianCreateDto
     {
-        public string FullName { get; set; }
+        public string FullName { get; set; } = null!;
         public string? Email { get; set; }
-        public string MobileNumber { get; set; }
-        public string Specialization { get; set; }
+        public string MobileNumber { get; set; } = null!;
+        public string Specialization { get; set; } = null!;
         public int ExperienceYears { get; set; }
         public string? CertificationDetails { get; set; }
         public int MaxDailyAssignments { get; set; } = 5;
@@ -900,9 +900,9 @@ namespace EncryptzBL.DTO_s
     public class TechnicianUpdateDto
     {
         public int ProfileId { get; set; }
-        public string Specialization { get; set; }
+        public string Specialization { get; set; } = null!;
         public int ExperienceYears { get; set; }
-        public string CertificationDetails { get; set; }
+        public string CertificationDetails { get; set; } = null!;
         public int MaxDailyAssignments { get; set; }
         public int AvailabilityStatus { get; set; }
     }
@@ -956,26 +956,26 @@ namespace EncryptzBL.DTO_s
     public class WarrantyReturnListItem
     {
         public int ReturnId { get; set; }
-        public string ReturnNo { get; set; }
+        public string ReturnNo { get; set; } = null!;
         public int ComplaintId { get; set; }
-        public string ComplaintNo { get; set; }
-        public string ComplaintSubject { get; set; }
+        public string ComplaintNo { get; set; } = null!;
+        public string ComplaintSubject { get; set; } = null!;
         public int CustomerId { get; set; }
-        public string CustomerName { get; set; }
-        public string CustomerPhone { get; set; }
+        public string CustomerName { get; set; } = null!;
+        public string CustomerPhone { get; set; } = null!;
         public int ProductId { get; set; }
-        public string ProductSerialNo { get; set; }
+        public string ProductSerialNo { get; set; } = null!;
         public DateTime? WarrantyStartDate { get; set; }
         public DateTime? WarrantyEndDate { get; set; }
-        public string ReturnReason { get; set; }
+        public string ReturnReason { get; set; } = null!;
         public int ReturnType { get; set; }
         public int StatusId { get; set; }
         public int? ApprovedBy { get; set; }
         public DateTime? ApprovedDate { get; set; }
         public DateTime? PickupDate { get; set; }
-        public string PickupAddress { get; set; }
-        public string TrackingNumber { get; set; }
-        public string ResolutionNotes { get; set; }
+        public string PickupAddress { get; set; } = null!;
+        public string TrackingNumber { get; set; } = null!;
+        public string ResolutionNotes { get; set; } = null!;
         public decimal? RefundAmount { get; set; }
         public DateTime CreatedDate { get; set; }
         public int TotalCount { get; set; }
@@ -995,7 +995,7 @@ namespace EncryptzBL.DTO_s
         public string? ProductSerialNo { get; set; }
         public DateTime? WarrantyStartDate { get; set; }
         public DateTime? WarrantyEndDate { get; set; }
-        public string ReturnReason { get; set; }
+        public string ReturnReason { get; set; } = null!;
         public int ReturnType { get; set; }
         public string? PickupAddress { get; set; }
     }
@@ -1004,14 +1004,14 @@ namespace EncryptzBL.DTO_s
     {
         public int ReturnId { get; set; }
         public int StatusId { get; set; }
-        public string ResolutionNotes { get; set; }
-        public string TrackingNumber { get; set; }
+        public string ResolutionNotes { get; set; } = null!;
+        public string TrackingNumber { get; set; } = null!;
         public decimal? RefundAmount { get; set; }
     }
 
     public class WarrantyReturnFilterDto
     {
-        public string SearchTerm { get; set; }
+        public string SearchTerm { get; set; } = null!;
         public int? StatusFilter { get; set; }
         public int? ReturnTypeFilter { get; set; }
         public int PageNumber { get; set; } = 1;
@@ -1024,12 +1024,12 @@ namespace EncryptzBL.DTO_s
     {
         public int ScheduleId { get; set; }
         public int TechnicianId { get; set; }
-        public string TechnicianName { get; set; }
-        public string EmployeeCode { get; set; }
-        public string Specialization { get; set; }
+        public string TechnicianName { get; set; } = null!;
+        public string EmployeeCode { get; set; } = null!;
+        public string Specialization { get; set; } = null!;
         public int? ComplaintId { get; set; }
-        public string ComplaintNo { get; set; }
-        public string ComplaintSubject { get; set; }
+        public string ComplaintNo { get; set; } = null!;
+        public string ComplaintSubject { get; set; } = null!;
         public int? PriorityId { get; set; }
         public DateTime ScheduleDate { get; set; }
         public TimeSpan StartTime { get; set; }
@@ -1037,12 +1037,12 @@ namespace EncryptzBL.DTO_s
         public int TaskType { get; set; }
         public int PriorityLevel { get; set; }
         public int StatusId { get; set; }
-        public string CustomerAddress { get; set; }
-        public string CustomerName { get; set; }
-        public string CustomerPhone { get; set; }
+        public string CustomerAddress { get; set; } = null!;
+        public string CustomerName { get; set; } = null!;
+        public string CustomerPhone { get; set; } = null!;
         public int EstimatedDuration { get; set; }
         public int? ActualDuration { get; set; }
-        public string Notes { get; set; }
+        public string Notes { get; set; } = null!;
     }
 
     public class ScheduleConflictItem
@@ -1051,8 +1051,8 @@ namespace EncryptzBL.DTO_s
         public int Schedule1Id { get; set; }
         public int Schedule2Id { get; set; }
         public int TechnicianId { get; set; }
-        public string TechnicianName { get; set; }
-        public string EmployeeCode { get; set; }
+        public string TechnicianName { get; set; } = null!;
+        public string EmployeeCode { get; set; } = null!;
         public DateTime ConflictDate { get; set; }
         public int ConflictType { get; set; }
         public int Severity { get; set; }
@@ -1063,8 +1063,8 @@ namespace EncryptzBL.DTO_s
         public TimeSpan? Schedule2Start { get; set; }
         public TimeSpan? Schedule2End { get; set; }
         public int Schedule2Type { get; set; }
-        public string Complaint1No { get; set; }
-        public string Complaint2No { get; set; }
+        public string Complaint1No { get; set; } = null!;
+        public string Complaint2No { get; set; } = null!;
         public bool IsResolved { get; set; }
     }
 
@@ -1084,11 +1084,11 @@ namespace EncryptzBL.DTO_s
         public TimeSpan EndTime { get; set; }
         public int TaskType { get; set; } = 1;
         public int PriorityLevel { get; set; } = 2;
-        public string CustomerAddress { get; set; }
+        public string CustomerAddress { get; set; } = null!;
         public decimal? CustomerLatitude { get; set; }
         public decimal? CustomerLongitude { get; set; }
         public int EstimatedDuration { get; set; } = 60;
-        public string Notes { get; set; }
+        public string Notes { get; set; } = null!;
     }
 
     public class ScheduleUpdateDto
@@ -1100,13 +1100,13 @@ namespace EncryptzBL.DTO_s
         public int TaskType { get; set; }
         public int PriorityLevel { get; set; }
         public int StatusId { get; set; }
-        public string Notes { get; set; }
+        public string Notes { get; set; } = null!;
     }
 
     public class ConflictResolveDto
     {
         public int ConflictId { get; set; }
-        public string Resolution { get; set; }
+        public string Resolution { get; set; } = null!;
     }
 
 
@@ -1114,14 +1114,14 @@ namespace EncryptzBL.DTO_s
     public class TechnicianLivePosition
     {
         public int TechnicianId { get; set; }
-        public string FullName { get; set; }
-        public string EmployeeCode { get; set; }
-        public string Specialization { get; set; }
+        public string FullName { get; set; } = null!;
+        public string EmployeeCode { get; set; } = null!;
+        public string Specialization { get; set; } = null!;
         public decimal? CurrentLatitude { get; set; }
         public decimal? CurrentLongitude { get; set; }
         public DateTime? LastLocationUpdate { get; set; }
         public int AvailabilityStatus { get; set; }
-        public string CurrentComplaint { get; set; }
+        public string CurrentComplaint { get; set; } = null!;
     }
 
     public class TrackingLogEntry
@@ -1339,33 +1339,33 @@ namespace EncryptzBL.DTO_s
     public class CustomerComplaint
     {
         public int ComplaintId { get; set; }
-        public string ComplaintNo { get; set; }
-        public string Subject { get; set; }
-        public string Description { get; set; }
+        public string ComplaintNo { get; set; } = null!;
+        public string Subject { get; set; } = null!;
+        public string Description { get; set; } = null!;
         public int StatusId { get; set; }
         public int? PriorityId { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? ResolvedDate { get; set; }
         public DateTime? ClosedDate { get; set; }
         public bool IsWarranty { get; set; }
-        public string TechnicianName { get; set; }
-        public string TechnicianPhone { get; set; }
+        public string TechnicianName { get; set; } = null!;
+        public string TechnicianPhone { get; set; } = null!;
         public int TotalCount { get; set; }
     }
 
     public class ComplaintTrackingDetail
     {
         public int ComplaintId { get; set; }
-        public string ComplaintNo { get; set; }
-        public string Subject { get; set; }
-        public string Description { get; set; }
+        public string ComplaintNo { get; set; } = null!;
+        public string Subject { get; set; } = null!;
+        public string Description { get; set; } = null!;
         public int StatusId { get; set; }
-        public string CustomerName { get; set; }
-        public string TechnicianName { get; set; }
+        public string CustomerName { get; set; } = null!;
+        public string TechnicianName { get; set; } = null!;
         public DateTime CreatedDate { get; set; }
         public DateTime? AssignedDate { get; set; }
         public DateTime? ResolvedDate { get; set; }
-        public List<StatusHistoryItem> StatusHistory { get; set; }
+        public List<StatusHistoryItem> StatusHistory { get; set; } = null!;
     }
 
     public class StatusHistoryItem
@@ -1373,9 +1373,9 @@ namespace EncryptzBL.DTO_s
         public int HistoryId { get; set; }
         public int OldStatusId { get; set; }
         public int NewStatusId { get; set; }
-        public string ChangedByName { get; set; }
+        public string ChangedByName { get; set; } = null!;
         public DateTime ChangedDate { get; set; }
-        public string Remarks { get; set; }
+        public string Remarks { get; set; } = null!;
     }
 
 
@@ -1384,10 +1384,10 @@ namespace EncryptzBL.DTO_s
     {
         public int? ProductId { get; set; }
         public int RequestType { get; set; }
-        public string Subject { get; set; }
-        public string Description { get; set; }
+        public string Subject { get; set; } = null!;
+        public string Description { get; set; } = null!;
         public DateTime? PreferredDate { get; set; }
-        public string PreferredTimeSlot { get; set; }
+        public string PreferredTimeSlot { get; set; } = null!;
     }
 
 
@@ -1416,9 +1416,9 @@ namespace EncryptzBL.DTO_s
     public class TechPerformanceReport
     {
         public int UserId { get; set; }
-        public string FullName { get; set; }
-        public string EmployeeCode { get; set; }
-        public string Specialization { get; set; }
+        public string FullName { get; set; } = null!;
+        public string EmployeeCode { get; set; } = null!;
+        public string Specialization { get; set; } = null!;
         public int TotalAssigned { get; set; }
         public int Resolved { get; set; }
         public int Closed { get; set; }
@@ -1442,11 +1442,11 @@ namespace EncryptzBL.DTO_s
     public class SystemSetting
     {
         public int SettingId { get; set; }
-        public string SettingKey { get; set; }
-        public string SettingValue { get; set; }
-        public string SettingGroup { get; set; }
-        public string DataType { get; set; }
-        public string Description { get; set; }
+        public string SettingKey { get; set; } = null!;
+        public string SettingValue { get; set; } = null!;
+        public string SettingGroup { get; set; } = null!;
+        public string DataType { get; set; } = null!;
+        public string Description { get; set; } = null!;
         public bool IsEditable { get; set; }
         public DateTime ModifiedDate { get; set; }
     }
@@ -1456,12 +1456,12 @@ namespace EncryptzBL.DTO_s
     public class SettingUpdateDto
     {
         public int SettingId { get; set; }
-        public string SettingValue { get; set; }
+        public string SettingValue { get; set; } = null!;
     }
 
     public class BulkSettingsUpdateDto
     {
-        public List<SettingUpdateDto> Settings { get; set; }
+        public List<SettingUpdateDto> Settings { get; set; } = null!;
     }
 
 
@@ -1469,20 +1469,20 @@ namespace EncryptzBL.DTO_s
     public class ApiResponse<T>
     {
         public bool Success { get; set; }
-        public string Message { get; set; }
-        public T Data { get; set; }
+        public string Message { get; set; } = null!;
+        public T Data { get; set; } = default!;
         public int? TotalCount { get; set; }
 
-        public static ApiResponse<T> Ok(T data, string message = "Success", int? totalCount = null)
-            => new() { Success = true, Message = message, Data = data, TotalCount = totalCount };
+        public static ApiResponse<T> Ok(T? data, string? message = "Success", int? totalCount = null)
+            => new() { Success = true, Message = message!, Data = data!, TotalCount = totalCount };
 
-        public static ApiResponse<T> Fail(string message)
-            => new() { Success = false, Message = message };
+        public static ApiResponse<T> Fail(string? message)
+            => new() { Success = false, Message = message! };
     }
 
     public class PagedResponse<T>
     {
-        public List<T> Items { get; set; }
+        public List<T> Items { get; set; } = null!;
         public int TotalCount { get; set; }
         public int PageNumber { get; set; }
         public int PageSize { get; set; }
@@ -1507,12 +1507,12 @@ namespace EncryptzBL.DTO_s
     public class ComplaintAutoCompleteDto
     {
         public int ComplaintId { get; set; }
-        public string ComplaintNumber { get; set; }
-        public string Subject { get; set; }
-        public string CustomerName { get; set; }
-        public string CustomerPhone { get; set; }
-        public string CustomerPlace { get; set; }
-        public string Priority { get; set; }
+        public string ComplaintNumber { get; set; } = null!;
+        public string Subject { get; set; } = null!;
+        public string CustomerName { get; set; } = null!;
+        public string CustomerPhone { get; set; } = null!;
+        public string CustomerPlace { get; set; } = null!;
+        public string Priority { get; set; } = null!;
         public int StatusId { get; set; }
     }
 
@@ -1520,14 +1520,14 @@ namespace EncryptzBL.DTO_s
     {
         public int AssignmentId { get; set; }
         public int ComplaintId { get; set; }
-        public string ComplaintNumber { get; set; }
-        public string ComplaintSubject { get; set; }
-        public string TechnicianName { get; set; }
-        public string AssignmentRole { get; set; }
-        public string Status { get; set; }
+        public string ComplaintNumber { get; set; } = null!;
+        public string ComplaintSubject { get; set; } = null!;
+        public string TechnicianName { get; set; } = null!;
+        public string AssignmentRole { get; set; } = null!;
+        public string Status { get; set; } = null!;
         public DateTime AssignedAt { get; set; }
-        public string CustomerName { get; set; }
-        public string CustomerPhone { get; set; }
+        public string CustomerName { get; set; } = null!;
+        public string CustomerPhone { get; set; } = null!;
         public string? CustomerPlace { get; set; }
         public string? CustomerAddress { get; set; }
         public string? LocationName { get; set; }
@@ -1542,36 +1542,36 @@ namespace EncryptzBL.DTO_s
     public class ProductMasterDto
     {
         public int ProductMasterId { get; set; }
-        public string ProductName { get; set; }
-        public string Brand { get; set; }
-        public string Category { get; set; }
-        public string Model { get; set; }
-        public string Description { get; set; }
+        public string ProductName { get; set; } = null!;
+        public string Brand { get; set; } = null!;
+        public string Category { get; set; } = null!;
+        public string Model { get; set; } = null!;
+        public string Description { get; set; } = null!;
         public int WarrantyMonths { get; set; }
     }
 
     public class CustomerComplaintListDto
     {
         public int ComplaintId { get; set; }
-        public string ComplaintNumber { get; set; }
-        public string Subject { get; set; }
-        public string Description { get; set; }
-        public string Priority { get; set; }
+        public string ComplaintNumber { get; set; } = null!;
+        public string Subject { get; set; } = null!;
+        public string Description { get; set; } = null!;
+        public string Priority { get; set; } = null!;
         public int StatusId { get; set; }
         public DateTime? SLADeadline { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        public string ProductName { get; set; }
-        public string SerialNumber { get; set; }
-        public string Brand { get; set; }
+        public string ProductName { get; set; } = null!;
+        public string SerialNumber { get; set; } = null!;
+        public string Brand { get; set; } = null!;
         public string? NatureOfJob { get; set; }
         public bool IsWarranty { get; set; }
         public DateTime? WarrantyExpiryDate { get; set; }
         public string? WarrantyStatus { get; set; }
-        public string TechnicianName { get; set; }
-        public string TechnicianPhone { get; set; }
-        public string AssignmentRole { get; set; }
-        public string AssignmentStatus { get; set; }
+        public string TechnicianName { get; set; } = null!;
+        public string TechnicianPhone { get; set; } = null!;
+        public string AssignmentRole { get; set; } = null!;
+        public string AssignmentStatus { get; set; } = null!;
         public string StatusName { get; set; } = string.Empty;
         public string? StatusColor { get; set; }
         public DateTime? AssignedAt { get; set; }
@@ -1589,26 +1589,26 @@ namespace EncryptzBL.DTO_s
     public class ComplaintDetailDto
     {
         public int ComplaintId { get; set; }
-        public string ComplaintNumber { get; set; }
-        public string Subject { get; set; }
-        public string Description { get; set; }
-        public string Priority { get; set; }
+        public string ComplaintNumber { get; set; } = null!;
+        public string Subject { get; set; } = null!;
+        public string Description { get; set; } = null!;
+        public string Priority { get; set; } = null!;
         public int StatusId { get; set; }
         public DateTime? SLADeadline { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsCustomerConfirmed { get; set; }
-        public string StatusName { get; set; }
-        public string StatusColor { get; set; }
-        public string ProductName { get; set; }
-        public string SerialNumber { get; set; }
-        public string Brand { get; set; }
+        public string StatusName { get; set; } = null!;
+        public string StatusColor { get; set; } = null!;
+        public string ProductName { get; set; } = null!;
+        public string SerialNumber { get; set; } = null!;
+        public string Brand { get; set; } = null!;
         public string? NatureOfJob { get; set; }
         public bool IsWarranty { get; set; }
         public DateTime? WarrantyExpiryDate { get; set; }
         public string? WarrantyStatus { get; set; }
-        public string CustomerName { get; set; }
-        public string MobileNumber { get; set; }
-        public string City { get; set; }
+        public string CustomerName { get; set; } = null!;
+        public string MobileNumber { get; set; } = null!;
+        public string City { get; set; } = null!;
         public List<AssignedTechDto> Technicians { get; set; } = new();
         public List<TimelineItemDto> Timeline { get; set; } = new();
     }
@@ -1616,13 +1616,13 @@ namespace EncryptzBL.DTO_s
     public class AssignedTechDto
     {
         public int AssignmentId { get; set; }
-        public string AssignmentRole { get; set; }
-        public string Status { get; set; }
+        public string AssignmentRole { get; set; } = null!;
+        public string Status { get; set; } = null!;
         public DateTime AssignedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
-        public string TechnicianName { get; set; }
-        public string TechnicianPhone { get; set; }
-        public string Specialization { get; set; }
+        public string TechnicianName { get; set; } = null!;
+        public string TechnicianPhone { get; set; } = null!;
+        public string Specialization { get; set; } = null!;
         public decimal Rating { get; set; }
     }
 
@@ -1630,33 +1630,33 @@ namespace EncryptzBL.DTO_s
     {
         // status-change shape read by the customer tracking screen
         public int TimelineId { get; set; }
-        public string StatusName { get; set; }
-        public string StatusColor { get; set; }
+        public string StatusName { get; set; } = null!;
+        public string StatusColor { get; set; } = null!;
         public DateTime? ActionAt { get; set; }
-        public string ActionByName { get; set; }
+        public string ActionByName { get; set; } = null!;
 
         public int AuditId { get; set; }
-        public string Action { get; set; }
-        public string Remarks { get; set; }
+        public string Action { get; set; } = null!;
+        public string Remarks { get; set; } = null!;
         public DateTime ChangedAt { get; set; }
-        public string ChangedByName { get; set; }
-        public string TechnicianName { get; set; }
-        public string NewRole { get; set; }
+        public string ChangedByName { get; set; } = null!;
+        public string TechnicianName { get; set; } = null!;
+        public string NewRole { get; set; } = null!;
     }
 
     public class ComplaintReplyDto
     {
-        public string Message { get; set; }
+        public string Message { get; set; } = null!;
     }
     // DTOs/CompanyDtos.cs
    
         public class SelfRegisterDto
         {
-            public string FullName { get; set; }
-            public string Email { get; set; }
-            public string MobileNumber { get; set; }
-            public string Password { get; set; }
-            public string AadhaarNumber { get; set; }
+            public string FullName { get; set; } = null!;
+            public string Email { get; set; } = null!;
+            public string MobileNumber { get; set; } = null!;
+            public string Password { get; set; } = null!;
+            public string AadhaarNumber { get; set; } = null!;
             public string? ReferralToken { get; set; }
             public string? InviterKey { get; set; }
         }
@@ -1664,12 +1664,12 @@ namespace EncryptzBL.DTO_s
         public class CompanyResponseDto
         {
             public int CompanyId { get; set; }
-            public string CompanyName { get; set; }
-            public string CompanyCode { get; set; }
-            public string Address { get; set; }
-            public string City { get; set; }
-            public string PhoneNumber { get; set; }
-            public string RoleInCompany { get; set; }
+            public string CompanyName { get; set; } = null!;
+            public string CompanyCode { get; set; } = null!;
+            public string Address { get; set; } = null!;
+            public string City { get; set; } = null!;
+            public string PhoneNumber { get; set; } = null!;
+            public string RoleInCompany { get; set; } = null!;
             public bool IsLinked { get; set; }
 
             /// <summary>State of the company's database: None | Provisioning | Ready | Failed.</summary>
@@ -1693,16 +1693,16 @@ namespace EncryptzBL.DTO_s
 
     public class SelectCompanyResponseDto
         {
-            public string Token { get; set; }
-            public string Role { get; set; }
-            public string RedirectUrl { get; set; }
+            public string Token { get; set; } = null!;
+            public string Role { get; set; } = null!;
+            public string RedirectUrl { get; set; } = null!;
         }
 
         public class InviteUserRequestDto
         {
-            public string Email { get; set; }
-            public string RoleInCompany { get; set; }
-        public string Remarks { get; set; }
+            public string Email { get; set; } = null!;
+            public string RoleInCompany { get; set; } = null!;
+        public string Remarks { get; set; } = null!;
          public int projectID { get; set; }
     }
     public class AcceptInvitationRequestDto
@@ -1715,12 +1715,12 @@ namespace EncryptzBL.DTO_s
     public class CompanyUserResponseDto
     {
         public int UserId { get; set; }
-        public string FullName { get; set; }
-        public string Email { get; set; }
-        public string MobileNumber { get; set; }
-        public string RoleInCompany { get; set; }
+        public string FullName { get; set; } = null!;
+        public string Email { get; set; } = null!;
+        public string MobileNumber { get; set; } = null!;
+        public string RoleInCompany { get; set; } = null!;
         public DateTime AssignedAt { get; set; }
-        public string AssignedByName { get; set; }
+        public string AssignedByName { get; set; } = null!;
     }
     public class ExistingUserCompanyDto
     {
@@ -1754,140 +1754,140 @@ namespace EncryptzBL.DTO_s
             public int InvitationId { get; set; }
         public int CompanyId { get; set; }
         public int ProjectId { get; set; }
-        public string CompanyName { get; set; }
-            public string RoleInCompany { get; set; }
+        public string CompanyName { get; set; } = null!;
+            public string RoleInCompany { get; set; } = null!;
             public Guid Token { get; set; }
             public DateTime ExpiresAt { get; set; }
-            public string InvitedByName { get; set; }
+            public string InvitedByName { get; set; } = null!;
         }
 
         public class CheckUserExistsResponseDto
         {
             public bool Exists { get; set; }
             public int? UserId { get; set; }
-            public string FullName { get; set; }
+            public string FullName { get; set; } = null!;
         }
 
         public class CustomerRegisterDto
         {
-            public string FullName { get; set; }
-            public string Email { get; set; }
-            public string MobileNumber { get; set; }
-            public string Password { get; set; }
-            public string Address { get; set; }
-            public string City { get; set; }
+            public string FullName { get; set; } = null!;
+            public string Email { get; set; } = null!;
+            public string MobileNumber { get; set; } = null!;
+            public string Password { get; set; } = null!;
+            public string Address { get; set; } = null!;
+            public string City { get; set; } = null!;
         }
     public class CustomerLoginRequestDto
     {
-        public string Email { get; set; }
-        public string Password { get; set; }
+        public string Email { get; set; } = null!;
+        public string Password { get; set; } = null!;
     }
     public class CustomerLoginResponseDto
         {
             public int CustomerPortalId { get; set; }
-            public string FullName { get; set; }
-            public string Email { get; set; }
-            public string Token { get; set; }
-            public string RedirectUrl { get; set; }
+            public string FullName { get; set; } = null!;
+            public string Email { get; set; } = null!;
+            public string Token { get; set; } = null!;
+            public string RedirectUrl { get; set; } = null!;
         }
 
         public class CustomerDashboardDto
         {
-            public CustomerProfileDto Profile { get; set; }
-            public List<CustomerMenuDto> Menus { get; set; }
+            public CustomerProfileDto Profile { get; set; } = null!;
+            public List<CustomerMenuDto> Menus { get; set; } = null!;
         }
 
         public class CustomerProfileDto
         {
             public int CustomerPortalId { get; set; }
-            public string FullName { get; set; }
-            public string Email { get; set; }
-            public string MobileNumber { get; set; }
-            public string Address { get; set; }
-            public string City { get; set; }
+            public string FullName { get; set; } = null!;
+            public string Email { get; set; } = null!;
+            public string MobileNumber { get; set; } = null!;
+            public string Address { get; set; } = null!;
+            public string City { get; set; } = null!;
         }
 
         public class CustomerMenuDto
         {
             public int MenuId { get; set; }
-            public string MenuName { get; set; }
-            public string MenuPath { get; set; }
-            public string Icon { get; set; }
+            public string MenuName { get; set; } = null!;
+            public string MenuPath { get; set; } = null!;
+            public string Icon { get; set; } = null!;
         }
 
         // Extended LoginResponseDto to include companies
         public class ExtendedLoginResponseDto : LoginResponseDto
         {
-            public List<CompanyResponseDto> Companies { get; set; }
+            public List<CompanyResponseDto> Companies { get; set; } = null!;
     }
     public class CreateCompanyDto
     {
-        public string CompanyName { get; set; }
-        public string CompanyCode { get; set; }
-        public string Address { get; set; }
-        public string City { get; set; }
-        public string State { get; set; }
-        public string PinCode { get; set; }
-        public string PhoneNumber { get; set; }
-        public string Email { get; set; }
+        public string CompanyName { get; set; } = null!;
+        public string CompanyCode { get; set; } = null!;
+        public string Address { get; set; } = null!;
+        public string City { get; set; } = null!;
+        public string State { get; set; } = null!;
+        public string PinCode { get; set; } = null!;
+        public string PhoneNumber { get; set; } = null!;
+        public string Email { get; set; } = null!;
     }
     public class CompanyUserDetailDto
     {
         public int CompanyUserId { get; set; }
         public int UserId { get; set; }
-        public string FullName { get; set; }
-        public string Email { get; set; }
-        public string MobileNumber { get; set; }
-        public string RoleInCompany { get; set; }
+        public string FullName { get; set; } = null!;
+        public string Email { get; set; } = null!;
+        public string MobileNumber { get; set; } = null!;
+        public string RoleInCompany { get; set; } = null!;
         public DateTime AssignedAt { get; set; }
-        public string AssignedBy { get; set; }
+        public string AssignedBy { get; set; } = null!;
         public bool IsActive { get; set; }
     }
 
     public class UpdateUserRoleDto
     {
         public int UserId { get; set; }
-        public string NewRole { get; set; }
+        public string NewRole { get; set; } = null!;
     }
 
     public class InvitationDetailDto
     {
         public int InvitationId { get; set; }
-        public string Email { get; set; }
-        public string RoleInCompany { get; set; }
-        public string Status { get; set; }
+        public string Email { get; set; } = null!;
+        public string RoleInCompany { get; set; } = null!;
+        public string Status { get; set; } = null!;
         public DateTime ExpiresAt { get; set; }
         public DateTime CreatedAt { get; set; }
-        public string CreatedByName { get; set; }
+        public string CreatedByName { get; set; } = null!;
     }
 
     public class JoinRequestDto
     {
         public int RequestId { get; set; }
         public int UserId { get; set; }
-        public string UserName { get; set; }
-        public string UserEmail { get; set; }
-        public string MobileNumber { get; set; }
-        public string RequestedRole { get; set; }
-        public string Remarks { get; set; }
+        public string UserName { get; set; } = null!;
+        public string UserEmail { get; set; } = null!;
+        public string MobileNumber { get; set; } = null!;
+        public string RequestedRole { get; set; } = null!;
+        public string Remarks { get; set; } = null!;
         public DateTime RequestedAt { get; set; }
-        public string Status { get; set; }
+        public string Status { get; set; } = null!;
     }
 
     public class CreateJoinRequestDto
     {
         public int CompanyId { get; set; }
-        public string RequestedRole { get; set; }
-        public string Remarks { get; set; }
+        public string RequestedRole { get; set; } = null!;
+        public string Remarks { get; set; } = null!;
     }
 
     public class CompanyInfoDto
     {
         public int CompanyId { get; set; }
-        public string CompanyName { get; set; }
-        public string CompanyCode { get; set; }
-        public string City { get; set; }
-        public string UserStatus { get; set; } // Member, Requested, Available
+        public string CompanyName { get; set; } = null!;
+        public string CompanyCode { get; set; } = null!;
+        public string City { get; set; } = null!;
+        public string UserStatus { get; set; } = null!; // Member, Requested, Available
     }
     // DTOs/CompanyManagementDtos.cs - ADD THESE
 
@@ -1899,90 +1899,90 @@ namespace EncryptzBL.DTO_s
         {
             public int RequestId { get; set; }
             public int CompanyId { get; set; }
-            public string CompanyName { get; set; }
-            public string RequestedRole { get; set; }
-            public string Remarks { get; set; }
+            public string CompanyName { get; set; } = null!;
+            public string RequestedRole { get; set; } = null!;
+            public string Remarks { get; set; } = null!;
             public DateTime RequestedAt { get; set; }
-            public string Status { get; set; }
+            public string Status { get; set; } = null!;
         }
 
         public class UpdateUserRoleDto
         {
-            public string NewRole { get; set; }
+            public string NewRole { get; set; } = null!;
         }
 
         public class InviteUserRequestDto
         {
-            public string Email { get; set; }
-            public string RoleInCompany { get; set; }
-            public string Remarks { get; set; }
+            public string Email { get; set; } = null!;
+            public string RoleInCompany { get; set; } = null!;
+            public string Remarks { get; set; } = null!;
         }
 
         public class CreateJoinRequestDto
         {
             public int CompanyId { get; set; }
-            public string RequestedRole { get; set; }
-            public string Remarks { get; set; }
+            public string RequestedRole { get; set; } = null!;
+            public string Remarks { get; set; } = null!;
         }
 
         public class CreateCompanyDto
         {
-            public string CompanyName { get; set; }
-            public string CompanyCode { get; set; }
-            public string Address { get; set; }
-            public string City { get; set; }
-            public string State { get; set; }
-            public string PinCode { get; set; }
-            public string PhoneNumber { get; set; }
-            public string Email { get; set; }
+            public string CompanyName { get; set; } = null!;
+            public string CompanyCode { get; set; } = null!;
+            public string Address { get; set; } = null!;
+            public string City { get; set; } = null!;
+            public string State { get; set; } = null!;
+            public string PinCode { get; set; } = null!;
+            public string PhoneNumber { get; set; } = null!;
+            public string Email { get; set; } = null!;
         }
         public class CustomerRegister_Dto
         {
-            public string FullName { get; set; }
-            public string Email { get; set; }
-            public string MobileNumber { get; set; }
-            public string PasswordHash { get; set; }
-            public string Address { get; set; }
-            public string City { get; set; }
-            public string State { get; set; }
-            public string PinCode { get; set; }
+            public string FullName { get; set; } = null!;
+            public string Email { get; set; } = null!;
+            public string MobileNumber { get; set; } = null!;
+            public string PasswordHash { get; set; } = null!;
+            public string Address { get; set; } = null!;
+            public string City { get; set; } = null!;
+            public string State { get; set; } = null!;
+            public string PinCode { get; set; } = null!;
             public int? CompanyId { get; set; }
         }
 
         public class CustomerLogin_Dto
         {
-            public string Email { get; set; }
-            public string Password { get; set; }
+            public string Email { get; set; } = null!;
+            public string Password { get; set; } = null!;
         }
 
         public class CustomerLoginResponse_Dto
         {
             public bool Success { get; set; }
-            public string Message { get; set; }
-            public Customer_DTO Customer { get; set; }
-            public List<CustomerMenu_Dto> Menus { get; set; }
-            public string Token { get; set; }
+            public string Message { get; set; } = null!;
+            public Customer_DTO Customer { get; set; } = null!;
+            public List<CustomerMenu_Dto> Menus { get; set; } = null!;
+            public string Token { get; set; } = null!;
         }
 
         public class Customer_DTO
         {
             public int UserId { get; set; }
             public int CustomerId { get; set; }
-            public string FullName { get; set; }
-            public string Email { get; set; }
-            public string MobileNumber { get; set; }
-            public string Address { get; set; }
-            public string City { get; set; }
-            public string State { get; set; }
-            public string PinCode { get; set; }
+            public string FullName { get; set; } = null!;
+            public string Email { get; set; } = null!;
+            public string MobileNumber { get; set; } = null!;
+            public string Address { get; set; } = null!;
+            public string City { get; set; } = null!;
+            public string State { get; set; } = null!;
+            public string PinCode { get; set; } = null!;
             public decimal? Latitude { get; set; }
             public decimal? Longitude { get; set; }
             public int RoleId { get; set; }
-            public string RoleName { get; set; }
+            public string RoleName { get; set; } = null!;
             public bool IsActive { get; set; }
             public int? CompanyId { get; set; }
             public DateTime CreatedAt { get; set; }
-            public string PasswordHash { get; set; }
+            public string PasswordHash { get; set; } = null!;
             public string? alternatePhone { get; set; }
             public string? landmark { get; set; }
         }
@@ -1990,9 +1990,9 @@ namespace EncryptzBL.DTO_s
         public class CustomerMenu_Dto
         {
             public int MenuId { get; set; }
-            public string MenuName { get; set; }
-            public string MenuPath { get; set; }
-            public string Icon { get; set; }
+            public string MenuName { get; set; } = null!;
+            public string MenuPath { get; set; } = null!;
+            public string Icon { get; set; } = null!;
             public int? ParentMenuId { get; set; }
             public int SortOrder { get; set; }
             public bool CanView { get; set; }
@@ -2003,12 +2003,12 @@ namespace EncryptzBL.DTO_s
 
         public class CustomerProfileUpdate_Dto
         {
-            public string FullName { get; set; }
-            public string Email { get; set; }
-            public string Address { get; set; }
-            public string City { get; set; }
-            public string State { get; set; }
-            public string PinCode { get; set; }
+            public string FullName { get; set; } = null!;
+            public string Email { get; set; } = null!;
+            public string Address { get; set; } = null!;
+            public string City { get; set; } = null!;
+            public string State { get; set; } = null!;
+            public string PinCode { get; set; } = null!;
             public decimal? Latitude { get; set; }
             public decimal? Longitude { get; set; }
             public string? alternatePhone { get; set; }
@@ -2027,32 +2027,32 @@ namespace EncryptzBL.DTO_s
 
         public class DashboardResponse_Dto
         {
-            public DashboardStats_Dto Stats { get; set; }
-            public List<RecentComplaint_Dto> RecentComplaints { get; set; }
+            public DashboardStats_Dto Stats { get; set; } = null!;
+            public List<RecentComplaint_Dto> RecentComplaints { get; set; } = null!;
         }
 
         public class RecentComplaint_Dto
         {
             public int ComplaintId { get; set; }
-            public string ComplaintNumber { get; set; }
-            public string Subject { get; set; }
-            public string Priority { get; set; }
+            public string ComplaintNumber { get; set; } = null!;
+            public string Subject { get; set; } = null!;
+            public string Priority { get; set; } = null!;
             public int StatusId { get; set; }
-            public string StatusName { get; set; }
-            public string StatusColor { get; set; }
+            public string StatusName { get; set; } = null!;
+            public string StatusColor { get; set; } = null!;
             public DateTime CreatedAt { get; set; }
             public int HoursSinceCreated { get; set; }
-            public string AssignedTechnicianName { get; set; }
+            public string AssignedTechnicianName { get; set; } = null!;
         }
 
         public class Product_Dto
         {
             public int ProductId { get; set; }
-            public string ProductName { get; set; }
-            public string SerialNumber { get; set; }
-            public string ModelNumber { get; set; }
-            public string Brand { get; set; }
-            public string Category { get; set; }
+            public string ProductName { get; set; } = null!;
+            public string SerialNumber { get; set; } = null!;
+            public string ModelNumber { get; set; } = null!;
+            public string Brand { get; set; } = null!;
+            public string Category { get; set; } = null!;
             public DateTime? PurchaseDate { get; set; }
             public DateTime? WarrantyExpiryDate { get; set; }
             public bool IsUnderWarranty { get; set; }
@@ -2062,10 +2062,10 @@ namespace EncryptzBL.DTO_s
 
         public class ProductCreate_Dto
         {
-            public string ProductName { get; set; }
-            public string SerialNumber { get; set; }
-            public string Brand { get; set; }
-            public string Model { get; set; }
+            public string ProductName { get; set; } = null!;
+            public string SerialNumber { get; set; } = null!;
+            public string Brand { get; set; } = null!;
+            public string Model { get; set; } = null!;
             public DateTime? PurchaseDate { get; set; }
             public DateTime? WarrantyExpiryDate { get; set; }
             public int? ProductMasterId { get; set; }
@@ -2089,7 +2089,7 @@ namespace EncryptzBL.DTO_s
         public class RegisterResponse_Dto
         {
             public bool Success { get; set; }
-            public string Message { get; set; }
+            public string Message { get; set; } = null!;
             public int? UserId { get; set; }
             public int? CustomerId { get; set; }
         }
@@ -2164,35 +2164,35 @@ namespace EncryptzBL.DTO_s
         }
         public class QuickComplaintRequest_Dto
         {
-            public string Subject { get; set; }
-            public string Category { get; set; }
-            public string BrandName { get; set; }
-            public string ModelNumber { get; set; }
-            public string Description { get; set; }
+            public string Subject { get; set; } = null!;
+            public string Category { get; set; } = null!;
+            public string BrandName { get; set; } = null!;
+            public string ModelNumber { get; set; } = null!;
+            public string Description { get; set; } = null!;
             public decimal? Latitude { get; set; }
             public decimal? Longitude { get; set; }
-            public string LocationName { get; set; }
-            public string ImageBase64 { get; set; }  // Base64 string
-            public string ImageName { get; set; }
-            public string ContentType { get; set; }
+            public string LocationName { get; set; } = null!;
+            public string ImageBase64 { get; set; } = null!;  // Base64 string
+            public string ImageName { get; set; } = null!;
+            public string ContentType { get; set; } = null!;
         }
 
         public class PublicQuickComplaintRequest_Dto
         {
-            public string MobileNumber { get; set; }
-            public string FullName { get; set; }
-            public string Email { get; set; }
-            public string Subject { get; set; }
-            public string Category { get; set; }
-            public string BrandName { get; set; }
-            public string ModelNumber { get; set; }
-            public string Description { get; set; }
+            public string MobileNumber { get; set; } = null!;
+            public string FullName { get; set; } = null!;
+            public string Email { get; set; } = null!;
+            public string Subject { get; set; } = null!;
+            public string Category { get; set; } = null!;
+            public string BrandName { get; set; } = null!;
+            public string ModelNumber { get; set; } = null!;
+            public string Description { get; set; } = null!;
             public decimal? Latitude { get; set; }
             public decimal? Longitude { get; set; }
-            public string LocationName { get; set; }
-            public string ImageBase64 { get; set; }
-            public string ImageName { get; set; }
-            public string ContentType { get; set; }
+            public string LocationName { get; set; } = null!;
+            public string ImageBase64 { get; set; } = null!;
+            public string ImageName { get; set; } = null!;
+            public string ContentType { get; set; } = null!;
         }
         // Models/ComplaintDetailModels.cs - Fixed Version
 
@@ -2203,113 +2203,113 @@ namespace EncryptzBL.DTO_s
             public class ManageComplaintRequestModel
             {
                 [Required]
-                public string OperationType { get; set; }
+                public string OperationType { get; set; } = null!;
 
                 // Common
                 public int? ComplaintId { get; set; }
                 public int? UserId { get; set; }
 
                 // Complaint fields (all nullable)
-                public string Subject { get; set; }
-                public string Description { get; set; }
-                public string NatureOfJob { get; set; }
-                public string Priority { get; set; }
-                public string Category { get; set; }
-                public string BrandName { get; set; }
-                public string ModelNumber { get; set; }
+                public string Subject { get; set; } = null!;
+                public string Description { get; set; } = null!;
+                public string NatureOfJob { get; set; } = null!;
+                public string Priority { get; set; } = null!;
+                public string Category { get; set; } = null!;
+                public string BrandName { get; set; } = null!;
+                public string ModelNumber { get; set; } = null!;
                 public DateTime? PreferredDate { get; set; }
-                public string PreferredTimeSlot { get; set; }
+                public string PreferredTimeSlot { get; set; } = null!;
                 public decimal? Latitude { get; set; }
                 public decimal? Longitude { get; set; }
-                public string LocationAddress { get; set; }
-                public string LocationName { get; set; }
+                public string LocationAddress { get; set; } = null!;
+                public string LocationName { get; set; } = null!;
 
                 // Customer fields (all nullable)
                 public int? CustomerId { get; set; }
-                public string CustomerName { get; set; }
-                public string CustomerEmail { get; set; }
-                public string CustomerMobile { get; set; }
-                public string AlternatePhone { get; set; }
-                public string CustomerAddress { get; set; }
-                public string City { get; set; }
-                public string State { get; set; }
-                public string PinCode { get; set; }
-                public string Landmark { get; set; }
+                public string CustomerName { get; set; } = null!;
+                public string CustomerEmail { get; set; } = null!;
+                public string CustomerMobile { get; set; } = null!;
+                public string AlternatePhone { get; set; } = null!;
+                public string CustomerAddress { get; set; } = null!;
+                public string City { get; set; } = null!;
+                public string State { get; set; } = null!;
+                public string PinCode { get; set; } = null!;
+                public string Landmark { get; set; } = null!;
                 public decimal? CustomerLatitude { get; set; }
                 public decimal? CustomerLongitude { get; set; }
 
                 // Product fields (all nullable)
                 public int? ProductId { get; set; }
-                public string ProductName { get; set; }
-                public string SerialNumber { get; set; }
-                public string ProductModelNumber { get; set; }
-                public string ProductBrand { get; set; }
-                public string ProductCategory { get; set; }
+                public string ProductName { get; set; } = null!;
+                public string SerialNumber { get; set; } = null!;
+                public string ProductModelNumber { get; set; } = null!;
+                public string ProductBrand { get; set; } = null!;
+                public string ProductCategory { get; set; } = null!;
                 public DateTime? PurchaseDate { get; set; }
                 public DateTime? WarrantyExpiryDate { get; set; }
 
                 // Assignment fields (all nullable)
                 public int? AssignmentId { get; set; }
                 public int? TechnicianId { get; set; }
-                public string AssignmentRole { get; set; }
-                public string AssignmentNotes { get; set; }
+                public string AssignmentRole { get; set; } = null!;
+                public string AssignmentNotes { get; set; } = null!;
                 public DateTime? ScheduledDate { get; set; }
-                public string StartTime { get; set; }
-                public string EndTime { get; set; }
+                public string StartTime { get; set; } = null!;
+                public string EndTime { get; set; } = null!;
                 public int? EstimatedDuration { get; set; }
-                public string WorkDone { get; set; }
-                public string PartsUsed { get; set; }
-                public string CompletionRemarks { get; set; }
+                public string WorkDone { get; set; } = null!;
+                public string PartsUsed { get; set; } = null!;
+                public string CompletionRemarks { get; set; } = null!;
 
                 // Spare part fields (all nullable)
                 public int? SpareRequestId { get; set; }
                 public int? SparePartId { get; set; }
                 public int? SpareQuantity { get; set; }
-                public string SpareUrgency { get; set; }
-                public string SpareRemarks { get; set; }
-                public string SpareStatus { get; set; }
+                public string SpareUrgency { get; set; } = null!;
+                public string SpareRemarks { get; set; } = null!;
+                public string SpareStatus { get; set; } = null!;
 
                 // Comment fields (all nullable)
                 public int? CommentId { get; set; }
-                public string CommentText { get; set; }
+                public string CommentText { get; set; } = null!;
                 public bool? IsInternal { get; set; }
             }
 
             public class UpdateComplaintRequestModel
             {
-                public string Subject { get; set; }
-                public string Description { get; set; }
-                public string NatureOfJob { get; set; }
-                public string Priority { get; set; }
-                public string Category { get; set; }
-                public string BrandName { get; set; }
-                public string ModelNumber { get; set; }
+                public string Subject { get; set; } = null!;
+                public string Description { get; set; } = null!;
+                public string NatureOfJob { get; set; } = null!;
+                public string Priority { get; set; } = null!;
+                public string Category { get; set; } = null!;
+                public string BrandName { get; set; } = null!;
+                public string ModelNumber { get; set; } = null!;
                 public DateTime? PreferredDate { get; set; }
-                public string PreferredTimeSlot { get; set; }
+                public string PreferredTimeSlot { get; set; } = null!;
             }
 
             public class UpdateCustomerRequestModel
             {
-                public string CustomerName { get; set; }
-                public string CustomerEmail { get; set; }
-                public string CustomerMobile { get; set; }
-                public string AlternatePhone { get; set; }
-                public string CustomerAddress { get; set; }
-                public string City { get; set; }
-                public string State { get; set; }
-                public string PinCode { get; set; }
-                public string Landmark { get; set; }
+                public string CustomerName { get; set; } = null!;
+                public string CustomerEmail { get; set; } = null!;
+                public string CustomerMobile { get; set; } = null!;
+                public string AlternatePhone { get; set; } = null!;
+                public string CustomerAddress { get; set; } = null!;
+                public string City { get; set; } = null!;
+                public string State { get; set; } = null!;
+                public string PinCode { get; set; } = null!;
+                public string Landmark { get; set; } = null!;
                 public decimal? CustomerLatitude { get; set; }
                 public decimal? CustomerLongitude { get; set; }
             }
 
             public class UpdateProductRequestModel
             {
-                public string ProductName { get; set; }
-                public string SerialNumber { get; set; }
-                public string ProductModelNumber { get; set; }
-                public string ProductBrand { get; set; }
-                public string ProductCategory { get; set; }
+                public string ProductName { get; set; } = null!;
+                public string SerialNumber { get; set; } = null!;
+                public string ProductModelNumber { get; set; } = null!;
+                public string ProductBrand { get; set; } = null!;
+                public string ProductCategory { get; set; } = null!;
                 public DateTime? PurchaseDate { get; set; }
                 public DateTime? WarrantyExpiryDate { get; set; }
             }
@@ -2318,8 +2318,8 @@ namespace EncryptzBL.DTO_s
             {
                 public decimal? Latitude { get; set; }
                 public decimal? Longitude { get; set; }
-                public string LocationAddress { get; set; }
-                public string LocationName { get; set; }
+                public string LocationAddress { get; set; } = null!;
+                public string LocationName { get; set; } = null!;
             }
 
             public class AssignTechnicianRequestModel
@@ -2328,28 +2328,28 @@ namespace EncryptzBL.DTO_s
                 public int ComplaintId { get; set; }
                 [Required]
                 public int TechnicianId { get; set; }
-                public string AssignmentRole { get; set; }
-                public string AssignmentNotes { get; set; }
+                public string AssignmentRole { get; set; } = null!;
+                public string AssignmentNotes { get; set; } = null!;
                 public DateTime? ScheduledDate { get; set; }
-                public string StartTime { get; set; }
-                public string EndTime { get; set; }
+                public string StartTime { get; set; } = null!;
+                public string EndTime { get; set; } = null!;
                 public int? EstimatedDuration { get; set; }
-                public string Priority { get; set; }
+                public string Priority { get; set; } = null!;
             }
 
         public class UpdateAssignmentRequestModel
         {
             public int? TechnicianId { get; set; }   // <-- ADD THIS LINE
-            public string AssignmentRole { get; set; }
-            public string AssignmentNotes { get; set; }
+            public string AssignmentRole { get; set; } = null!;
+            public string AssignmentNotes { get; set; } = null!;
             public DateTime? ScheduledDate { get; set; }
-            public string StartTime { get; set; }
-            public string EndTime { get; set; }
+            public string StartTime { get; set; } = null!;
+            public string EndTime { get; set; } = null!;
             public int? EstimatedDuration { get; set; }
-            public string Priority { get; set; }
-            public string WorkDone { get; set; }
-            public string PartsUsed { get; set; }
-            public string CompletionRemarks { get; set; }
+            public string Priority { get; set; } = null!;
+            public string WorkDone { get; set; } = null!;
+            public string PartsUsed { get; set; } = null!;
+            public string CompletionRemarks { get; set; } = null!;
         }
         public class AddSparePartRequestModel
             {
@@ -2360,16 +2360,16 @@ namespace EncryptzBL.DTO_s
                 [Required]
                 public int TechnicianId { get; set; }
                 public int? SpareQuantity { get; set; }
-                public string SpareUrgency { get; set; }
-                public string SpareRemarks { get; set; }
+                public string SpareUrgency { get; set; } = null!;
+                public string SpareRemarks { get; set; } = null!;
             }
 
             public class UpdateSparePartRequestModel
             {
                 public int? SpareQuantity { get; set; }
-                public string SpareUrgency { get; set; }
-                public string SpareRemarks { get; set; }
-                public string SpareStatus { get; set; }
+                public string SpareUrgency { get; set; } = null!;
+                public string SpareRemarks { get; set; } = null!;
+                public string SpareStatus { get; set; } = null!;
             }
 
             public class AddCommentRequestModel
@@ -2377,14 +2377,14 @@ namespace EncryptzBL.DTO_s
                 [Required]
                 public int ComplaintId { get; set; }
                 [Required]
-                public string CommentText { get; set; }
+                public string CommentText { get; set; } = null!;
                 public bool? IsInternal { get; set; }
             }
 
             public class UpdateCommentRequestModel
             {
                 [Required]
-                public string CommentText { get; set; }
+                public string CommentText { get; set; } = null!;
             }
 
             // ============================================
@@ -2393,40 +2393,40 @@ namespace EncryptzBL.DTO_s
 
             public class ComplaintDetailResponseModel
             {
-                public ComplaintResponseModel Complaint { get; set; }
-                public CustomerResponseModel Customer { get; set; }
-                public ProductResponseModel Product { get; set; }
-                public List<AssignmentResponseModel> Assignments { get; set; }
-                public List<SparePartResponseModel> SpareParts { get; set; }
-                public List<CommentResponseModel> Comments { get; set; }
-                public List<SparePartDropdownModel> SparePartsDropdown { get; set; }
-                public List<TechnicianDropdownModel> TechniciansDropdown { get; set; }
+                public ComplaintResponseModel Complaint { get; set; } = null!;
+                public CustomerResponseModel Customer { get; set; } = null!;
+                public ProductResponseModel Product { get; set; } = null!;
+                public List<AssignmentResponseModel> Assignments { get; set; } = null!;
+                public List<SparePartResponseModel> SpareParts { get; set; } = null!;
+                public List<CommentResponseModel> Comments { get; set; } = null!;
+                public List<SparePartDropdownModel> SparePartsDropdown { get; set; } = null!;
+                public List<TechnicianDropdownModel> TechniciansDropdown { get; set; } = null!;
             }
 
             public class ComplaintResponseModel
             {
                 public int ComplaintId { get; set; }
-                public string ComplaintNumber { get; set; }
-                public string Subject { get; set; }
-                public string Description { get; set; }
-                public string NatureOfJob { get; set; }
+                public string ComplaintNumber { get; set; } = null!;
+                public string Subject { get; set; } = null!;
+                public string Description { get; set; } = null!;
+                public string NatureOfJob { get; set; } = null!;
                 public DateTime CreatedAt { get; set; }
                 public DateTime? UpdatedAt { get; set; }
-                public string Priority { get; set; }
+                public string Priority { get; set; } = null!;
                 public int PriorityId { get; set; }
                 public int StatusId { get; set; }
-                public string StatusName { get; set; }
-                public string StatusColor { get; set; }
+                public string StatusName { get; set; } = null!;
+                public string StatusColor { get; set; } = null!;
                 public bool IsSLABreached { get; set; }
                 public DateTime? SLADeadline { get; set; }
-                public string ContactNumber { get; set; }
+                public string ContactNumber { get; set; } = null!;
                 public DateTime? PreferredDate { get; set; }
-                public string PreferredTimeSlot { get; set; }
-                public string Category { get; set; }
-                public string BrandName { get; set; }
-                public string ModelNumber { get; set; }
-                public string LocationName { get; set; }
-                public string LocationAddress { get; set; }
+                public string PreferredTimeSlot { get; set; } = null!;
+                public string Category { get; set; } = null!;
+                public string BrandName { get; set; } = null!;
+                public string ModelNumber { get; set; } = null!;
+                public string LocationName { get; set; } = null!;
+                public string LocationAddress { get; set; } = null!;
                 public decimal? Latitude { get; set; }
                 public decimal? Longitude { get; set; }
                 public DateTime? ClosedAt { get; set; }
@@ -2435,15 +2435,15 @@ namespace EncryptzBL.DTO_s
             public class CustomerResponseModel
             {
                 public int CustomerId { get; set; }
-                public string CustomerName { get; set; }
-                public string Email { get; set; }
-                public string MobileNumber { get; set; }
-                public string AlternatePhone { get; set; }
-                public string Address { get; set; }
-                public string City { get; set; }
-                public string State { get; set; }
-                public string PinCode { get; set; }
-                public string Landmark { get; set; }
+                public string CustomerName { get; set; } = null!;
+                public string Email { get; set; } = null!;
+                public string MobileNumber { get; set; } = null!;
+                public string AlternatePhone { get; set; } = null!;
+                public string Address { get; set; } = null!;
+                public string City { get; set; } = null!;
+                public string State { get; set; } = null!;
+                public string PinCode { get; set; } = null!;
+                public string Landmark { get; set; } = null!;
                 public decimal? Latitude { get; set; }
                 public decimal? Longitude { get; set; }
                 public DateTime CreatedAt { get; set; }
@@ -2453,14 +2453,14 @@ namespace EncryptzBL.DTO_s
             public class ProductResponseModel
             {
                 public int ProductId { get; set; }
-                public string ProductName { get; set; }
-                public string SerialNumber { get; set; }
-                public string ModelNumber { get; set; }
-                public string Brand { get; set; }
-                public string ProductCategory { get; set; }
+                public string ProductName { get; set; } = null!;
+                public string SerialNumber { get; set; } = null!;
+                public string ModelNumber { get; set; } = null!;
+                public string Brand { get; set; } = null!;
+                public string ProductCategory { get; set; } = null!;
                 public DateTime? PurchaseDate { get; set; }
                 public DateTime? WarrantyExpiryDate { get; set; }
-                public string WarrantyStatus { get; set; }
+                public string WarrantyStatus { get; set; } = null!;
                 public DateTime CreatedAt { get; set; }
                 public DateTime? UpdatedAt { get; set; }
             }
@@ -2469,50 +2469,50 @@ namespace EncryptzBL.DTO_s
             {
                 public int AssignmentId { get; set; }
                 public int TechnicianId { get; set; }
-                public string TechnicianName { get; set; }
-                public string TechnicianPhone { get; set; }
-                public string Specialization { get; set; }
-                public string EmployeeCode { get; set; }
-                public string Role { get; set; }
-                public string Status { get; set; }
+                public string TechnicianName { get; set; } = null!;
+                public string TechnicianPhone { get; set; } = null!;
+                public string Specialization { get; set; } = null!;
+                public string EmployeeCode { get; set; } = null!;
+                public string Role { get; set; } = null!;
+                public string Status { get; set; } = null!;
                 public DateTime AssignedAt { get; set; }
                 public DateTime? CompletedAt { get; set; }
                 public DateTime? ScheduledDate { get; set; }
-                public string StartTime { get; set; }
-                public string EndTime { get; set; }
+                public string StartTime { get; set; } = null!;
+                public string EndTime { get; set; } = null!;
                 public int? EstimatedDuration { get; set; }
-                public string Notes { get; set; }
-                public string Priority { get; set; }
-                public string WorkDone { get; set; }
-                public string PartsUsed { get; set; }
-                public string CompletionRemarks { get; set; }
-                public string AssignedByName { get; set; }
+                public string Notes { get; set; } = null!;
+                public string Priority { get; set; } = null!;
+                public string WorkDone { get; set; } = null!;
+                public string PartsUsed { get; set; } = null!;
+                public string CompletionRemarks { get; set; } = null!;
+                public string AssignedByName { get; set; } = null!;
             }
 
             public class SparePartResponseModel
             {
                 public int RequestId { get; set; }
                 public int? SparePartId { get; set; }
-                public string PartName { get; set; }
-                public string PartNumber { get; set; }
+                public string PartName { get; set; } = null!;
+                public string PartNumber { get; set; } = null!;
                 public decimal? UnitPrice { get; set; }
                 public int Quantity { get; set; }
-                public string Status { get; set; }
-                public string UrgencyLevel { get; set; }
+                public string Status { get; set; } = null!;
+                public string UrgencyLevel { get; set; } = null!;
                 public DateTime RequestedAt { get; set; }
                 public DateTime? ApprovedAt { get; set; }
-                public string Remarks { get; set; }
-                public string TechnicianName { get; set; }
+                public string Remarks { get; set; } = null!;
+                public string TechnicianName { get; set; } = null!;
                 public int TechnicianId { get; set; }
-                public string ApprovedByName { get; set; }
+                public string ApprovedByName { get; set; } = null!;
             }
 
             public class CommentResponseModel
             {
                 public int CommentId { get; set; }
-                public string Comment { get; set; }
-                public string PostedByRole { get; set; }
-                public string PostedBy { get; set; }
+                public string Comment { get; set; } = null!;
+                public string PostedByRole { get; set; } = null!;
+                public string PostedBy { get; set; } = null!;
                 public DateTime PostedAt { get; set; }
                 public bool IsInternal { get; set; }
             }
@@ -2520,8 +2520,8 @@ namespace EncryptzBL.DTO_s
             public class SparePartDropdownModel
             {
                 public int SparePartId { get; set; }
-                public string PartName { get; set; }
-                public string PartNumber { get; set; }
+                public string PartName { get; set; } = null!;
+                public string PartNumber { get; set; } = null!;
                 public int StockQuantity { get; set; }
                 public decimal? UnitPrice { get; set; }
             }
@@ -2529,16 +2529,16 @@ namespace EncryptzBL.DTO_s
             public class TechnicianDropdownModel
             {
                 public int TechnicianId { get; set; }
-                public string TechnicianName { get; set; }
-                public string Specialization { get; set; }
+                public string TechnicianName { get; set; } = null!;
+                public string Specialization { get; set; } = null!;
                 public int AvailabilityStatus { get; set; }
-                public string EmployeeCode { get; set; }
+                public string EmployeeCode { get; set; } = null!;
         }
 
         public class OperationResultModel
         {
             public bool Success { get; set; }
-            public string Message { get; set; }
+            public string Message { get; set; } = null!;
             public int? AssignmentId { get; set; }
             public int? CommentId { get; set; }
             public int? RequestId { get; set; }
@@ -2546,8 +2546,8 @@ namespace EncryptzBL.DTO_s
         public class SparePart_Model
         {
             public int SparePartId { get; set; }
-            public string PartName { get; set; }
-            public string PartNumber { get; set; }
+            public string PartName { get; set; } = null!;
+            public string PartNumber { get; set; } = null!;
             public int StockQuantity { get; set; }
             public decimal? UnitPrice { get; set; }
             public bool IsActive { get; set; }
@@ -2556,7 +2556,7 @@ namespace EncryptzBL.DTO_s
 
         public class SparePartListResponse
         {
-            public List<SparePart_Model> Items { get; set; }
+            public List<SparePart_Model> Items { get; set; } = null!;
             public int TotalCount { get; set; }
             public int CurrentPage { get; set; }
             public int TotalPages { get; set; }
@@ -2566,8 +2566,8 @@ namespace EncryptzBL.DTO_s
         public class SparePartRequest_Model
         {
             public int? SparePartId { get; set; }
-            public string PartName { get; set; }
-            public string PartNumber { get; set; }
+            public string PartName { get; set; } = null!;
+            public string PartNumber { get; set; } = null!;
             public int? StockQuantity { get; set; }
             public decimal? UnitPrice { get; set; }
             public bool? IsActive { get; set; }
@@ -2576,7 +2576,7 @@ namespace EncryptzBL.DTO_s
 
         public class SparePartFilter_Model
         {
-            public string SearchTerm { get; set; }
+            public string SearchTerm { get; set; } = null!;
             public bool? IsActive { get; set; }
             public int PageNumber { get; set; } = 1;
             public int PageSize { get; set; } = 20;
@@ -2587,8 +2587,8 @@ namespace EncryptzBL.DTO_s
         public class SparePartDropdown_Model
         {
             public int SparePartId { get; set; }
-            public string PartName { get; set; }
-            public string PartNumber { get; set; }
+            public string PartName { get; set; } = null!;
+            public string PartNumber { get; set; } = null!;
             public int StockQuantity { get; set; }
         }
         public class RepairPartRequestCreateDto
@@ -2598,9 +2598,9 @@ namespace EncryptzBL.DTO_s
             public int TechnicianId { get; set; }
             public int? CustomerId { get; set; }
             public int? ProductId { get; set; }
-            public string PartName { get; set; }
-            public string PartSerialNumber { get; set; }
-            public string Notes { get; set; }
+            public string PartName { get; set; } = null!;
+            public string PartSerialNumber { get; set; } = null!;
+            public string Notes { get; set; } = null!;
         }
 
         public class RepairPartFilterDto

@@ -47,8 +47,8 @@ namespace EncryptzBL.Infrastructure.WarrantyReturn.Modules
             var dt = await GetDataTableAsync("sp_WarrantyReturn_GetById", parameters);
 
             return dt.Rows.Count > 0
-                ? dt.ToList<WarrantyReturnListItem>().FirstOrDefault()
-                : null;
+                ? dt.ToList<WarrantyReturnListItem>().FirstOrDefault()!
+                : null!;
         }
 
         // 🔥 CREATE WARRANTY RETURN

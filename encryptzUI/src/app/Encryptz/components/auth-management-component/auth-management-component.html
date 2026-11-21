@@ -281,7 +281,7 @@
                     <button
                       type="button"
                       class="search-btn"
-                      [disabled]="!searchUserTerm()?.trim() || searchingUsers()"
+                      [disabled]="!$any(searchUserTerm())?.trim() || searchingUsers()"
                       (click)="onSearchUser()">
 
                       @if (searchingUsers()) {

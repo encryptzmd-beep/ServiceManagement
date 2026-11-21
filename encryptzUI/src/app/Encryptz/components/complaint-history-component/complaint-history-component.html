@@ -70,7 +70,7 @@
           <h4><span class="material-icons">group</span> Assigned Technicians</h4>
           @for (t of detail()!.technicians; track t.assignmentId) {
           <div class="tech-card">
-            <div class="tc-avatar">{{ t.technicianName?.charAt(0) }}</div>
+            <div class="tc-avatar">{{ $any(t.technicianName)?.charAt(0) }}</div>
             <div class="tc-info">
               <strong>{{ t.technicianName }}</strong>
               <small>{{ t.specialization }} &bull; {{ t.assignmentRole }}</small>

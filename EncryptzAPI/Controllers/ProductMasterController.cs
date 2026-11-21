@@ -1,6 +1,5 @@
 using EncryptzBL.Common.Tenant;
 using EncryptzAPI.Middleware;
-﻿using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Products.Modules;

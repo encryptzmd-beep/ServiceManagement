@@ -8,7 +8,7 @@ namespace EncryptzBL.Common
 {
     public static class SqlParameterHelper
     {
-        public static SqlParameter Input(string name, object value)
+        public static SqlParameter Input(string name, object? value)
         {
             return new SqlParameter(name, value ?? DBNull.Value);
         }
@@ -21,7 +21,7 @@ namespace EncryptzBL.Common
             };
         }
 
-        public static SqlParameter InputOutput(string name, SqlDbType type, object value)
+        public static SqlParameter InputOutput(string name, SqlDbType type, object? value)
         {
             return new SqlParameter(name, type)
             {
@@ -33,7 +33,7 @@ namespace EncryptzBL.Common
         public static T GetOutputValue<T>(SqlParameter parameter)
         {
             if (parameter.Value == DBNull.Value)
-                return default;
+                return default!;
             return (T)parameter.Value;
         }
     }
