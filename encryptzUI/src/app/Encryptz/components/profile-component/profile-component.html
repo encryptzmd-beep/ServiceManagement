@@ -313,11 +313,7 @@
   </div>
 }
 
-@if (toast.show) {
-  <div class="custom-toast" [class]="toast.type">
-    {{ toast.message }}
-  </div>
-}
+@if (toast.show) { <app-toast [text]="toast.message" [kind]="toast.type" (closed)="toast.show = false" /> }
 
 @if (isFetchingLocation) {
   <div class="popup-backdrop">

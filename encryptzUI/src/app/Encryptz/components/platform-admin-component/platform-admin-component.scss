@@ -244,20 +244,6 @@ code {
 .pa-test.ok   { background: #e6f6ec; color: #15803d; }
 .pa-test.warn { background: #fff4e0; color: #b45309; }
 
-.pa-toast {
-  position: fixed;
-  right: 24px;
-  bottom: 24px;
-  z-index: 1100;
-  padding: 12px 18px;
-  border-radius: 10px;
-  background: #15803d;
-  color: #fff;
-  font-size: 13px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
-
-  &.bad { background: #b91c1c; }
-}
 
 @media (max-width: 640px) {
   .form-grid { grid-template-columns: 1fr; }

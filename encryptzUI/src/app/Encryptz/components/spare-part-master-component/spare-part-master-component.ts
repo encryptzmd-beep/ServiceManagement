@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 // spare-part-master.component.ts
 
 import { Component, OnInit, inject, signal } from '@angular/core';
@@ -18,7 +19,7 @@ export interface SparePart {
 @Component({
   selector: 'app-spare-part-master',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [AppToastComponent, CommonModule, FormsModule],
   template: `
     <div class="mgmt-page">
       <div class="page-header">
@@ -285,17 +286,7 @@ export interface SparePart {
       </div>
     }
 
-    @if (toastMessage()) {
-      <div class="toast-stack">
-        <div class="app-toast" [class.toast-error]="toastType() === 'error'" [class.toast-success]="toastType() === 'success'">
-          <div class="toast-icon">{{ toastType() === 'success' ? '✓' : '!' }}</div>
-          <div class="toast-copy">
-            <div class="toast-title">{{ toastType() === 'success' ? 'Success' : 'Please check' }}</div>
-            <div class="toast-message">{{ toastMessage() }}</div>
-          </div>
-        </div>
-      </div>
-    }
+    @if (toastMessage()) { <app-toast [text]="toastMessage()" [kind]="toastType()" /> }
 
     @if (confirmVisible()) {
       <div class="confirm-overlay">
@@ -1028,74 +1019,15 @@ export interface SparePart {
       cursor: not-allowed;
     }
 
-    .toast-stack {
-      position: fixed;
-      top: 84px;
-      right: 24px;
-      z-index: 1200;
-    }
 
-    .app-toast {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      min-width: 320px;
-      max-width: 420px;
-      padding: 14px 16px;
-      border: 1px solid #d6e0ec;
-      border-radius: 14px;
-      background: #fff;
-      box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
-    }
 
-    .toast-success {
-      border-color: #cfe5d3;
-    }
 
-    .toast-error {
-      border-color: #f0c6c6;
-    }
 
-    .toast-icon {
-      width: 28px;
-      height: 28px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      border-radius: 999px;
-      background: #e8eef5;
-      color: var(--brand-navy);
-      font-size: 14px;
-      font-weight: 700;
-    }
 
-    .toast-error .toast-icon {
-      background: var(--brand-red-light);
-      color: var(--brand-red);
-    }
 
-    .toast-success .toast-icon {
-      background: #edf7ee;
-      color: #2d7a38;
-    }
 
-    .toast-copy {
-      flex: 1;
-    }
 
-    .toast-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
 
-    .toast-message {
-      margin-top: 2px;
-      font-size: 13px;
-      color: var(--text-secondary);
-      line-height: 1.35;
-    }
 
     .confirm-overlay {
       position: fixed;

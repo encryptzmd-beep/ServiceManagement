@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -10,7 +11,7 @@ const STATUS_ORDER = ['Requested','ReceivedAtHQ','UnderRepair','Repaired','Dispa
 @Component({
   selector: 'app-repair-parts-management',
   standalone: true,
-  imports: [AppRightDirective, CommonModule, FormsModule],
+  imports: [AppToastComponent, AppRightDirective, CommonModule, FormsModule],
   templateUrl: './repair-parts-management-component.html',
   styleUrl: './repair-parts-management-component.scss'
 })

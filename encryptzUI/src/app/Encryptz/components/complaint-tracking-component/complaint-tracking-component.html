@@ -222,18 +222,7 @@
   }
 
   <!-- Toast Notification -->
-  @if (toastVisible()) {
-  <div class="toast-stack">
-    <div class="app-toast" [class.toast-error]="toastType() === 'error'" [class.toast-success]="toastType() === 'success'">
-      <div class="toast-icon">{{ toastType() === 'success' ? '✓' : '!' }}</div>
-      <div class="toast-copy">
-        <div class="toast-title">{{ toastType() === 'success' ? 'Success' : 'Error' }}</div>
-        <div class="toast-message">{{ toastMessage() }}</div>
-      </div>
-      <button class="toast-close" (click)="hideToast()" aria-label="Close notification">×</button>
-    </div>
-  </div>
-  }
+  @if (toastVisible()) { <app-toast [text]="toastMessage()" [kind]="toastType()" (closed)="hideToast()" /> }
 
   <!-- Edit Complaint Modal -->
   @if (showEditModal()) {

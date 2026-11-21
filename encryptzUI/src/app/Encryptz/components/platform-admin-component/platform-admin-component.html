@@ -944,6 +944,4 @@
   </div>
 }
 
-@if (toast(); as t) {
-  <div class="pa-toast" [class.bad]="!t.ok">{{ t.text }}</div>
-}
+@if (toast(); as t) { <app-toast [text]="t.text" [kind]="t.ok ? 'success' : 'error'" /> }

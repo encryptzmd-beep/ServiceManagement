@@ -538,8 +538,4 @@
   </div>
 }
 
-@if (toast(); as t) {
-  <div class="toast" [class.success]="t.type === 'success'" [class.error]="t.type === 'error'">
-    <span class="material-icons">{{ t.type === 'success' ? 'check_circle' : 'error' }}</span>{{ t.text }}
-  </div>
-}
+@if (toast(); as t) { <app-toast [text]="t.text" [kind]="t.type" /> }

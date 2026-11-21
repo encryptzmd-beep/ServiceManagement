@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription, finalize } from 'rxjs';
@@ -41,7 +42,7 @@ const SECTION_TABS: Tab[] = ['companies', 'applications', 'verification', 'proje
  */
 @Component({
   selector: 'app-platform-admin-component',
-  imports: [CommonModule, FormsModule, VerificationPanelComponent, LoginAdsPanelComponent, ScrollIntoViewOn, EscapeClose],
+  imports: [AppToastComponent, CommonModule, FormsModule, VerificationPanelComponent, LoginAdsPanelComponent, ScrollIntoViewOn, EscapeClose],
   templateUrl: './platform-admin-component.html',
   styleUrl: './platform-admin-component.scss',
 })

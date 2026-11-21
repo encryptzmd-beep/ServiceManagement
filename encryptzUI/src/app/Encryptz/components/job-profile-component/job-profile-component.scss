@@ -813,25 +813,6 @@ $soft: 0 1px 2px rgba(20, 40, 90, 0.04), 0 6px 20px rgba(20, 40, 90, 0.06);
 }
 
 /* ── toast ── */
-.jp-toast {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: calc(100vw - 40px);
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: $ink;
-  color: #fff;
-  font-size: 13px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-  z-index: 60;
-
-  .material-icons { font-size: 18px; color: #6ee7a8; }
-  &.bad .material-icons { color: #fda29b; }
-}
 
 /* ── dialog ── */
 .jp-overlay {

@@ -380,7 +380,5 @@
     </aside>
   }
 
-  @if (toast()) {
-    <div class="ca-toast" role="status"><span class="material-icons" aria-hidden="true">check_circle</span>{{ toast() }}</div>
-  }
+  @if (toast()) { <app-toast [text]="toast()" kind="success" /> }
 </div>

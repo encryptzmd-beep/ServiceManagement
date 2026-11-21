@@ -238,7 +238,5 @@
     }
   }
 
-  @if (toast(); as t) {
-    <div class="vp-toast" [class.bad]="!t.ok" role="status">{{ t.text }}</div>
-  }
+  @if (toast(); as t) { <app-toast [text]="t.text" [kind]="t.ok ? 'success' : 'error'" /> }
 </div>

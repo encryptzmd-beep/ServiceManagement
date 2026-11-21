@@ -3,6 +3,11 @@ import { Subject, of, throwError } from 'rxjs';
 import { AuthService } from '../../Auth/auth-service';
 import { PlatformService } from '../../Services/platform-service';
 import { PlatformAdminComponent } from './platform-admin-component';
+import { ToastService } from '../../Services/toast-service';
+
+// the page and its toasts, which are drawn by the root toast host
+const shown = (fixture: any): string =>
+  `${fixture.nativeElement.textContent} ${TestBed.inject(ToastService).items().map(t => t.text).join(' ')}`;
 
 describe('PlatformAdminComponent modules', () => {
   const company = { companyId: 2, companyName: 'Hamster A/C', companyCode: 'C002', address: '', city: '', phoneNumber: '', isActive: true, projectCount: 1, userCount: 3 };
@@ -106,7 +111,7 @@ describe('PlatformAdminComponent modules', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.companyModules()[1].isEnabled).toBe(false);
-    expect(fixture.nativeElement.textContent).toContain('Only a platform administrator can switch modules');
+    expect(shown(fixture)).toContain('Only a platform administrator can switch modules');
   });
 
   it('puts the checkbox back when the server refuses', () => {
@@ -144,7 +149,7 @@ describe('PlatformAdminComponent modules', () => {
     boxesOf(fixture)[1].click();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Could not switch the module');
+    expect(shown(fixture)).toContain('Could not switch the module');
     expect(boxesOf(fixture)[1].checked).toBe(false);
   });
 
@@ -201,7 +206,7 @@ describe('PlatformAdminComponent modules', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.toast()).toBeNull();
-    expect(fixture.nativeElement.textContent).not.toContain('Sales switched on');
+    expect(shown(fixture)).not.toContain('Sales switched on');
     expect(fixture.componentInstance.companyModules()).toEqual([]);
   });
 
@@ -233,13 +238,13 @@ describe('PlatformAdminComponent modules', () => {
     };
     const fixture = create(true);
     openDialog(fixture);
-    expect(fixture.nativeElement.textContent).not.toContain('On · 4 users');
+    expect(shown(fixture)).not.toContain('On · 4 users');
 
     boxesOf(fixture)[1].click();
     fixture.detectChanges();
 
     expect(loads).toBe(2);
-    expect(fixture.nativeElement.textContent).toContain('On · 4 users');
+    expect(shown(fixture)).toContain('On · 4 users');
   });
 
   it('closes the Modules dialog with the other forms', () => {
@@ -338,8 +343,8 @@ describe('PlatformAdminComponent module access', () => {
 
     expect(calls).toContainEqual(['getModuleAccess', 2, 'SALES']);
     expect(fixture.componentInstance.access().map(a => a.userId)).toEqual([9]);
-    expect(fixture.nativeElement.textContent).toContain('Sales S');
-    expect(fixture.nativeElement.textContent).not.toContain('Tech T');
+    expect(shown(fixture)).toContain('Sales S');
+    expect(shown(fixture)).not.toContain('Tech T');
   });
 
   it('gives a member access to the picked module', () => {
@@ -364,7 +369,7 @@ describe('PlatformAdminComponent module access', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.access().find(a => a.userId === 5)?.hasAccess).toBe(true);
-    expect(fixture.nativeElement.textContent).toContain('Company administrators always have access');
+    expect(shown(fixture)).toContain('Company administrators always have access');
   });
 
   it('says Branch and Module access, never Project or Location', () => {
@@ -420,7 +425,7 @@ describe('PlatformAdminComponent module access', () => {
     expect(calls.some(c => c[0] === 'getModuleAccess')).toBe(false);
     expect(fixture.componentInstance.accessModuleKey()).toBe('');
     expect(fixture.componentInstance.loading()).toBe(false);
-    expect(fixture.nativeElement.textContent).toContain('This company has no modules switched on.');
+    expect(shown(fixture)).toContain('This company has no modules switched on.');
     expect(fixture.nativeElement.querySelector('.pa-module-picker')).toBeNull();
     expect(fixture.nativeElement.querySelector('table')).toBeNull();
 
@@ -435,11 +440,11 @@ describe('PlatformAdminComponent module access', () => {
     fixture.detectChanges();
 
     expect(calls.some(c => c[0] === 'getModuleAccess')).toBe(false);
-    expect(fixture.nativeElement.textContent).toContain('Modules are unavailable');
+    expect(shown(fixture)).toContain('Modules are unavailable');
     expect(fixture.componentInstance.accessModuleKey()).toBe('');
-    expect(fixture.nativeElement.textContent).toContain('Could not load the modules.');
-    expect(fixture.nativeElement.textContent).not.toContain('no modules switched on');
-    expect(fixture.nativeElement.textContent).not.toContain('no members yet');
+    expect(shown(fixture)).toContain('Could not load the modules.');
+    expect(shown(fixture)).not.toContain('no modules switched on');
+    expect(shown(fixture)).not.toContain('no members yet');
   });
 
   it('shows the same hint and asks for no access list when loading the modules fails', () => {
@@ -451,9 +456,9 @@ describe('PlatformAdminComponent module access', () => {
     expect(fixture.componentInstance.accessModuleKey()).toBe('');
     expect(fixture.componentInstance.modulesFailed()).toBe(true);
     expect(fixture.componentInstance.loading()).toBe(false);
-    expect(fixture.nativeElement.textContent).toContain('Could not load the modules.');
-    expect(fixture.nativeElement.textContent).not.toContain('no modules switched on');
-    expect(fixture.nativeElement.textContent).not.toContain('no members yet');
+    expect(shown(fixture)).toContain('Could not load the modules.');
+    expect(shown(fixture)).not.toContain('no modules switched on');
+    expect(shown(fixture)).not.toContain('no members yet');
   });
 
   it('ignores a late branch list after another company was picked', () => {
@@ -490,7 +495,7 @@ describe('PlatformAdminComponent module access', () => {
     box.click();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Could not change access');
+    expect(shown(fixture)).toContain('Could not change access');
     expect(switchBoxes(fixture)[1].checked).toBe(false);
   });
 
@@ -565,7 +570,7 @@ describe('PlatformAdminComponent servers, settings and database state', () => {
     return fixture;
   };
 
-  const text = (fixture: any) => fixture.nativeElement.textContent as string;
+  const text = shown;
   const tabs = (fixture: any) => (Array.from(fixture.nativeElement.querySelectorAll('.pa-tabs button')) as HTMLButtonElement[]).map(b => b.textContent?.trim());
 
   beforeEach(() => {
@@ -1066,7 +1071,7 @@ describe('PlatformAdminComponent branch access', () => {
     return fixture;
   };
 
-  const text = (fixture: any) => fixture.nativeElement.textContent as string;
+  const text = shown;
   const boxes = (fixture: any) => Array.from(fixture.nativeElement.querySelectorAll('.pa-branch-table input[type=checkbox]')) as HTMLInputElement[];
 
   beforeEach(() => {

@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { statusText } from '../shared/sales-input-rules';
 import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
@@ -17,7 +18,7 @@ type DespatchSource = 'sales' | 'spare' | 'repair';
 @Component({
   selector: 'app-despatch-list',
   standalone: true,
-  imports: [AppRightDirective, CommonModule, FormsModule, RouterModule, ModuleRefusedComponent, ComplaintDetailPopupComponent],
+  imports: [AppToastComponent, AppRightDirective, CommonModule, FormsModule, RouterModule, ModuleRefusedComponent, ComplaintDetailPopupComponent],
   templateUrl: './despatch-list-component.html',
   styleUrls: ['./despatch-list-component.scss'],
 })

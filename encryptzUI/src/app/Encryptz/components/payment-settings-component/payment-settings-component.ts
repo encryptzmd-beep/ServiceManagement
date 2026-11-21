@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -8,7 +9,7 @@ import { DialogService } from '../../Services/dialog-service';
 @Component({
   selector: 'app-payment-settings',
   standalone: true,
-  imports: [AppRightDirective, CommonModule, FormsModule],
+  imports: [AppToastComponent, AppRightDirective, CommonModule, FormsModule],
   templateUrl: './payment-settings-component.html',
   styleUrls: ['./payment-settings-component.scss']
 })

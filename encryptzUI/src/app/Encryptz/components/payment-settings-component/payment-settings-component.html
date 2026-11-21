@@ -1,10 +1,7 @@
 <!-- payment-settings-component.html -->
 <div class="ps-page">
 
-  <div class="ps-toast" [class.show]="showToast()" [class.error]="toastErr()">
-    <span class="material-icons">{{ toastErr() ? 'error' : 'check_circle' }}</span>
-    {{ toastMsg() }}
-  </div>
+  @if (showToast()) { <app-toast [text]="toastMsg()" [kind]="toastErr() ? 'error' : 'success'" /> }
 
   <div class="ps-header">
     <div class="ps-header-icon"><span class="material-icons">account_balance_wallet</span></div>

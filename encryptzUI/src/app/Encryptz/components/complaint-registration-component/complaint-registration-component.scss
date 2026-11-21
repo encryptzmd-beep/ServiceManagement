@@ -1654,27 +1654,6 @@
   }
 }
 // Add toast notification for location updates
-.location-toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #16a34a;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  z-index: 1000;
-  animation: slideUp 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-
-  .material-icons {
-    font-size: 18px;
-  }
-}
 
 @keyframes slideUp {
   from {

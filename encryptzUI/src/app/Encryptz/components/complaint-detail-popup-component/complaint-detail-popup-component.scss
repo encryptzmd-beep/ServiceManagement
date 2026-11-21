@@ -31,19 +31,6 @@
   to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
-.cd-toast {
-  position: absolute; top: 16px; right: 16px;
-  background: #10b981; color: #fff;
-  padding: 10px 16px; border-radius: 10px;
-  display: flex; align-items: center; gap: 8px;
-  font-size: 13px; font-weight: 600;
-  z-index: 1100;
-  transform: translateX(400px);
-  transition: transform .25s ease;
-  &.show  { transform: translateX(0); }
-  &.error { background: #ef4444; }
-  .material-icons { font-size: 18px; }
-}
 
 .cd-header {
   display: flex; align-items: center; justify-content: space-between;

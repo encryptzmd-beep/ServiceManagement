@@ -3,10 +3,7 @@
 <div class="cd-overlay" (click)="close()"></div>
 <div class="cd-popup">
 
-  <div class="cd-toast" [class.show]="showToast()" [class.error]="toastType()==='error'">
-    <span class="material-icons">{{ toastType()==='success' ? 'check_circle' : 'error' }}</span>
-    <span>{{ toastMessage() }}</span>
-  </div>
+  @if (showToast()) { <app-toast [text]="toastMessage()" [kind]="toastType()" /> }
 
   <div class="cd-header">
     <div class="cd-header-left">

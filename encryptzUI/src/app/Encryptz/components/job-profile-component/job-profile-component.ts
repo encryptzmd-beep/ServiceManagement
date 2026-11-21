@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -68,7 +69,7 @@ const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 @Component({
   selector: 'app-job-profile-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent, ScrollIntoViewOn, EscapeClose],
+  imports: [AppToastComponent, CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent, ScrollIntoViewOn, EscapeClose],
   templateUrl: './job-profile-component.html',
   styleUrl: './job-profile-component.scss',
 })

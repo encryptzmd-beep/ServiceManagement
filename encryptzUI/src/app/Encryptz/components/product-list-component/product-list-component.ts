@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { AppRightDirective } from '../shared/app-right/app-right';
 // components/product-list/product-list.component.ts
 import { RouterLink } from '@angular/router';
@@ -12,7 +13,7 @@ import { ProductMasterDTO, DropdownData, ProductMaster } from '../../Models/ApiM
 @Component({
   selector: 'app-product-list',
   standalone: true,
-  imports: [AppRightDirective, CommonModule, FormsModule, RouterLink, ProductFormComponent, ProductViewComponent],
+  imports: [AppToastComponent, AppRightDirective, CommonModule, FormsModule, RouterLink, ProductFormComponent, ProductViewComponent],
   templateUrl: './product-list-component.html',
   styleUrls: ['./product-list-component.scss']
 })

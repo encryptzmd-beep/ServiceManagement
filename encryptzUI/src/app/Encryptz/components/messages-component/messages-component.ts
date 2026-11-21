@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, ElementRef, OnDestroy, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
@@ -31,7 +32,7 @@ const REFRESH_EVERY_MS = 30_000;
 @Component({
   selector: 'app-messages',
   standalone: true,
-  imports: [AppRightDirective, NgTemplateOutlet, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent],
+  imports: [AppToastComponent, AppRightDirective, NgTemplateOutlet, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent],
   templateUrl: './messages-component.html',
   styleUrls: ['../job-profile-component/job-profile-component.scss', './messages-component.scss', '../consultancy-shell-component/consultancy-pages.scss'],
 })

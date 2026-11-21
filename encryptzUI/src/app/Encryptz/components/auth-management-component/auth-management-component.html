@@ -427,16 +427,7 @@
     </div>
   }
 
-  @if (toastMessage()) {
-    <div class="toast-container">
-      <div class="toast" [class.error]="toastType() === 'error'">
-        <span class="material-icons">
-          {{ toastType() === 'error' ? 'error' : 'check_circle' }}
-        </span>
-        <span>{{ toastMessage() }}</span>
-      </div>
-    </div>
-  }
+  @if (toastMessage()) { <app-toast [text]="toastMessage()" [kind]="toastType()" /> }
 
   @if (confirmModal()) {
     <div class="modal-backdrop">

@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { statusText } from '../shared/sales-input-rules';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -10,7 +11,7 @@ import { FormsModule } from '@angular/forms';
 @Component({
   selector: 'app-complaint-tracking',
   standalone: true,
-  imports: [CommonModule, RouterModule,FormsModule],
+  imports: [AppToastComponent, CommonModule, RouterModule,FormsModule],
   templateUrl: './complaint-tracking-component.html',
   styleUrls: ['./complaint-tracking-component.scss'],
 })

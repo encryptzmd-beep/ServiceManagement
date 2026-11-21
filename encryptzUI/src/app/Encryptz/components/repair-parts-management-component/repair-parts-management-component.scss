@@ -712,20 +712,6 @@
 }
 
 /* ── Toast ── */
-.rpm-toast {
-  position: fixed;
-  bottom: 24px; right: 24px;
-  background: #1e293b;
-  color: #fff;
-  padding: 12px 20px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: 0 4px 20px rgba(0,0,0,.2);
-  z-index: 600;
-  animation: rpm-slide-in .25s ease;
-  &.err { background: #dc2626; }
-}
 @keyframes rpm-slide-in {
   from { transform: translateY(16px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }

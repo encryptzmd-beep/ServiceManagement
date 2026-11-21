@@ -362,6 +362,4 @@
 }
 
 <!-- ══ TOAST ══ -->
-@if (showToast()) {
-  <div class="rpm-toast" [class.err]="toastErr()">{{ toastMsg() }}</div>
-}
+@if (showToast()) { <app-toast [text]="toastMsg()" [kind]="toastErr() ? 'error' : 'success'" /> }

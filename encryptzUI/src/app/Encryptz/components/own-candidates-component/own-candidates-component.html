@@ -80,11 +80,7 @@
   }
 }
 
-@if (toast(); as t) {
-  <div class="jp-toast" [class.bad]="!t.ok" role="status">
-    <span class="material-icons">{{ t.ok ? 'check_circle' : 'error_outline' }}</span>{{ t.text }}
-  </div>
-}
+@if (toast(); as t) { <app-toast [text]="t.text" [kind]="t.ok ? 'success' : 'error'" /> }
 
 <!-- ═══════════ A CANDIDATE, WRITTEN ═══════════ -->
 @if (form(); as f) {

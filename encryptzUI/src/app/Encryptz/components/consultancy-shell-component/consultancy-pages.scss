@@ -41,7 +41,6 @@ $navy: #1b4a7a;
 
   /* above the fixed header (1000) and side menu (900) */
   .jp-overlay { z-index: 1100; }
-  .jp-toast { z-index: 1200; }
 
   /* stays below the fixed header while the page scrolls */
   .cd-filters { top: 64px; max-height: calc(100vh - 76px); }

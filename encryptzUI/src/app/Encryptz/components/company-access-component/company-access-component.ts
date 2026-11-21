@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -39,7 +40,7 @@ interface RoleDraft {
 @Component({
   selector: 'app-company-access',
   standalone: true,
-  imports: [CommonModule, NotificationBellComponent],
+  imports: [AppToastComponent, CommonModule, NotificationBellComponent],
   templateUrl: './company-access-component.html',
   styleUrl: './company-access-component.scss',
 })

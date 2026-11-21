@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, DestroyRef, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -41,7 +42,7 @@ interface BillLine {
 @Component({
   selector: 'app-sales-order-entry',
   standalone: true,
-  imports: [AppRightDirective, CommonModule, FormsModule, RouterModule, AutocompleteComponent, TransactionToolbarComponent, TransactionFindComponent, SalesDocumentsComponent],
+  imports: [AppToastComponent, AppRightDirective, CommonModule, FormsModule, RouterModule, AutocompleteComponent, TransactionToolbarComponent, TransactionFindComponent, SalesDocumentsComponent],
   templateUrl: './sales-order-entry-component.html',
   styleUrls: ['./sales-order-entry-component.scss'],
 })

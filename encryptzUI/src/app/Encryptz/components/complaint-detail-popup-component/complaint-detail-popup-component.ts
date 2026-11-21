@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { AppRightDirective } from '../shared/app-right/app-right';
 // complaint-detail-popup.component.ts  (v5)
 // Changes vs v4:
@@ -29,7 +30,7 @@ declare var L: any;
 @Component({
   selector: 'app-complaint-detail-popup',
   standalone: true,
-  imports: [AppRightDirective, CommonModule, FormsModule],
+  imports: [AppToastComponent, AppRightDirective, CommonModule, FormsModule],
   templateUrl: './complaint-detail-popup-component.html',
   styleUrls: ['./complaint-detail-popup-component.scss']
 })

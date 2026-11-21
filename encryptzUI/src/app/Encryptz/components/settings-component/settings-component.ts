@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { Component, computed, signal } from '@angular/core';
 import { SettingUpdateDto, SystemSetting } from '../../Models/ApiModels';
 import { CommonModule } from '@angular/common';
@@ -6,7 +7,7 @@ import { ApiService } from '../../Services/API/api-service';
 
 @Component({
   selector: 'app-settings-component',
-  imports: [CommonModule, FormsModule],
+  imports: [AppToastComponent, CommonModule, FormsModule],
   templateUrl: './settings-component.html',
   styleUrl: './settings-component.scss',
 })

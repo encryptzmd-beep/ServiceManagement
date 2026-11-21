@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 // auth-management-component.ts - COMPLETE CORRECTED VERSION
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
@@ -89,7 +90,7 @@ export interface CompanyInfoDto {
 
 @Component({
   selector: 'app-auth-management-component',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule,],
+  imports: [AppToastComponent, CommonModule, FormsModule, ReactiveFormsModule,],
   templateUrl: './auth-management-component.html',
   styleUrl: './auth-management-component.scss',
 })

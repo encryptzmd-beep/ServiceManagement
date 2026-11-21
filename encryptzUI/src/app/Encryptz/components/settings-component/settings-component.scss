@@ -235,18 +235,6 @@
     cursor: not-allowed
   }
 
-  .toast {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    padding: 14px 24px;
-    background: #d1fae5;
-    color: #059669;
-    border-radius: 10px;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, .1);
-    animation: fadeIn .3s ease
-  }
 
   @keyframes fadeIn {
     from {
@@ -550,7 +538,6 @@
   color: #b91c1c;
   font-size: 13px;
 }
-.toast.toast-error { background: #fef2f2; color: #b91c1c; }
 
 /* select + image settings (print header / footer) */
 .page-container .fi.sel { width: 180px; background: #fff; cursor: pointer; }

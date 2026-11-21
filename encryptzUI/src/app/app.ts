@@ -3,10 +3,11 @@ import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { installDateRangeGuard } from './Encryptz/Services/date-range-guard';
 import { RouterOutlet } from '@angular/router';
 import { AppDialogComponent } from './Encryptz/components/app-dialog-component/app-dialog-component';
+import { AppToastHostComponent } from './Encryptz/components/app-toast-component/app-toast-component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, AppDialogComponent],
+  imports: [RouterOutlet, AppDialogComponent, AppToastHostComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
