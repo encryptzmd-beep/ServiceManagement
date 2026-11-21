@@ -215,7 +215,7 @@
 
 <!-- ══ DETAIL PANEL ══ -->
 @if (selected()) {
-  <div class="rpm-overlay" (click)="closeDetail()"></div>
+  <div class="rpm-overlay"></div>
   <div class="rpm-panel">
     <div class="rpm-panel-header">
       <span class="material-icons">construction</span>
@@ -311,7 +311,7 @@
 
 <!-- ══ STATUS MODAL ══ -->
 @if (showStatusModal()) {
-  <div class="rpm-modal-overlay" (click)="closeStatusModal()"></div>
+  <div class="rpm-modal-overlay"></div>
   <div class="rpm-modal">
     <div class="rpm-modal-header">
       <span class="material-icons">sync</span>
@@ -355,7 +355,7 @@
 
 <!-- ══ LIGHTBOX ══ -->
 @if (lightboxImg()) {
-  <div class="rpm-lightbox-overlay" (click)="closeLightbox()">
+  <div class="rpm-lightbox-overlay">
     <img [src]="lightboxImg()!" class="rpm-lightbox-img" (click)="$event.stopPropagation()" />
     <button class="rpm-lightbox-close" (click)="closeLightbox()"><span class="material-icons">close</span></button>
   </div>

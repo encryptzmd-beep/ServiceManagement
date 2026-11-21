@@ -516,7 +516,7 @@
 
 <!-- ═══════════ MODULES OF A COMPANY ═══════════ -->
 @if (membersCompany(); as ac) {
-  <div class="modal-overlay" (click)="closeAdministrators()" (escapeClose)="closeAdministrators()">
+  <div class="modal-overlay" (escapeClose)="closeAdministrators()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>Administrators · {{ ac.companyName }}</h2>
@@ -568,7 +568,7 @@
 }
 
 @if (modulesCompany(); as mc) {
-  <div class="modal-overlay" (click)="closeModules()" (escapeClose)="closeModules()">
+  <div class="modal-overlay" (escapeClose)="closeModules()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>Modules · {{ mc.companyName }}</h2>
@@ -603,7 +603,7 @@
 
 <!-- ═══════════ APPLICATION DIALOG ═══════════ -->
 @if (applicationForm; as f) {
-  <div class="modal-overlay" (click)="closeForms()" (escapeClose)="closeForms()">
+  <div class="modal-overlay" (escapeClose)="closeForms()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>{{ f.moduleId ? 'Edit Application' : 'New Application' }}</h2>
@@ -675,7 +675,7 @@
 
 <!-- ═══════════ COMPANY DIALOG ═══════════ -->
 @if (companyForm; as f) {
-  <div class="modal-overlay" (click)="closeForms()" (escapeClose)="closeForms()">
+  <div class="modal-overlay" (escapeClose)="closeForms()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>{{ f.companyId ? 'Edit Company' : 'New Company' }}</h2>
@@ -724,7 +724,7 @@
 
 <!-- ═══════════ PROJECT DIALOG ═══════════ -->
 @if (projectForm; as f) {
-  <div class="modal-overlay" (click)="closeForms()" (escapeClose)="closeForms()">
+  <div class="modal-overlay" (escapeClose)="closeForms()">
     <div class="modal-content wide" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>{{ f.projectId ? 'Edit Company Database' : 'Attach Company Database' }}</h2>
@@ -802,7 +802,7 @@
 
 <!-- ═══════════ LOCATION DIALOG ═══════════ -->
 @if (locationForm; as f) {
-  <div class="modal-overlay" (click)="closeForms()" (escapeClose)="closeForms()">
+  <div class="modal-overlay" (escapeClose)="closeForms()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>{{ f.locationId ? 'Edit Branch' : 'New Branch' }} · {{ selectedProject()?.companyName }}</h2>
@@ -842,7 +842,7 @@
 
 <!-- ═══════════ DATABASE SERVER DIALOG ═══════════ -->
 @if (serverForm; as f) {
-  <div class="modal-overlay" (click)="closeForms()" (escapeClose)="closeForms()">
+  <div class="modal-overlay" (escapeClose)="closeForms()">
     <div class="modal-content wide" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>{{ f.dbServerId ? 'Edit Database Server' : 'New Database Server' }}</h2>
@@ -892,7 +892,7 @@
 
 <!-- ═══════════ MENU DIALOG ═══════════ -->
 @if (menuForm; as f) {
-  <div class="modal-overlay" (click)="closeForms()" (escapeClose)="closeForms()">
+  <div class="modal-overlay" (escapeClose)="closeForms()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>{{ f.menuId ? 'Edit Menu' : 'New Menu' }}</h2>

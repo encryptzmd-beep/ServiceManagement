@@ -21,7 +21,7 @@ declare var L: any;
 
     <!-- Modal Overlay -->
     @if (isOpen()) {
-      <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-overlay">
         <div class="modal-container" (click)="$event.stopPropagation()">
 
           <div class="modal-header">

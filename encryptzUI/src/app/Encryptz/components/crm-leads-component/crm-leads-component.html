@@ -139,7 +139,7 @@
   </div>
 
   @if (deleting(); as d) {
-    <div class="ld-modal-backdrop" (click)="cancelDelete()">
+    <div class="ld-modal-backdrop">
       <div class="ld-modal" role="alertdialog" aria-modal="true" aria-labelledby="ld-del-title" aria-describedby="ld-del-text"
            (click)="$event.stopPropagation()" (keydown.escape)="cancelDelete()">
         <div class="ld-modal-icon"><span class="material-icons" aria-hidden="true">delete_outline</span></div>

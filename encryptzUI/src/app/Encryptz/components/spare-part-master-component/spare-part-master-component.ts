@@ -214,7 +214,7 @@ export interface SparePart {
     </div>
 
     @if (showModal()) {
-      <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-overlay">
         <div class="modal-card role-access-modal" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <div class="modal-heading">

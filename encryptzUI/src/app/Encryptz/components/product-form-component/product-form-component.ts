@@ -19,7 +19,7 @@ export type ProductFormResult = boolean | { refresh?: boolean; message?: string;
   standalone: true,
   imports: [CommonModule, FormsModule, AppRightDirective],
   template: `
-    <div class="modal-overlay" (click)="close.emit(false)">
+    <div class="modal-overlay">
       <div class="modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-heading">

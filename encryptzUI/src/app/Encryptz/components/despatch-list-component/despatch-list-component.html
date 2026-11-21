@@ -360,7 +360,7 @@
 
   <!-- everything about one spare or repair despatch -->
   @if (viewing(); as v) {
-    <div class="sd-overlay" (click)="viewing.set(null)">
+    <div class="sd-overlay">
       <div class="sd-box sv-box" role="dialog" aria-modal="true" aria-labelledby="sv-title" (click)="$event.stopPropagation()">
         <div class="sd-head">
           <div>
@@ -437,7 +437,7 @@
 
   <!-- the one despatch window: every tab uses it -->
     @if (despatching().length || fillSales()) {
-      <div class="sd-overlay" (click)="closeServiceDespatch()">
+      <div class="sd-overlay">
         <div class="sd-box" role="dialog" aria-modal="true" aria-labelledby="sd-title" (click)="$event.stopPropagation()">
           <div class="sd-head">
             <div>

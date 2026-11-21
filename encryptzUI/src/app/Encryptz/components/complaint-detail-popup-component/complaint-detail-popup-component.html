@@ -1,6 +1,6 @@
 <!-- complaint-detail-popup-component.html  (v5) -->
 
-<div class="cd-overlay" (click)="close()"></div>
+<div class="cd-overlay"></div>
 <div class="cd-popup">
 
   @if (showToast()) { <app-toast [text]="toastMessage()" [kind]="toastType()" /> }
@@ -1183,7 +1183,7 @@
 }
 
 @if (lightboxImage()) {
-  <div class="lb-overlay" (click)="closeLightbox()">
+  <div class="lb-overlay">
     <div class="lb-box" (click)="$event.stopPropagation()">
       <div class="lb-header">
         <div class="lb-title">

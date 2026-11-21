@@ -346,7 +346,7 @@
 }
 
 @if (showAssign() && detail(); as v) {
-  <div class="dlg-overlay" (click)="closeAssign()">
+  <div class="dlg-overlay">
     <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="asgTitle" (click)="$event.stopPropagation()" (keydown.escape)="closeAssign()">
       <div class="dlg-head">
         <div>

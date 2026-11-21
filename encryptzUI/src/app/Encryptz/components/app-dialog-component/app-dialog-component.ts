@@ -9,7 +9,7 @@ import { DialogService } from '../../Services/dialog-service';
   imports: [CommonModule],
   template: `
     @if (dialog.state(); as d) {
-      <div class="dlg-overlay" (click)="onOverlay(d.mode)">
+      <div class="dlg-overlay">
         <div class="dlg" [class]="'dlg kind-' + (d.kind || 'info')" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
           <div class="dlg-icon">
             <span class="material-icons">{{ icon(d.kind) }}</span>
@@ -72,9 +72,6 @@ export class AppDialogComponent {
       default: return 'Information';
     }
   }
-
-  /** clicking outside: an alert closes, a confirm counts as "No" */
-  onOverlay(mode: 'alert' | 'confirm'): void { this.dialog.close(mode === 'alert'); }
 
   /** Marks the key as used, so a dialog under the message box (EscapeClose) stays open. */
   @HostListener('document:keydown.escape', ['$event'])
