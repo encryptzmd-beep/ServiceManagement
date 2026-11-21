@@ -10,7 +10,7 @@ $muted: #8a9ab0;
 
 :host { display: block; min-width: 0; }
 .crm-reports {
-  display: flex; flex-direction: column; gap: 12px; min-width: 0; max-width: 1240px; margin: 0 auto;
+  display: flex; flex-direction: column; gap: 12px; min-width: 0; width: 100%;
   // the page fits the window: the table takes what is left and scrolls inside
   height: calc(100vh - 52px - 48px - 43px);   // top bar, page padding, footer
   min-height: 460px;
@@ -71,8 +71,8 @@ $muted: #8a9ab0;
 .rp-leg { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .rp-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
 
-/* ── the report table: the rest of the screen ── */
-.rp-table { flex: 1 1 auto; min-height: 220px; }
+/* ── the report table: as tall as its rows, and scrolls inside when they fill the screen ── */
+.rp-table { flex: 0 1 auto; min-height: 160px; }
 .rp-tablehead { display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 16px; border-bottom: 1px solid $border; flex-shrink: 0; }
 .rp-tabletitle { font-size: 13.5px; font-weight: 600; color: $text; }
 .rp-grow { flex: 1 1 auto; }
