@@ -1,4 +1,4 @@
-import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, HostListener, computed, inject, signal, viewChild } from '@angular/core';
 import { NotificationBellComponent } from '../notification-bell-component/notification-bell-component';
 import { moduleLanding, moduleRoute } from '../shared/module-route';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -8,28 +8,34 @@ import { AuthService, Company } from '../../Auth/auth-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LocationDto, ModuleDto, PersonalApp } from '../../Models/ApiModels';
-import { branchDecision, moduleCaption } from '../../Auth/scope-flow';
+import { branchDecision, branchToEnter, moduleCaption } from '../../Auth/scope-flow';
 import {
   anyProvisioning, canEnter, CompanyCreationState, emptyCompanyForm, NewCompanyForm, POLL_LIMIT_MS, POLL_MS,
   provisionLabel, requestErrorMessage, suggestCompanyCode, validateNewCompany
 } from '../../Auth/company-creation';
 
-type Stage = 'company' | 'module' | 'branch';
+type Stage = 'company' | 'branch';
 
-/** Radius of the orbit and the farthest an item sits above / below its centre (px). */
-const ORBIT_R = 180;
-const ORBIT_MAX_Y = 172;
-
-/** One bubble of the orbit on the home screen. */
-interface OrbitItem {
+/** One application on the home screen. */
+interface HomeApp {
   key: string;
   label: string;
+  description: string;
   icon: string;
+  /** Colour of its icon. */
+  tone: string;
   disabled: boolean;
-  /** Small caption under the label ('' = none). */
+  /** Why it cannot be opened ('' when it can). */
   note: string;
   open: () => void;
 }
+
+/** Icon colour of each application; a new application gets the neutral one. */
+const APP_TONES: Record<string, string> = {
+  SERVICE: 'blue', CRM: 'orange', JOBCONSULTANCY: 'purple', INVENTORY: 'green', ACCOUNTS: 'navy',
+  PAYROLL: 'lime', SCHOOL: 'amber', JOBPORTAL: 'blue', EXPENSE: 'lime',
+};
+const appTone = (key: string): string => APP_TONES[(key || '').toUpperCase()] ?? 'slate';
 
 /** The search box shows only when there are more companies than this. */
 const SEARCH_ABOVE = 6;
@@ -63,7 +69,6 @@ export class CompanySelectorComponent {
     return this.companies().filter(c =>
       (c.companyName || '').toLowerCase().includes(term) || (c.companyCode || '').toLowerCase().includes(term));
   });
-  modules = signal<ModuleDto[]>([]);
   /** Empty also when the list could not be read: it never blocks the companies. */
   personalApps = signal<PersonalApp[]>([]);
   branches = signal<LocationDto[]>([]);
@@ -123,23 +128,21 @@ export class CompanySelectorComponent {
     const stage = this.route.snapshot.data['stage'] as Stage | undefined;
     this.stage.set(stage ?? 'company');
 
-    if ((this.stage() === 'module' || this.stage() === 'branch') && !this.auth.scopeState().companyId) {
+    if (this.stage() === 'branch' && !this.auth.scopeState().companyId) {
       this.router.navigate(['/select-company'], { replaceUrl: true });
       return;
     }
 
-    // after a reload on the module or branch step the list is not in memory: the name of
+    // after a reload on the branch step the list is not in memory: the name of
     // the company in the switcher and the user menu comes from it
     if (this.stage() !== 'company' && this.auth.companies().length === 0) {
       this.auth.getUserCompanies().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ error: () => {} });
     }
 
-    if (this.stage() === 'module') {
-      this.loadModules();
-    } else if (this.stage() === 'branch') {
+    if (this.stage() === 'branch') {
       this.moduleKey = this.route.snapshot.queryParamMap.get('module') || this.auth.selectedModuleKey() || '';
       if (!this.moduleKey) {
-        this.router.navigate(['/select-module'], { replaceUrl: true });
+        this.router.navigate(['/select-company'], { replaceUrl: true });
         return;
       }
       this.loadBranches();
@@ -153,8 +156,7 @@ export class CompanySelectorComponent {
     this.pollStopped.set(false);
     this.creationFailed.set(false);
     this.error.set('');
-    if (this.stage() === 'module') this.loadModules();
-    else if (this.stage() === 'branch') this.loadBranches();
+    if (this.stage() === 'branch') this.loadBranches();
     else this.loadCompanies();
   }
 
@@ -172,7 +174,7 @@ export class CompanySelectorComponent {
 
     this.companies.set(kept);
     this.loading.set(kept.length === 0);
-    const firstKept = kept.find(c => this.enterable(c));
+    const firstKept = this.startingCompany(kept);
     if (firstKept) {
       this.activeCompany.set(firstKept);
       this.defaultToBusiness();
@@ -182,6 +184,12 @@ export class CompanySelectorComponent {
       if (kept.length === 0) this.error.set('Could not load your companies. Please try again.');
     });
     this.loadPersonalApps();
+  }
+
+  /** The company the session is already in, else the first one that can be opened. */
+  private startingCompany(list: Company[]): Company | undefined {
+    const current = this.auth.selectedCompanyId?.();
+    return list.find(c => c.companyId === current && this.enterable(c)) ?? list.find(c => this.enterable(c));
   }
 
   /** Reads the list and the creation state again, without the spinner. */
@@ -199,7 +207,7 @@ export class CompanySelectorComponent {
         this.companies.set(list);
         this.expectSetUp = false;
         if (!this.activeCompany()) {
-          const first = list.find(c => this.enterable(c));
+          const first = this.startingCompany(list);
           if (first) {
             this.activeCompany.set(first);
             // Business is shown (by default or picked before the list came): read the modules now
@@ -248,7 +256,11 @@ export class CompanySelectorComponent {
           return;
         }
 
-        this.router.navigate(['/select-module']);
+        // its apps are listed on this same page
+        this.enteringCompany = false;
+        this.activeCompany.set(company);
+        this.businessCompanyId = null;
+        this.showMode('business');
       },
       error: () => {
         this.loading.set(false);
@@ -459,12 +471,13 @@ export class CompanySelectorComponent {
     if (!this.enterable(company)) return;
     this.activeCompany.set(company);
     this.companyMenuOpen.set(false);
+    this.appQuery.set('');
     if (this.mode() === 'business') this.loadBusinessModules();
   }
 
   /**
-   * Home screen: first the two choices (Personal / Business); the orbit then shows the
-   * personal applications or the business modules of the company picked in the top bar.
+   * Home screen: the personal applications or the business modules of the company picked
+   * in the top bar. 'choose' is the state before a company is known.
    */
   mode = signal<'choose' | 'personal' | 'business'>('choose');
 
@@ -481,6 +494,7 @@ export class CompanySelectorComponent {
 
   setMode(m: 'choose' | 'personal' | 'business'): void {
     this.modeTouched = true;
+    this.appQuery.set('');
     this.showMode(m);
   }
 
@@ -518,25 +532,34 @@ export class CompanySelectorComponent {
     this.businessLoading.set(true);
     this.businessError.set('');
     this.businessModules.set([]);
+    this.canManageUsers.set(false);
     const failed = (msg: string) => {
       if (this.gone || seq !== this.businessSeq) return;
       this.businessLoading.set(false);
       this.businessError.set(msg);
     };
+    const readModules = () => {
+      this.auth.getModules().pipe(timeout(20000), takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: (m) => {
+          if (this.gone || seq !== this.businessSeq) return;
+          if (!m.success) { failed(m.message || 'Could not load the modules'); return; }
+          this.businessLoading.set(false);
+          this.businessCompanyId = co.companyId;
+          this.businessModules.set(m.data || []);
+          this.loadUsersRolesAccess(seq);
+        },
+        error: () => failed('Could not load the modules. Please try again.'),
+      });
+    };
+
+    // selecting a company forgets the module and branch: coming back to the apps must not end the session's work
+    if (this.auth.selectedCompanyId?.() === co.companyId) { readModules(); return; }
+
     this.auth.selectCompany(co.companyId).pipe(timeout(20000), takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         if (this.gone || seq !== this.businessSeq) return;
         if (!res.success || !res.data) { failed(res.message || 'Could not open this company'); return; }
-        this.auth.getModules().pipe(timeout(20000), takeUntilDestroyed(this.destroyRef)).subscribe({
-          next: (m) => {
-            if (this.gone || seq !== this.businessSeq) return;
-            if (!m.success) { failed(m.message || 'Could not load the modules'); return; }
-            this.businessLoading.set(false);
-            this.businessCompanyId = co.companyId;
-            this.businessModules.set(m.data || []);
-          },
-          error: () => failed('Could not load the modules. Please try again.'),
-        });
+        readModules();
       },
       error: () => failed('Could not open this company. Please try again.'),
     });
@@ -544,69 +567,96 @@ export class CompanySelectorComponent {
 
   retryBusiness(): void { this.loadBusinessModules(true); }
 
-  // ── ORBITAL DISPLAY ───────────────────────────────────────────────
+  /** The tenant admin, and anyone they granted it, get the Users & Roles entry. */
+  canManageUsers = signal(false);
 
-  /** What the orbit shows: the two choices, the personal applications or the business modules. */
-  orbitItems = computed<OrbitItem[]>(() => {
+  private loadUsersRolesAccess(seq: number): void {
+    this.auth.getCompanyAccessMe?.().pipe(timeout(20000), takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (res) => {
+        if (!this.gone && seq === this.businessSeq) this.canManageUsers.set(!!res.success && !!res.data?.canManage);
+      },
+      error: () => { if (!this.gone && seq === this.businessSeq) this.canManageUsers.set(false); },
+    });
+  }
+
+  openUsersRoles(): void {
+    this.companyMenuOpen.set(false);
+    this.router.navigate(['/company/users-roles']);
+  }
+
+  // ── APP HOME ──────────────────────────────────────────────────────
+
+  /** What the user typed to find an application. */
+  appQuery = signal('');
+  private appSearchInput = viewChild<ElementRef<HTMLInputElement>>('appSearchInput');
+
+  /** The personal applications or the business modules, in their order. */
+  homeApps = computed<HomeApp[]>(() => {
     const m = this.mode();
     if (m === 'personal') {
-      return this.personalApps().map(a => ({
-        key: a.moduleKey, label: a.moduleName, icon: a.icon || 'apps',
-        disabled: !this.canOpenPersonalApp(a), note: a.isReleased ? '' : 'Coming soon',
-        open: () => this.openPersonalApp(a),
-      }));
+      return this.personalApps().map(a => {
+        const disabled = !this.canOpenPersonalApp(a);
+        return {
+          key: a.moduleKey, label: a.moduleName, description: a.description || '', icon: a.icon || 'apps',
+          tone: appTone(a.moduleKey), disabled, note: disabled ? (a.isReleased ? 'Unavailable' : 'Coming soon') : '',
+          open: () => this.openPersonalApp(a),
+        };
+      });
     }
     if (m === 'business') {
-      return this.businessModules().map(mod => ({
-        key: mod.moduleKey, label: mod.moduleName, icon: mod.icon || 'apps',
-        disabled: mod.state !== 'Available',
-        note: mod.state === 'ComingSoon' ? 'Coming soon' : this.caption(mod),
-        open: () => this.openModule(mod),
-      }));
+      return this.businessModules().map(mod => {
+        const disabled = mod.state !== 'Available';
+        return {
+          key: mod.moduleKey, label: mod.moduleName, description: mod.description || '', icon: mod.icon || 'apps',
+          tone: appTone(mod.moduleKey), disabled,
+          note: disabled ? (mod.state === 'ComingSoon' ? 'Coming soon' : this.caption(mod) || 'Unavailable') : '',
+          open: () => this.openModule(mod),
+        };
+      });
     }
-    return [
-      { key: 'personal', label: 'Personal Apps', icon: 'person', disabled: false, note: '', open: () => this.setMode('personal') },
-      { key: 'business', label: 'Business Apps', icon: 'business_center', disabled: false, note: '', open: () => this.setMode('business') },
-    ];
+    return [];
   });
 
-  openOrbitItem(item: OrbitItem): void {
-    if (!item.disabled) item.open();
-  }
-
-  /**
-   * Vertical offset of the i-th of n items from the centre. The items are spread evenly
-   * by height (not by angle), so each one sits on its own row and the labels never overlap.
-   */
-  private orbitOffsetY(i: number, n: number): number {
-    if (n <= 1) return 0;
-    const step = Math.min(80, (2 * ORBIT_MAX_Y) / (n - 1));
-    const half = step * (n - 1) / 2;
-    return half - step * i;
-  }
-
-  private orbitPos(i: number): { x: number; y: number } {
-    const r = ORBIT_R, cx = 160, cy = 240;
-    const dy = this.orbitOffsetY(i, this.orbitItems().length);
-    return { x: cx + Math.sqrt(r * r - dy * dy), y: cy - dy };
-  }
-
-  orbitItemX(i: number): number { return this.orbitPos(i).x - 22; }
-  orbitItemY(i: number): number { return this.orbitPos(i).y - 22; }
-  orbitDotCx(i: number): string { return this.orbitPos(i).x.toFixed(1); }
-  orbitDotCy(i: number): string { return this.orbitPos(i).y.toFixed(1); }
-
-  /** The dashed arc: a little past the first and the last item. */
-  orbitArcD = computed(() => {
-    const r = ORBIT_R, cx = 160, cy = 240;
-    const n = this.orbitItems().length;
-    const top = Math.asin(Math.min(1, this.orbitOffsetY(0, n) / r)) * 180 / Math.PI;
-    const a = Math.min(110, Math.max(40, top + 18));
-    const p = (deg: number) => ({ x: cx + r * Math.cos(deg * Math.PI / 180), y: cy - r * Math.sin(deg * Math.PI / 180) });
-    const s = p(a), e = p(-a);
-    const large = 2 * a > 180 ? 1 : 0;
-    return `M ${s.x.toFixed(1)} ${s.y.toFixed(1)} A ${r} ${r} 0 ${large} 1 ${e.x.toFixed(1)} ${e.y.toFixed(1)}`;
+  private foundApps = computed(() => {
+    const term = this.appQuery().trim().toLowerCase();
+    return term ? this.homeApps().filter(a => a.label.toLowerCase().includes(term)) : this.homeApps();
   });
+  openApps = computed(() => this.foundApps().filter(a => !a.disabled));
+  lockedApps = computed(() => this.foundApps().filter(a => a.disabled));
+  /** The Dock keeps every application that opens, whatever is typed in the search. */
+  dockApps = computed(() => this.homeApps().filter(a => !a.disabled));
+
+  /** One heading when the locked apps share a reason; otherwise each one shows its own. */
+  lockedTitle = computed(() => {
+    const notes = new Set(this.lockedApps().map(a => a.note));
+    if (notes.size !== 1) return 'More Apps';
+    const note = [...notes][0];
+    return note === 'Not subscribed' ? 'Not Subscribed' : note === 'Coming soon' ? 'Coming Soon' : 'More Apps';
+  });
+
+  /** Administration needs the company selected, which reading its modules has done. */
+  showAdminInDock(): boolean {
+    return this.isPlatformAdmin() && this.mode() === 'business' && this.hasBusinessCompany()
+      && !this.businessLoading() && this.businessModules().length > 0 && this.canAdminister();
+  }
+
+  /** Only the platform's own administrators get Platform Admin in the Dock. */
+  isPlatformAdmin(): boolean {
+    return !!this.auth.currentUser()?.isPlatformAdmin;
+  }
+
+  focusAppSearch(): void {
+    this.appSearchInput()?.nativeElement.focus();
+  }
+
+  /** Ctrl + K (Cmd + K on a Mac) finds an application from anywhere on the home screen. */
+  @HostListener('document:keydown', ['$event'])
+  onSearchShortcut(event: KeyboardEvent): void {
+    if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'k') return;
+    if (this.stage() !== 'company' || this.showCreate() || this.showChangePasswordModal()) return;
+    event.preventDefault();
+    this.focusAppSearch();
+  }
 
   /** What the user typed in the top bar to find one of their applications. */
   appSearch = signal('');
@@ -666,7 +716,7 @@ export class CompanySelectorComponent {
 
   greeting(): string {
     const h = new Date().getHours();
-    return h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
+    return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
   }
 
   greetingIcon(): string {
@@ -676,7 +726,16 @@ export class CompanySelectorComponent {
 
   /** e.g. "Friday, 20 November" */
   todayLabel(): string {
-    return new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+    const now = new Date();
+    return now.toLocaleDateString('en-GB', { weekday: 'long' }) + ', '
+      + now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+  }
+
+  /** e.g. "Fri, 20 Nov" */
+  shortDate(): string {
+    const now = new Date();
+    return now.toLocaleDateString('en-GB', { weekday: 'short' }) + ', '
+      + now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   }
 
   firstName(): string {
@@ -697,25 +756,10 @@ export class CompanySelectorComponent {
     document.querySelector('.ws-content')?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // ── STEP 2: MODULE ────────────────────────────────────────────────
+  // ── OPENING A MODULE (from the app list) ──────────────────────────
 
-  private loadModules(): void {
-    this.loading.set(true);
-    this.auth.getModules().subscribe({
-      next: (res) => {
-        this.loading.set(false);
-        if (!res.success) {
-          this.error.set(res.message || 'Could not load the modules');
-          return;
-        }
-        this.modules.set(res.data || []);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.error.set('Could not load the modules. Please try again.');
-      }
-    });
-  }
+  /** The module being entered: its card says "Opening…". */
+  openingModule = signal<string | null>(null);
 
   caption(module: ModuleDto): string {
     return moduleCaption(module.state);
@@ -724,9 +768,33 @@ export class CompanySelectorComponent {
   openModule(module: ModuleDto): void {
     if (module.state !== 'Available') return;
 
-    // an application whose pages need no branch opens at once; the others ask for the branch
+    if (this.openingModule()) return;
+
+    // an application whose pages need no branch opens at once
     const to = moduleRoute(module);
-    this.router.navigate(to.commands, to.queryParams ? { queryParams: to.queryParams } : undefined);
+    const toBranchStep = () => {
+      this.openingModule.set(null);
+      this.router.navigate(to.commands, to.queryParams ? { queryParams: to.queryParams } : undefined);
+    };
+    if (!to.queryParams) { toBranchStep(); return; }
+
+    // the others open in their branch from here; the branch step only explains a problem
+    this.openingModule.set(module.moduleKey);
+    this.auth.getBranches(module.moduleKey).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (res) => {
+        const branch = branchToEnter(res.success ? res.data ?? [] : [], this.auth.rememberedBranchId());
+        if (!branch) { toBranchStep(); return; }
+        this.auth.setScope(module.moduleKey, branch.locationId, branch.locationName).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+          next: (scope) => {
+            if (!scope.success || !scope.data) { toBranchStep(); return; }
+            this.openingModule.set(null);
+            this.router.navigate([moduleLanding(module.moduleKey, scope.data.role)]);
+          },
+          error: () => toBranchStep(),
+        });
+      },
+      error: () => toBranchStep(),
+    });
   }
 
   /** Administrators of a company can work on it before any module can be opened. */
@@ -756,12 +824,15 @@ export class CompanySelectorComponent {
         const list = res.data || [];
         this.branches.set(list);
 
-        const decision = branchDecision(list.length);
-        if (decision === 'none') {
+        if (branchDecision(list.length) === 'none') {
           this.noBranch.set(true);
-        } else if (decision === 'auto') {
+          return;
+        }
+        // asked only once: later the branch is changed from the top bar
+        const branch = branchToEnter(list, this.auth.rememberedBranchId());
+        if (branch) {
           this.entering.set(true);
-          this.enterBranch(list[0]);
+          this.enterBranch(branch);
         }
       },
       error: () => {
@@ -800,10 +871,6 @@ export class CompanySelectorComponent {
 
   backToCompanies(): void {
     this.router.navigate(['/select-company']);
-  }
-
-  backToModules(): void {
-    this.router.navigate(['/select-module']);
   }
 
   getRoleClass(role: string): string {

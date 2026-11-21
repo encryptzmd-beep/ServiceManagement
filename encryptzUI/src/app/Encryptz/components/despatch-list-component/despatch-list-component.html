@@ -75,7 +75,7 @@
                 <td>
                   <div class="actions">
                     <button class="fx-action-btn" title="Open bill" (click)="openBill(o.salesOrderId)"><span class="material-icons">receipt_long</span></button>
-                    <button class="fx-btn-navy btn-xs" (click)="despatch(o)"><span class="material-icons" style="font-size:15px">local_shipping</span> Despatch</button>
+                    <button appRight="create" appRightMenu="/sales/despatch" class="fx-btn-navy btn-xs" (click)="despatch(o)"><span class="material-icons" style="font-size:15px">local_shipping</span> Despatch</button>
                   </div>
                 </td>
               </tr>

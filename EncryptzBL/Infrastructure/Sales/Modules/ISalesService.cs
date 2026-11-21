@@ -26,6 +26,12 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
         Task<PagedResult<DespatchListDto>> GetDespatches(DespatchFilterDto filter);
         Task<ApiResponse<DespatchDetailDto>> GetDespatch(int despatchId);
 
+        // documents of a bill (PDF), shared by the Sales Order and Despatch screens
+        Task<ApiResponse<List<SalesDocumentDto>>> GetDocuments(int salesOrderId);
+        Task<ApiResponse<int>> SaveDocument(int salesOrderId, int? despatchId, string? documentType, string? fileName, byte[] content, int userId);
+        Task<ApiResponse<SalesDocumentFile>> GetDocumentFile(int documentId);
+        Task<ApiResponse> DeleteDocument(int documentId, int userId);
+
         // warranty
         Task<PagedResult<WarrantyLookupDto>> WarrantyLookup(WarrantyLookupFilterDto filter);
     }

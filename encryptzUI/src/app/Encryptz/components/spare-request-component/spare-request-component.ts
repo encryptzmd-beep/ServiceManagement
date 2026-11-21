@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, inject, OnInit, signal, computed, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -16,7 +17,7 @@ interface CartItem {
 @Component({
   selector: 'app-spare-request',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [AppRightDirective, CommonModule, FormsModule],
   templateUrl: './spare-request-component.html',
   styleUrls: ['./spare-request-component.scss'],
 })

@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 ﻿import { Component, Input, Output, EventEmitter, inject, OnChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -6,7 +7,7 @@ import { ApiService } from '../../Services/API/api-service';
 @Component({
   selector: 'app-edit-payment-dialog',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [AppRightDirective, CommonModule, ReactiveFormsModule],
   templateUrl: './edit-payment-dialog.html',
   styleUrls: ['./edit-payment-dialog.scss']
 })

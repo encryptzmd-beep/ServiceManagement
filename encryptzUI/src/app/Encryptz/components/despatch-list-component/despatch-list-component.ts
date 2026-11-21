@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -9,7 +10,7 @@ import { DespatchFilter, DespatchListItem, SalesOrderListItem } from '../../Mode
 @Component({
   selector: 'app-despatch-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, ModuleRefusedComponent],
+  imports: [AppRightDirective, CommonModule, FormsModule, RouterModule, ModuleRefusedComponent],
   templateUrl: './despatch-list-component.html',
   styleUrls: ['./despatch-list-component.scss'],
 })

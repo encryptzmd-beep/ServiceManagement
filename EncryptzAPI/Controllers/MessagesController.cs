@@ -1,3 +1,5 @@
+using EncryptzBL.Common.Tenant;
+using EncryptzAPI.Middleware;
 using System.Security.Claims;
 using EncryptzBL.Common;
 using EncryptzBL.Common.Jobs;
@@ -79,10 +81,12 @@ namespace EncryptzAPI.Controllers
             => Answer(await _messages.GetCompanyConversation(Caller(), Company(), id));
 
         /// <summary>Write to a person the company may reach (by CandidateKey, or by an application to one of its jobs).</summary>
+        [MenuRight("/consultancy/messages", MenuRightKind.Create)]
         [HttpPost("company/start")]
         public async Task<IActionResult> StartCompany([FromBody] StartCompanyConversationRequest? req)
             => Answer(await _messages.StartCompanyConversation(Caller(), Company(), req?.CandidateKey, req?.PostingId, req?.ApplicationId));
 
+        [MenuRight("/consultancy/messages", MenuRightKind.Create)]
         [HttpPost("company/{id:int}")]
         public async Task<IActionResult> SendCompany(int id, [FromBody] SendMessageRequest? req)
             => Answer(await _messages.SendCompanyMessage(Caller(), Company(), id, req ?? new SendMessageRequest(), SenderName()));

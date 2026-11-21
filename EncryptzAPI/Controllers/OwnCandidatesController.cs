@@ -1,3 +1,5 @@
+using EncryptzBL.Common.Tenant;
+using EncryptzAPI.Middleware;
 using EncryptzBL.Common;
 using EncryptzBL.Common.Jobs;
 using EncryptzBL.DTO_s;
@@ -48,14 +50,17 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetDuplicates([FromQuery] int? id, [FromQuery] string? email, [FromQuery] string? phone)
             => Answer(await _candidates.FindDuplicates(Caller(), Company(), id ?? 0, email, phone));
 
+        [MenuRight("/consultancy/our-candidates", MenuRightKind.Save, IdProperty = "CandidateId")]
         [HttpPost]
         public async Task<IActionResult> Save([FromBody] OwnCandidateDto? dto)
             => Answer(await _candidates.SaveOwnCandidate(Caller(), Company(), dto ?? new OwnCandidateDto()));
 
+        [MenuRight("/consultancy/our-candidates", MenuRightKind.Delete)]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
             => Answer(await _candidates.DeleteOwnCandidate(Caller(), Company(), id));
 
+        [MenuRight("/consultancy/our-candidates", MenuRightKind.Edit)]
         [HttpPost("{id:int}/resume")]
         [RequestSizeLimit(UploadLimit)]
         public async Task<IActionResult> SaveResume(int id, IFormFile? file)
@@ -70,6 +75,7 @@ namespace EncryptzAPI.Controllers
             return Answer(await _candidates.SaveOwnCandidateResume(Caller(), Company(), id, new JobUpload(file.FileName ?? "", memory.ToArray())));
         }
 
+        [MenuRight("/consultancy/our-candidates", MenuRightKind.Edit)]
         [HttpDelete("{id:int}/resume")]
         public async Task<IActionResult> DeleteResume(int id)
             => Answer(await _candidates.SaveOwnCandidateResume(Caller(), Company(), id, null));

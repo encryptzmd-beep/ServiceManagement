@@ -19,6 +19,8 @@ export class TransactionToolbarComponent {
   /** The document number, e.g. SO-0012. */
   label = input('');
   status = input('');
+  /** The user may create documents of this kind. */
+  canNew = input(true);
   canEdit = input(false);
   canSave = input(true);
   canCancel = input(false);

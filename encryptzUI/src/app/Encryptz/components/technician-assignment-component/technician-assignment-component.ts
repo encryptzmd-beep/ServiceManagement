@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -10,7 +11,7 @@ import { debounceTime, Subject } from 'rxjs';
 @Component({
   selector: 'app-technician-assignment',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [AppRightDirective, CommonModule, FormsModule],
   templateUrl: './technician-assignment-component.html',
   styleUrl: './technician-assignment-component.scss',
 })

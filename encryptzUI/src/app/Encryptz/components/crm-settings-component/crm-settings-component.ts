@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CrmMasterDto, CrmMasterKind, CrmMemberDto, CrmUserOptionDto } from '../../Models/CrmModels';
@@ -9,7 +10,7 @@ import { FORBIDDEN, refusalOf } from '../crm-shell-component/crm-ui';
 @Component({
   selector: 'app-crm-settings',
   standalone: true,
-  imports: [FormsModule, CrmRefusedComponent],
+  imports: [AppRightDirective, FormsModule, CrmRefusedComponent],
   templateUrl: './crm-settings-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-settings-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

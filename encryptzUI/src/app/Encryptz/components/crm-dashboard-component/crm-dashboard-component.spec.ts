@@ -248,7 +248,7 @@ describe('CrmDashboardComponent', () => {
   it('sends the person to the module list when the token is not for CRM', () => {
     crm.getBoard = () => throwError(() => ({ status: 403 }));
     const { el } = create();
-    expect(el.textContent).toContain('Open CRM from the module list');
+    expect(el.textContent).toContain('Open CRM from your apps');
     expect(el.querySelector('.crm-col')).toBeNull();
   });
 });

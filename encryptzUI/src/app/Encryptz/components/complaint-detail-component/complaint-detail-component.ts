@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 // src/app/modules/backoffice/components/complaint-detail/complaint-detail.component.ts
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -10,7 +11,7 @@ import { Complaint, ComplaintStatus } from '../../Models/ApiModels';
 @Component({
   selector: 'app-complaint-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [AppRightDirective, CommonModule, FormsModule, RouterModule],
   templateUrl: './complaint-detail-component.html',
   styleUrls: ['./complaint-detail-component.scss'],
 })

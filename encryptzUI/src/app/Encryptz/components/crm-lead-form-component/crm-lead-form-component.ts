@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -22,7 +23,7 @@ const blank = (): LeadSaveDto => ({
 @Component({
   selector: 'app-crm-lead-form',
   standalone: true,
-  imports: [FormsModule, RouterLink, CrmRefusedComponent, CrmLeadFieldsComponent, TransactionToolbarComponent, TransactionFindComponent],
+  imports: [AppRightDirective, FormsModule, RouterLink, CrmRefusedComponent, CrmLeadFieldsComponent, TransactionToolbarComponent, TransactionFindComponent],
   templateUrl: './crm-lead-form-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-lead-form-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

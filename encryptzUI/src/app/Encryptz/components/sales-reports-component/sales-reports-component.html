@@ -1,0 +1,91 @@
+<div class="crm-page">
+  <header class="crm-page-head sr-head">
+    <div>
+      <h1>{{ current().label }}</h1>
+      @if (view(); as v) { <p>{{ v.note }}</p> }
+    </div>
+    <div class="crm-page-actions">
+      <button type="button" class="crm-btn" [disabled]="!shownRows().length" (click)="excel()">
+        <span class="material-icons" aria-hidden="true">grid_on</span>Excel</button>
+      <button type="button" class="crm-btn" [disabled]="!shownRows().length" (click)="pdf()">
+        <span class="material-icons" aria-hidden="true">picture_as_pdf</span>PDF</button>
+    </div>
+  </header>
+
+  <!-- the reports of Sales, also reachable before the sidebar script has been run -->
+  <nav class="crm-stabs sr-tabs" aria-label="Sales reports">
+    @for (r of reports; track r.key) {
+      <a class="crm-stab" [class.on]="r.key === current().key" [attr.aria-current]="r.key === current().key ? 'page' : null" [href]="'/sales/reports/' + r.key" (click)="$event.preventDefault(); go(r.key)">{{ r.label }}</a>
+    }
+  </nav>
+
+  @if (loading()) {
+    <div class="crm-state" role="status"><span class="material-icons" aria-hidden="true">hourglass_empty</span><p>Loading the report…</p></div>
+  } @else if (error()) {
+    <div class="crm-state" role="alert">
+      <span class="material-icons" aria-hidden="true">error_outline</span>
+      <p>{{ error() }}</p>
+      <button type="button" class="crm-btn" (click)="load()">Try again</button>
+    </div>
+  } @else if (view(); as v) {
+    @if (partial()) { <p class="crm-warn">This report shows the latest 10,000 records only.</p> }
+
+    <section class="crm-stats sr-stats" aria-label="Summary">
+      @for (s of v.stats; track s.label) {
+        <div class="crm-stat">
+          <div class="crm-stat-label">{{ s.label }}</div>
+          <div class="crm-stat-val sr-val">{{ s.value }}</div>
+        </div>
+      }
+    </section>
+
+    <section class="crm-listcard">
+      <div class="crm-filterbar">
+        <label class="crm-search">
+          <span class="material-icons" aria-hidden="true">search</span>
+          <input type="search" aria-label="Search in this report" placeholder="Search in this report"
+                 [value]="query()" (input)="query.set($any($event.target).value)" />
+        </label>
+        @if (v.dated) {
+          <div class="crm-range" role="group" aria-label="Dates">
+            <span class="material-icons" aria-hidden="true">event</span>
+            <input type="date" aria-label="From" [value]="from()" (change)="from.set($any($event.target).value)" />
+            <span aria-hidden="true">–</span>
+            <input type="date" aria-label="To" [value]="to()" (change)="to.set($any($event.target).value)" />
+          </div>
+        }
+        <span class="crm-spacer"></span>
+        <span class="crm-result">{{ shownRows().length }} of {{ v.rows.length }}</span>
+        @if (query() || from() || to()) {
+          <button type="button" class="crm-btn ghost" (click)="clearFilters()">Clear</button>
+        }
+      </div>
+
+      @if (shownRows().length) {
+        <div class="crm-datagrid crm-cards-sm">
+          <table>
+            <thead>
+              <tr>
+                @for (c of v.columns; track c.key) { <th scope="col" [class.num]="isNumeric(c)">{{ c.title }}</th> }
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of shownRows(); track $index) {
+                <tr>
+                  @for (c of v.columns; track c.key; let first = $first) {
+                    <td [attr.data-label]="c.title" [class.num]="isNumeric(c)" [class.sr-first]="first">{{ cell(r, c) }}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="crm-empty big">
+          <span class="material-icons" aria-hidden="true">inbox</span>
+          <strong>{{ v.rows.length ? 'Nothing matches' : 'Nothing to report yet' }}</strong>
+        </div>
+      }
+    </section>
+  }
+</div>

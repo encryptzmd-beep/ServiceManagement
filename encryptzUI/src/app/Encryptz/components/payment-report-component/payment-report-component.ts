@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -33,7 +34,7 @@ interface AdminPayment {
 @Component({
   selector: 'app-payment-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, EditPaymentDialog],
+  imports: [AppRightDirective, CommonModule, FormsModule, EditPaymentDialog],
   templateUrl: './payment-report-component.html',
   styleUrls: ['./payment-report-component.scss']
 })

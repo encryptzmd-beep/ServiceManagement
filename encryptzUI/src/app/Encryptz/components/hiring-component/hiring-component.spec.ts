@@ -93,16 +93,6 @@ describe('HiringComponent', () => {
     expect(calls.length).toBe(0);
   });
 
-  it('is a page of Job Consultancy: its menu opens every page of it', () => {
-    const fixture = create();
-    const items = Array.from(fixture.nativeElement.querySelectorAll('.ps-nav-item')) as HTMLElement[];
-
-    expect(text(fixture)).toContain('Job Consultancy');
-    expect(items.map(e => e.querySelector('.ps-nav-label')!.textContent!.trim())).toEqual(['Dashboard', 'Job postings', 'Candidates', 'Messages', 'Clients', 'Placements']);
-    expect(items.map(e => e.getAttribute('href'))).toEqual(['/consultancy/dashboard', '/consultancy/postings', '/consultancy/candidates', '/consultancy/messages', '/consultancy/clients', '/consultancy/placements']);
-    expect(fixture.nativeElement.querySelector('.ps-back').getAttribute('href')).toBe('/select-module');
-  });
-
   it('shows the client of a job, and saves a changed client apart from the job', () => {
     consultancy.getClients = () => ok([{ clientId: 4, name: 'Acme Retail', isActive: true }]);
     consultancy.getPostingClients = () => ok([{ postingId: 7, clientId: 4, clientName: 'Acme Retail' }]);
@@ -170,7 +160,7 @@ describe('HiringComponent', () => {
 
     expect(text(fixture)).toContain('Job Consultancy is not available yet');
     expect(fixture.nativeElement.querySelector('.jb-card')).toBeNull();
-    expect(fixture.nativeElement.querySelector('a.jp-link').getAttribute('href')).toBe('/select-module');
+    expect(fixture.nativeElement.querySelector('a.jp-link').getAttribute('href')).toBe('/select-company');
   });
 
   it('saves a new job as a draft with numbers as numbers and nothing for what is left empty', () => {

@@ -47,7 +47,7 @@ describe('routeForStep', () => {
   it('maps each step to its route', () => {
     expect(routeForStep('login')).toBe('/login');
     expect(routeForStep('company')).toBe('/select-company');
-    expect(routeForStep('module')).toBe('/select-module');
+    expect(routeForStep('module')).toBe('/select-company');
     expect(routeForStep('branch')).toBe('/select-branch');
   });
 });

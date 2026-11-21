@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -10,8 +11,6 @@ import {
   TALENT_STAGES,
   TalentStage,
 } from '../../Services/consultancy-service';
-import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
-import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { ScrollIntoViewOn } from '../shared/scroll-into-view';
 import { EscapeClose } from '../shared/escape-close';
 
@@ -31,12 +30,13 @@ interface CandidateForm extends Omit<OwnCandidate, 'experienceYears'> {
 @Component({
   selector: 'app-own-candidates',
   standalone: true,
-  imports: [FormsModule, RouterModule, PersonalShellComponent, ScrollIntoViewOn, EscapeClose],
+  imports: [AppRightDirective, FormsModule, RouterModule, ScrollIntoViewOn, EscapeClose],
   templateUrl: './own-candidates-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',
     '../job-board-component/job-board-component.scss',
     './own-candidates-component.scss',
+    '../consultancy-shell-component/consultancy-pages.scss',
   ],
 })
 export class OwnCandidatesComponent implements OnInit {
@@ -45,7 +45,6 @@ export class OwnCandidatesComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
-  readonly menu = CONSULTANCY_MENU;
   readonly stages = TALENT_STAGES;
   readonly sources = CANDIDATE_SOURCES;
 

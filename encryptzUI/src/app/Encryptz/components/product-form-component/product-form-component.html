@@ -173,7 +173,7 @@
     <button mat-button class="cancel-btn" (click)="onCancel()" [disabled]="isSubmitting">
       Cancel
     </button>
-    <button mat-raised-button color="primary" (click)="onSubmit()" [disabled]="productForm.invalid || isSubmitting">
+    <button appRight="save" appRightMenu="/products" mat-raised-button color="primary" (click)="onSubmit()" [disabled]="productForm.invalid || isSubmitting">
       <mat-spinner diameter="20" *ngIf="isSubmitting"></mat-spinner>
       <span *ngIf="!isSubmitting">
         <mat-icon>{{isEditMode ? 'save' : 'add'}}</mat-icon>

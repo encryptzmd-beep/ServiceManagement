@@ -1,3 +1,5 @@
+using EncryptzBL.Common.Tenant;
+using EncryptzAPI.Middleware;
 ﻿using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Schedule.Modules;
@@ -29,6 +31,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/schedule/daily", MenuRightKind.Create)]
         [HttpPost]
         [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Create([FromBody] ScheduleCreateDto dto)
@@ -47,6 +50,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/schedule/daily", MenuRightKind.Edit)]
         [HttpPut]
         [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Update([FromBody] ScheduleUpdateDto dto)
@@ -62,6 +66,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/schedule/conflicts", MenuRightKind.Edit)]
         [HttpPost("conflicts/resolve")]
         [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> ResolveConflict([FromBody] ConflictResolveDto dto)

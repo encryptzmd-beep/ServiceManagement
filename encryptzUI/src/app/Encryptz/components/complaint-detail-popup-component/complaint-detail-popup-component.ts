@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 // complaint-detail-popup.component.ts  (v5)
 // Changes vs v4:
 //   • Removed "Request New Spare" button + form (spare tab is list-only now)
@@ -27,7 +28,7 @@ declare var L: any;
 @Component({
   selector: 'app-complaint-detail-popup',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [AppRightDirective, CommonModule, FormsModule],
   templateUrl: './complaint-detail-popup-component.html',
   styleUrls: ['./complaint-detail-popup-component.scss']
 })
@@ -61,6 +62,14 @@ activeTab = signal<'overview'|'customer'|'product'|'location'|'assignments'|'spa
   private repairLoaded = false;
 
   complaintData = signal<any>(null);
+
+  /** A job raised by a despatch is an installation, not a complaint: the wording follows it. */
+  isInstallation(): boolean {
+    return String(this.complaintData()?.NatureOfJob ?? '').trim().toLowerCase() === 'installation';
+  }
+  jobTitle(): string { return this.isInstallation() ? 'Installation' : 'Complaint'; }
+  jobNoun(): string { return this.isInstallation() ? 'installation job' : 'complaint'; }
+
   customerData  = signal<any>(null);
   productData   = signal<any>(null);
   assignments   = signal<any[]>([]);
@@ -180,7 +189,7 @@ activeTab = signal<'overview'|'customer'|'product'|'location'|'assignments'|'spa
         this.loadPayments();
         this.loadPhotoCount();
       },
-      error: () => { this.loading.set(false); this.showMessage('Failed to load complaint details', 'error'); }
+      error: () => { this.loading.set(false); this.showMessage('Failed to load the details', 'error'); }
     });
   }
 
@@ -463,8 +472,8 @@ onImgError(ev: Event) {
       preferredDate: e.PreferredDate || null,
       preferredTimeSlot: e.PreferredTimeSlot
     }).subscribe({
-      next: (r: any) => this._afterSave(r, 'Complaint updated', 'complaint'),
-      error: () => this._afterError('Error updating complaint')
+      next: (r: any) => this._afterSave(r, `${this.jobTitle()} updated`, 'complaint'),
+      error: () => this._afterError(`Error updating ${this.jobNoun()}`)
     });
   }
 
@@ -653,7 +662,7 @@ nextImage()   { if (this.imagePage()   < this.imageTotalPages())   this.imagePag
   }
 
   async markComplaintResolved() {
-    if (!(await this.dialog.confirm('Mark this complaint as completed/resolved?'))) return;
+    if (!(await this.dialog.confirm(this.isInstallation() ? 'Mark this installation job as completed?' : 'Mark this complaint as completed/resolved?'))) return;
     this.saving.set(true);
     // the id of "WorkCompleted" is looked up: it used to be sent as 5, which is another
     // status ("Assigned") in this tenant's database
@@ -669,17 +678,17 @@ nextImage()   { if (this.imagePage()   < this.imageTotalPages())   this.imagePag
           next: (r: any) => {
             this.saving.set(false);
             if (r?.Success ?? r?.success) {
-              this.showMessage('Complaint resolved', 'success');
+              this.showMessage(this.isInstallation() ? 'Installation job completed' : 'Complaint resolved', 'success');
               this.loadAllData();
               this.refreshed.emit();
             } else {
               this.showMessage(r?.Message || r?.message || 'Failed to resolve', 'error');
             }
           },
-          error: () => { this.saving.set(false); this.showMessage('Error resolving complaint', 'error'); }
+          error: () => { this.saving.set(false); this.showMessage(`Error completing ${this.jobNoun()}`, 'error'); }
         });
       },
-      error: () => { this.saving.set(false); this.showMessage('Error resolving complaint', 'error'); }
+      error: () => { this.saving.set(false); this.showMessage(`Error completing ${this.jobNoun()}`, 'error'); }
     });
   }
 

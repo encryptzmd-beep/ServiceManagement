@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ProductService } from '../../Services/product-service';
@@ -7,7 +8,7 @@ import { ProductCategory } from './product-category-options';
 @Component({
   selector: 'app-product-categories',
   standalone: true,
-  imports: [RouterLink],
+  imports: [AppRightDirective, RouterLink],
   templateUrl: './product-categories-component.html',
   styleUrl: './product-categories-component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

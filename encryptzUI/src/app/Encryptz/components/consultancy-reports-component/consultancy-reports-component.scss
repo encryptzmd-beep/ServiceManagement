@@ -1,0 +1,10 @@
+/* The look comes from crm-pages.scss; only what these reports add is here. */
+.cr-head { margin-bottom: 0; }
+.cr-stats { margin-bottom: 0; }
+.cr-val { font-size: 24px; overflow-wrap: anywhere; line-height: 1.15; }
+.crm-datagrid .cr-first { font-weight: 600; }
+
+@media (max-width: 640px) {
+  .crm-datagrid td.num { text-align: right; }
+  .crm-datagrid .cr-first { font-weight: 600; }
+}

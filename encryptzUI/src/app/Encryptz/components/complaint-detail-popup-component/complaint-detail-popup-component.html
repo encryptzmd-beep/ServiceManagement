@@ -20,7 +20,7 @@
   </div>
 
   @if (loading()) {
-    <div class="cd-loading"><div class="spinner"></div><p>Loading complaint details...</p></div>
+    <div class="cd-loading"><div class="spinner"></div><p>Loading details...</p></div>
   }
 
   @if (!loading() && complaintData()) {
@@ -65,9 +65,9 @@
       @if (activeTab()==='overview') {
         <div class="cd-section">
           <div class="cd-section-header">
-            <h3>Complaint Information</h3>
+            <h3>{{ jobTitle() }} Information</h3>
             @if (!viewOnly && !editing.complaint) {
-              <button class="cd-btn-edit" (click)="startEdit('complaint')">
+              <button appRight="edit" appRightMenu="/complaints/list" class="cd-btn-edit" (click)="startEdit('complaint')">
                 <span class="material-icons">edit</span> Edit
               </button>
             }
@@ -130,7 +130,7 @@
               </div>
               <div class="cd-form-actions">
                 <button class="cd-btn-cancel" (click)="cancelEdit('complaint')">Cancel</button>
-                <button class="cd-btn-save" (click)="saveComplaint()" [disabled]="saving()">
+                <button appRight="edit" appRightMenu="/complaints/list" class="cd-btn-save" (click)="saveComplaint()" [disabled]="saving()">
                   @if (saving()) { <span class="mini-spinner white"></span> Saving… }
                   @else { <span class="material-icons">save</span> Save }
                 </button>
@@ -138,7 +138,7 @@
             </div>
           } @else {
             <div class="cd-detail-grid">
-              <div class="cd-detail"><span class="cd-lbl">Complaint #</span><span class="cd-val mono">{{ display(complaintData()?.ComplaintNumber) }}</span></div>
+              <div class="cd-detail"><span class="cd-lbl">{{ jobTitle() }} #</span><span class="cd-val mono">{{ display(complaintData()?.ComplaintNumber) }}</span></div>
               <div class="cd-detail"><span class="cd-lbl">Status</span>
                 <span class="cd-val"><span class="status-badge" [ngClass]="statusClass(complaintData()?.StatusId)">{{ display(complaintData()?.StatusName) }}</span></span></div>
               <div class="cd-detail"><span class="cd-lbl">Priority</span>
@@ -193,7 +193,7 @@
                 <div class="ov-card-title">
                   Product / Equipment
                   @if (!hasProduct()) {
-                    <span class="ov-no-master">(from complaint — no master record)</span>
+                    <span class="ov-no-master">(from {{ jobNoun() }} — no master record)</span>
                   }
                 </div>
 
@@ -270,7 +270,7 @@
                 </button>
               }
 @if (!viewOnly && !editing.customer && customerData()) {
-                <button class="cd-btn-edit" (click)="startEdit('customer')">
+                <button appRight="edit" appRightMenu="/complaints/list" class="cd-btn-edit" (click)="startEdit('customer')">
                   <span class="material-icons">edit</span> Edit
                 </button>
               }
@@ -344,7 +344,7 @@
               </div>
               <div class="cd-form-actions">
                 <button class="cd-btn-cancel" (click)="cancelEdit('customer')">Cancel</button>
-                <button class="cd-btn-save" (click)="saveCustomer()" [disabled]="saving()">
+                <button appRight="edit" appRightMenu="/complaints/list" class="cd-btn-save" (click)="saveCustomer()" [disabled]="saving()">
                   @if (saving()) { <span class="mini-spinner white"></span> Saving… }
                   @else { <span class="material-icons">save</span> Save }
                 </button>
@@ -385,7 +385,7 @@
           <div class="cd-section-header">
             <h3>Product Details</h3>
        @if (!viewOnly && !editing.product) {
-              <button class="cd-btn-edit" (click)="startEdit('product')">
+              <button appRight="edit" appRightMenu="/complaints/list" class="cd-btn-edit" (click)="startEdit('product')">
                 <span class="material-icons">edit</span> {{ hasProduct() ? 'Edit' : 'Add Product' }}
               </button>
             }
@@ -396,7 +396,7 @@
               @if (!editData.product.__isProduct) {
                 <div class="fallback-note">
                   <span class="material-icons">info</span>
-                  No product is linked to this complaint yet. Fill in the details below to create a product record and link it — the complaint will be updated to point to the new product.
+                  No product is linked to this {{ jobNoun() }} yet. Fill in the details below to create a product record and link it — the {{ jobNoun() }} will be updated to point to the new product.
                 </div>
               }
 
@@ -434,7 +434,7 @@
 
               <div class="cd-form-actions">
                 <button class="cd-btn-cancel" (click)="cancelEdit('product')">Cancel</button>
-                <button class="cd-btn-save" (click)="saveProduct()" [disabled]="saving()">
+                <button appRight="edit" appRightMenu="/complaints/list" class="cd-btn-save" (click)="saveProduct()" [disabled]="saving()">
                   @if (saving()) { <span class="mini-spinner white"></span> Saving… }
                   @else {
                     <span class="material-icons">save</span>
@@ -465,7 +465,7 @@
             } @else {
               <div class="fallback-note">
                 <span class="material-icons">info</span>
-                No product record is linked to this complaint. Showing what's stored on the complaint itself. Use "Add Product" above to create a linked product record.
+                No product record is linked to this {{ jobNoun() }}. Showing what's stored on the {{ jobNoun() }} itself. Use "Add Product" above to create a linked product record.
               </div>
               <div class="cd-detail-grid">
                 <div class="cd-detail"><span class="cd-lbl">Category</span><span class="cd-val">{{ display(complaintData()?.Category) }}</span></div>
@@ -483,7 +483,7 @@
           <div class="cd-section-header">
             <h3>Service Location</h3>
            @if (!viewOnly && !editing.location) {
-              <button class="cd-btn-edit" (click)="startEdit('location')">
+              <button appRight="edit" appRightMenu="/complaints/list" class="cd-btn-edit" (click)="startEdit('location')">
                 <span class="material-icons">edit</span> Edit
               </button>
             }
@@ -533,7 +533,7 @@
               </div>
               <div class="cd-form-actions">
                 <button class="cd-btn-cancel" (click)="cancelEdit('location')">Cancel</button>
-                <button class="cd-btn-save" (click)="saveLocation()" [disabled]="saving()">
+                <button appRight="edit" appRightMenu="/complaints/list" class="cd-btn-save" (click)="saveLocation()" [disabled]="saving()">
                   @if (saving()) { <span class="mini-spinner white"></span> Saving… }
                   @else { <span class="material-icons">save</span> Save }
                 </button>
@@ -566,7 +566,7 @@
           <div class="cd-section-header">
             <h3>Technician Assignments</h3>
              @if (!viewOnly) {
-            <button class="cd-btn-add" (click)="requestNewAssign()">
+            <button appRight="create" appRightMenu="/complaints/assign" class="cd-btn-add" (click)="requestNewAssign()">
               <span class="material-icons">person_add</span> Assign Technician
             </button>
           }
@@ -599,10 +599,10 @@
                           <span class="material-icons">check_circle</span> Complete
                         </button>
                       }
-                      <button class="btn-reassign" (click)="requestReassign(a)">
+                      <button appRight="edit" appRightMenu="/complaints/assign" class="btn-reassign" (click)="requestReassign(a)">
                         <span class="material-icons">swap_horiz</span> Reassign
                       </button>
-                      <button class="btn-unassign" (click)="requestUnassign(a)" [disabled]="a.Status?.toLowerCase() === 'completed'">
+                      <button appRight="delete" appRightMenu="/complaints/assign" class="btn-unassign" (click)="requestUnassign(a)" [disabled]="a.Status?.toLowerCase() === 'completed'">
                         <span class="material-icons">person_remove</span>
                       </button>
                     }
@@ -659,7 +659,7 @@
                 <span class="material-icons">person_off</span>
                 <p>No technicians assigned yet</p>
                   @if (!viewOnly) {
-                <button class="cd-btn-add" (click)="requestNewAssign()">
+                <button appRight="create" appRightMenu="/complaints/assign" class="cd-btn-add" (click)="requestNewAssign()">
                   <span class="material-icons">person_add</span> Assign Now
                 </button>
               }
@@ -684,7 +684,7 @@
           @if (spareParts().length === 0) {
             <div class="cd-empty">
               <span class="material-icons">inventory_2</span>
-              <p>No spare parts requested for this complaint</p>
+              <p>No spare parts requested for this {{ jobNoun() }}</p>
             </div>
           } @else {
             <div class="spare-wrap">
@@ -712,8 +712,8 @@
                         <td class="mono">{{ formatDate(p.RequestedAt) }}</td>
                         <td class="row-actions">
                            @if (!viewOnly) {
-                          <button class="btn-icon" (click)="startEditSpare(p)"><span class="material-icons">edit</span></button>
-                          <button class="btn-icon danger" (click)="deleteSpare(p.RequestId)"><span class="material-icons">delete</span></button>
+                          <button appRight="edit" appRightMenu="/technicians/spare-requests" class="btn-icon" (click)="startEditSpare(p)"><span class="material-icons">edit</span></button>
+                          <button appRight="delete" appRightMenu="/technicians/spare-requests" class="btn-icon danger" (click)="deleteSpare(p.RequestId)"><span class="material-icons">delete</span></button>
                            }
                         </td>
                       </tr>
@@ -743,7 +743,7 @@
                         <td>{{ display(p.TechnicianName) }}</td>
                         <td class="mono">{{ formatDate(p.RequestedAt) }}</td>
                         <td class="row-actions">
-                          <button class="btn-icon ok" [disabled]="savingSpare()" (click)="saveEditSpare(p)"><span class="material-icons">check</span></button>
+                          <button appRight="edit" appRightMenu="/technicians/spare-requests" class="btn-icon ok" [disabled]="savingSpare()" (click)="saveEditSpare(p)"><span class="material-icons">check</span></button>
                           <button class="btn-icon" (click)="cancelEditSpare()"><span class="material-icons">close</span></button>
                         </td>
                       </tr>
@@ -781,7 +781,7 @@
           } @else if (!repairParts().length) {
             <div class="cd-empty">
               <span class="material-icons">construction</span>
-              <p>No repair part requests for this complaint</p>
+              <p>No repair part requests for this {{ jobNoun() }}</p>
             </div>
           } @else {
             <div class="spare-wrap">
@@ -847,7 +847,7 @@
                 <input type="checkbox" [(ngModel)]="isInternalComment">
                 <span>Internal note</span>
               </label>
-              <button class="cd-btn-save sm" (click)="addComment()" [disabled]="!newComment.trim() || savingComment()">
+              <button appRight="create" appRightMenu="/complaints/list" appRightTech class="cd-btn-save sm" (click)="addComment()" [disabled]="!newComment.trim() || savingComment()">
                 @if (savingComment()) { <span class="mini-spinner white"></span> }
                 @else { <span class="material-icons">send</span> }
                 Post
@@ -901,7 +901,7 @@
     } @else if (complaintImages().length === 0) {
       <div class="cd-empty">
         <span class="material-icons">photo_library</span>
-        <p>No photos uploaded for this complaint</p>
+        <p>No photos uploaded for this {{ jobNoun() }}</p>
       </div>
     } @else {
 
@@ -909,13 +909,13 @@
       <div class="img-section">
         <div class="img-section-label">
           <span class="material-icons">photo_camera</span>
-          Complaint Images
+          {{ jobTitle() }} Images
           <span class="img-section-count">{{ complaintOnlyImages().length }}</span>
         </div>
         @if (complaintOnlyImages().length === 0) {
           <div class="cd-empty cd-empty-sm">
             <span class="material-icons">image_not_supported</span>
-            <p>No complaint images</p>
+            <p>No {{ isInstallation() ? 'installation' : 'complaint' }} images</p>
           </div>
         } @else {
           <div class="img-grid">
@@ -1038,7 +1038,7 @@
     <div class="cd-section-header">
       <h3>Payments</h3>
       @if (!viewOnly && !showPayForm()) {
-        <button class="cd-btn-add" (click)="openPayForm()">
+        <button appRight="create" appRightMenu="/settings/payments" class="cd-btn-add" (click)="openPayForm()">
           <span class="material-icons">add_card</span> Record Payment
         </button>
       }
@@ -1126,7 +1126,7 @@
 
         <div class="cd-form-actions">
           <button class="cd-btn-cancel" (click)="cancelPayForm()">Cancel</button>
-          <button class="cd-btn-save green" (click)="submitPayment()" [disabled]="savingPayment()">
+          <button appRight="create" appRightMenu="/settings/payments" class="cd-btn-save green" (click)="submitPayment()" [disabled]="savingPayment()">
             @if (savingPayment()) { <span class="mini-spinner white"></span> Recording… }
             @else { <span class="material-icons">payment</span> Record Payment }
           </button>
@@ -1137,7 +1137,7 @@
     @if (payments().length === 0) {
       <div class="cd-empty">
         <span class="material-icons">receipt_long</span>
-        <p>No payments recorded for this complaint</p>
+        <p>No payments recorded for this {{ jobNoun() }}</p>
       </div>
     } @else {
       <div class="pay-list">
@@ -1219,7 +1219,7 @@
 
     @if (!viewOnly && complaintData()?.StatusId !== 5) {
       <button class="cd-btn-save green" (click)="markComplaintResolved()" [disabled]="saving()">
-        <span class="material-icons">task_alt</span> Mark Resolved
+        <span class="material-icons">task_alt</span> {{ isInstallation() ? 'Mark Completed' : 'Mark Resolved' }}
       </button>
     }</div>
 </div>

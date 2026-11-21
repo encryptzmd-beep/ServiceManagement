@@ -21,6 +21,15 @@ img { max-width: 100%; }
 button { font-family: inherit; }
 input, select, textarea { font-family: inherit; }
 
+/* A button or link the user has no right for (appRight): it looks and acts disabled */
+.no-right, .no-right:hover {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  filter: grayscale(0.4);
+  transform: none !important;
+  box-shadow: none !important;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

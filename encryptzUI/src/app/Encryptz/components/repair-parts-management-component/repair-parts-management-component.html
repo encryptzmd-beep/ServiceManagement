@@ -177,7 +177,7 @@
                 }
               </td>
               <td (click)="$event.stopPropagation()">
-                <button class="rpm-btn-status" (click)="openStatusModal(item)" title="Update Status">
+                <button appRight="edit" appRightMenu="/technicians/repair-parts" class="rpm-btn-status" (click)="openStatusModal(item)" title="Update Status">
                   <span class="material-icons">edit</span>
                 </button>
               </td>
@@ -276,7 +276,7 @@
       </div>
 
       <!-- Update status button -->
-      <button class="rpm-btn-update-status" (click)="openStatusModal(selected()!)">
+      <button appRight="edit" appRightMenu="/technicians/repair-parts" class="rpm-btn-update-status" (click)="openStatusModal(selected()!)">
         <span class="material-icons">sync</span> Update Status
       </button>
 
@@ -346,7 +346,7 @@
     </div>
     <div class="rpm-modal-footer">
       <button class="rpm-btn-cancel" (click)="closeStatusModal()">Cancel</button>
-      <button class="rpm-btn-save" (click)="saveStatus()" [disabled]="statusSaving()">
+      <button appRight="edit" appRightMenu="/technicians/repair-parts" class="rpm-btn-save" (click)="saveStatus()" [disabled]="statusSaving()">
         @if (statusSaving()) { <span class="rpm-spinner-sm"></span> } Save
       </button>
     </div>

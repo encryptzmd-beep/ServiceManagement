@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { CommonModule } from '@angular/common';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -21,7 +22,7 @@ interface TileConfig {
 
 @Component({
   selector: 'app-complaint-dashboard-component',
-  imports: [CommonModule, FormsModule, RouterModule, ComplaintDetailPopupComponent],
+  imports: [AppRightDirective, CommonModule, FormsModule, RouterModule, ComplaintDetailPopupComponent],
   templateUrl: './complaint-dashboard-component.html',
   styleUrl: './complaint-dashboard-component.scss',
 })

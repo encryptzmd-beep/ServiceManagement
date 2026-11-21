@@ -82,7 +82,7 @@
                   <div class="resolve-box">
                     <input type="text" class="fx-filter-select" maxlength="500" placeholder="How was it resolved?"
                            [(ngModel)]="resolutionTexts[c.conflictId]" />
-                    <button type="button" class="fx-page-btn" [disabled]="resolvingId() === c.conflictId"
+                    <button appRight="edit" appRightMenu="/schedule/conflicts" type="button" class="fx-page-btn" [disabled]="resolvingId() === c.conflictId"
                             (click)="resolveConflict(c)">
                       {{ resolvingId() === c.conflictId ? 'Saving...' : 'Mark resolved' }}
                     </button>

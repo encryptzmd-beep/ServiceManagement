@@ -5,7 +5,7 @@
       <div class="fx-page-title">Technicians</div>
       <div class="fx-page-sub">Manage your field service technicians</div>
     </div>
-    <button type="button" class="fx-btn-new" (click)="openCreate()">
+    <button appRight="create" appRightMenu="/technicians/list" type="button" class="fx-btn-new" (click)="openCreate()">
       <span class="material-icons" style="font-size:18px;">person_add</span> Add Technician
     </button>
   </div>
@@ -113,7 +113,7 @@
           <div class="card-footer">
             <span class="active-badge" *ngIf="tech.activeComplaints > 0">{{ tech.activeComplaints }} active</span>
             <div class="card-actions">
-              <button class="fx-action-btn" (click)="editTech(tech); $event.stopPropagation()" title="Edit">
+              <button appRight="edit" appRightMenu="/technicians/list" class="fx-action-btn" (click)="editTech(tech); $event.stopPropagation()" title="Edit">
                 <span class="material-icons">edit</span>
               </button>
             </div>
@@ -197,7 +197,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" (click)="closeModals()">Cancel</button>
-        <button class="fx-btn-navy" (click)="saveTechnician()" [disabled]="!showEditModal && (!formData.fullName || !formData.mobileNumber || !formData.specialization)">
+        <button appRight="save" appRightMenu="/technicians/list" class="fx-btn-navy" (click)="saveTechnician()" [disabled]="!showEditModal && (!formData.fullName || !formData.mobileNumber || !formData.specialization)">
           {{ showEditModal ? 'Update' : 'Create' }}
         </button>
       </div>

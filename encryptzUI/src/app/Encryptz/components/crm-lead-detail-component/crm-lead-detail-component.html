@@ -21,12 +21,12 @@
           <button type="button" class="crm-btn" (click)="open('status')">Change status</button>
           <button type="button" class="crm-btn danger" (click)="open('lost')">Mark lost</button>
           @if (isManager()) { <button type="button" class="crm-btn crm-reassign" (click)="open('reassign')">Reassign</button> }
-          <button type="button" class="crm-btn" (click)="newQuotation()">New quotation</button>
+          <button appRight="create" appRightMenu="/crm/quotations" type="button" class="crm-btn" (click)="newQuotation()">New quotation</button>
           @if (canConvert()) {
-            <button type="button" class="crm-btn navy crm-convert" (click)="openConvert()"><span class="material-icons" aria-hidden="true">shopping_cart_checkout</span>Convert to Sale</button>
+            <button appRight="edit" appRightMenu="/crm/leads" type="button" class="crm-btn navy crm-convert" (click)="openConvert()"><span class="material-icons" aria-hidden="true">shopping_cart_checkout</span>Convert to Sale</button>
           }
         }
-        @if (l.status === 'Lost' && isManager()) { <button type="button" class="crm-btn" (click)="reopen()">Reopen</button> }
+        @if (l.status === 'Lost' && isManager()) { <button appRight="edit" appRightMenu="/crm/leads" type="button" class="crm-btn" (click)="reopen()">Reopen</button> }
         @if (canLinkOrder()) { <button type="button" class="crm-btn crm-link-order" (click)="open('link')">Link existing order</button> }
         @if (canCancelConvert()) { <button type="button" class="crm-btn crm-cancel-convert" (click)="open('cancel-convert')">Cancel convert</button> }
       </div>
@@ -110,7 +110,7 @@
               </tbody>
             </table>
           </div>
-          @if (!isClosed()) { <div class="crm-actions"><button type="button" class="crm-btn" (click)="newQuotation()">New quotation</button></div> }
+          @if (!isClosed()) { <div class="crm-actions"><button appRight="create" appRightMenu="/crm/quotations" type="button" class="crm-btn" (click)="newQuotation()">New quotation</button></div> }
         }
       }
     </section>
@@ -182,12 +182,12 @@
         <div class="crm-actions">
           <button type="button" class="crm-btn" (click)="close()">Cancel</button>
           @switch (dialog()) {
-            @case ('followup') { <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="saveFollowUp()">Save follow-up</button> }
-            @case ('status') { <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="saveStatus()">Change status</button> }
-            @case ('lost') { <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="saveLost()">Mark lost</button> }
-            @case ('reassign') { <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="saveReassign()">Reassign</button> }
-            @case ('link') { <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="saveLink()">Link order</button> }
-            @case ('cancel-convert') { <button type="button" class="crm-btn primary crm-confirm-cancel-convert" [disabled]="busy()" (click)="saveCancelConvert()">Cancel convert</button> }
+            @case ('followup') { <button appRight="edit" appRightMenu="/crm/leads" type="button" class="crm-btn primary" [disabled]="busy()" (click)="saveFollowUp()">Save follow-up</button> }
+            @case ('status') { <button appRight="edit" appRightMenu="/crm/leads" type="button" class="crm-btn primary" [disabled]="busy()" (click)="saveStatus()">Change status</button> }
+            @case ('lost') { <button appRight="edit" appRightMenu="/crm/leads" type="button" class="crm-btn primary" [disabled]="busy()" (click)="saveLost()">Mark lost</button> }
+            @case ('reassign') { <button appRight="edit" appRightMenu="/crm/leads" type="button" class="crm-btn primary" [disabled]="busy()" (click)="saveReassign()">Reassign</button> }
+            @case ('link') { <button appRight="edit" appRightMenu="/crm/leads" type="button" class="crm-btn primary" [disabled]="busy()" (click)="saveLink()">Link order</button> }
+            @case ('cancel-convert') { <button appRight="edit" appRightMenu="/crm/leads" type="button" class="crm-btn primary crm-confirm-cancel-convert" [disabled]="busy()" (click)="saveCancelConvert()">Cancel convert</button> }
           }
         </div>
       </div>

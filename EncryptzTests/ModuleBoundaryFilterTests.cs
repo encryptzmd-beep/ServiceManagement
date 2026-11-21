@@ -97,6 +97,8 @@ namespace EncryptzTests
             var controlPlane = new[]
             {
                 "AuthController", "CompanyController", "PlatformController", "WeatherForecastController",
+                "CompanyAccessController", // Users & Roles belong to the company, outside every module
+                "MenuRightsController", // the caller's own rights, asked per module by the screens
                 "JobsController", "JobPostingsController", "CompanyJobsController", "VerificationController", "ConsultancyController", "NotificationsController",
                 "LoginAdsController",  // the sign-in page, before anyone has a company
                 "PublicJobsController", // the public job pages: no login, no company

@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { CrmMasterDto } from '../../Models/CrmModels';
 
@@ -7,6 +8,7 @@ import { CrmMasterDto } from '../../Models/CrmModels';
  */
 @Component({
   selector: 'app-crm-status-dialog',
+  imports: [AppRightDirective],
   standalone: true,
   templateUrl: './crm-status-dialog-component.html',
   styleUrls: ['./crm-pages.scss', './crm-status-dialog-component.scss'],

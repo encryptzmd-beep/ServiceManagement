@@ -1,0 +1,386 @@
+<div class="ca">
+  <header class="ca-top">
+    <div class="ca-brand">{{ companyFirst }} <span>{{ companyRest }}</span></div>
+    <span class="ca-grow"></span>
+    <button type="button" class="ca-btn" (click)="backToApps()">
+      <span class="material-icons" aria-hidden="true">grid_view</span><span class="ca-hide-sm">All apps</span>
+    </button>
+    <app-notification-bell />
+    <span class="ca-me ca-hide-sm"><strong>{{ auth.userName() }}</strong><small>{{ auth.userRole() }}</small></span>
+    <span class="ca-av" aria-hidden="true">{{ initials(auth.userName()) }}</span>
+  </header>
+
+  <div class="ca-body">
+    <aside class="ca-side">
+      <div class="ca-side-label">USERS &amp; ROLES</div>
+      <nav class="ca-nav" aria-label="Users and roles">
+        <button type="button" [class.on]="tab() === 'users'" (click)="tab.set('users')">
+          <span class="material-icons" aria-hidden="true">group</span>Users<em>{{ data()?.users?.length ?? '' }}</em>
+        </button>
+        <button type="button" [class.on]="tab() === 'roles'" (click)="tab.set('roles')">
+          <span class="material-icons" aria-hidden="true">badge</span>Roles<em>{{ data()?.roles?.length ?? '' }}</em>
+        </button>
+        <button type="button" [class.on]="tab() === 'access'" (click)="tab.set('access')">
+          <span class="material-icons" aria-hidden="true">admin_panel_settings</span>Admin Access<em>{{ data() ? managers().length : '' }}</em>
+        </button>
+      </nav>
+    </aside>
+
+    <main class="ca-content">
+      <div class="ca-page-head">
+        <div>
+          <h1>{{ pageTitle() }}</h1>
+          <p>{{ pageSub() }}</p>
+        </div>
+        @if (data()) {
+          @if (tab() === 'users') {
+            <button type="button" class="ca-btn accent" (click)="addUser()">
+              <span class="material-icons" aria-hidden="true">person_add</span>Add User
+            </button>
+          } @else if (tab() === 'roles') {
+            <button type="button" class="ca-btn accent" (click)="newRole()">
+              <span class="material-icons" aria-hidden="true">add</span>New Role
+            </button>
+          }
+        }
+      </div>
+
+      @if (loading()) {
+        <div class="ca-card ca-state"><div class="ca-spinner"></div>Loading users and roles…</div>
+      } @else if (loadError() && !data()) {
+        <div class="ca-card ca-state" role="alert">
+          <span class="material-icons ca-state-icon" aria-hidden="true">error_outline</span>
+          <span>{{ loadError() }}</span>
+          <span class="ca-state-actions">
+            <button type="button" class="ca-btn" (click)="retry()">Try again</button>
+            <button type="button" class="ca-btn" (click)="backToApps()">Back to apps</button>
+          </span>
+        </div>
+      } @else if (data(); as d) {
+        @if (loadError()) { <p class="ca-error" role="alert">{{ loadError() }}</p> }
+
+        <!-- USERS -->
+        @if (tab() === 'users') {
+          <section class="ca-card">
+            <div class="ca-toolbar">
+              <h2>All users</h2>
+              <label class="ca-search">
+                <span class="material-icons" aria-hidden="true">search</span>
+                <input type="search" placeholder="Search users" aria-label="Search users"
+                       [value]="query()" (input)="query.set(valueOf($event))" />
+              </label>
+            </div>
+            <div class="ca-table-wrap">
+              <table class="ca-table">
+                <thead>
+                  <tr><th scope="col">User</th><th scope="col">Roles</th><th scope="col">Apps</th><th scope="col">Branches</th><th scope="col">Status</th><th scope="col"><span class="ca-sr">Actions</span></th></tr>
+                </thead>
+                <tbody>
+                  @for (u of filteredUsers(); track u.userId) {
+                    <tr>
+                      <td>
+                        <div class="ca-person">
+                          <span class="ca-av" aria-hidden="true">{{ initials(u.fullName) }}</span>
+                          <span><strong>{{ u.fullName }}</strong><small>{{ u.email }}</small></span>
+                        </div>
+                      </td>
+                      <td><div class="ca-chips">@for (r of userRoleLabels(u); track r) { <span class="ca-chip">{{ r }}</span> }</div></td>
+                      <td>
+                        <div class="ca-icons" [title]="moduleNames(u.moduleKeys)" role="img" [attr.aria-label]="moduleNames(u.moduleKeys) || 'No apps'">
+                          @for (k of u.moduleKeys; track k) {
+                            @if (moduleOf(k); as m) { <span class="ca-ic"><span class="material-icons">{{ m.icon || 'apps' }}</span></span> }
+                          } @empty { <span class="ca-muted">None</span> }
+                        </div>
+                      </td>
+                      <td class="ca-nowrap">{{ branchText(u) }}</td>
+                      <td><span class="ca-status"><i [class.off]="!u.isActive"></i>{{ u.isActive ? 'Active' : 'Inactive' }}</span></td>
+                      <td class="ca-right">
+                        @if (canEdit(u)) {
+                          <button type="button" class="ca-btn" [attr.aria-label]="'Edit ' + u.fullName" (click)="editUser(u)">Edit</button>
+                        } @else if (u.isTenantAdmin) {
+                          <span class="material-icons ca-lock" title="Tenant admin" aria-label="Tenant admin">lock</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            @if (filteredUsers().length === 0) { <p class="ca-empty">No users match your search.</p> }
+          </section>
+        }
+
+        <!-- ROLES -->
+        @if (tab() === 'roles') {
+          <div class="ca-roles">
+            <section class="ca-card ca-role-list">
+              <h2>All roles</h2>
+              <div class="ca-role-builtin">
+                <span><strong>Tenant Admin <span class="material-icons" aria-label="Built-in">lock</span></strong><small>Full access to every subscribed app</small></span>
+              </div>
+              @for (r of d.roles; track r.companyRoleId) {
+                <button type="button" class="ca-role-row" [class.on]="roleDraft()?.companyRoleId === r.companyRoleId" (click)="pickRole(r)">
+                  <span><strong>{{ r.roleName }}</strong><small>{{ r.userCount }} {{ r.userCount === 1 ? 'user' : 'users' }}</small></span>
+                  <span class="ca-icons">
+                    @for (k of r.moduleKeys; track k) {
+                      @if (moduleOf(k); as m) { <span class="ca-ic sm" [title]="m.moduleName"><span class="material-icons">{{ m.icon || 'apps' }}</span></span> }
+                    }
+                  </span>
+                </button>
+              } @empty {
+                <p class="ca-empty left">No roles yet. Create your first one.</p>
+              }
+            </section>
+
+            @if (roleDraft(); as r) {
+              <section class="ca-card ca-role-editor">
+                <div class="ca-editor-head">
+                  <div>
+                    <h2>{{ r.companyRoleId ? (r.roleName || 'Role') : 'New role' }}</h2>
+                    <p>Choose its modules, then the menus and actions for each.</p>
+                  </div>
+                  <div class="ca-actions">
+                    @if (canDeleteRole()) {
+                      @if (confirmDelete()) {
+                        <span class="ca-confirm">Delete this role?</span>
+                        <button type="button" class="ca-btn danger" (click)="deleteRole()">Yes, delete</button>
+                        <button type="button" class="ca-btn" (click)="confirmDelete.set(false)">Keep</button>
+                      } @else {
+                        <button type="button" class="ca-btn danger" (click)="confirmDelete.set(true)">Delete</button>
+                      }
+                    }
+                    <button type="button" class="ca-btn primary" [disabled]="savingRole()" (click)="saveRole()">
+                      {{ savingRole() ? 'Saving…' : 'Save role' }}
+                    </button>
+                  </div>
+                </div>
+
+                <div class="ca-fields three">
+                  <label>Role name
+                    <input class="ca-input" maxlength="100" placeholder="e.g. Branch Manager" [value]="r.roleName"
+                           (input)="patchRole({ roleName: valueOf($event) })" />
+                  </label>
+                  <label>Description
+                    <input class="ca-input" maxlength="300" placeholder="What this role is for" [value]="r.description"
+                           (input)="patchRole({ description: valueOf($event) })" />
+                  </label>
+                  <label>Works as
+                    <select class="ca-input" [value]="r.accessLevel" (change)="patchRole({ accessLevel: valueOf($event) })">
+                      @for (l of accessLevels; track l.value) { <option [value]="l.value" [selected]="l.value === r.accessLevel">{{ l.label }}</option> }
+                    </select>
+                    <small>Sets the system actions this role can perform</small>
+                  </label>
+                </div>
+                @if (roleError()) { <p class="ca-error" role="alert">{{ roleError() }}</p> }
+
+                <h3>1. Choose modules</h3>
+                <div class="ca-modules">
+                  @for (m of d.modules; track m.moduleKey) {
+                    <label class="ca-module" [class.on]="r.moduleKeys.includes(m.moduleKey)">
+                      <input type="checkbox" [checked]="r.moduleKeys.includes(m.moduleKey)" (change)="toggleModule(m, checkedOf($event))" />
+                      <span class="ca-ic"><span class="material-icons" aria-hidden="true">{{ m.icon || 'apps' }}</span></span>
+                      {{ m.moduleName }}
+                    </label>
+                  } @empty {
+                    <p class="ca-empty left">Your company has no subscribed modules yet.</p>
+                  }
+                </div>
+
+                <h3>2. Set what this role can do</h3>
+                @if (currentModule(); as cm) {
+                  <div class="ca-matrix-head">
+                    <div class="ca-tabs" role="group" aria-label="Module permissions">
+                      @for (m of selectedModules(); track m.moduleKey) {
+                        <button type="button" [class.on]="m.moduleKey === cm.moduleKey" [attr.aria-pressed]="m.moduleKey === cm.moduleKey"
+                                (click)="activeModule.set(m.moduleKey)">{{ m.moduleName }}</button>
+                      }
+                    </div>
+                    @if (cm.menus.length) {
+                      <label class="ca-check">
+                        <input type="checkbox" [checked]="fullAccess()" (change)="setFullAccess(checkedOf($event))" />
+                        Full access to {{ cm.moduleName }}
+                      </label>
+                    }
+                  </div>
+                  @if (cm.menus.length) {
+                    <div class="ca-table-wrap ca-matrix">
+                      <table class="ca-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Menu</th>
+                            @for (p of permissions; track p.key) {
+                              <th scope="col" class="ca-center">
+                                <label class="ca-head-check">
+                                  <input type="checkbox" [checked]="columnOn(p.key)" [attr.aria-label]="p.label + ' for all menus'"
+                                         (change)="setColumn(p.key, checkedOf($event))" />{{ p.label }}
+                                </label>
+                              </th>
+                            }
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (menu of cm.menus; track menu.menuId) {
+                            <tr>
+                              <td>@if (menu.groupName) { <small class="ca-group">{{ menu.groupName }} ›</small> } {{ menu.menuName }}</td>
+                              @for (p of permissions; track p.key) {
+                                <td class="ca-center">
+                                  <input type="checkbox" [checked]="isOn(menu.menuId, p.key)" [attr.aria-label]="p.label + ' ' + menu.menuName"
+                                         (change)="setCell(menu.menuId, p.key, checkedOf($event))" />
+                                </td>
+                              }
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  } @else {
+                    <p class="ca-note">{{ cm.moduleName }} has no separate menus here. This role can open the whole app.</p>
+                  }
+                } @else {
+                  <p class="ca-note">Choose at least one module above.</p>
+                }
+              </section>
+            }
+          </div>
+        }
+
+        <!-- ADMIN ACCESS -->
+        @if (tab() === 'access') {
+          <section class="ca-card ca-access">
+            @if (d.canGrant) {
+              <div class="ca-grant">
+                <label>Grant access to
+                  <select class="ca-input" [value]="grantId()" (change)="grantId.set(numberOf($event))">
+                    <option value="0" [selected]="grantId() === 0">Choose a user</option>
+                    @for (u of grantable(); track u.userId) { <option [value]="u.userId">{{ u.fullName }}</option> }
+                  </select>
+                </label>
+                <button type="button" class="ca-btn primary" [disabled]="!grantId() || savingManager()" (click)="setManager(grantId(), true)">Grant access</button>
+              </div>
+            } @else {
+              <p class="ca-note">Only the tenant admin can change who has this access.</p>
+            }
+            @if (accessError()) { <p class="ca-error" role="alert">{{ accessError() }}</p> }
+
+            <div class="ca-managers">
+              @for (m of managers(); track m.userId) {
+                <div class="ca-manager">
+                  <span class="ca-av" aria-hidden="true">{{ initials(m.fullName) }}</span>
+                  <span class="ca-manager-name"><strong>{{ m.fullName }}</strong><small>{{ m.email }}</small></span>
+                  @if (m.isTenantAdmin) {
+                    <span class="ca-status"><span class="material-icons" aria-hidden="true">lock</span>Tenant admin, default</span>
+                  } @else if (d.canGrant) {
+                    <button type="button" class="ca-btn danger" [disabled]="savingManager()" [attr.aria-label]="'Remove access for ' + m.fullName"
+                            (click)="setManager(m.userId, false)">Remove</button>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+        }
+      }
+    </main>
+  </div>
+
+  @if (draft(); as u) {
+    <button type="button" class="ca-scrim" aria-label="Close" (click)="closeUser()"></button>
+    <aside class="ca-drawer" role="dialog" aria-modal="true" [attr.aria-label]="u.userId ? 'Edit user' : 'Add user'" (keydown.escape)="closeUser()">
+      <div class="ca-drawer-head">
+        <h2>{{ u.userId ? 'Edit user' : 'Add user' }}</h2>
+        <button type="button" class="ca-btn icon" aria-label="Close" (click)="closeUser()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="ca-drawer-body">
+        @if (u.userId) {
+          <div class="ca-person big">
+            <span class="ca-av" aria-hidden="true">{{ initials(u.fullName) }}</span>
+            <span><strong>{{ u.fullName }}</strong><small>{{ u.email }}</small></span>
+          </div>
+        } @else {
+          <div class="ca-fields">
+            <label>Email
+              <input class="ca-input" type="email" maxlength="256" autocomplete="off" placeholder="name@example.com" [value]="u.email"
+                     (input)="patchDraft({ email: valueOf($event) })" />
+              <small>If this person already has an account, they are added to your company.</small>
+            </label>
+            <label>Full name
+              <input class="ca-input" maxlength="200" autocomplete="off" [value]="u.fullName" (input)="patchDraft({ fullName: valueOf($event) })" />
+            </label>
+            <label>Mobile number
+              <input class="ca-input" maxlength="20" autocomplete="off" [value]="u.mobileNumber" (input)="patchDraft({ mobileNumber: valueOf($event) })" />
+            </label>
+            <label>Temporary password
+              <input class="ca-input" type="password" autocomplete="new-password" [value]="u.password" (input)="patchDraft({ password: valueOf($event) })" />
+              <small>Only needed for a person with no account. At least 6 characters.</small>
+            </label>
+          </div>
+        }
+
+        <div>
+          <h3>Roles</h3>
+          <p class="ca-help">A user can have more than one role.</p>
+          @if (!u.hadRoles && u.userId && !u.roleIds.length) {
+            <p class="ca-note">Current access: {{ levelLabel(u.roleInCompany) }}. It stays as it is until you choose a role.</p>
+          }
+          @for (r of data()?.roles ?? []; track r.companyRoleId) {
+            <label class="ca-check row">
+              <input type="checkbox" [checked]="u.roleIds.includes(r.companyRoleId)" (change)="toggleDraftRole(r.companyRoleId, checkedOf($event))" />
+              <span>{{ r.roleName }}</span>
+              <span class="ca-icons">
+                @for (k of r.moduleKeys; track k) {
+                  @if (moduleOf(k); as m) { <span class="ca-ic sm" [title]="m.moduleName"><span class="material-icons">{{ m.icon || 'apps' }}</span></span> }
+                }
+              </span>
+            </label>
+          } @empty {
+            <p class="ca-note">Create a role first, in the Roles tab.</p>
+          }
+        </div>
+
+        <div class="ca-apps-preview">
+          <strong>Apps this user will get</strong>
+          <span>{{ draftApps() }}</span>
+        </div>
+
+        @if (data()?.branchNote) {
+          <p class="ca-note">{{ data()?.branchNote }}</p>
+        } @else if (data()?.branches?.length) {
+          <div>
+            <h3>Branches</h3>
+            <div class="ca-branches">
+              @for (b of data()?.branches ?? []; track b.locationId) {
+                <label class="ca-check">
+                  <input type="checkbox" [checked]="u.locationIds.includes(b.locationId)" (change)="toggleDraftBranch(b.locationId, checkedOf($event))" />
+                  {{ b.locationName }}
+                </label>
+              }
+            </div>
+          </div>
+        }
+
+        @if (data()?.canGrant) {
+          <label class="ca-check boxed">
+            <input type="checkbox" [checked]="u.canManage" (change)="patchDraft({ canManage: checkedOf($event) })" />
+            <span><strong>Can manage users &amp; roles</strong><small>Lets this person create users and roles for the company.</small></span>
+          </label>
+        }
+        @if (u.userId && !u.isSelf) {
+          <label class="ca-check">
+            <input type="checkbox" [checked]="u.isActive" (change)="patchDraft({ isActive: checkedOf($event) })" />
+            Active in this company
+          </label>
+        }
+        @if (userError()) { <p class="ca-error" role="alert">{{ userError() }}</p> }
+      </div>
+      <div class="ca-drawer-foot">
+        <button type="button" class="ca-btn" [disabled]="savingUser()" (click)="closeUser()">Cancel</button>
+        <button type="button" class="ca-btn primary" [disabled]="savingUser()" (click)="saveUser()">
+          {{ savingUser() ? 'Saving…' : (u.userId ? 'Save user' : 'Add user') }}
+        </button>
+      </div>
+    </aside>
+  }
+
+  @if (toast()) {
+    <div class="ca-toast" role="status"><span class="material-icons" aria-hidden="true">check_circle</span>{{ toast() }}</div>
+  }
+</div>

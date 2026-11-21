@@ -5,7 +5,7 @@
       <div class="fx-page-title">Sales Orders</div>
       <div class="fx-page-sub">Bills raised against customers · saved bills go on to Despatch, which creates the installation job and starts the warranty</div>
     </div>
-    <button class="fx-btn-new" (click)="newOrder()" [hidden]="refused()">
+    <button appRight="create" appRightMenu="/sales/orders" class="fx-btn-new" (click)="newOrder()" [hidden]="refused()">
       <span class="material-icons" style="font-size:18px">add</span> New Sales Order
     </button>
   </div>
@@ -112,10 +112,10 @@
                   <div class="actions">
                     <button class="fx-action-btn" title="Open bill" (click)="open(o)"><span class="material-icons">visibility</span></button>
                     @if (o.status === 'Billed') {
-                      <button class="fx-btn-navy btn-xs" title="Despatch this bill" (click)="despatch(o)">
+                      <button appRight="create" appRightMenu="/sales/despatch" class="fx-btn-navy btn-xs" title="Despatch this bill" (click)="despatch(o)">
                         <span class="material-icons" style="font-size:15px">local_shipping</span> Despatch
                       </button>
-                      <button class="fx-action-btn is-danger" title="Cancel bill" (click)="cancel(o, $event)"><span class="material-icons">block</span></button>
+                      <button appRight="delete" appRightMenu="/sales/orders" class="fx-action-btn is-danger" title="Cancel bill" (click)="cancel(o, $event)"><span class="material-icons">block</span></button>
                     } @else if (o.despatchId) {
                       <button class="fx-action-btn" title="Despatch & warranty" (click)="viewDespatch(o)"><span class="material-icons">verified_user</span></button>
                     }

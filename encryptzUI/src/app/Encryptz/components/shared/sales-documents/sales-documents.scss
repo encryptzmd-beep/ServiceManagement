@@ -1,0 +1,62 @@
+:host { display: block; margin-bottom: 14px; }
+
+.sd-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+
+.sd-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 12px 18px; border-bottom: 1px solid #e2e8f0;
+  h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14.5px; font-weight: 600; color: #1a2332; }
+  p { margin: 2px 0 0; font-size: 12px; color: #5a6a7e; }
+}
+
+.sd-count {
+  min-width: 20px; padding: 1px 7px; box-sizing: border-box; border-radius: 10px; background: #e8eef5; color: #1b4a7a;
+  font-size: 12px; font-weight: 600; text-align: center;
+}
+
+.sd-add { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sd-add select {
+  height: 36px; padding: 0 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; color: #334155; font: inherit; font-size: 13px;
+  &:focus { outline: none; border-color: #4a7ab5; box-shadow: 0 0 0 3px rgba(74, 122, 181, 0.15); }
+}
+
+.sd-btn {
+  position: relative; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; box-sizing: border-box;
+  border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+  .material-icons { font-size: 17px; }
+  input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  &.primary { background: #d42b2b; color: #fff; &:hover { background: #b82424; } }
+  &.busy { opacity: 0.7; cursor: default; input { cursor: default; } }
+  &:focus-within { outline: 2px solid #4a7ab5; outline-offset: 2px; }
+}
+
+.sd-error { margin: 10px 18px 0; padding: 9px 12px; border-radius: 8px; background: #fff1f2; color: #be123c; font-size: 13px; }
+
+.sd-list { list-style: none; margin: 0; padding: 0; }
+.sd-list li { display: flex; align-items: center; gap: 10px; padding: 9px 18px; min-width: 0; }
+.sd-list li + li { border-top: 1px solid #f1f5f9; }
+.sd-icon { flex: 0 0 auto; font-size: 22px; color: #d42b2b; }
+
+.sd-file {
+  display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; padding: 0; border: none; background: none; font: inherit; text-align: left; cursor: pointer;
+  strong { font-size: 13.5px; font-weight: 600; color: #1b4a7a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  small { margin-top: 1px; font-size: 12px; color: #5a6a7e; overflow-wrap: anywhere; }
+  &:hover strong { text-decoration: underline; }
+  &:focus-visible { outline: 2px solid #4a7ab5; outline-offset: 2px; border-radius: 4px; }
+}
+
+.sd-remove {
+  flex: 0 0 auto; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid #f5d0d0; border-radius: 8px; background: #fff; color: #be123c; cursor: pointer;
+  .material-icons { font-size: 17px; }
+  &:hover { background: #fff1f2; }
+}
+
+.sd-empty { display: block; margin: 0; padding: 16px 18px !important; font-size: 13px; color: #5a6a7e; text-align: center; justify-content: center; }
+
+@media (max-width: 640px) {
+  .sd-head { padding: 12px 14px; }
+  .sd-add, .sd-add select, .sd-btn { width: 100%; }
+  .sd-btn { justify-content: center; }
+  .sd-list li { padding: 9px 14px; }
+}

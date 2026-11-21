@@ -1,3 +1,4 @@
+using EncryptzBL.Common.Tenant;
 using EncryptzAPI.Middleware;
 using EncryptzBL.Common.Service;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
@@ -42,6 +43,7 @@ namespace EncryptzAPI.Controllers
         }
 
         // POST api/staff-complaints
+        [MenuRight("/complaints/list", MenuRightKind.Create)]
         [HttpPost]
         public async Task<IActionResult> Register([FromBody] PublicQuickComplaintRequest_Dto dto)
         {

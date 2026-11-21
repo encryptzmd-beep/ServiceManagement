@@ -175,6 +175,8 @@ export interface DespatchSummary {
   vehicleNo?: string | null;
   driverName?: string | null;
   trackingNo?: string | null;
+  despatchMode?: string | null;
+  referenceDate?: string | null;
   remarks?: string | null;
   status: string;
   installationComplaintId?: number | null;
@@ -206,11 +208,40 @@ export interface DespatchCreate {
   vehicleNo?: string | null;
   driverName?: string | null;
   trackingNo?: string | null;
+  despatchMode?: string | null;
+  referenceDate?: string | null;
   remarks?: string | null;
   createInstallationComplaint: boolean;
   priority?: string | null;
   preferredDate?: string | null;
   units: DespatchUnit[];
+}
+
+/** How goods leave, and what the reference number of that mode is called. */
+export const DESPATCH_MODES: { value: string; reference: string; carrier: boolean; vehicle: boolean }[] = [
+  { value: 'Own Vehicle', reference: 'Trip / Gate Pass No', carrier: false, vehicle: true },
+  { value: 'Road Transport', reference: 'LR No', carrier: true, vehicle: true },
+  { value: 'Courier', reference: 'AWB / Docket No', carrier: true, vehicle: false },
+  { value: 'Rail', reference: 'RR No', carrier: true, vehicle: false },
+  { value: 'Air', reference: 'Air Waybill No', carrier: true, vehicle: false },
+  { value: 'Sea', reference: 'Bill of Lading No', carrier: true, vehicle: false },
+  { value: 'Hand Delivery', reference: 'Delivery Note No', carrier: false, vehicle: false },
+  { value: 'Customer Pickup', reference: 'Gate Pass No', carrier: false, vehicle: true },
+];
+
+export const SALES_DOCUMENT_TYPES = ['Invoice', 'E-Way Bill', 'Delivery Challan', 'LR / Consignment Note', 'Purchase Order', 'Other'];
+
+/** A PDF attached to a bill, from the Sales Order or the Despatch screen. */
+export interface SalesDocument {
+  documentId: number;
+  salesOrderId: number;
+  despatchId?: number | null;
+  despatchNo?: string | null;
+  documentType: string;
+  fileName: string;
+  fileSize: number;
+  uploadedAt: string;
+  uploadedByName?: string | null;
 }
 
 export interface DespatchCreateResult {
@@ -236,6 +267,8 @@ export interface DespatchListItem {
   transporterName?: string | null;
   vehicleNo?: string | null;
   trackingNo?: string | null;
+  despatchMode?: string | null;
+  referenceDate?: string | null;
   salesOrderId: number;
   orderNo: string;
   orderDate: string;

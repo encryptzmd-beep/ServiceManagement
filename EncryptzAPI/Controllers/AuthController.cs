@@ -126,6 +126,7 @@ namespace EncryptzAPI.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SaveRole([FromBody] SaveRoleRequest req)
         {
+            if (!IsPlatformAdmin()) return GlobalRolesRefused();
             var result = await _authService.SaveRole(req);
             return Ok(result);
         }
@@ -134,6 +135,7 @@ namespace EncryptzAPI.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteRole(int roleId)
         {
+            if (!IsPlatformAdmin()) return GlobalRolesRefused();
             var result = await _authService.DeleteRole(roleId);
             if (!result.Success) return BadRequest(result);
             return Ok(result);
@@ -153,9 +155,15 @@ namespace EncryptzAPI.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SaveMenuAccessBulk([FromBody] SaveMenuAccessBulkRequest req)
         {
+            if (!IsPlatformAdmin()) return GlobalRolesRefused();
             var result = await _authService.SaveMenuAccessBulk(req);
             return Ok(result);
         }
+
+        // dbo.Roles and RoleMenuAccess are shared by every company: a company's own Admin role
+        // must not change them. Companies keep their roles in Users & Roles (api/company-access).
+        private ObjectResult GlobalRolesRefused() => StatusCode(StatusCodes.Status403Forbidden,
+            ApiResponse<object>.Fail("Global roles are managed by the platform. Use Users & Roles for your company"));
         // Controllers/AuthController.cs (ADD THESE NEW ACTIONS)
 
         #region Multi-Company Actions

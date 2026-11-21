@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, OnInit, inject, signal, computed, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -14,9 +15,7 @@ import {
   REJECT_REASON_MIN,
 } from '../../Services/company-jobs-service';
 import { INTERVIEW_MODES, InterviewMode, JOB_EMPLOYMENT_TYPES, JOB_WORK_MODES, JobEducation, JobSkill } from '../../Services/jobs-service';
-import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
-import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
 import { CandidateMatch, ConsultClient, ConsultancyService, PostingClient } from '../../Services/consultancy-service';
 import { MessagesService } from '../../Services/messages-service';
 import { AutocompleteComponent, AutocompleteOption } from '../autocomplete-component/autocomplete-component';
@@ -42,12 +41,13 @@ const REFUSED = "You don't have access to Job Consultancy. Ask your administrato
 @Component({
   selector: 'app-hiring-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent, AutocompleteComponent, ScrollIntoViewOn, EscapeClose],
+  imports: [AppRightDirective, CommonModule, FormsModule, RouterModule, VerifiedBadgeComponent, AutocompleteComponent, ScrollIntoViewOn, EscapeClose],
   templateUrl: './hiring-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',
     '../job-board-component/job-board-component.scss',
     './hiring-component.scss',
+    '../consultancy-shell-component/consultancy-pages.scss',
   ],
 })
 export class HiringComponent implements OnInit {
@@ -60,8 +60,6 @@ export class HiringComponent implements OnInit {
   private asked = false;
   private consultancy = inject(ConsultancyService);
   private messages = inject(MessagesService);
-
-  readonly menu = CONSULTANCY_MENU;
 
   /** The clients of the consultancy, and which job is for which (known to the company only). */
   clients = signal<ConsultClient[]>([]);

@@ -1,0 +1,21 @@
+/* The frame itself is crm-shell-component.scss. Only what Job Consultancy adds to it is here. */
+
+/* its pages take their text size from the page, not from the small size of the CRM frame */
+.crm-content { font-size: 1rem; }
+
+.cz-badge {
+  min-width: 20px; padding: 1px 6px; border-radius: 999px; box-sizing: border-box; flex-shrink: 0;
+  background: #d42b2b; color: #fff; font-size: 11px; font-weight: 600; line-height: 16px; text-align: center;
+}
+.crm-side.collapsed .cz-badge { position: absolute; top: 3px; right: 3px; min-width: 16px; padding: 0 4px; font-size: 10px; line-height: 14px; }
+
+@media (max-width: 768px) {
+  .crm-side.collapsed .cz-badge { position: static; min-width: 20px; padding: 1px 6px; font-size: 11px; line-height: 16px; }
+}
+
+/* a page prints without the menu and the bars */
+@media print {
+  app-header, app-footer, .crm-side, .crm-backdrop { display: none !important; }
+  .crm-main, .crm-main.sidebar-open { margin: 0; }
+  .crm-content { padding: 0; }
+}

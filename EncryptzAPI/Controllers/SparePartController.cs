@@ -1,3 +1,5 @@
+using EncryptzBL.Common.Tenant;
+using EncryptzAPI.Middleware;
 ﻿using EncryptzAPI.Middleware;
 using EncryptzBL.Common;
 using EncryptzBL.DTO_s;
@@ -95,6 +97,7 @@ using System.Security.Claims;
     }
 
     // PATCH api/spare-parts/request/{id}/status
+    [MenuRight("/technicians/spare-requests", MenuRightKind.Edit, AllowTechnician = true)]
     [HttpPatch("request/{id}/status")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateSpareStatusDto dto)
     {
@@ -123,6 +126,7 @@ using System.Security.Claims;
     }
 
     // POST api/spare-parts/bulk-status
+    [MenuRight("/technicians/spare-requests", MenuRightKind.Edit)]
     [HttpPost("bulk-status")]
     public async Task<IActionResult> BulkUpdateStatus([FromBody] BulkStatusDto dto)
     {
@@ -164,6 +168,7 @@ using System.Security.Claims;
     }
 
     // POST api/spare-parts/request
+    [MenuRight("/technicians/spare-requests", MenuRightKind.Create, AllowTechnician = true)]
     [HttpPost("requestspare")]
     public async Task<IActionResult> CreateRequest([FromBody] List<SparePartRequestCreateDto> dtos)
     {
@@ -214,6 +219,7 @@ using System.Security.Claims;
         });
     }
 
+    [MenuRight("/technicians/spare-requests", MenuRightKind.Create, AllowTechnician = true)]
     [HttpPost("request")]
     public async Task<IActionResult> CreateRequest([FromBody] SparePartRequestCreateDto dto)
     {
@@ -267,6 +273,7 @@ using System.Security.Claims;
     }
 
     // POST: api/SparePart
+    [MenuRight("/spare-parts", MenuRightKind.Create)]
     [HttpPost]
     [Authorize(Roles = "Admin,CompanyAdmin")]
     public async Task<IActionResult> Create([FromBody] SparePartRequest_Model request)
@@ -278,6 +285,7 @@ using System.Security.Claims;
     }
 
     // PUT: api/SparePart/{id}
+    [MenuRight("/spare-parts", MenuRightKind.Edit)]
     [HttpPut("{id}")]
     [Authorize(Roles = "Admin,CompanyAdmin")]
     public async Task<IActionResult> Update(int id, [FromBody] SparePartRequest_Model request)
@@ -290,6 +298,7 @@ using System.Security.Claims;
     }
 
     // DELETE: api/SparePart/{id}
+    [MenuRight("/spare-parts", MenuRightKind.Delete)]
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin,CompanyAdmin")]
     public async Task<IActionResult> Delete(int id)
@@ -301,6 +310,7 @@ using System.Security.Claims;
     }
 
     // POST: api/SparePart/bulk-delete
+    [MenuRight("/spare-parts", MenuRightKind.Delete)]
     [HttpPost("bulk-delete")]
     [Authorize(Roles = "Admin,CompanyAdmin")]
     public async Task<IActionResult> BulkDelete([FromBody] BulkDeleteRequest request)

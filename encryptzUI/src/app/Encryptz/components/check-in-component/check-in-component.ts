@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { CommonModule } from '@angular/common';
 import {
   Component,
@@ -16,7 +17,7 @@ import { GpsTracking } from '../../Services/gps-tracking';
 
 @Component({
   selector: 'app-check-in-component',
-  imports: [CommonModule, FormsModule],
+  imports: [AppRightDirective, CommonModule, FormsModule],
   templateUrl: './check-in-component.html',
   styleUrl: './check-in-component.scss',
 })

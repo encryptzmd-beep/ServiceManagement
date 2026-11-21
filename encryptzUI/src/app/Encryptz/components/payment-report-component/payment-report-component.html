@@ -187,7 +187,7 @@
             <th class="col-verify">
               <div class="verify-header">
                 <span>Verify</span>
-                <button class="verify-all-btn"
+                <button appRight="edit" appRightMenu="/settings/payments" class="verify-all-btn"
                         (click)="verifyAll()"
                         [title]="'Verify all unverified (' + filteredPayments().filter(p => !p.isVerified).length + ')'">
                   All
@@ -342,7 +342,7 @@
                   <div class="comment-box">
                     <textarea [(ngModel)]="commentDraft" rows="2" placeholder="Add remark…"></textarea>
                     <div class="comment-actions">
-                      <button class="btn-save-sm" (click)="saveComment(p)" [disabled]="savingComment()">
+                      <button appRight="edit" appRightMenu="/settings/payments" class="btn-save-sm" (click)="saveComment(p)" [disabled]="savingComment()">
                         {{ savingComment() ? 'Saving…' : 'Save' }}
                       </button>
                       <button class="btn-cancel-sm" (click)="cancelComment()">Cancel</button>
@@ -362,7 +362,7 @@
 
               <!-- Actions -->
               <td>
-                <button class="btn-view" (click)="edit(p)" title="View / Edit">
+                <button appRight="edit" appRightMenu="/settings/payments" class="btn-view" (click)="edit(p)" title="View / Edit">
                   <span class="material-icons">visibility</span>
                 </button>
               </td>

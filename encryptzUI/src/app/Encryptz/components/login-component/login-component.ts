@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
 import { safeNextUrl } from '../../Auth/return-url';
+import { apiErrorMessage } from '../../Auth/api-error';
 import { LoginBrandPanelComponent } from '../login-brand-panel/login-brand-panel';
 
 @Component({
@@ -97,9 +98,9 @@ export class LoginComponent {
 
       this.goOn();
     },
-    error: () => {
+    error: (err) => {
       this.loading.set(false);
-      this.error.set('Login failed. Please try again.');
+      this.error.set(apiErrorMessage(err, 'Login failed. Please try again.'));
     }
   });
 }
@@ -121,9 +122,9 @@ export class LoginComponent {
           this.error.set(res.message || 'Failed to send OTP');
         }
       },
-      error: () => {
+      error: (err) => {
         this.loading.set(false);
-        this.error.set('Failed to send OTP. Please try again.');
+        this.error.set(apiErrorMessage(err, 'Failed to send OTP. Please try again.'));
       }
     });
   }
@@ -149,9 +150,9 @@ export class LoginComponent {
           this.error.set(res.message || 'Invalid OTP');
         }
       },
-      error: () => {
+      error: (err) => {
         this.loading.set(false);
-        this.error.set('OTP verification failed. Please try again.');
+        this.error.set(apiErrorMessage(err, 'OTP verification failed. Please try again.'));
       }
     });
   }
@@ -215,9 +216,9 @@ private handlePostLogin(data: any): void {
           this.forgotPasswordError.set(res.message || 'Failed to send OTP');
         }
       },
-      error: () => {
+      error: (err) => {
         this.forgotPasswordLoading.set(false);
-        this.forgotPasswordError.set('Network error occurred. Please try again.');
+        this.forgotPasswordError.set(apiErrorMessage(err, 'Something went wrong. Please try again.'));
       }
     });
   }
@@ -248,9 +249,9 @@ private handlePostLogin(data: any): void {
           this.forgotPasswordError.set(res.message || 'Failed to reset password');
         }
       },
-      error: () => {
+      error: (err) => {
         this.forgotPasswordLoading.set(false);
-        this.forgotPasswordError.set('Network error occurred. Please try again.');
+        this.forgotPasswordError.set(apiErrorMessage(err, 'Something went wrong. Please try again.'));
       }
     });
   }

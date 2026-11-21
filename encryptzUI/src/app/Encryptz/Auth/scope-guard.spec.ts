@@ -25,7 +25,7 @@ describe('scopeGuard', () => {
   });
 
   it('sends a session with only a company to the module screen', () => {
-    expect(run({ ...full, moduleKey: null, locationId: null })).toBe('/select-module');
+    expect(run({ ...full, moduleKey: null, locationId: null })).toBe('/select-company');
   });
 
   it('sends a session without a branch to the branch screen', () => {
@@ -53,6 +53,6 @@ describe('scopeGuard', () => {
   });
 
   it('asks a platform administrator in a company for the module as usual', () => {
-    expect(run({ ...full, moduleKey: null, locationId: null }, {}, true)).toBe('/select-module');
+    expect(run({ ...full, moduleKey: null, locationId: null }, {}, true)).toBe('/select-company');
   });
 });

@@ -168,7 +168,7 @@ export class AuthService {
 
   login(email: string, password: string): Observable<ApiResponse<LoginResponse>> {
     return this.http.post<ApiResponse<LoginResponse>>(`${this.apiUrl}/login`, { email, password })
-      .pipe(tap(res => { if (res.success && res.data) this.setSession(res.data); }));
+      .pipe(tap(res => { if (res.success && res.data) this.startNewSession(res.data); }));
   }
 
   sendOtp(mobileNumber: string): Observable<ApiResponse<string>> {
@@ -177,7 +177,13 @@ export class AuthService {
 
   verifyOtp(mobileNumber: string, otpCode: string): Observable<ApiResponse<LoginResponse>> {
     return this.http.post<ApiResponse<LoginResponse>>(`${this.apiUrl}/verify-otp`, { mobileNumber, otpCode })
-      .pipe(tap(res => { if (res.success && res.data) this.setSession(res.data); }));
+      .pipe(tap(res => { if (res.success && res.data) this.startNewSession(res.data); }));
+  }
+
+  /** A login token has no company yet: a selection left by an expired session must not be trusted. */
+  private startNewSession(data: LoginResponse): void {
+    this.clearSelectedCompany();
+    this.setSession(data);
   }
 
   register(data: RegisterRequest): Observable<ApiResponse> {
@@ -401,10 +407,32 @@ private persistScope(moduleKey: string, locationId: number, locationName: string
   this._selectedLocationId.set(locationId || null);
   this._selectedLocationName.set(locationName);
 
+  const rememberKey = this.branchMemoryKey();
+  if (rememberKey && locationId) localStorage.setItem(rememberKey, locationId.toString());
+
   if (scopeId != null) {
     localStorage.setItem('selected_project_id', scopeId.toString());
     this._selectedProjectId.set(scopeId || null);
   }
+}
+
+/** Whether this person may open Users & Roles of the selected company. */
+getCompanyAccessMe(): Observable<ApiResponse<{ canManage: boolean; canGrant: boolean }>> {
+  return this.http.get<ApiResponse<{ canManage: boolean; canGrant: boolean }>>(`${this.companyUrl}/company-access/me`);
+}
+
+/** Last branch is kept per user and company, and survives logout, so the step is asked only once. */
+private branchMemoryKey(): string | null {
+  const user = this._currentUser();
+  const companyId = this._selectedCompanyId() ?? user?.companyId;
+  return user?.userId && companyId ? `encryptz_last_branch_${user.userId}_${companyId}` : null;
+}
+
+/** The branch this user last worked in for the selected company (null = none yet). */
+rememberedBranchId(): number | null {
+  const key = this.branchMemoryKey();
+  const stored = key ? Number(localStorage.getItem(key)) : 0;
+  return stored > 0 ? stored : null;
 }
 
 /** Forget the module and branch (another company was selected). */

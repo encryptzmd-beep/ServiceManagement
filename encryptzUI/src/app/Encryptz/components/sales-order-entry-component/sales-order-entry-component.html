@@ -13,7 +13,10 @@
 
   <app-transaction-toolbar
     [mode]="mode()" [label]="orderNo()" [status]="isNew() ? '' : status()"
-    [canEdit]="canEditBill()" [canSave]="isEditable()" [canCancel]="canCancelBill()"
+    [canNew]="rights.can('create', '/sales/orders')"
+    [canEdit]="canEditBill() && rights.can('edit', '/sales/orders')"
+    [canSave]="isEditable() && rights.can(isNew() ? 'create' : 'edit', '/sales/orders')"
+    [canCancel]="canCancelBill() && rights.can('delete', '/sales/orders')"
     [previousId]="neighbours().previousId" [nextId]="neighbours().nextId" [busy]="saving() || loading()"
     (newDoc)="onNew()" (edit)="onEdit()" (discard)="onDiscard()" (save)="onSave()" (print)="print()"
     (cancelDoc)="onCancelBill()" (previous)="onPrevious()" (next)="onNext()" (find)="onFind()" />
@@ -88,7 +91,7 @@
                   <small class="geo"><span class="material-icons">place</span>Landmark: {{ c.landmark }}</small>
                 }
               </div>
-              <button type="button" class="pill-btn" title="Edit customer master" (click)="openEditCustomer()">
+              <button appRight="edit" appRightMenu="/sales/orders" type="button" class="pill-btn" title="Edit customer master" (click)="openEditCustomer()">
                 <span class="material-icons">edit</span>
               </button>
               @if (isEditable()) {
@@ -106,7 +109,7 @@
                      (blur)="closeCustomerDropdownLater()"
                      placeholder="Search customer by name, mobile, e-mail or city…"
                      autocomplete="off" />
-              <button type="button" class="btn-new-customer" (mousedown)="$event.preventDefault()" (click)="openNewCustomer()">
+              <button appRight="create" appRightMenu="/sales/orders" type="button" class="btn-new-customer" (mousedown)="$event.preventDefault()" (click)="openNewCustomer()">
                 <span class="material-icons">person_add</span> New Customer
               </button>
 
@@ -117,7 +120,7 @@
                   } @else if (!customerResults().length) {
                     <div class="dd-row muted">
                       No customer found.
-                      <a (mousedown)="$event.preventDefault()" (click)="openNewCustomer()">Create “{{ customerSearch || 'new customer' }}”</a>
+                      <a appRight="create" appRightMenu="/sales/orders" (mousedown)="$event.preventDefault()" (click)="openNewCustomer()">Create “{{ customerSearch || 'new customer' }}”</a>
                     </div>
                   } @else {
                     @for (c of customerResults(); track c.customerId) {
@@ -257,6 +260,11 @@
     </div>
   </section>
 
+  <!-- ── PDFs of the bill (also shown on its despatch) ─────── -->
+  @if (!isNew()) {
+    <app-sales-documents [salesOrderId]="salesOrderId()" [canAdd]="status() !== 'Cancelled'" [canRemove]="status() !== 'Cancelled'" />
+  }
+
   <!-- ── notes + summary ───────────────────────────────────── -->
   <div class="bottom-grid">
     <section class="card">
@@ -271,15 +279,17 @@
               <div class="despatch-row">
                 <div>
                   <strong>{{ d.despatchNo }}</strong> · {{ d.despatchDate | date:'dd MMM yyyy' }}
+                  @if (d.despatchMode) { · {{ d.despatchMode }} }
+                  @if (d.trackingNo) { · Ref {{ d.trackingNo }} }
                   @if (d.transporterName) { · {{ d.transporterName }} }
                   @if (d.vehicleNo) { · {{ d.vehicleNo }} }
                 </div>
                 <div class="despatch-meta">
                   @if (d.installationComplaintNo) {
-                    Installation complaint <span class="mono">{{ d.installationComplaintNo }}</span>
+                    Installation job <span class="mono">{{ d.installationComplaintNo }}</span>
                     <span class="status-badge" [style.background]="(d.installationStatusColor || '#64748b') + '20'" [style.color]="d.installationStatusColor || '#64748b'">{{ d.installationStatus }}</span>
                     @if (d.assignedTechnicians) { · Technician: {{ d.assignedTechnicians }} } @else { · <em>not assigned yet</em> }
-                  } @else { No installation complaint was created. }
+                  } @else { No installation job was created. }
                 </div>
                 <button type="button" class="btn-link" (click)="viewDespatch(d.despatchId)">View despatch &amp; warranty →</button>
               </div>
@@ -306,16 +316,16 @@
 
         <div class="summary-actions">
           @if (isEditable()) {
-            <button type="button" class="btn-outline" [disabled]="saving()" (click)="save(false)">
+            <button appRight="save" appRightMenu="/sales/orders" type="button" class="btn-outline" [disabled]="saving()" (click)="save(false)">
               {{ isNew() ? 'Save Bill' : 'Update Bill' }}
             </button>
-            <button type="button" class="btn-primary" [disabled]="saving()" (click)="save(true)">
+            <button appRight="save" appRightMenu="/sales/orders" type="button" class="btn-primary" [disabled]="saving()" (click)="save(true)">
               <span class="material-icons">local_shipping</span>
               {{ saving() ? 'Saving…' : 'Save & Despatch' }}
             </button>
           } @else if (status() === 'Billed' && !isNew()) {
             <!-- a saved bill, shown read-only: it can go on to despatch without Edit -->
-            <button type="button" class="btn-primary" [disabled]="saving()" (click)="goToDespatch()">
+            <button appRight="create" appRightMenu="/sales/despatch" type="button" class="btn-primary" [disabled]="saving()" (click)="goToDespatch()">
               <span class="material-icons">local_shipping</span> Despatch
             </button>
           } @else if (detail()?.despatches?.length) {
@@ -520,7 +530,7 @@
       </div>
       <div class="modal-foot">
         <button type="button" class="btn-outline" (click)="closeCustomerPanel()">Cancel</button>
-        <button type="button" class="btn-primary" [disabled]="savingCustomer()" (click)="saveCustomer()">
+        <button appRight="save" appRightMenu="/sales/orders" type="button" class="btn-primary" [disabled]="savingCustomer()" (click)="saveCustomer()">
           {{ savingCustomer() ? 'Saving…' : (customerPanelMode() === 'new' ? 'Create Customer' : 'Save Changes') }}
         </button>
       </div>

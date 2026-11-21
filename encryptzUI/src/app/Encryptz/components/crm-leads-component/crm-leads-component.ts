@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -14,7 +15,7 @@ const KEYS = ['search', 'status', 'sourceId', 'ownerUserId', 'from', 'to', 'due'
 @Component({
   selector: 'app-crm-leads',
   standalone: true,
-  imports: [FormsModule, RouterLink, CrmRefusedComponent],
+  imports: [AppRightDirective, FormsModule, RouterLink, CrmRefusedComponent],
   templateUrl: './crm-leads-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-leads-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

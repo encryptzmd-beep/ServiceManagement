@@ -25,8 +25,8 @@ describe('route guards with the real routes', () => {
     return router.url;
   };
 
-  it('sends a session with only a company from a business page to the module step', async () => {
-    expect(await urlAfter(companyOnly, '/complaints/dashboard')).toBe('/select-module');
+  it('sends a session with only a company from a business page to the app list', async () => {
+    expect(await urlAfter(companyOnly, '/complaints/dashboard')).toBe('/select-company');
   });
 
   it('lets a session with only a company open a company-only page', async () => {

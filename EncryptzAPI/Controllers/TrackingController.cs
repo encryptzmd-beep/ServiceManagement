@@ -1,3 +1,5 @@
+using EncryptzBL.Common.Tenant;
+using EncryptzAPI.Middleware;
 ﻿using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Tracking.Modules;
@@ -37,6 +39,7 @@ namespace EncryptzAPI.Controllers
         // FIXED: Was [HttpPost("checkin")] using JWT UserId only.
         // Now accepts {technicianId} from route so admin panel can check in
         // a selected technician (matches checkout/site-arrival pattern).
+        [MenuRight("/tracking/attendance", MenuRightKind.Create, AllowTechnician = true)]
         [HttpPost("{technicianId}/checkin")]
         public async Task<IActionResult> CheckIn(int technicianId, [FromBody] CheckInDto dto)
         {
@@ -49,6 +52,7 @@ namespace EncryptzAPI.Controllers
         }
 
         // ── Check Out ────────────────────────────────────────────────────────
+        [MenuRight("/tracking/attendance", MenuRightKind.Edit, AllowTechnician = true)]
         [HttpPost("{technicianId}/checkout")]
         public async Task<IActionResult> CheckOut(int technicianId, [FromBody] CheckOutDto dto)
         {
@@ -61,6 +65,7 @@ namespace EncryptzAPI.Controllers
         }
 
         // ── Site Arrival ─────────────────────────────────────────────────────
+        [MenuRight("/tracking/attendance", MenuRightKind.Edit, AllowTechnician = true)]
         [HttpPost("{technicianId}/site-arrival")]
         public async Task<IActionResult> SiteArrival(int technicianId, [FromBody] SiteArrivalDto dto)
         {
@@ -72,6 +77,7 @@ namespace EncryptzAPI.Controllers
         }
 
         // ── Log Position ─────────────────────────────────────────────────────
+        [MenuRight("/tracking/geo", MenuRightKind.Create, AllowTechnician = true)]
         [HttpPost("log")]
         public async Task<IActionResult> LogPosition([FromBody] TrackingLogDto dto)
         {

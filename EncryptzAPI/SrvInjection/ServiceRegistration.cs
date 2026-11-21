@@ -74,6 +74,8 @@ namespace EncryptzAPI.SrvInjection
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<ICompanyProvisioningService, CompanyProvisioningService>();
             services.AddScoped<IPlatformService, PlatformService>();                // MainDB registry administration
+            services.AddScoped<ICompanyAccessService, CompanyAccessService>();      // a company's users and roles (MainDB)
+            services.AddScoped<IMenuRightsService, MenuRightsService>();            // add / edit / delete rights of a user (MainDB)
             services.AddScoped<IPlatformUnlockService, PlatformUnlockService>();    // e-mailed access code for Platform Admin
             services.AddScoped<IWalletService, WalletService>();                    // credits and invites of an individual (MainDB)
             services.AddScoped<ILoginAdService, LoginAdService>();                  // login page advertisements (MainDB)

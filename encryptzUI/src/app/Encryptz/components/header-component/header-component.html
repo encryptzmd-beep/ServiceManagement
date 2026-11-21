@@ -8,7 +8,7 @@
     {{ companyName }}
     <span class="brand-accent">{{ companySuffix }}</span>
   </span>
-  @if (branchName) {
+  @if (branchName && !showBranchSwitch()) {
     <span class="brand-branch">· {{ branchName }}</span>
   }
 </div>
@@ -22,6 +22,35 @@
   </div> -->
 
   <div class="header-right">
+    <!-- branch switcher: only for a user who can work in more than one branch -->
+    @if (showBranchSwitch()) {
+      <div class="mod-switch">
+        <button type="button" class="mod-btn" (click)="toggleBranchMenu($event)" aria-haspopup="menu"
+                [attr.aria-expanded]="branchMenuOpen()" [attr.aria-label]="'Branch: ' + branchName" title="Switch branch">
+          <span class="material-icons mod-btn-icon" aria-hidden="true">storefront</span>
+          <span class="mod-btn-name">{{ branchName || 'Branch' }}</span>
+          <span class="material-icons mod-chevron" [class.open]="branchMenuOpen()" aria-hidden="true">expand_more</span>
+        </button>
+        @if (branchMenuOpen()) {
+          <div class="mod-backdrop" (click)="closeBranchMenu()"></div>
+          <div class="mod-menu" role="menu" (keydown.escape)="closeBranchMenu()">
+            <div class="mod-menu-label">Switch branch</div>
+            @for (b of branches(); track b.locationId) {
+              <button type="button" class="mod-item" role="menuitem" [class.on]="isCurrentBranch(b)"
+                      [disabled]="branchSwitching() !== null" (click)="switchBranch(b)">
+                <span class="mod-item-icon"><span class="material-icons" aria-hidden="true">storefront</span></span>
+                <span class="mod-item-text">
+                  <span class="mod-item-name">{{ b.locationName }}</span>
+                  @if (branchSwitching() === b.locationId) { <span class="mod-item-sub">Opening…</span> }
+                </span>
+                @if (isCurrentBranch(b)) { <span class="material-icons mod-check" aria-hidden="true">check</span> }
+              </button>
+            }
+            @if (branchError()) { <div class="mod-menu-note mod-menu-error" role="alert">{{ branchError() }}</div> }
+          </div>
+        }
+      </div>
+    }
     <!-- module switcher: the company's modules, the current one marked -->
     @if (auth.selectedCompanyId()) {
       <div class="mod-switch">
@@ -80,14 +109,8 @@
       <a routerLink="/profile" class="dropdown-item">
         <span class="material-icons">person</span> Profile
       </a>
-      <a routerLink="/select-branch" [queryParams]="{ module: auth.selectedModuleKey() }" class="dropdown-item">
-        <span class="material-icons">storefront</span> Switch branch
-      </a>
-      <a routerLink="/select-module" class="dropdown-item">
-        <span class="material-icons">apps</span> Modules
-      </a>
       <a routerLink="/select-company" class="dropdown-item">
-        <span class="material-icons">apartment</span> Switch company
+        <span class="material-icons">apps</span> Apps &amp; companies
       </a>
       <a class="dropdown-item" (click)="auth.logout()">
         <span class="material-icons">logout</span> Logout

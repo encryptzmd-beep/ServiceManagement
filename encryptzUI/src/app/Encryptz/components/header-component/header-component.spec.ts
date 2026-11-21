@@ -8,6 +8,10 @@ describe('HeaderComponent', () => {
   let branch = '';
   let branches: any[] = [];
   let setScope: any;
+  let location: number | null = null;
+  let remembered: number | null = null;
+
+  beforeEach(() => { location = null; remembered = null; });
 
   const create = () => {
     TestBed.resetTestingModule();
@@ -22,6 +26,8 @@ describe('HeaderComponent', () => {
           selectedCompanyId: () => 2,
           companies: () => [],
           selectedLocationName: () => branch,
+          selectedLocationId: () => location,
+          rememberedBranchId: () => remembered,
           selectedModuleKey: () => 'SERVICE',
           getBranches: () => of({ success: true, message: '', data: branches }),
           setScope: (...a: any[]) => setScope(...a),
@@ -83,28 +89,83 @@ describe('HeaderComponent', () => {
     expect(navigate).not.toHaveBeenCalledWith(['/select-branch'], expect.anything());
   });
 
-  it('goes to the branch step only when there are several branches to choose from', () => {
+  it('enters another module at the branch chosen before, without asking again', () => {
     branches = [{ locationId: 7, locationName: 'Head Office' }, { locationId: 8, locationName: 'Kochi' }];
-    setScope = vi.fn();
+    remembered = 8;
+    setScope = vi.fn(() => of({ success: true, message: '', data: { role: 'Admin' } }));
     const fixture = create();
     const el = fixture.nativeElement as HTMLElement;
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     (el.querySelector('.mod-btn') as HTMLButtonElement).click();
     fixture.detectChanges();
     (Array.from(el.querySelectorAll('button.mod-item')) as HTMLButtonElement[])[1].click();
-    expect(setScope).not.toHaveBeenCalled();
-    expect(navigate).toHaveBeenCalledWith(['/select-branch'], { queryParams: { module: 'CRM' } });
+    expect(setScope).toHaveBeenCalledWith('CRM', 8, 'Kochi');
+    expect(navigate).not.toHaveBeenCalledWith(['/select-branch'], expect.anything());
   });
 
-  it('offers the branch, module and company switches', () => {
+  it('shows no branch dropdown for a user with one branch', () => {
+    branch = 'Head Office';
+    location = 7;
+    branches = [{ locationId: 7, locationName: 'Head Office' }];
+    const fixture = create();
+    expect(fixture.componentInstance.showBranchSwitch()).toBe(false);
+    expect(fixture.nativeElement.querySelector('.brand-branch').textContent).toContain('Head Office');
+  });
+
+  it('changes the branch from the dropdown and reloads the data', () => {
+    branch = 'Head Office';
+    location = 7;
+    branches = [{ locationId: 7, locationName: 'Head Office' }, { locationId: 8, locationName: 'Kochi' }];
+    setScope = vi.fn(() => of({ success: true, message: '', data: { role: 'Admin' } }));
+    const fixture = create();
+    const reload = vi.spyOn(fixture.componentInstance as any, 'reloadPage').mockImplementation(() => {});
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.brand-branch')).toBeNull();
+
+    (el.querySelector('.mod-btn') as HTMLButtonElement).click();   // the branch button comes first
+    fixture.detectChanges();
+    const items = Array.from(el.querySelectorAll('button.mod-item')) as HTMLButtonElement[];
+    expect(items.map(i => i.querySelector('.mod-item-name')!.textContent!.trim())).toEqual(['Head Office', 'Kochi']);
+    items[1].click();
+
+    expect(setScope).toHaveBeenCalledWith('SERVICE', 8, 'Kochi');
+    expect(reload).toHaveBeenCalled();
+  });
+
+  it('keeps the page and shows the reason when the branch is refused', () => {
+    branch = 'Head Office';
+    location = 7;
+    branches = [{ locationId: 7, locationName: 'Head Office' }, { locationId: 8, locationName: 'Kochi' }];
+    setScope = vi.fn(() => of({ success: false, message: 'No access to this branch', data: null }));
+    const fixture = create();
+    const reload = vi.spyOn(fixture.componentInstance as any, 'reloadPage').mockImplementation(() => {});
+    fixture.componentInstance.switchBranch(branches[1]);
+    expect(reload).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.branchError()).toBe('No access to this branch');
+  });
+
+  it('opens the first branch without the branch step when several are allowed and none is remembered', () => {
+    branches = [{ locationId: 7, locationName: 'Head Office' }, { locationId: 8, locationName: 'Kochi' }];
+    setScope = vi.fn(() => of({ success: true, message: '', data: { role: 'Admin' } }));
+    const fixture = create();
+    const el = fixture.nativeElement as HTMLElement;
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    (el.querySelector('.mod-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (Array.from(el.querySelectorAll('button.mod-item')) as HTMLButtonElement[])[1].click();
+    expect(setScope).toHaveBeenCalledWith('CRM', 7, 'Head Office');
+    expect(navigate).not.toHaveBeenCalledWith(['/select-branch'], expect.anything());
+  });
+
+  it('offers the module and company switches in the user menu; the branch is in the top bar', () => {
     branch = 'Elankulam';
     const fixture = create();
     (fixture.nativeElement.querySelector(".user-menu") as HTMLElement).click();
     fixture.detectChanges();
     const hrefs = (Array.from(fixture.nativeElement.querySelectorAll('.dropdown a')) as HTMLAnchorElement[])
       .map(a => a.getAttribute('href') || '');
-    expect(hrefs.some(h => h.startsWith('/select-branch') && h.includes('module=SERVICE'))).toBe(true);
-    expect(hrefs.some(h => h.endsWith('/select-module'))).toBe(true);
+    expect(hrefs.some(h => h.startsWith('/select-branch'))).toBe(false);
+    expect(hrefs.some(h => h.endsWith('/select-module'))).toBe(false);
     expect(hrefs.some(h => h.endsWith('/select-company'))).toBe(true);
   });
 });

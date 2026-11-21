@@ -3,7 +3,7 @@ import { LoginComponent } from './Encryptz/components/login-component/login-comp
 import { RegisterComponent } from './Encryptz/components/register-component/register-component';
 import { Routes } from '@angular/router';
 import { MainLayoutComponent } from './Encryptz/components/main-layout-component/main-layout-component';
-import { authGuard, dashboardRedirectGuard, roleGuard, scopeGuard } from './Encryptz/Auth/guard-guard';
+import { authGuard, companySelectedGuard, companyUsersRolesGuard, dashboardRedirectGuard, roleGuard, scopeGuard } from './Encryptz/Auth/guard-guard';
 import { CompanySelectorComponent } from './Encryptz/components/company-selector-component/company-selector-component';
 import { NoCompanyComponent } from './Encryptz/components/no-company-component/no-company-component';
 import { AddUserComponent } from './Encryptz/components/add-user-component/add-user-component';
@@ -47,9 +47,18 @@ export const routes: Routes = [
     children: CUSTOMER_ROUTES
   },
   { path: 'select-company', component: CompanySelectorComponent, canActivate: [authGuard], data: { stage: 'company' } },
-  { path: 'select-module', component: CompanySelectorComponent, canActivate: [authGuard], data: { stage: 'module' } },
+  // the app list on select-company replaced the separate module page; old links and bookmarks land there
+  { path: 'select-module', redirectTo: 'select-company', pathMatch: 'full' },
   { path: 'select-branch', component: CompanySelectorComponent, canActivate: [authGuard], data: { stage: 'branch' } },
   { path: 'no-company', component: NoCompanyComponent, canActivate: [authGuard] },
+  // Users & Roles belong to the company, not to a module
+  {
+    path: 'company/users-roles',
+    loadComponent: () => import('./Encryptz/components/company-access-component/company-access-component')
+      .then(m => m.CompanyAccessComponent),
+    canActivate: [authGuard, companySelectedGuard],
+    data: { title: 'Users & Roles' },
+  },
   // Personal applications: a login is enough, no company, no layout of a company
   {
     path: 'apps/jobs',
@@ -87,13 +96,6 @@ export const routes: Routes = [
     data: { title: 'Job Portal', side: 'person' },
   },
   {
-    path: 'consultancy/messages',
-    loadComponent: () => import('./Encryptz/components/messages-component/messages-component')
-      .then(m => m.MessagesComponent),
-    canActivate: [authGuard],
-    data: { title: 'Job Consultancy', side: 'company' },
-  },
-  {
     path: 'apps/jobs/job/:id',
     loadComponent: () => import('./Encryptz/components/job-detail-component/job-detail-component')
       .then(m => m.JobDetailComponent),
@@ -112,42 +114,22 @@ export const routes: Routes = [
   // the API checks on every call that the company has the application and the person may use it
   { path: 'consultancy', redirectTo: 'consultancy/dashboard', pathMatch: 'full' },
   {
-    path: 'consultancy/dashboard',
-    loadComponent: () => import('./Encryptz/components/consultancy-dashboard-component/consultancy-dashboard-component')
-      .then(m => m.ConsultancyDashboardComponent),
+    path: 'consultancy',
     canActivate: [authGuard],
-    data: { title: 'Job Consultancy' },
-  },
-  ...([
-    ['candidates', () => import('./Encryptz/components/consultancy-candidates-component/consultancy-candidates-component').then(m => m.ConsultancyCandidatesComponent)],
-    ['clients', () => import('./Encryptz/components/consultancy-clients-component/consultancy-clients-component').then(m => m.ConsultancyClientsComponent)],
-    ['placements', () => import('./Encryptz/components/consultancy-placements-component/consultancy-placements-component').then(m => m.ConsultancyPlacementsComponent)],
-  ] as const).map(([page, loadComponent]) => ({
-    path: `consultancy/${page}`,
-    loadComponent,
-    canActivate: [authGuard],
-    data: { title: 'Job Consultancy' },
-  })),
-  {
-    path: 'consultancy/our-candidates',
-    loadComponent: () => import('./Encryptz/components/own-candidates-component/own-candidates-component')
-      .then(m => m.OwnCandidatesComponent),
-    canActivate: [authGuard],
-    data: { title: 'Job Consultancy' },
-  },
-  {
-    path: 'consultancy/candidates/:key',
-    loadComponent: () => import('./Encryptz/components/consultancy-candidates-component/consultancy-candidates-component')
-      .then(m => m.ConsultancyCandidatesComponent),
-    canActivate: [authGuard],
-    data: { title: 'Job Consultancy', page: true },
-  },
-  {
-    path: 'consultancy/postings',
-    loadComponent: () => import('./Encryptz/components/hiring-component/hiring-component')
-      .then(m => m.HiringComponent),
-    canActivate: [authGuard],
-    data: { title: 'Job Consultancy' },
+    loadComponent: () => import('./Encryptz/components/consultancy-shell-component/consultancy-shell-component')
+      .then(m => m.ConsultancyShellComponent),
+    children: [
+      { path: 'dashboard', loadComponent: () => import('./Encryptz/components/consultancy-dashboard-component/consultancy-dashboard-component').then(m => m.ConsultancyDashboardComponent), canActivate: [authGuard], data: { title: 'Job Consultancy' } },
+      { path: 'postings', loadComponent: () => import('./Encryptz/components/hiring-component/hiring-component').then(m => m.HiringComponent), canActivate: [authGuard], data: { title: 'Job Consultancy' } },
+      { path: 'candidates', loadComponent: () => import('./Encryptz/components/consultancy-candidates-component/consultancy-candidates-component').then(m => m.ConsultancyCandidatesComponent), canActivate: [authGuard], data: { title: 'Job Consultancy' } },
+      { path: 'candidates/:key', loadComponent: () => import('./Encryptz/components/consultancy-candidates-component/consultancy-candidates-component').then(m => m.ConsultancyCandidatesComponent), canActivate: [authGuard], data: { title: 'Job Consultancy', page: true } },
+      { path: 'our-candidates', loadComponent: () => import('./Encryptz/components/own-candidates-component/own-candidates-component').then(m => m.OwnCandidatesComponent), canActivate: [authGuard], data: { title: 'Job Consultancy' } },
+      { path: 'messages', loadComponent: () => import('./Encryptz/components/messages-component/messages-component').then(m => m.MessagesComponent), canActivate: [authGuard], data: { title: 'Job Consultancy', side: 'company' } },
+      { path: 'clients', loadComponent: () => import('./Encryptz/components/consultancy-clients-component/consultancy-clients-component').then(m => m.ConsultancyClientsComponent), canActivate: [authGuard], data: { title: 'Job Consultancy' } },
+      { path: 'placements', loadComponent: () => import('./Encryptz/components/consultancy-placements-component/consultancy-placements-component').then(m => m.ConsultancyPlacementsComponent), canActivate: [authGuard], data: { title: 'Job Consultancy' } },
+      { path: 'reports', redirectTo: 'reports/jobs', pathMatch: 'full' },
+      { path: 'reports/:report', loadComponent: () => import('./Encryptz/components/consultancy-reports-component/consultancy-reports-component').then(m => m.ConsultancyReportsComponent), canActivate: [authGuard], data: { title: 'Job Consultancy Reports' } },
+    ],
   },
   // CRM Lead Management. Works on the company database after select-branch + set-scope, like
   // Service, but has its own shell (top navigation) instead of the main layout. Pages are filled in
@@ -192,7 +174,7 @@ export const routes: Routes = [
       {
         path: 'admin/add-user',
         component: AddUserComponent,
-        canActivate: [roleGuard(['Admin', 'CompanyAdmin'])],
+        canActivate: [companyUsersRolesGuard, roleGuard(['Admin', 'CompanyAdmin'])],
         data: { scope: 'company' },
       },
 
@@ -468,6 +450,7 @@ export const routes: Routes = [
   path: 'settings/roles',
   loadComponent: () => import('./Encryptz/components/user-roles/user-roles')
     .then(m => m.UserRoles),
+  canActivate: [companyUsersRolesGuard],
   data: { scope: 'company' }
 },
   {
@@ -530,6 +513,14 @@ export const routes: Routes = [
     .then(m => m.SalesOrderEntryComponent),
   canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
   data: { title: 'Sales Order', icon: 'receipt_long', menu: 'sales' }
+},
+{ path: 'sales/reports', redirectTo: 'sales/reports/register', pathMatch: 'full' },
+{
+  path: 'sales/reports/:report',
+  loadComponent: () => import('./Encryptz/components/sales-reports-component/sales-reports-component')
+    .then(m => m.SalesReportsComponent),
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
+  data: { title: 'Sales Reports', icon: 'bar_chart', menu: 'sales' }
 },
 {
   path: 'sales/despatch',

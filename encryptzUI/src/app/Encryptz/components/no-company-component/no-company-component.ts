@@ -4,10 +4,11 @@ import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../Auth/auth-service';
 import { DialogService } from '../../Services/dialog-service';
+import { LoginBrandPanelComponent } from '../login-brand-panel/login-brand-panel';
 
 @Component({
   selector: 'app-no-company-component',
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, LoginBrandPanelComponent],
   templateUrl: './no-company-component.html',
   styleUrl: './no-company-component.scss',
 })
@@ -36,6 +37,12 @@ export class NoCompanyComponent implements OnInit {
   changePasswordLoading = signal(false);
   changePasswordError = signal('');
   changePasswordSuccess = signal('');
+
+  /** Up to two letters for the picture place. */
+  initials(): string {
+    const words = this.userFullName().trim().split(/\s+/).filter(Boolean);
+    return words.slice(0, 2).map(w => Array.from(w)[0].toUpperCase()).join('') || '?';
+  }
 
   ngOnInit() {
     this.loadUserInfo();

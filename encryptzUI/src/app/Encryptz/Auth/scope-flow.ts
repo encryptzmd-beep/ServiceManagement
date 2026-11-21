@@ -35,7 +35,7 @@ export function routeForStep(step: ScopeStep): string {
   switch (step) {
     case 'login': return '/login';
     case 'company': return '/select-company';
-    case 'module': return '/select-module';
+    case 'module': return '/select-company';   // the app list of the company is the module step
     case 'branch': return '/select-branch';
     default: return '/';
   }
@@ -69,6 +69,14 @@ export function legacyModuleKey(
 export function branchDecision(count: number): 'none' | 'auto' | 'choose' {
   if (count <= 0) return 'none';
   return count === 1 ? 'auto' : 'choose';
+}
+
+/**
+ * The branch a module opens in, without asking: the one the user last worked in if this module
+ * allows it, else the first. The branch switcher in the header changes it. Null: there is none.
+ */
+export function branchToEnter<T extends { locationId: number }>(list: T[], rememberedId: number | null): T | null {
+  return list.find(b => b.locationId === rememberedId) ?? list[0] ?? null;
 }
 
 /** First page of the Service module for a role. */

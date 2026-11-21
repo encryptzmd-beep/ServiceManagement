@@ -1,9 +1,11 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ApiService } from '../../Services/API/api-service';
-import { AssignTechnician, DespatchCreate, DespatchDetail, SalesOrderDetail, PRIORITIES } from '../../Models/ApiModels';
+import { AssignTechnician, DESPATCH_MODES, DespatchCreate, DespatchDetail, DespatchHeader, SalesOrderDetail, PRIORITIES } from '../../Models/ApiModels';
+import { SalesDocumentsComponent } from '../shared/sales-documents/sales-documents';
 
 /** A technician as the picker shows it. */
 interface TechOption {
@@ -36,7 +38,7 @@ interface UnitRow {
 @Component({
   selector: 'app-despatch-entry',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, ComplaintDetailPopupComponent],
+  imports: [AppRightDirective, CommonModule, FormsModule, RouterModule, ComplaintDetailPopupComponent, SalesDocumentsComponent],
   templateUrl: './despatch-entry-component.html',
   styleUrls: ['./despatch-entry-component.scss'],
 })
@@ -65,6 +67,11 @@ export class DespatchEntryComponent implements OnInit {
   vehicleNo = '';
   driverName = '';
   trackingNo = '';
+  referenceDate = '';
+  readonly despatchModes = DESPATCH_MODES;
+  despatchMode = signal(DESPATCH_MODES[0].value);
+  /** What the reference is called, and which details this mode has. */
+  modeInfo = computed(() => DESPATCH_MODES.find(m => m.value === this.despatchMode()) ?? DESPATCH_MODES[0]);
   remarks = '';
   createInstallationComplaint = true;
   priority = 'Medium';
@@ -225,10 +232,13 @@ export class DespatchEntryComponent implements OnInit {
       deliveryAddress: this.deliveryAddress || null,
       contactPerson: this.contactPerson || null,
       contactNumber: this.contactNumber || null,
-      transporterName: this.transporterName || null,
-      vehicleNo: this.vehicleNo || null,
-      driverName: this.driverName || null,
-      trackingNo: this.trackingNo || null,
+      // details of another mode, typed before the mode was changed, are not saved
+      transporterName: this.modeInfo().carrier ? this.transporterName || null : null,
+      vehicleNo: this.modeInfo().vehicle ? this.vehicleNo || null : null,
+      driverName: this.modeInfo().vehicle ? this.driverName || null : null,
+      trackingNo: this.trackingNo.trim() || null,
+      despatchMode: this.despatchMode(),
+      referenceDate: this.referenceDate || null,
       remarks: this.remarks || null,
       createInstallationComplaint: this.createInstallationComplaint,
       priority: this.priority,
@@ -328,6 +338,14 @@ export class DespatchEntryComponent implements OnInit {
     this.showAssign.set(false);
     this.showToast('success', `${this.techName(this.assignTechId)} assigned to installation ${d.installationComplaintNo}`);
     this.refreshDespatch();
+  }
+
+  referenceLabel(mode?: string | null): string {
+    return DESPATCH_MODES.find(m => m.value === mode)?.reference ?? 'Reference No';
+  }
+
+  vehicleLine(d: DespatchHeader): string {
+    return [d.vehicleNo, d.driverName].filter(Boolean).join(' · ') || '—';
   }
 
   openBill(): void {

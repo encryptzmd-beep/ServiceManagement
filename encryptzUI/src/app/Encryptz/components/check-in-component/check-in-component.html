@@ -109,7 +109,7 @@
           <span class="material-icons">engineering</span>
           <span>{{ selectedTech().fullName }}</span>
         </div>
-        <button class="ac-btn green-btn" (click)="checkIn()" [disabled]="isCheckedIn() || busy()">
+        <button appRight="create" appRightMenu="/tracking/attendance" appRightTech class="ac-btn green-btn" (click)="checkIn()" [disabled]="isCheckedIn() || busy()">
           @if (busy()) { <span class="spinner"></span> Getting Location... }
           @else { <span class="material-icons">my_location</span> Check In Now }
         </button>
@@ -126,7 +126,7 @@
           <span class="material-icons">engineering</span>
           <span>{{ selectedTech().fullName }}</span>
         </div>
-        <button class="ac-btn red-btn" (click)="checkOut()" [disabled]="!isCheckedIn() || busy()">
+        <button appRight="edit" appRightMenu="/tracking/attendance" appRightTech class="ac-btn red-btn" (click)="checkOut()" [disabled]="!isCheckedIn() || busy()">
           @if (busy()) { <span class="spinner"></span> Getting Location... }
           @else { <span class="material-icons">my_location</span> Check Out Now }
         </button>
@@ -210,7 +210,7 @@
           </div><!-- /site-autocomplete -->
         </div><!-- /ac-field -->
 
-        <button class="ac-btn blue-btn" (click)="recordSiteArrival()" [disabled]="!siteComplaintId || busy()">
+        <button appRight="edit" appRightMenu="/tracking/attendance" appRightTech class="ac-btn blue-btn" (click)="recordSiteArrival()" [disabled]="!siteComplaintId || busy()">
           @if (busy()) { <span class="spinner"></span> }
           @else { <span class="material-icons">pin_drop</span> Record Arrival }
         </button>

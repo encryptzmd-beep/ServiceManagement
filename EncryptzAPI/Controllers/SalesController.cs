@@ -1,4 +1,6 @@
+using EncryptzBL.Common.Tenant;
 using EncryptzAPI.Middleware;
+using EncryptzBL.Common.Sales;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Sales.Modules;
 using EncryptzBL.Infrastructure.Settings.Modules;
@@ -57,6 +59,7 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SearchCustomers([FromQuery] string? search = null, [FromQuery] int top = 50)
             => Ok(ApiResponse<List<SalesCustomerDto>>.Ok(await _svc.SearchCustomers(search, top)));
 
+        [MenuRight("/sales/orders", MenuRightKind.Save, IdProperty = "CustomerId")]
         [HttpPost("customers")]
         public async Task<IActionResult> SaveCustomer([FromBody] SalesCustomerSaveDto dto)
         {
@@ -85,6 +88,7 @@ namespace EncryptzAPI.Controllers
             return result.Success ? Ok(result) : NotFound(result);
         }
 
+        [MenuRight("/sales/orders", MenuRightKind.Save, IdProperty = "SalesOrderId")]
         [HttpPost("orders")]
         public async Task<IActionResult> SaveOrder([FromBody] SalesOrderSaveDto dto)
         {
@@ -92,6 +96,7 @@ namespace EncryptzAPI.Controllers
             return result.Success ? Ok(result) : BadRequest(result);
         }
 
+        [MenuRight("/sales/orders", MenuRightKind.Delete)]
         [HttpPost("orders/{id:int}/cancel")]
         public async Task<IActionResult> CancelOrder(int id)
         {
@@ -111,12 +116,47 @@ namespace EncryptzAPI.Controllers
             return result.Success ? Ok(result) : NotFound(result);
         }
 
+        [MenuRight("/sales/despatch", MenuRightKind.Create)]
         [HttpPost("despatches")]
         public async Task<IActionResult> CreateDespatch([FromBody] DespatchCreateDto dto)
         {
             var result = await _svc.CreateDespatch(dto, UserId);
             return result.Success ? Ok(result) : BadRequest(result);
         }
+
+        // ---------------- documents of a bill (PDF) ----------------
+        [HttpGet("orders/{id:int}/documents")]
+        public async Task<IActionResult> GetDocuments(int id)
+            => Ok(await _svc.GetDocuments(id));
+
+        [MenuRight("/sales/orders", MenuRightKind.Edit, OrMenuPath = "/sales/despatch")]
+        [HttpPost("orders/{id:int}/documents")]
+        [RequestSizeLimit(SalesDocumentRules.MaxFileBytes + 256 * 1024)]
+        public async Task<IActionResult> AddDocument(int id, IFormFile? file, [FromForm] string? documentType, [FromForm] int? despatchId)
+        {
+            if (file == null || file.Length <= 0) return Ok(ApiResponse<int>.Fail("Choose a PDF file."));
+            if (file.Length > SalesDocumentRules.MaxFileBytes) return Ok(ApiResponse<int>.Fail("The file is larger than 10 MB."));
+
+            using var memory = new MemoryStream((int)file.Length);
+            await file.CopyToAsync(memory);
+            return Ok(await _svc.SaveDocument(id, despatchId, documentType, file.FileName, memory.ToArray(), UserId));
+        }
+
+        [HttpGet("documents/{id:int}/file")]
+        public async Task<IActionResult> GetDocumentFile(int id)
+        {
+            var result = await _svc.GetDocumentFile(id);
+            if (!result.Success || result.Data == null) return NotFound(result);
+
+            Response.Headers["X-Content-Type-Options"] = "nosniff";
+            Response.Headers["Cache-Control"] = "private, no-store";
+            return File(result.Data.Content, "application/pdf", result.Data.FileName);
+        }
+
+        [MenuRight("/sales/orders", MenuRightKind.Delete, OrMenuPath = "/sales/despatch")]
+        [HttpDelete("documents/{id:int}")]
+        public async Task<IActionResult> DeleteDocument(int id)
+            => Ok(await _svc.DeleteDocument(id, UserId));
 
         // ---------------- warranty ----------------
         [HttpGet("warranty")]

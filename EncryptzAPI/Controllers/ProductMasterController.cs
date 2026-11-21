@@ -1,3 +1,5 @@
+using EncryptzBL.Common.Tenant;
+using EncryptzAPI.Middleware;
 ﻿using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
@@ -21,6 +23,7 @@ namespace EncryptzAPI.Controllers
             _productMasterService = productMasterService;
         }
 
+        [MenuRight("/products", MenuRightKind.Create)]
         [HttpPost("create")]
         public async Task<IActionResult> Create([FromBody] ProductMasterRequestDto dto)
         {
@@ -28,6 +31,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/products", MenuRightKind.Edit)]
         [HttpPut("{id}/update")]
         public async Task<IActionResult> Update(int id, [FromBody] ProductMasterRequestDto dto)
         {
@@ -36,6 +40,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/products", MenuRightKind.Delete)]
         [HttpDelete("{id}/delete")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -67,6 +72,7 @@ namespace EncryptzAPI.Controllers
         }
 
         // POST api/ProductMaster/categories  { categoryId (0 = new), parentId, name, isActive }
+        [MenuRight("/products", MenuRightKind.Edit)]
         [HttpPost("categories")]
         [Authorize(Roles = "Admin,CompanyAdmin,ServiceManager,Manager")]
         public async Task<IActionResult> SaveCategory([FromBody] ProductCategorySaveDto dto)
@@ -89,6 +95,7 @@ namespace EncryptzAPI.Controllers
             return Ok(ApiResponse<List<ProductMaster>>.Ok(result));
         }
 
+        [MenuRight("/products", MenuRightKind.Delete)]
         [HttpPost("bulk-delete")]
         public async Task<IActionResult> BulkDelete([FromBody] BulkOperationDto dto)
         {
@@ -97,6 +104,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/products", MenuRightKind.Edit)]
         [HttpPost("bulk-update-status")]
         public async Task<IActionResult> BulkUpdateStatus([FromBody] BulkUpdateStatusDto dto)
         {

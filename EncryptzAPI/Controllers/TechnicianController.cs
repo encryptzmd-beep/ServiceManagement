@@ -1,3 +1,4 @@
+using EncryptzBL.Common.Tenant;
 using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Technician.modules;
@@ -62,6 +63,7 @@ namespace EncryptzAPI.Controllers
             => Ok(new { success = true, data = await _service.GetAttendanceRules() });
 
         // PUT api/technician/attendance-required  { technicianId, required }
+        [MenuRight("/technicians/list", MenuRightKind.Edit)]
         [HttpPut("attendance-required")]
         [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> SetAttendanceRequired([FromBody] AttendanceRequiredSetDto dto)
@@ -116,6 +118,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/technicians/list", MenuRightKind.Create)]
         [HttpPost]
         [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Create([FromBody] TechnicianCreateDto dto)
@@ -125,6 +128,7 @@ namespace EncryptzAPI.Controllers
             return CreatedAtAction(nameof(GetById), new { id = result.Data }, result);
         }
 
+        [MenuRight("/technicians/list", MenuRightKind.Edit)]
         [HttpPut]
         [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Update([FromBody] TechnicianUpdateDto dto)
@@ -133,6 +137,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/technicians/list", MenuRightKind.Delete)]
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
@@ -140,6 +145,7 @@ namespace EncryptzAPI.Controllers
             var result = await _service.Delete(id);
             return Ok(result);
         }
+        [MenuRight("/complaints/assign", MenuRightKind.Create)]
         [HttpPost("assign")]
         public async Task<IActionResult> Assign([FromBody] AssignTechnicianDto dto)
         {
@@ -152,6 +158,7 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetAuditLog(int complaintId)
             => Ok(await _service.GetAuditLog(complaintId));
 
+        [MenuRight("/complaints/assign", MenuRightKind.Edit, AllowTechnician = true)]
         [HttpPost("complete-assignment")]
         public async Task<IActionResult> CompleteAssignment([FromBody] CompleteAssignmentDto dto)
         {
@@ -168,6 +175,7 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetActiveAssignments()
             => Ok(await _service.GetActiveAssignments());
 
+        [MenuRight("/complaints/assign", MenuRightKind.Delete, AllowTechnician = true)]
         [HttpPost("unassign")]
 
         public async Task<IActionResult> UnAssignTechnician([FromBody] UnAssignTechnicianRequest request)
@@ -211,6 +219,7 @@ namespace EncryptzAPI.Controllers
         }
 
         // POST api/technician/update-status
+        [MenuRight("/technicians/work-orders", MenuRightKind.Edit, AllowTechnician = true)]
         [HttpPost("update-status")]
         public async Task<IActionResult> UpdateStatus([FromBody] ServiceUpdateDto dto)
         {
@@ -272,6 +281,7 @@ namespace EncryptzAPI.Controllers
             return Ok(new { success = true, data = detail });
         }
 
+        [MenuRight("/technicians/work-orders", MenuRightKind.Edit, AllowTechnician = true)]
         [HttpPost("{technicianId}/upload-image")]
         [RequestSizeLimit(10 * 1024 * 1024)]
         public async Task<IActionResult> UploadImage(

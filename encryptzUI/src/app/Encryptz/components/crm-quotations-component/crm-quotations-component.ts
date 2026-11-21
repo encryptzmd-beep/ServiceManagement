@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -12,7 +13,7 @@ const PAGE_SIZE = 20;
 @Component({
   selector: 'app-crm-quotations',
   standalone: true,
-  imports: [FormsModule, RouterLink, CrmRefusedComponent],
+  imports: [AppRightDirective, FormsModule, RouterLink, CrmRefusedComponent],
   templateUrl: './crm-quotations-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-quotations-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
