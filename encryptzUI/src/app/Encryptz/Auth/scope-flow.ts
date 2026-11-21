@@ -35,7 +35,7 @@ export function routeForStep(step: ScopeStep): string {
   switch (step) {
     case 'login': return '/login';
     case 'company': return '/select-company';
-    case 'module': return '/select-module';
+    case 'module': return '/select-company';   // the app list of the company is the module step
     case 'branch': return '/select-branch';
     default: return '/';
   }

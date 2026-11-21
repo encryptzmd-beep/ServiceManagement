@@ -13,8 +13,6 @@ import {
   PlacementList,
   PlacementSave,
 } from '../../Services/consultancy-service';
-import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
-import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { AutocompleteComponent, AutocompleteOption } from '../autocomplete-component/autocomplete-component';
 import { ScrollIntoViewOn } from '../shared/scroll-into-view';
 import { EscapeClose } from '../shared/escape-close';
@@ -35,12 +33,13 @@ interface PlacementForm extends PlacementSave {
 @Component({
   selector: 'app-consultancy-placements-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, AutocompleteComponent, ScrollIntoViewOn, EscapeClose],
+  imports: [CommonModule, FormsModule, RouterModule, AutocompleteComponent, ScrollIntoViewOn, EscapeClose],
   templateUrl: './consultancy-placements-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',
     '../job-board-component/job-board-component.scss',
     './consultancy-placements-component.scss',
+    '../consultancy-shell-component/consultancy-pages.scss',
   ],
 })
 export class ConsultancyPlacementsComponent implements OnInit {
@@ -50,7 +49,6 @@ export class ConsultancyPlacementsComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
-  readonly menu = CONSULTANCY_MENU;
   readonly feeStatuses = FEE_STATUSES;
 
   loading = signal(true);

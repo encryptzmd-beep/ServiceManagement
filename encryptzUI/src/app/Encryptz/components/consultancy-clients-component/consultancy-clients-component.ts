@@ -4,8 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
 import { ConsultClient, ConsultancyService } from '../../Services/consultancy-service';
-import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
-import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { ScrollIntoViewOn } from '../shared/scroll-into-view';
 import { EscapeClose } from '../shared/escape-close';
 
@@ -19,20 +17,19 @@ const PHONE = /^[0-9 +()\-]{6,30}$/;
 @Component({
   selector: 'app-consultancy-clients-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, ScrollIntoViewOn, EscapeClose],
+  imports: [CommonModule, FormsModule, RouterModule, ScrollIntoViewOn, EscapeClose],
   templateUrl: './consultancy-clients-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',
     '../job-board-component/job-board-component.scss',
     './consultancy-clients-component.scss',
+    '../consultancy-shell-component/consultancy-pages.scss',
   ],
 })
 export class ConsultancyClientsComponent implements OnInit {
   private api = inject(ConsultancyService);
   private auth = inject(AuthService);
   private router = inject(Router);
-
-  readonly menu = CONSULTANCY_MENU;
 
   loading = signal(true);
   unavailable = signal('');

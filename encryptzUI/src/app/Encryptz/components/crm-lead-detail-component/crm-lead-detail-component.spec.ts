@@ -179,8 +179,8 @@ describe('CrmLeadDetailComponent', () => {
     f.detectChanges();
     (el(f).querySelector('.crm-confirm-convert') as HTMLButtonElement).click();
     f.detectChanges();
-    expect(el(f).textContent).toContain('Open CRM from the module list');
-    expect(el(f).querySelector('.crm-refused a')!.getAttribute('href')).toBe('/select-module');
+    expect(el(f).textContent).toContain('Open CRM from your apps');
+    expect(el(f).querySelector('.crm-refused a')!.getAttribute('href')).toBe('/select-company');
     expect(el(f).textContent).not.toContain('You may not convert this lead');
   });
 

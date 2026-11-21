@@ -10,8 +10,8 @@ import { RouterLink } from '@angular/router';
   template: `
     <div class="crm-refused" role="alert">
       <span class="material-icons" aria-hidden="true">lock_outline</span>
-      <p>This page is not open to your session. Open CRM from the module list.</p>
-      <a routerLink="/select-module">Open CRM from the module list</a>
+      <p>This page is not open to your session. Open CRM from your apps.</p>
+      <a routerLink="/select-company">Open CRM from your apps</a>
     </div>`,
   styles: [`
     .crm-refused { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 16px; text-align: center; color: #64748b; }

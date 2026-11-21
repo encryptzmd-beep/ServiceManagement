@@ -1,0 +1,35 @@
+/* The Job Consultancy pages in the CRM look. These pages share their base styles with Job Portal,
+   so everything here applies only inside the Consultancy frame (.cz-frame). */
+
+$brand-red: #d42b2b;
+$brand-red-dark: #b82424;
+$text: #1a2332;
+$muted: #5a6a7e;
+$border: #e2e8f0;
+
+:host-context(.cz-frame) {
+  .jb-head h1, .db-head h1 { font-size: 22px; font-weight: 600; letter-spacing: 0; color: $text; }
+  .jb-head p, .db-sub { font-size: 13px; color: $muted; }
+
+  .jp-card, .db-card, .cd-filters, .ms {
+    border: 1px solid $border;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  .jp-btn.primary, .db-btn.primary {
+    border-color: $brand-red;
+    background: $brand-red;
+    color: #fff;
+    box-shadow: none;
+
+    &:hover:not(:disabled) { border-color: $brand-red-dark; background: $brand-red-dark; color: #fff; }
+  }
+
+  /* above the fixed header (1000) and side menu (900) */
+  .jp-overlay { z-index: 1100; }
+  .jp-toast { z-index: 1200; }
+
+  /* stays below the fixed header while the page scrolls */
+  .cd-filters { top: 64px; max-height: calc(100vh - 76px); }
+}

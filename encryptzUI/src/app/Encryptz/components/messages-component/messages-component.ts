@@ -1,4 +1,5 @@
 import { Component, ElementRef, OnDestroy, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { CompanyJobsService } from '../../Services/company-jobs-service';
@@ -9,7 +10,6 @@ import { NotificationService } from '../../Services/notification-service';
 import { MessageAlertsService } from '../../Services/message-alerts-service';
 import { jobPath } from '../../Services/public-jobs-service';
 import { initial } from '../../Services/job-labels';
-import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
 import { jobsMenu } from '../personal-shell-component/jobs-menu';
 import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
@@ -30,9 +30,9 @@ const REFRESH_EVERY_MS = 30_000;
 @Component({
   selector: 'app-messages',
   standalone: true,
-  imports: [FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent],
+  imports: [NgTemplateOutlet, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent],
   templateUrl: './messages-component.html',
-  styleUrls: ['../job-profile-component/job-profile-component.scss', './messages-component.scss'],
+  styleUrls: ['../job-profile-component/job-profile-component.scss', './messages-component.scss', '../consultancy-shell-component/consultancy-pages.scss'],
 })
 export class MessagesComponent implements OnDestroy {
   private api = inject(MessagesService);
@@ -45,7 +45,7 @@ export class MessagesComponent implements OnDestroy {
   private router = inject(Router);
 
   readonly side: MessageSide = this.route.snapshot.data['side'] === 'company' ? 'company' : 'person';
-  readonly menu = computed(() => (this.side === 'company' ? CONSULTANCY_MENU : jobsMenu(this.alerts.unread())));
+  readonly menu = computed(() => jobsMenu(this.alerts.unread()));
 
   loading = signal(true);
   unavailable = signal('');

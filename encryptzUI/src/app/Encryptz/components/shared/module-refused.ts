@@ -20,7 +20,7 @@ export function isModuleRefusal(err: any): boolean {
     <div class="module-refused" role="alert">
       <span class="material-icons" aria-hidden="true">lock_outline</span>
       <p>This page belongs to <strong>{{ moduleName() }}</strong>. Switch to it from the module menu at the top, then open the page again.</p>
-      <a routerLink="/select-module">Open the module list</a>
+      <a routerLink="/select-company">Open your apps</a>
     </div>`,
   styles: [`
     .module-refused { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 16px; text-align: center; color: #64748b; }

@@ -17,8 +17,6 @@ import {
 } from '../../Services/consultancy-service';
 import { JOB_WORK_MODES, JobEducation, JobSkill } from '../../Services/jobs-service';
 import { MessagesService } from '../../Services/messages-service';
-import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
-import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
 import { AutocompleteComponent, AutocompleteOption } from '../autocomplete-component/autocomplete-component';
 import { EscapeClose } from '../shared/escape-close';
@@ -42,12 +40,13 @@ export function takesApplications(p: { status: string; closesOn?: string | null 
 @Component({
   selector: 'app-consultancy-candidates-component',
   standalone: true,
-  imports: [CommonModule, NgTemplateOutlet, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent, AutocompleteComponent, EscapeClose],
+  imports: [CommonModule, NgTemplateOutlet, FormsModule, RouterModule, VerifiedBadgeComponent, AutocompleteComponent, EscapeClose],
   templateUrl: './consultancy-candidates-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',
     '../job-board-component/job-board-component.scss',
     './consultancy-candidates-component.scss',
+    '../consultancy-shell-component/consultancy-pages.scss',
   ],
 })
 export class ConsultancyCandidatesComponent implements OnInit {
@@ -58,7 +57,6 @@ export class ConsultancyCandidatesComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private messages = inject(MessagesService);
 
-  readonly menu = CONSULTANCY_MENU;
   readonly stages = TALENT_STAGES;
   readonly workModes = JOB_WORK_MODES;
   readonly bands = EXPERIENCE_BANDS;

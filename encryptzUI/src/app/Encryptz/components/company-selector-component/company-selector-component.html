@@ -336,77 +336,28 @@
       </div>
     }
 
-    <!-- ══════ MODULE / BRANCH ══════ -->
+    <!-- ══════ BRANCH ══════ -->
     @if (stage() !== 'company') {
       <div class="ws-frame-wrapper">
         <section class="frame">
           <div class="frame-head">
-            @if (stage() === 'module') {
-              <div class="frame-icon"><span class="material-icons">widgets</span></div>
-              <div class="frame-titles">
-                <h2 class="frame-title">Modules</h2>
-                <div class="frame-sub">Choose what you want to work with in {{ currentCompanyName() }}</div>
-              </div>
-              <span class="spacer"></span>
-              @if (canAdminister()) {
-                <button class="link-back" (click)="openAdministration()">
-                  <span class="material-icons" aria-hidden="true">admin_panel_settings</span> Administration
-                </button>
-              }
-              <button class="link-back" (click)="backToCompanies()">
-                <span class="material-icons" aria-hidden="true">chevron_left</span> Back
-              </button>
-            } @else {
-              <div class="frame-icon"><span class="material-icons">storefront</span></div>
-              <div class="frame-titles">
-                <h2 class="frame-title">Select Branch</h2>
-                <div class="frame-sub">Choose where you'll work</div>
-              </div>
-              <span class="spacer"></span>
-              <button class="link-back" (click)="backToModules()">
-                <span class="material-icons" aria-hidden="true">chevron_left</span> Back
-              </button>
-            }
+            <div class="frame-icon"><span class="material-icons">storefront</span></div>
+            <div class="frame-titles">
+              <h2 class="frame-title">Select Branch</h2>
+              <div class="frame-sub">Choose where you'll work</div>
+            </div>
+            <span class="spacer"></span>
+            <button class="link-back" (click)="backToCompanies()">
+              <span class="material-icons" aria-hidden="true">chevron_left</span> Back
+            </button>
           </div>
 
           <div class="frame-body">
             @if (loading() || entering()) {
               <div class="loading-state">
                 <div class="spinner"></div>
-                @if (stage() === 'module') { <span>Loading modules…</span> }
-                @else if (entering()) { <span>Setting up your workspace…</span> }
+                @if (entering()) { <span>Setting up your workspace…</span> }
                 @else { <span>Loading branches…</span> }
-              </div>
-            }
-
-            @if (!loading() && stage() === 'module') {
-              <div class="tile-grid module-grid">
-                @for (module of modules(); track module.moduleKey; let i = $index) {
-                  <div class="tile module-tile"
-                       [class.disabled]="module.state !== 'Available'"
-                       [attr.aria-disabled]="module.state !== 'Available'"
-                       (click)="openModule(module)"
-                       role="button"
-                       [attr.tabindex]="module.state === 'Available' ? 0 : -1"
-                       (keydown.enter)="openModule(module)"
-                       (keydown.space)="openModule(module); $event.preventDefault()">
-                    <div class="quick-icon" [attr.data-tone]="tone(i)">
-                      <span class="material-icons">{{ module.icon || 'apps' }}</span>
-                    </div>
-                    <div class="tile-info">
-                      <h3>{{ module.moduleName }}</h3>
-                      @if (module.state === 'ComingSoon') { <span class="soon-badge">Coming soon</span> }
-                      @else if (caption(module)) { <span class="status-badge">{{ caption(module) }}</span> }
-                    </div>
-                    @if (module.state === 'Available') {
-                      <span class="material-icons arrow-icon">chevron_right</span>
-                    } @else if (module.state === 'ComingSoon') {
-                      <span class="material-icons arrow-icon muted">schedule</span>
-                    } @else {
-                      <span class="material-icons arrow-icon muted">lock</span>
-                    }
-                  </div>
-                }
               </div>
             }
 

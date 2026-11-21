@@ -1,94 +1,90 @@
-<app-personal-shell appName="Job Consultancy" icon="work" subtitle="Commercial application" [menu]="menu"
-                    backLabel="Back to modules" backRoute="/select-module">
-
-  <div class="jb-head oc-head">
-    <div class="jb-head-text">
-      <h1>Our candidates @if (!loading() && !unavailable()) { <span class="jp-count">{{ total() }}</span> }</h1>
-      <p>People you met outside Job Portal: walk-ins, referrals, CVs by e-mail. Only your company sees them; they are never public.</p>
-    </div>
-    <div class="oc-tabs" role="navigation" aria-label="Candidates">
-      <a routerLink="/consultancy/candidates"><span class="material-icons" aria-hidden="true">travel_explore</span>Search all</a>
-      <a routerLink="/consultancy/candidates" [queryParams]="{ pool: 1 }"><span class="material-icons" aria-hidden="true">bookmarks</span>My pool</a>
-      <a class="on" aria-current="page"><span class="material-icons" aria-hidden="true">badge</span>Our candidates</a>
-    </div>
+<div class="jb-head oc-head">
+  <div class="jb-head-text">
+    <h1>Our candidates @if (!loading() && !unavailable()) { <span class="jp-count">{{ total() }}</span> }</h1>
+    <p>People you met outside Job Portal: walk-ins, referrals, CVs by e-mail. Only your company sees them; they are never public.</p>
   </div>
+  <div class="oc-tabs" role="navigation" aria-label="Candidates">
+    <a routerLink="/consultancy/candidates"><span class="material-icons" aria-hidden="true">travel_explore</span>Search all</a>
+    <a routerLink="/consultancy/candidates" [queryParams]="{ pool: 1 }"><span class="material-icons" aria-hidden="true">bookmarks</span>My pool</a>
+    <a class="on" aria-current="page"><span class="material-icons" aria-hidden="true">badge</span>Our candidates</a>
+  </div>
+</div>
 
-  <form class="jp-card oc-search" (ngSubmit)="search()" role="search">
-    <label class="oc-search-main">
-      <span class="material-icons" aria-hidden="true">search</span>
-      <span class="jp-sr">Search your candidates</span>
-      <input class="jp-input" name="q" [(ngModel)]="query" maxlength="100" placeholder="Name, phone, e-mail, skill, city…" />
-    </label>
-    <button class="jp-btn" type="submit">Search</button>
-    <button class="jp-btn primary" type="button" (click)="openNew()"><span class="material-icons" aria-hidden="true">person_add</span>Add candidate</button>
-  </form>
+<form class="jp-card oc-search" (ngSubmit)="search()" role="search">
+  <label class="oc-search-main">
+    <span class="material-icons" aria-hidden="true">search</span>
+    <span class="jp-sr">Search your candidates</span>
+    <input class="jp-input" name="q" [(ngModel)]="query" maxlength="100" placeholder="Name, phone, e-mail, skill, city…" />
+  </label>
+  <button class="jp-btn" type="submit">Search</button>
+  <button class="jp-btn primary" type="button" (click)="openNew()"><span class="material-icons" aria-hidden="true">person_add</span>Add candidate</button>
+</form>
 
-  @if (loading()) {
-    <div class="jp-state"><span class="jp-spinner" aria-hidden="true"></span><p>Loading…</p></div>
-  } @else if (unavailable()) {
-    <div class="jp-state">
-      <span class="material-icons">lock_outline</span>
-      <p>{{ unavailable() }}</p>
-      <button class="jp-btn primary" (click)="load()">Try again</button>
-    </div>
-  } @else {
-    @for (c of items(); track c.candidateId) {
-      <article class="jp-card jb-card oc-card">
-        <div class="oc-avatar" aria-hidden="true">{{ initials(c.fullName) || '?' }}</div>
-        <div class="jb-card-main">
-          <h2><button class="jb-title" (click)="openEdit(c)">{{ c.fullName }}</button></h2>
-          @if (c.headline) { <div class="jb-company oc-headline">{{ c.headline }}</div> }
-          <div class="jb-meta">
-            @if (c.phone) { <span><span class="material-icons" aria-hidden="true">call</span>{{ c.phone }}</span> }
-            @if (c.email) { <span><span class="material-icons" aria-hidden="true">mail_outline</span>{{ c.email }}</span> }
-            @if (c.city) { <span><span class="material-icons" aria-hidden="true">place</span>{{ c.city }}</span> }
-            <span [class.oc-none]="c.experienceYears == null"><span class="material-icons" aria-hidden="true">work_outline</span>{{ experienceLabel(c.experienceYears) }}</span>
-            @if (c.source) { <span><span class="material-icons" aria-hidden="true">input</span>{{ c.source }}</span> }
-          </div>
-          @if (skillList(c.skills).length) {
-            <div class="jb-skills">@for (s of skillList(c.skills); track s) { <span class="jp-chip">{{ s }}</span> }</div>
-          }
-          @if (c.preferredJobs) { <div class="jb-foot oc-looking"><span class="material-icons" aria-hidden="true">flag</span>Looking for <strong>{{ c.preferredJobs }}</strong></div> }
+@if (loading()) {
+  <div class="jp-state"><span class="jp-spinner" aria-hidden="true"></span><p>Loading…</p></div>
+} @else if (unavailable()) {
+  <div class="jp-state">
+    <span class="material-icons">lock_outline</span>
+    <p>{{ unavailable() }}</p>
+    <button class="jp-btn primary" (click)="load()">Try again</button>
+  </div>
+} @else {
+  @for (c of items(); track c.candidateId) {
+    <article class="jp-card jb-card oc-card">
+      <div class="oc-avatar" aria-hidden="true">{{ initials(c.fullName) || '?' }}</div>
+      <div class="jb-card-main">
+        <h2><button class="jb-title" (click)="openEdit(c)">{{ c.fullName }}</button></h2>
+        @if (c.headline) { <div class="jb-company oc-headline">{{ c.headline }}</div> }
+        <div class="jb-meta">
+          @if (c.phone) { <span><span class="material-icons" aria-hidden="true">call</span>{{ c.phone }}</span> }
+          @if (c.email) { <span><span class="material-icons" aria-hidden="true">mail_outline</span>{{ c.email }}</span> }
+          @if (c.city) { <span><span class="material-icons" aria-hidden="true">place</span>{{ c.city }}</span> }
+          <span [class.oc-none]="c.experienceYears == null"><span class="material-icons" aria-hidden="true">work_outline</span>{{ experienceLabel(c.experienceYears) }}</span>
+          @if (c.source) { <span><span class="material-icons" aria-hidden="true">input</span>{{ c.source }}</span> }
         </div>
-        <div class="jb-card-side">
-          <span [class]="stageClass(c.stage)">{{ stageLabel(c.stage) }}</span>
-          <div class="oc-actions">
-            @if (c.hasResume) {
-              <button class="jp-btn" (click)="downloadResume(c)" title="Download the resume"><span class="material-icons">description</span></button>
-            }
-            <button class="jp-btn" (click)="openEdit(c)">Edit</button>
-            <button class="jp-btn ghost" (click)="remove(c)" title="Remove" aria-label="Remove"><span class="material-icons">delete_outline</span></button>
-          </div>
-        </div>
-      </article>
-    } @empty {
-      <div class="jp-card jb-empty">
-        <span class="material-icons">badge</span>
-        @if (query) {
-          <p>None of your candidates matches.</p>
-          <button class="jp-btn" (click)="query = ''; search()">Show all</button>
-        } @else {
-          <p>No candidates of your own yet. Add the people you meet outside Job Portal; only your company sees them.</p>
-          <button class="jp-btn primary" (click)="openNew()">Add candidate</button>
+        @if (skillList(c.skills).length) {
+          <div class="jb-skills">@for (s of skillList(c.skills); track s) { <span class="jp-chip">{{ s }}</span> }</div>
         }
+        @if (c.preferredJobs) { <div class="jb-foot oc-looking"><span class="material-icons" aria-hidden="true">flag</span>Looking for <strong>{{ c.preferredJobs }}</strong></div> }
       </div>
-    }
-
-    @if (lastPage > 1) {
-      <nav class="jb-pages" aria-label="Pages">
-        <button class="jp-btn" (click)="goToPage(page - 1)" [disabled]="page <= 1">Previous</button>
-        <span>Page {{ page }} of {{ lastPage }}</span>
-        <button class="jp-btn" (click)="goToPage(page + 1)" [disabled]="page >= lastPage">Next</button>
-      </nav>
-    }
-  }
-
-  @if (toast(); as t) {
-    <div class="jp-toast" [class.bad]="!t.ok" role="status">
-      <span class="material-icons">{{ t.ok ? 'check_circle' : 'error_outline' }}</span>{{ t.text }}
+      <div class="jb-card-side">
+        <span [class]="stageClass(c.stage)">{{ stageLabel(c.stage) }}</span>
+        <div class="oc-actions">
+          @if (c.hasResume) {
+            <button class="jp-btn" (click)="downloadResume(c)" title="Download the resume"><span class="material-icons">description</span></button>
+          }
+          <button class="jp-btn" (click)="openEdit(c)">Edit</button>
+          <button class="jp-btn ghost" (click)="remove(c)" title="Remove" aria-label="Remove"><span class="material-icons">delete_outline</span></button>
+        </div>
+      </div>
+    </article>
+  } @empty {
+    <div class="jp-card jb-empty">
+      <span class="material-icons">badge</span>
+      @if (query) {
+        <p>None of your candidates matches.</p>
+        <button class="jp-btn" (click)="query = ''; search()">Show all</button>
+      } @else {
+        <p>No candidates of your own yet. Add the people you meet outside Job Portal; only your company sees them.</p>
+        <button class="jp-btn primary" (click)="openNew()">Add candidate</button>
+      }
     </div>
   }
-</app-personal-shell>
+
+  @if (lastPage > 1) {
+    <nav class="jb-pages" aria-label="Pages">
+      <button class="jp-btn" (click)="goToPage(page - 1)" [disabled]="page <= 1">Previous</button>
+      <span>Page {{ page }} of {{ lastPage }}</span>
+      <button class="jp-btn" (click)="goToPage(page + 1)" [disabled]="page >= lastPage">Next</button>
+    </nav>
+  }
+}
+
+@if (toast(); as t) {
+  <div class="jp-toast" [class.bad]="!t.ok" role="status">
+    <span class="material-icons">{{ t.ok ? 'check_circle' : 'error_outline' }}</span>{{ t.text }}
+  </div>
+}
 
 <!-- ═══════════ A CANDIDATE, WRITTEN ═══════════ -->
 @if (form(); as f) {

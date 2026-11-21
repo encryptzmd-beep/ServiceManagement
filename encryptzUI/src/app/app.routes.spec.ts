@@ -6,13 +6,16 @@ describe('app routes', () => {
   const children = layout[0].children ?? [];
   const child = (path: string) => children.find(c => c.path === path);
 
-  it('has the three step routes at the top level with their stage', () => {
-    const stages = ['company', 'module', 'branch'];
-    for (const stage of stages) {
+  it('has the company and branch steps at the top level with their stage', () => {
+    for (const stage of ['company', 'branch']) {
       const route = routes.find(r => r.path === `select-${stage}`);
       expect(route).toBeDefined();
       expect(route?.data?.['stage']).toBe(stage);
     }
+  });
+
+  it('sends the old module page to the app list', () => {
+    expect(routes.find(r => r.path === 'select-module')?.redirectTo).toBe('select-company');
   });
 
   it('has exactly one main layout route and it guards its children with scopeGuard', () => {

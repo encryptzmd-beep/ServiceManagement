@@ -168,7 +168,7 @@ export class AuthService {
 
   login(email: string, password: string): Observable<ApiResponse<LoginResponse>> {
     return this.http.post<ApiResponse<LoginResponse>>(`${this.apiUrl}/login`, { email, password })
-      .pipe(tap(res => { if (res.success && res.data) this.setSession(res.data); }));
+      .pipe(tap(res => { if (res.success && res.data) this.startNewSession(res.data); }));
   }
 
   sendOtp(mobileNumber: string): Observable<ApiResponse<string>> {
@@ -177,7 +177,13 @@ export class AuthService {
 
   verifyOtp(mobileNumber: string, otpCode: string): Observable<ApiResponse<LoginResponse>> {
     return this.http.post<ApiResponse<LoginResponse>>(`${this.apiUrl}/verify-otp`, { mobileNumber, otpCode })
-      .pipe(tap(res => { if (res.success && res.data) this.setSession(res.data); }));
+      .pipe(tap(res => { if (res.success && res.data) this.startNewSession(res.data); }));
+  }
+
+  /** A login token has no company yet: a selection left by an expired session must not be trusted. */
+  private startNewSession(data: LoginResponse): void {
+    this.clearSelectedCompany();
+    this.setSession(data);
   }
 
   register(data: RegisterRequest): Observable<ApiResponse> {

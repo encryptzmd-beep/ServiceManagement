@@ -14,7 +14,7 @@ import {
   provisionLabel, requestErrorMessage, suggestCompanyCode, validateNewCompany
 } from '../../Auth/company-creation';
 
-type Stage = 'company' | 'module' | 'branch';
+type Stage = 'company' | 'branch';
 
 /** One application on the home screen. */
 interface HomeApp {
@@ -69,7 +69,6 @@ export class CompanySelectorComponent {
     return this.companies().filter(c =>
       (c.companyName || '').toLowerCase().includes(term) || (c.companyCode || '').toLowerCase().includes(term));
   });
-  modules = signal<ModuleDto[]>([]);
   /** Empty also when the list could not be read: it never blocks the companies. */
   personalApps = signal<PersonalApp[]>([]);
   branches = signal<LocationDto[]>([]);
@@ -129,23 +128,21 @@ export class CompanySelectorComponent {
     const stage = this.route.snapshot.data['stage'] as Stage | undefined;
     this.stage.set(stage ?? 'company');
 
-    if ((this.stage() === 'module' || this.stage() === 'branch') && !this.auth.scopeState().companyId) {
+    if (this.stage() === 'branch' && !this.auth.scopeState().companyId) {
       this.router.navigate(['/select-company'], { replaceUrl: true });
       return;
     }
 
-    // after a reload on the module or branch step the list is not in memory: the name of
+    // after a reload on the branch step the list is not in memory: the name of
     // the company in the switcher and the user menu comes from it
     if (this.stage() !== 'company' && this.auth.companies().length === 0) {
       this.auth.getUserCompanies().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ error: () => {} });
     }
 
-    if (this.stage() === 'module') {
-      this.loadModules();
-    } else if (this.stage() === 'branch') {
+    if (this.stage() === 'branch') {
       this.moduleKey = this.route.snapshot.queryParamMap.get('module') || this.auth.selectedModuleKey() || '';
       if (!this.moduleKey) {
-        this.router.navigate(['/select-module'], { replaceUrl: true });
+        this.router.navigate(['/select-company'], { replaceUrl: true });
         return;
       }
       this.loadBranches();
@@ -159,8 +156,7 @@ export class CompanySelectorComponent {
     this.pollStopped.set(false);
     this.creationFailed.set(false);
     this.error.set('');
-    if (this.stage() === 'module') this.loadModules();
-    else if (this.stage() === 'branch') this.loadBranches();
+    if (this.stage() === 'branch') this.loadBranches();
     else this.loadCompanies();
   }
 
@@ -178,7 +174,7 @@ export class CompanySelectorComponent {
 
     this.companies.set(kept);
     this.loading.set(kept.length === 0);
-    const firstKept = kept.find(c => this.enterable(c));
+    const firstKept = this.startingCompany(kept);
     if (firstKept) {
       this.activeCompany.set(firstKept);
       this.defaultToBusiness();
@@ -188,6 +184,12 @@ export class CompanySelectorComponent {
       if (kept.length === 0) this.error.set('Could not load your companies. Please try again.');
     });
     this.loadPersonalApps();
+  }
+
+  /** The company the session is already in, else the first one that can be opened. */
+  private startingCompany(list: Company[]): Company | undefined {
+    const current = this.auth.selectedCompanyId?.();
+    return list.find(c => c.companyId === current && this.enterable(c)) ?? list.find(c => this.enterable(c));
   }
 
   /** Reads the list and the creation state again, without the spinner. */
@@ -205,7 +207,7 @@ export class CompanySelectorComponent {
         this.companies.set(list);
         this.expectSetUp = false;
         if (!this.activeCompany()) {
-          const first = list.find(c => this.enterable(c));
+          const first = this.startingCompany(list);
           if (first) {
             this.activeCompany.set(first);
             // Business is shown (by default or picked before the list came): read the modules now
@@ -254,7 +256,11 @@ export class CompanySelectorComponent {
           return;
         }
 
-        this.router.navigate(['/select-module']);
+        // its apps are listed on this same page
+        this.enteringCompany = false;
+        this.activeCompany.set(company);
+        this.businessCompanyId = null;
+        this.showMode('business');
       },
       error: () => {
         this.loading.set(false);
@@ -532,21 +538,28 @@ export class CompanySelectorComponent {
       this.businessLoading.set(false);
       this.businessError.set(msg);
     };
+    const readModules = () => {
+      this.auth.getModules().pipe(timeout(20000), takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: (m) => {
+          if (this.gone || seq !== this.businessSeq) return;
+          if (!m.success) { failed(m.message || 'Could not load the modules'); return; }
+          this.businessLoading.set(false);
+          this.businessCompanyId = co.companyId;
+          this.businessModules.set(m.data || []);
+          this.loadUsersRolesAccess(seq);
+        },
+        error: () => failed('Could not load the modules. Please try again.'),
+      });
+    };
+
+    // selecting a company forgets the module and branch: coming back to the apps must not end the session's work
+    if (this.auth.selectedCompanyId?.() === co.companyId) { readModules(); return; }
+
     this.auth.selectCompany(co.companyId).pipe(timeout(20000), takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         if (this.gone || seq !== this.businessSeq) return;
         if (!res.success || !res.data) { failed(res.message || 'Could not open this company'); return; }
-        this.auth.getModules().pipe(timeout(20000), takeUntilDestroyed(this.destroyRef)).subscribe({
-          next: (m) => {
-            if (this.gone || seq !== this.businessSeq) return;
-            if (!m.success) { failed(m.message || 'Could not load the modules'); return; }
-            this.businessLoading.set(false);
-            this.businessCompanyId = co.companyId;
-            this.businessModules.set(m.data || []);
-            this.loadUsersRolesAccess(seq);
-          },
-          error: () => failed('Could not load the modules. Please try again.'),
-        });
+        readModules();
       },
       error: () => failed('Could not open this company. Please try again.'),
     });
@@ -743,25 +756,7 @@ export class CompanySelectorComponent {
     document.querySelector('.ws-content')?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // ── STEP 2: MODULE ────────────────────────────────────────────────
-
-  private loadModules(): void {
-    this.loading.set(true);
-    this.auth.getModules().subscribe({
-      next: (res) => {
-        this.loading.set(false);
-        if (!res.success) {
-          this.error.set(res.message || 'Could not load the modules');
-          return;
-        }
-        this.modules.set(res.data || []);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.error.set('Could not load the modules. Please try again.');
-      }
-    });
-  }
+  // ── OPENING A MODULE (from the app list) ──────────────────────────
 
   caption(module: ModuleDto): string {
     return moduleCaption(module.state);
@@ -849,10 +844,6 @@ export class CompanySelectorComponent {
 
   backToCompanies(): void {
     this.router.navigate(['/select-company']);
-  }
-
-  backToModules(): void {
-    this.router.navigate(['/select-module']);
   }
 
   getRoleClass(role: string): string {

@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, computed, inject, output, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NotificationBellComponent } from '../notification-bell-component/notification-bell-component';
 import { WalletChipComponent } from '../wallet-chip-component/wallet-chip-component';
@@ -22,7 +22,11 @@ export class HeaderComponent implements OnInit {
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
   toggleSidebar = output<void>();
+  /** A module that works without a branch says here that it is the current one (the session scope has no entry for it). */
+  moduleKey = input<string | null>(null);
   showDropdown = false;
+
+  private readonly activeModuleKey = computed(() => (this.moduleKey() || this.auth.selectedModuleKey() || '').toUpperCase());
 
   /** The module switcher: the company's modules (read once), and whether its menu is open. */
   modules = signal<ModuleDto[] | null>(null);
@@ -31,7 +35,7 @@ export class HeaderComponent implements OnInit {
 
   /** The module the session works in, by name ('' before the list is read). */
   readonly currentModule = computed(() => {
-    const key = (this.auth.selectedModuleKey() || '').toUpperCase();
+    const key = this.activeModuleKey();
     return this.modules()?.find(m => m.moduleKey.toUpperCase() === key) ?? null;
   });
 
@@ -51,7 +55,7 @@ export class HeaderComponent implements OnInit {
 
   private loadBranches(): void {
     const moduleKey = this.auth.selectedModuleKey();
-    if (!moduleKey || !this.auth.selectedLocationId()) { this.branches.set([]); return; }
+    if (this.moduleKey() || !moduleKey || !this.auth.selectedLocationId()) { this.branches.set([]); return; }
     this.auth.getBranches(moduleKey).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: res => this.branches.set(res.success ? res.data ?? [] : []),
       error: () => this.branches.set([]),   // the current branch name still shows beside the company
@@ -135,7 +139,7 @@ export class HeaderComponent implements OnInit {
   closeModuleMenu(): void { this.moduleMenuOpen.set(false); }
 
   isCurrent(m: ModuleDto): boolean {
-    return m.moduleKey.toUpperCase() === (this.auth.selectedModuleKey() || '').toUpperCase();
+    return m.moduleKey.toUpperCase() === this.activeModuleKey();
   }
 
   /** The module being opened (its menu item shows "Opening…"), and why it could not be. */
@@ -223,6 +227,6 @@ export class HeaderComponent implements OnInit {
 
   /** Branch the session works in ('' before one is chosen). */
   get branchName(): string {
-    return this.auth.selectedLocationName();
+    return this.moduleKey() ? '' : this.auth.selectedLocationName();
   }
 }

@@ -165,7 +165,7 @@ describe('HeaderComponent', () => {
     const hrefs = (Array.from(fixture.nativeElement.querySelectorAll('.dropdown a')) as HTMLAnchorElement[])
       .map(a => a.getAttribute('href') || '');
     expect(hrefs.some(h => h.startsWith('/select-branch'))).toBe(false);
-    expect(hrefs.some(h => h.endsWith('/select-module'))).toBe(true);
+    expect(hrefs.some(h => h.endsWith('/select-module'))).toBe(false);
     expect(hrefs.some(h => h.endsWith('/select-company'))).toBe(true);
   });
 });

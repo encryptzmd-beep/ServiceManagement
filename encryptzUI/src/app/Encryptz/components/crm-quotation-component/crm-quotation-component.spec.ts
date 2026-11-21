@@ -340,7 +340,7 @@ describe('CrmQuotationComponent', () => {
       f.detectChanges();
       (f.nativeElement.querySelector('.crm-confirm-convert') as HTMLButtonElement).click();
       f.detectChanges();
-      expect(f.nativeElement.querySelector('.crm-refused a')!.getAttribute('href')).toBe('/select-module');
+      expect(f.nativeElement.querySelector('.crm-refused a')!.getAttribute('href')).toBe('/select-company');
     });
   });
 

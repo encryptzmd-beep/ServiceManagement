@@ -5,8 +5,6 @@ import { CompanyDashboard, CompanyJobsService, CompanyPosting } from '../../Serv
 import { ConsultancyService, PlacementList } from '../../Services/consultancy-service';
 import { MessageAlertsService } from '../../Services/message-alerts-service';
 import { initial, interviewLabel, interviewParts, isWebLink } from '../../Services/job-labels';
-import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
-import { PersonalShellComponent } from '../personal-shell-component/personal-shell-component';
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
 
 const REFUSED = "You don't have access to Job Consultancy. Ask your administrator";
@@ -23,12 +21,13 @@ interface DashCard { key: string; label: string; icon: string; value: string; li
 @Component({
   selector: 'app-consultancy-dashboard',
   standalone: true,
-  imports: [RouterModule, PersonalShellComponent, VerifiedBadgeComponent],
+  imports: [RouterModule, VerifiedBadgeComponent],
   templateUrl: './consultancy-dashboard-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',
     '../job-dashboard-component/job-dashboard-component.scss',
     './consultancy-dashboard-component.scss',
+    '../consultancy-shell-component/consultancy-pages.scss',
   ],
 })
 export class ConsultancyDashboardComponent implements OnInit {
@@ -38,7 +37,6 @@ export class ConsultancyDashboardComponent implements OnInit {
   private consultancy = inject(ConsultancyService);
   private messageAlerts = inject(MessageAlertsService);
 
-  readonly menu = CONSULTANCY_MENU;
   readonly initial = initial;
   readonly interviewLabel = interviewLabel;
   readonly interviewParts = interviewParts;

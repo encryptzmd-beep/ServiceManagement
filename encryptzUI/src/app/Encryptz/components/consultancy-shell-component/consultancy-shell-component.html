@@ -1,0 +1,40 @@
+<div class="crm-layout cz-frame">
+  <app-header moduleKey="JOBCONSULTANCY" (toggleSidebar)="dash.toggleSidebar()" />
+
+  <aside class="crm-side" [class.collapsed]="!dash.sidebarOpen()" [class.mobile-open]="dash.sidebarOpen()" aria-label="Job Consultancy">
+    <div class="side-header">
+      <span class="side-brand"></span>
+      <button type="button" class="side-toggle" (click)="dash.toggleSidebar()" title="Toggle sidebar">
+        <span class="material-icons">{{ dash.sidebarOpen() ? 'menu_open' : 'menu' }}</span>
+      </button>
+    </div>
+
+    <nav class="side-nav">
+      <div class="nav-section">
+        @for (item of menu(); track item.label) {
+          <a class="nav-item" [routerLink]="item.route" [class.active]="isActive(item.route)"
+             [attr.aria-current]="isActive(item.route) ? 'page' : null" [title]="item.label">
+            <span class="material-icons nav-icon">{{ item.icon }}</span>
+            <span class="nav-label">{{ item.label }}</span>
+            @if (item.badge) {
+              <span class="cz-badge" [attr.aria-label]="item.badge + ' unread'">{{ item.badge > 99 ? '99+' : item.badge }}</span>
+            }
+          </a>
+        }
+      </div>
+
+      <div class="side-footer">
+        <div class="env-badge">v1.0.0 • Dev</div>
+      </div>
+    </nav>
+  </aside>
+
+  @if (dash.sidebarOpen()) {
+    <div class="crm-backdrop" (click)="dash.closeSidebar()"></div>
+  }
+
+  <main class="crm-main" [class.sidebar-open]="dash.sidebarOpen()">
+    <div class="crm-content"><router-outlet /></div>
+    <app-footer />
+  </main>
+</div>
