@@ -3,7 +3,7 @@ import { LoginComponent } from './Encryptz/components/login-component/login-comp
 import { RegisterComponent } from './Encryptz/components/register-component/register-component';
 import { Routes } from '@angular/router';
 import { MainLayoutComponent } from './Encryptz/components/main-layout-component/main-layout-component';
-import { authGuard, dashboardRedirectGuard, roleGuard, scopeGuard } from './Encryptz/Auth/guard-guard';
+import { authGuard, companySelectedGuard, companyUsersRolesGuard, dashboardRedirectGuard, roleGuard, scopeGuard } from './Encryptz/Auth/guard-guard';
 import { CompanySelectorComponent } from './Encryptz/components/company-selector-component/company-selector-component';
 import { NoCompanyComponent } from './Encryptz/components/no-company-component/no-company-component';
 import { AddUserComponent } from './Encryptz/components/add-user-component/add-user-component';
@@ -50,6 +50,14 @@ export const routes: Routes = [
   { path: 'select-module', component: CompanySelectorComponent, canActivate: [authGuard], data: { stage: 'module' } },
   { path: 'select-branch', component: CompanySelectorComponent, canActivate: [authGuard], data: { stage: 'branch' } },
   { path: 'no-company', component: NoCompanyComponent, canActivate: [authGuard] },
+  // Users & Roles belong to the company, not to a module
+  {
+    path: 'company/users-roles',
+    loadComponent: () => import('./Encryptz/components/company-access-component/company-access-component')
+      .then(m => m.CompanyAccessComponent),
+    canActivate: [authGuard, companySelectedGuard],
+    data: { title: 'Users & Roles' },
+  },
   // Personal applications: a login is enough, no company, no layout of a company
   {
     path: 'apps/jobs',
@@ -192,7 +200,7 @@ export const routes: Routes = [
       {
         path: 'admin/add-user',
         component: AddUserComponent,
-        canActivate: [roleGuard(['Admin', 'CompanyAdmin'])],
+        canActivate: [companyUsersRolesGuard, roleGuard(['Admin', 'CompanyAdmin'])],
         data: { scope: 'company' },
       },
 
@@ -468,6 +476,7 @@ export const routes: Routes = [
   path: 'settings/roles',
   loadComponent: () => import('./Encryptz/components/user-roles/user-roles')
     .then(m => m.UserRoles),
+  canActivate: [companyUsersRolesGuard],
   data: { scope: 'company' }
 },
   {

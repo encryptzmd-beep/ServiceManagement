@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CustomerAuthService, CustomerTenantProject } from '../../Services/customer-auth-service';
+import { apiErrorMessage } from '../../Auth/api-error';
 
 
 @Component({
@@ -375,7 +376,7 @@ export class CustomerLoginComponent implements OnInit {
       },
       error: (err) => {
         this.isLoading.set(false);
-        this.errorMessage.set(err.error?.message || 'Login failed. Please try again.');
+        this.errorMessage.set(apiErrorMessage(err, 'Login failed. Please try again.'));
       }
     });
   }

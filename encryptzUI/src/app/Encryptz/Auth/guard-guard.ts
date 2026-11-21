@@ -39,6 +39,21 @@ export const roleGuard = (allowedRoles: string[], options: { platformAdmin?: boo
     return router.createUrlTree(['/select-company']);
   };
 };
+/** A page of the company itself, outside the modules: a company must be selected. */
+export const companySelectedGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  return auth.selectedCompanyId() ? true : inject(Router).createUrlTree(['/select-company']);
+};
+
+/**
+ * The old users and roles screens edit roles shared by every company: only the platform
+ * keeps them. Everybody else goes to the company's own Users & Roles.
+ */
+export const companyUsersRolesGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  return auth.currentUser()?.isPlatformAdmin ? true : inject(Router).createUrlTree(['/company/users-roles']);
+};
+
 // guard-guard.ts — update authGuard
 
 // Add a new dashboardRedirectGuard for the '' → dashboard redirect

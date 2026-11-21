@@ -2,9 +2,13 @@
 
   <!-- ── TOP BAR ── -->
   <header class="ws-topbar" (click)="$event.stopPropagation()">
-    <div class="ws-logo">
-      <img src="logo.png" alt="Encryptz" class="ws-logo-img" />
-    </div>
+    @if (stage() === 'company') {
+      <div class="lx-lights" aria-hidden="true"><span></span><span></span><span></span></div>
+    } @else {
+      <div class="ws-logo">
+        <img src="logo.png" alt="Encryptz" class="ws-logo-img" />
+      </div>
+    }
 
     <!-- Company selector (stage=company only) -->
     @if (stage() === 'company' && !loading()) {
@@ -12,7 +16,7 @@
         <button type="button" class="ws-company-btn" (click)="toggleCompanyMenu($event)"
                 aria-haspopup="true" [attr.aria-expanded]="companyMenuOpen()">
           @if (companies().length > 0) {
-            <div class="ws-company-dot" [attr.data-tone]="tone(0)">
+            <div class="ws-company-dot lx-company-tile">
               {{ (activeCompany()?.companyName || companies()[0]?.companyName || 'C').charAt(0).toUpperCase() }}
             </div>
             <span class="ws-company-name">{{ activeCompany()?.companyName || companies()[0]?.companyName || 'Select Company' }}</span>
@@ -62,6 +66,18 @@
               </div>
               <div class="ws-menu-divider"></div>
             }
+            @if (canManageUsers()) {
+              <button type="button" class="ws-menu-action" role="menuitem" (click)="openUsersRoles()">
+                <span class="material-icons">manage_accounts</span>
+                <span class="ws-menu-text"><span>Users &amp; Roles</span><small>People, roles and access</small></span>
+              </button>
+            }
+            @if (hasBusinessCompany() && canAdminister() && !isPlatformAdmin()) {
+              <button type="button" class="ws-menu-action" role="menuitem" (click)="openAdministration()">
+                <span class="material-icons">admin_panel_settings</span>
+                <span class="ws-menu-text"><span>Company Administration</span><small>Branches and company settings</small></span>
+              </button>
+            }
             <button type="button" class="ws-menu-action" role="menuitem"
                     (click)="openCreate()" [disabled]="!creation()?.canCreate">
               <span class="material-icons">add_business</span>
@@ -83,22 +99,25 @@
       </div>
     }
 
-    <div class="ws-search-wrap">
-      <label class="ws-searchbar">
-        <span class="material-icons">search</span>
-        <input type="search" placeholder="Search applications, reports, or help…" aria-label="Search" />
-      </label>
-    </div>
+    <span class="spacer"></span>
     <div class="ws-topbar-actions" (click)="$event.stopPropagation()">
+      @if (stage() === 'company' && !showCreate()) {
+        <button type="button" class="ws-icon-btn" aria-label="Search applications" (click)="focusAppSearch()">
+          <span class="material-icons">search</span>
+        </button>
+      }
       <div class="ws-bell-wrap"><app-notification-bell /></div>
-      <button class="ws-icon-btn" aria-label="All applications"><span class="material-icons">apps</span></button>
-      <div class="ws-vdivider"></div>
+      <div class="ws-vdivider lx-hide-md"></div>
+      <div class="lx-top-date lx-hide-md">
+        <span class="material-icons" aria-hidden="true">calendar_month</span>{{ shortDate() }}
+      </div>
+      <div class="ws-vdivider lx-hide-md"></div>
       <div class="ws-user">
         <button type="button" class="ws-user-btn"
                 (click)="toggleUserMenu()"
                 aria-haspopup="true"
                 [attr.aria-expanded]="userMenuOpen()">
-          <span class="user-pic">{{ (userName() || '?').charAt(0).toUpperCase() }}</span>
+          <span class="user-pic">{{ initials(userName()) }}</span>
           <span class="material-icons ws-chevron-icon">expand_more</span>
         </button>
         @if (userMenuOpen()) {
@@ -121,148 +140,149 @@
     <!-- ══════ STAGE: COMPANY ══════ -->
     @if (stage() === 'company' && !showCreate()) {
 
-      <!-- WELCOME HERO (2-column layout) -->
-      <section class="ws-welcome-screen">
-        <!-- Background wave shapes -->
-        <div class="wave-corner wave-bl"></div>
-        <div class="wave-corner wave-br"></div>
+      <section class="lx-home">
+        <svg class="lx-waves" viewBox="0 0 1440 940" preserveAspectRatio="none" aria-hidden="true">
+          <path class="lx-wave" d="M0 270 C120 235 205 150 300 55 L0 55 Z" />
+          <path class="lx-wave-line" d="M0 275 C125 240 205 150 305 52" />
+          <path class="lx-wave soft" d="M0 680 C230 650 360 760 610 815 C850 870 1090 815 1260 660 C1330 595 1390 555 1440 545 L1440 940 L0 940 Z" />
+          <path class="lx-wave-line" d="M0 800 C190 730 400 770 620 835 C880 905 1120 830 1290 665 C1345 615 1395 590 1440 585" />
+        </svg>
 
-        <!-- Left: welcome text + buttons -->
-        <div class="ws-welcome-left">
+        <div class="lx-main">
+          <p class="lx-date">{{ todayLabel() }}</p>
+          <h1 class="lx-title">{{ greeting() }}@if (firstName()) {, <span>{{ firstName() }}</span>}</h1>
+          <div class="lx-accent" aria-hidden="true"></div>
+
           @if (error()) {
-            <div class="error-msg" style="margin-bottom:16px">
+            <div class="error-msg lx-message">
               <span class="material-icons" aria-hidden="true">error_outline</span>
               {{ error() }}
               <button (click)="reload()" class="retry-btn">Refresh</button>
             </div>
           }
-          <span class="ws-eyebrow">
-            <span class="material-icons" aria-hidden="true">{{ greetingIcon() }}</span>
-            {{ greeting() }} · {{ todayLabel() }}
-          </span>
-          <p class="greeting-line">Welcome back,</p>
-          <h1 class="user-name-big">{{ userName() }}</h1>
-          <div class="red-accent-line"></div>
-          <p class="choose-line">
-            @switch (mode()) {
-              @case ('personal') { Your personal applications, all in one place. }
-              @case ('business') {
-                Modules of <strong>{{ activeCompany()?.companyName || 'your company' }}</strong>
-              }
-              @default { Choose an application to get started. }
-            }
-          </p>
-          <div class="ws-segment" role="group" aria-label="Application type">
-            <span class="ws-segment-thumb" [attr.data-pos]="mode()"></span>
-            <button class="btn-app btn-personal" [class.active]="mode() === 'personal'"
-                    [attr.aria-pressed]="mode() === 'personal'" (click)="setMode('personal')">
-              <span class="material-icons">person</span> Personal Apps
-            </button>
-            <button class="btn-app btn-business" [class.active]="mode() === 'business'"
-                    [attr.aria-pressed]="mode() === 'business'" (click)="setMode('business')">
-              <span class="material-icons">business_center</span> Business Apps
-            </button>
-          </div>          @if (pollStopped()) {
-            <p class="notice">
+          @if (pollStopped()) {
+            <p class="notice lx-message">
               <span class="material-icons" aria-hidden="true">hourglass_top</span>
               Still setting up. Come back in a few minutes.
               <button class="link-back" (click)="reload()">Refresh</button>
             </p>
           }
-        </div>
 
-        <!-- Right: orbital display -->
-        <div class="ws-welcome-right">
-          <div class="ws-orbital">
-            <!-- Arc SVG -->
-            <svg class="orbital-svg" viewBox="0 0 520 480" aria-hidden="true">
-              <defs>
-                <linearGradient id="wsArcGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#60A5FA" />
-                  <stop offset="50%" stop-color="#2563EB" />
-                  <stop offset="100%" stop-color="#22C55E" />
-                </linearGradient>
-              </defs>
-              <!-- soft concentric rings behind the avatar -->
-              <circle cx="160" cy="240" r="120" class="orbital-ring" />
-              <circle cx="160" cy="240" r="250" class="orbital-ring faint" />
-              <path [attr.d]="orbitArcD()" class="orbital-arc" />
-              @for (item of orbitItems(); track item.key; let i = $index) {
-                <circle [attr.cx]="orbitDotCx(i)" [attr.cy]="orbitDotCy(i)" r="4" class="orbital-dot" />
-              }
-            </svg>
+          <section class="lx-panel" aria-label="Applications">
+            <label class="lx-search">
+              <span class="material-icons" aria-hidden="true">search</span>
+              <input #appSearchInput type="search" placeholder="Search applications..." aria-label="Search applications"
+                     [value]="appQuery()" (input)="appQuery.set($any($event.target).value)" />
+              <kbd>Ctrl + K</kbd>
+            </label>
 
-            <!-- Center user avatar -->
-            <div class="orbital-center">
-              <span class="orbital-halo" aria-hidden="true"></span>
-              <span class="orbital-initials">{{ (userName() || '?').charAt(0).toUpperCase() }}</span>
-              <span class="orbital-badge" [attr.title]="mode() === 'business' ? 'Business' : 'Personal'">
-                <span class="material-icons">{{ mode() === 'business' ? 'business_center' : 'person' }}</span>
-              </span>
+            <div class="lx-head">
+              <h2>{{ mode() === 'personal' ? 'Personal Apps' : 'Your Apps' }}</h2>
+              <div class="lx-segment" role="group" aria-label="Application type">
+                <button type="button" [class.active]="mode() !== 'personal'" [attr.aria-pressed]="mode() !== 'personal'"
+                        (click)="setMode('business')">Business</button>
+                <button type="button" [class.active]="mode() === 'personal'" [attr.aria-pressed]="mode() === 'personal'"
+                        (click)="setMode('personal')">Personal</button>
+              </div>
             </div>
 
-            <!-- Bubbles: the two choices, the personal apps or the business modules -->
-            @for (item of orbitItems(); track item.key; let i = $index) {
-              <div class="orbit-item" [class.disabled]="item.disabled"
-                   [style.left.px]="orbitItemX(i)" [style.top.px]="orbitItemY(i)"
-                   (click)="openOrbitItem(item)" role="button"
-                   [attr.tabindex]="item.disabled ? -1 : 0" [attr.aria-disabled]="item.disabled"
-                   (keydown.enter)="openOrbitItem(item)"
-                   (keydown.space)="openOrbitItem(item); $event.preventDefault()"
-                   [style.animation-delay.ms]="120 + i * 60">
-                <div class="orbit-circle" [attr.data-tone]="item.disabled ? null : tone(i)">
-                  <span class="material-icons">{{ item.icon }}</span>
-                </div>
-                <span class="orbit-label">
-                  <span class="orbit-label-text">{{ item.label }}</span>
-                  @if (item.note) { <small class="orbit-note">{{ item.note }}</small> }
-                </span>
-                @if (!item.disabled) {
-                  <span class="material-icons orbit-go" aria-hidden="true">arrow_forward</span>
-                }
+            @if (mode() !== 'personal' && (businessLoading() || loading())) {
+              <div class="loading-state"><div class="spinner"></div><span>Loading your apps…</span></div>
+            } @else if (mode() !== 'personal' && businessError()) {
+              <div class="lx-state">
+                <span>{{ businessError() }}</span>
+                <button class="retry-btn" (click)="retryBusiness()">Retry</button>
               </div>
-            }
-
-            <!-- Nothing to show yet -->
-            @if (orbitItems().length === 0) {
-              <div class="orbit-status">
-                @if (mode() === 'business' && businessLoading()) {
-                  <div class="spinner"></div><span>Loading modules…</span>
-                } @else if (mode() === 'business' && businessError()) {
-                  <span>{{ businessError() }}</span>
-                  <button class="retry-btn" (click)="retryBusiness()">Retry</button>
-                } @else if (mode() === 'business' && loading()) {
-                  <div class="spinner"></div><span>Loading your companies…</span>
-                } @else if (mode() === 'business' && !hasBusinessCompany()) {
-                  <div class="orbit-cta">
-                    <span class="orbit-cta-icon"><span class="material-icons">domain_add</span></span>
-                    @if (companies().length === 0) {
-                      <strong>You are not in a company yet</strong>
-                      <span class="small">Create your own, or join one you were invited to.</span>
-                    } @else {
-                      <strong>Pick a company</strong>
-                      <span class="small">Choose a ready company from the menu at the top.</span>
-                    }
-                    <div class="orbit-cta-actions">
-                      <button type="button" class="btn-cta primary" (click)="openCreate()" [disabled]="!creation()?.canCreate">
-                        <span class="material-icons">add_business</span> Create
-                      </button>
-                      <button type="button" class="btn-cta" (click)="openInvitations()">
-                        <span class="material-icons">group_add</span> Join
-                      </button>
-                    </div>
-                    @if (creation() && !creation()!.canCreate) {
-                      <span class="small">{{ creation()!.message }}</span>
-                    }
-                  </div>
-                } @else if (mode() === 'business') {
-                  <span>No modules for this company yet.</span>
+            } @else if (mode() !== 'personal' && !hasBusinessCompany()) {
+              <div class="lx-state">
+                <span class="material-icons" aria-hidden="true">domain_add</span>
+                @if (companies().length === 0) {
+                  <strong>You are not in a company yet</strong>
+                  <span>Create your own, or join one you were invited to.</span>
                 } @else {
-                  <span>No personal applications yet.</span>
+                  <strong>Pick a company</strong>
+                  <span>Choose a ready company from the menu at the top.</span>
                 }
+                <div class="lx-state-actions">
+                  <button type="button" class="lx-btn primary" (click)="openCreate()" [disabled]="!creation()?.canCreate">
+                    <span class="material-icons" aria-hidden="true">add_business</span> Create
+                  </button>
+                  <button type="button" class="lx-btn" (click)="openInvitations()">
+                    <span class="material-icons" aria-hidden="true">group_add</span> Join
+                  </button>
+                </div>
+                @if (creation() && !creation()!.canCreate) { <span class="small">{{ creation()!.message }}</span> }
               </div>
+            } @else if (homeApps().length === 0) {
+              <div class="lx-state">
+                {{ mode() === 'personal' ? 'No personal applications yet.' : 'No modules for this company yet.' }}
+              </div>
+            } @else {
+              @if (openApps().length > 0) {
+                <div class="lx-apps" [attr.data-count]="openApps().length">
+                  @for (app of openApps(); track app.key) {
+                    <button type="button" class="lx-app" [attr.aria-label]="'Open ' + app.label" (click)="app.open()">
+                      <span class="lx-icon" [attr.data-app]="app.tone" aria-hidden="true">
+                        <span class="material-icons">{{ app.icon }}</span>
+                      </span>
+                      <span class="lx-app-text">
+                        <strong>{{ app.label }}</strong>
+                        @if (app.description) { <small>{{ app.description }}</small> }
+                      </span>
+                      <span class="lx-go" aria-hidden="true"><span class="material-icons">arrow_forward</span></span>
+                    </button>
+                  }
+                </div>
+              } @else if (appQuery().trim() && lockedApps().length === 0) {
+                <div class="lx-state">No applications match your search.</div>
+              } @else if (!appQuery().trim()) {
+                <div class="lx-state">No apps are open to you here yet.</div>
+              }
+
+              @if (lockedApps().length > 0) {
+                <div class="lx-divider"></div>
+                <h3 class="lx-locked-title">{{ lockedTitle() }}</h3>
+                <div class="lx-locked">
+                  @for (app of lockedApps(); track app.key) {
+                    <div class="lx-chip" [title]="app.note">
+                      <span class="lx-icon sm" [attr.data-app]="app.tone" aria-hidden="true">
+                        <span class="material-icons">{{ app.icon }}</span>
+                      </span>
+                      <span>{{ app.label }}</span>
+                      @if (lockedTitle() === 'More Apps') { <small>{{ app.note }}</small> }
+                    </div>
+                  }
+                </div>
+              }
             }
-          </div>
+          </section>
+
+          @if (dockApps().length > 0 || showAdminInDock() || (canManageUsers() && mode() !== 'personal')) {
+            <nav class="lx-dock" aria-label="Quick launch">
+              @for (app of dockApps(); track app.key) {
+                <button type="button" class="lx-dock-btn" [attr.aria-label]="'Open ' + app.label" (click)="app.open()">
+                  <span class="lx-icon" [attr.data-app]="app.tone" aria-hidden="true">
+                    <span class="material-icons">{{ app.icon }}</span>
+                  </span>
+                  <span class="lx-tip">{{ app.label }}</span>
+                </button>
+              }
+              @if (canManageUsers() && mode() !== 'personal') {
+                <button type="button" class="lx-dock-btn" aria-label="Users and roles" (click)="openUsersRoles()">
+                  <span class="lx-icon" [attr.data-app]="isPlatformAdmin() ? 'navy' : 'slate'" aria-hidden="true">
+                    <span class="material-icons">{{ isPlatformAdmin() ? 'manage_accounts' : 'settings' }}</span>
+                  </span>
+                  <span class="lx-tip">Users &amp; Roles</span>
+                </button>
+              }
+              @if (showAdminInDock()) {
+                <button type="button" class="lx-dock-btn" aria-label="Administration" (click)="openAdministration()">
+                  <span class="lx-icon" data-app="slate" aria-hidden="true"><span class="material-icons">settings</span></span>
+                  <span class="lx-tip">Administration</span>
+                </button>
+              }
+            </nav>
+          }
         </div>
       </section>
     }

@@ -71,6 +71,15 @@ export function branchDecision(count: number): 'none' | 'auto' | 'choose' {
   return count === 1 ? 'auto' : 'choose';
 }
 
+/**
+ * The branch to enter without asking: the only one, or the one the user last worked in if
+ * this module still allows it. Null means the user has to choose (or there is none).
+ */
+export function branchToEnter<T extends { locationId: number }>(list: T[], rememberedId: number | null): T | null {
+  if (list.length === 1) return list[0];
+  return list.find(b => b.locationId === rememberedId) ?? null;
+}
+
 /** First page of the Service module for a role. */
 export function landingRouteForRole(role: string): string {
   switch (role) {
