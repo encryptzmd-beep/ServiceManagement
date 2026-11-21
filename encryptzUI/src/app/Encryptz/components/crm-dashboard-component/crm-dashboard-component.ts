@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { CdkDrag, CdkDragDrop, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { CdkScrollable } from '@angular/cdk/scrolling';
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, effect, inject, signal } from '@angular/core';
@@ -27,7 +28,7 @@ function readDensity(): 'comfortable' | 'compact' {
 @Component({
   selector: 'app-crm-dashboard',
   standalone: true,
-  imports: [RouterLink, CdkScrollable, CdkDropListGroup, CdkDropList, CdkDrag, CrmRefusedComponent, CrmStatusDialogComponent],
+  imports: [AppRightDirective, RouterLink, CdkScrollable, CdkDropListGroup, CdkDropList, CdkDrag, CrmRefusedComponent, CrmStatusDialogComponent],
   templateUrl: './crm-dashboard-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-dashboard-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

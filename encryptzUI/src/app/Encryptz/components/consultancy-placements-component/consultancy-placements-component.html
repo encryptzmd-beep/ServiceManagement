@@ -14,7 +14,7 @@
       <p>Who you placed where, the fee and the replacement guarantee.</p>
     </div>
     <span class="jb-grow"></span>
-    <button class="jp-btn primary" (click)="openNew()"><span class="material-icons" aria-hidden="true">add</span>New placement</button>
+    <button appRight="create" appRightMenu="/consultancy/placements" class="jp-btn primary" (click)="openNew()"><span class="material-icons" aria-hidden="true">add</span>New placement</button>
   </div>
 
   <div class="pl-figures">
@@ -51,10 +51,10 @@
       <div class="jb-card-side">
         <span [class]="feeClass(p.feeStatus)">Fee {{ p.feeStatus.toLowerCase() }}</span>
         <div class="pl-actions">
-          @if (p.feeStatus === 'Pending') { <button class="jp-btn" (click)="setFee(p, 'Invoiced')">Invoiced</button> }
-          @if (p.feeStatus !== 'Paid') { <button class="jp-btn" (click)="setFee(p, 'Paid')">Paid</button> }
-          <button class="jp-btn" (click)="openEdit(p)">Edit</button>
-          <button class="jp-btn ghost" (click)="remove(p)">Remove</button>
+          @if (p.feeStatus === 'Pending') { <button appRight="edit" appRightMenu="/consultancy/placements" class="jp-btn" (click)="setFee(p, 'Invoiced')">Invoiced</button> }
+          @if (p.feeStatus !== 'Paid') { <button appRight="edit" appRightMenu="/consultancy/placements" class="jp-btn" (click)="setFee(p, 'Paid')">Paid</button> }
+          <button appRight="edit" appRightMenu="/consultancy/placements" class="jp-btn" (click)="openEdit(p)">Edit</button>
+          <button appRight="delete" appRightMenu="/consultancy/placements" class="jp-btn ghost" (click)="remove(p)">Remove</button>
         </div>
       </div>
     </article>
@@ -65,7 +65,7 @@
         <p>No placement with this fee state.</p>
       } @else {
         <p>No placements yet. Record one here, from a candidate of your pool, or from an applicant you hired.</p>
-        <button class="jp-btn primary" (click)="openNew()">New placement</button>
+        <button appRight="create" appRightMenu="/consultancy/placements" class="jp-btn primary" (click)="openNew()">New placement</button>
       }
     </div>
   }
@@ -133,7 +133,7 @@
       </div>
       <div class="jp-dialog-foot">
         <button class="jp-btn ghost" (click)="closeForm()" [disabled]="saving()">Cancel</button>
-        <button class="jp-btn primary" (click)="save()" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
+        <button appRight="save" appRightMenu="/consultancy/placements" class="jp-btn primary" (click)="save()" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
       </div>
     </div>
   </div>

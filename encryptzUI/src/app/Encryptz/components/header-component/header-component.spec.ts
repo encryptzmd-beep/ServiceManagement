@@ -144,17 +144,17 @@ describe('HeaderComponent', () => {
     expect(fixture.componentInstance.branchError()).toBe('No access to this branch');
   });
 
-  it('goes to the branch step only when there are several branches to choose from', () => {
+  it('opens the first branch without the branch step when several are allowed and none is remembered', () => {
     branches = [{ locationId: 7, locationName: 'Head Office' }, { locationId: 8, locationName: 'Kochi' }];
-    setScope = vi.fn();
+    setScope = vi.fn(() => of({ success: true, message: '', data: { role: 'Admin' } }));
     const fixture = create();
     const el = fixture.nativeElement as HTMLElement;
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     (el.querySelector('.mod-btn') as HTMLButtonElement).click();
     fixture.detectChanges();
     (Array.from(el.querySelectorAll('button.mod-item')) as HTMLButtonElement[])[1].click();
-    expect(setScope).not.toHaveBeenCalled();
-    expect(navigate).toHaveBeenCalledWith(['/select-branch'], { queryParams: { module: 'CRM' } });
+    expect(setScope).toHaveBeenCalledWith('CRM', 7, 'Head Office');
+    expect(navigate).not.toHaveBeenCalledWith(['/select-branch'], expect.anything());
   });
 
   it('offers the module and company switches in the user menu; the branch is in the top bar', () => {

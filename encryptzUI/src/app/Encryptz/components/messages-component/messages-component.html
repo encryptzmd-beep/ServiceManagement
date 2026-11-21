@@ -152,7 +152,7 @@
               </button>
               <textarea name="draft" [(ngModel)]="draft" (keydown)="onKey($event)" rows="1" maxlength="2000"
                         placeholder="Write a message…  (Enter to send, Shift+Enter for a new line)" aria-label="Message"></textarea>
-              <button class="ms-send" type="submit" [disabled]="sending() || (!draft.trim() && !attached())" aria-label="Send">
+              <button appRight="create" appRightMenu="/consultancy/messages" [appRightOff]="side !== 'company'" class="ms-send" type="submit" [disabled]="sending() || (!draft.trim() && !attached())" aria-label="Send">
                 <span class="material-icons">send</span>
               </button>
             </div>

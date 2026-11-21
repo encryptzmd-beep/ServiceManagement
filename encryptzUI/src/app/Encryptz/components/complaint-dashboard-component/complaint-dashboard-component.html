@@ -117,7 +117,7 @@
           <span class="overdue-badge">
             <span class="material-icons">schedule</span>{{ $any(b).hoursOverdue }}h overdue
           </span>
-          <button class="btn-assign" (click)="openAssign(b, $event)">
+          <button appRight="create" appRightMenu="/complaints/assign" class="btn-assign" (click)="openAssign(b, $event)">
             <span class="material-icons">person_add</span> Assign
           </button>
         </div>
@@ -151,13 +151,13 @@
           </span>
           }
           <div class="atl-actions">
-            <button class="btn-assign reassign" (click)="openAssign(a, $event)" title="Reassign">
+            <button appRight="create" appRightMenu="/complaints/assign" class="btn-assign reassign" (click)="openAssign(a, $event)" title="Reassign">
               <span class="material-icons">swap_horiz</span> Reassign
             </button>
-            <button class="btn-complete-sm" (click)="quickComplete(a, $event)" title="Complete">
+            <button appRight="edit" appRightMenu="/complaints/list" class="btn-complete-sm" (click)="quickComplete(a, $event)" title="Complete">
               <span class="material-icons">check_circle</span> Complete
             </button>
-            <button class="btn-unassign" (click)="openUnAssign(a, $event)" title="Unassign">
+            <button appRight="delete" appRightMenu="/complaints/assign" class="btn-unassign" (click)="openUnAssign(a, $event)" title="Unassign">
               <span class="material-icons">person_remove</span> Unassign
             </button>
           </div>
@@ -230,7 +230,7 @@
 <a class="btn-sm-view" (click)="openComplaintDetails(c.complaintId, $event)">
   <span class="material-icons">open_in_new</span>
 </a>
-                <button class="btn-assign" [class.reassign]="isReassign(c)" (click)="openAssign(c, $event)">
+                <button appRight="create" appRightMenu="/complaints/assign" class="btn-assign" [class.reassign]="isReassign(c)" (click)="openAssign(c, $event)">
                   <span class="material-icons">{{ isReassign(c) ? 'swap_horiz' : 'person_add' }}</span>
                   {{ isReassign(c) ? 'Reassign' : 'Assign' }}
                 </button>
@@ -501,7 +501,7 @@
             </div>
           </div>
           <div class="aei-actions">
-            <button class="btn-unassign sm" (click)="openUnAssign(a, $event)" title="Unassign"
+            <button appRight="delete" appRightMenu="/complaints/assign" class="btn-unassign sm" (click)="openUnAssign(a, $event)" title="Unassign"
                     [disabled]="$any(a).status === 'Completed'">
               <span class="material-icons">person_remove</span>
             </button>
@@ -640,7 +640,7 @@
     @if (assignOk()) { <div class="ap-alert ok"><span class="material-icons">check_circle</span>{{ assignOk() }}</div> }
     @if (assignErr()) { <div class="ap-alert err"><span class="material-icons">error</span>{{ assignErr() }}</div> }
 
-    <button class="ap-submit" (click)="doAssign()"
+    <button appRight="create" appRightMenu="/complaints/assign" class="ap-submit" (click)="doAssign()"
             [disabled]="(!selectedC()&&!assignTarget()?.complaintId)||!selectedTech()||assigning()">
       @if (assigning()) { <span class="mini-spinner white"></span> Assigning... }
       @else { <span class="material-icons">person_add</span> Assign Technician }
@@ -677,7 +677,7 @@
         </div>
         }
         <div class="ci-actions">
-          <button class="btn-unassign sm" (click)="openUnAssign(a, $event)" title="Unassign technician">
+          <button appRight="delete" appRightMenu="/complaints/assign" class="btn-unassign sm" (click)="openUnAssign(a, $event)" title="Unassign technician">
             <span class="material-icons">person_remove</span> Unassign
           </button>
         </div>
@@ -694,7 +694,7 @@
     </div>
     @if (completeOk()) { <div class="ap-alert ok"><span class="material-icons">check_circle</span>{{ completeOk() }}</div> }
     @if (completeErr()) { <div class="ap-alert err"><span class="material-icons">error</span>{{ completeErr() }}</div> }
-    <button class="ap-submit complete" (click)="doComplete()" [disabled]="completing()">
+    <button appRight="edit" appRightMenu="/complaints/list" class="ap-submit complete" (click)="doComplete()" [disabled]="completing()">
       @if (completing()) { <span class="mini-spinner white"></span> Completing... }
       @else { <span class="material-icons">check_circle</span> Mark as Complete }
     </button>
@@ -801,9 +801,9 @@
     <div class="sd-actions">
       <button type="button" class="sd-btn ghost" (click)="closeSpareDecision()" [disabled]="spareActioning()">Cancel</button>
       @if (spareStockWarning()) {
-      <button type="button" class="sd-btn primary" (click)="confirmSpareDecision(true)" [disabled]="spareActioning()">Approve anyway</button>
+      <button appRight="edit" appRightMenu="/technicians/spare-requests" type="button" class="sd-btn primary" (click)="confirmSpareDecision(true)" [disabled]="spareActioning()">Approve anyway</button>
       } @else {
-      <button type="button" class="sd-btn" [class.primary]="d.status !== 'Rejected'" [class.danger]="d.status === 'Rejected'"
+      <button appRight="edit" appRightMenu="/technicians/spare-requests" type="button" class="sd-btn" [class.primary]="d.status !== 'Rejected'" [class.danger]="d.status === 'Rejected'"
               (click)="confirmSpareDecision()" [disabled]="spareActioning()">
         {{ spareActioning() ? 'Saving...' : spareDecisionVerb(d.status) }}
       </button>
@@ -855,22 +855,22 @@
     <div class="sp-bulk-btns">
       <!-- Show Approve/Reject only when viewing Requested items -->
       @if (!spareFilter.status || spareFilter.status === 'Requested') {
-      <button class="sp-bulk-btn approve" (click)="bulkAction('Approved')" [disabled]="spareActioning()">
+      <button appRight="edit" appRightMenu="/complaints/list" class="sp-bulk-btn approve" (click)="bulkAction('Approved')" [disabled]="spareActioning()">
         <span class="material-icons">check_circle</span> Approve
       </button>
-      <button class="sp-bulk-btn reject" (click)="bulkAction('Rejected')" [disabled]="spareActioning()">
+      <button appRight="edit" appRightMenu="/complaints/list" class="sp-bulk-btn reject" (click)="bulkAction('Rejected')" [disabled]="spareActioning()">
         <span class="material-icons">cancel</span> Reject
       </button>
       }
       <!-- Show Dispatch when viewing Approved items -->
       @if (!spareFilter.status || spareFilter.status === 'Approved') {
-      <button class="sp-bulk-btn dispatch" (click)="bulkAction('Dispatched')" [disabled]="spareActioning()">
+      <button appRight="edit" appRightMenu="/complaints/list" class="sp-bulk-btn dispatch" (click)="bulkAction('Dispatched')" [disabled]="spareActioning()">
         <span class="material-icons">local_shipping</span> Dispatch
       </button>
       }
       <!-- Show Mark Used when viewing Dispatched items -->
       @if (!spareFilter.status || spareFilter.status === 'Dispatched') {
-      <button class="sp-bulk-btn used" (click)="bulkAction('Used')" [disabled]="spareActioning()">
+      <button appRight="edit" appRightMenu="/complaints/list" class="sp-bulk-btn used" (click)="bulkAction('Used')" [disabled]="spareActioning()">
         <span class="material-icons">build_circle</span> Mark Used
       </button>
       }
@@ -942,20 +942,20 @@
             <td>
               <div class="sp-row-actions">
                 @if (r.status === 'Requested') {
-                <button class="sp-act-btn approve" (click)="singleAction(r.requestId, 'Approved', $event)" title="Approve">
+                <button appRight="edit" appRightMenu="/complaints/list" class="sp-act-btn approve" (click)="singleAction(r.requestId, 'Approved', $event)" title="Approve">
                   <span class="material-icons">check</span>
                 </button>
-                <button class="sp-act-btn reject" (click)="singleAction(r.requestId, 'Rejected', $event)" title="Reject">
+                <button appRight="edit" appRightMenu="/complaints/list" class="sp-act-btn reject" (click)="singleAction(r.requestId, 'Rejected', $event)" title="Reject">
                   <span class="material-icons">close</span>
                 </button>
                 }
                 @if (r.status === 'Approved') {
-                <button class="sp-act-btn dispatch" (click)="singleAction(r.requestId, 'Dispatched', $event)" title="Dispatch">
+                <button appRight="edit" appRightMenu="/complaints/list" class="sp-act-btn dispatch" (click)="singleAction(r.requestId, 'Dispatched', $event)" title="Dispatch">
                   <span class="material-icons">local_shipping</span>
                 </button>
                 }
                 @if (r.status === 'Dispatched') {
-                <button class="sp-act-btn used" (click)="singleAction(r.requestId, 'Used', $event)" title="Mark Used">
+                <button appRight="edit" appRightMenu="/complaints/list" class="sp-act-btn used" (click)="singleAction(r.requestId, 'Used', $event)" title="Mark Used">
                   <span class="material-icons">build_circle</span>
                 </button>
                 }
@@ -1045,7 +1045,7 @@
 
   <div class="ua-footer">
     <button class="ua-btn-cancel" (click)="closeUnAssign()" [disabled]="unAssigning()">Cancel</button>
-    <button class="ua-btn-confirm" (click)="doUnAssign()" [disabled]="unAssigning()">
+    <button appRight="delete" appRightMenu="/complaints/assign" class="ua-btn-confirm" (click)="doUnAssign()" [disabled]="unAssigning()">
       @if (unAssigning()) { <span class="mini-spinner white"></span> Unassigning... }
       @else { <span class="material-icons">person_remove</span> Confirm Unassign }
     </button>

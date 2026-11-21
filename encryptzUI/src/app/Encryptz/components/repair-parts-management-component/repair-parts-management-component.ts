@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -8,7 +9,7 @@ const STATUS_ORDER = ['Requested','ReceivedAtHQ','UnderRepair','Repaired','Dispa
 @Component({
   selector: 'app-repair-parts-management',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [AppRightDirective, CommonModule, FormsModule],
   templateUrl: './repair-parts-management-component.html',
   styleUrl: './repair-parts-management-component.scss'
 })

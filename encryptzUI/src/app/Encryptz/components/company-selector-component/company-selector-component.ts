@@ -758,6 +758,9 @@ export class CompanySelectorComponent {
 
   // ── OPENING A MODULE (from the app list) ──────────────────────────
 
+  /** The module being entered: its card says "Opening…". */
+  openingModule = signal<string | null>(null);
+
   caption(module: ModuleDto): string {
     return moduleCaption(module.state);
   }
@@ -765,9 +768,33 @@ export class CompanySelectorComponent {
   openModule(module: ModuleDto): void {
     if (module.state !== 'Available') return;
 
-    // an application whose pages need no branch opens at once; the others ask for the branch
+    if (this.openingModule()) return;
+
+    // an application whose pages need no branch opens at once
     const to = moduleRoute(module);
-    this.router.navigate(to.commands, to.queryParams ? { queryParams: to.queryParams } : undefined);
+    const toBranchStep = () => {
+      this.openingModule.set(null);
+      this.router.navigate(to.commands, to.queryParams ? { queryParams: to.queryParams } : undefined);
+    };
+    if (!to.queryParams) { toBranchStep(); return; }
+
+    // the others open in their branch from here; the branch step only explains a problem
+    this.openingModule.set(module.moduleKey);
+    this.auth.getBranches(module.moduleKey).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (res) => {
+        const branch = branchToEnter(res.success ? res.data ?? [] : [], this.auth.rememberedBranchId());
+        if (!branch) { toBranchStep(); return; }
+        this.auth.setScope(module.moduleKey, branch.locationId, branch.locationName).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+          next: (scope) => {
+            if (!scope.success || !scope.data) { toBranchStep(); return; }
+            this.openingModule.set(null);
+            this.router.navigate([moduleLanding(module.moduleKey, scope.data.role)]);
+          },
+          error: () => toBranchStep(),
+        });
+      },
+      error: () => toBranchStep(),
+    });
   }
 
   /** Administrators of a company can work on it before any module can be opened. */

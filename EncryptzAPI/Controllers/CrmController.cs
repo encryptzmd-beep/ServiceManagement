@@ -64,11 +64,13 @@ namespace EncryptzAPI.Controllers
             return result.Message == "Lead not found" ? NotFound(result) : BadRequest(result);
         }
 
+        [MenuRight("/crm/leads", MenuRightKind.Save, IdProperty = "LeadId")]
         [HttpPost("leads")]
         public async Task<IActionResult> SaveLead([FromBody] LeadSaveDto dto)
             => Answer(await _crm.SaveLead(Caller(), await Manager(), Company(), dto));
 
         /// <summary>Soft delete: the owner or a manager; never a converted lead (22_CRM_Lead_Delete.sql).</summary>
+        [MenuRight("/crm/leads", MenuRightKind.Delete)]
         [HttpDelete("leads/{id:int}")]
         public async Task<IActionResult> DeleteLead(int id)
         {
@@ -77,14 +79,17 @@ namespace EncryptzAPI.Controllers
             return result.Message == "Lead not found" ? NotFound(result) : BadRequest(result);
         }
 
+        [MenuRight("/crm/leads", MenuRightKind.Edit)]
         [HttpPost("leads/{id:int}/status")]
         public async Task<IActionResult> ChangeStatus(int id, [FromBody] StatusChangeDto dto)
             => Answer(await _crm.ChangeStatus(Caller(), await Manager(), Company(), id, dto));
 
+        [MenuRight("/crm/leads", MenuRightKind.Edit)]
         [HttpPost("leads/{id:int}/reassign")]
         public async Task<IActionResult> Reassign(int id, [FromBody] ReassignDto dto)
             => Answer(await _crm.Reassign(Caller(), await Manager(), Company(), id, dto));
 
+        [MenuRight("/crm/leads", MenuRightKind.Edit)]
         [HttpPost("leads/{id:int}/follow-ups")]
         public async Task<IActionResult> AddFollowUp(int id, [FromBody] FollowUpSaveDto dto)
             => Answer(await _crm.AddFollowUp(Caller(), await Manager(), Company(), id, dto));
@@ -93,19 +98,23 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> PreviewConvert(int id, [FromQuery] int quotationId)
             => Answer(await _crm.PreviewConvert(Caller(), await Manager(), Company(), id, quotationId));
 
+        [MenuRight("/crm/leads", MenuRightKind.Edit)]
         [HttpPost("leads/{id:int}/convert")]
         public async Task<IActionResult> Convert(int id, [FromBody] ConvertRequestDto dto)
             => Answer(await _crm.Convert(Caller(), await Manager(), Company(), id, dto));
 
+        [MenuRight("/crm/leads", MenuRightKind.Edit)]
         [HttpPost("leads/{id:int}/link-order")]
         public async Task<IActionResult> LinkOrder(int id, [FromBody] LinkOrderDto dto)
             => Answer(await _crm.LinkOrder(Caller(), await Manager(), Company(), id, dto?.OrderNo ?? "", dto?.QuotationId));
 
         /// <summary>A manager frees the convert marker of a lead, also one flagged for a check of the sales orders.</summary>
+        [MenuRight("/crm/leads", MenuRightKind.Edit)]
         [HttpPost("leads/{id:int}/cancel-convert")]
         public async Task<IActionResult> CancelConvert(int id)
             => Answer(await _crm.ManagerCancelConvert(Caller(), await Manager(), Company(), id));
 
+        [MenuRight("/crm/quotations", MenuRightKind.Save, IdProperty = "QuotationId")]
         [HttpPost("quotations")]
         public async Task<IActionResult> SaveQuotation([FromBody] QuotationSaveDto dto)
             => Answer(await _crm.SaveQuotation(Caller(), await Manager(), Company(), dto));
@@ -123,10 +132,12 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetQuotationNeighbours(int id)
             => Answer(await _crm.GetQuotationNeighbours(Caller(), await Manager(), Company(), id));
 
+        [MenuRight("/crm/quotations", MenuRightKind.Edit)]
         [HttpPost("quotations/{id:int}/revise")]
         public async Task<IActionResult> ReviseQuotation(int id)
             => Answer(await _crm.ReviseQuotation(Caller(), await Manager(), Company(), id));
 
+        [MenuRight("/crm/quotations", MenuRightKind.Edit, DeleteWhenStatus = "Cancelled")]
         [HttpPost("quotations/{id:int}/status")]
         public async Task<IActionResult> SetQuotationStatus(int id, [FromBody] QuotationStatusDto dto)
             => Answer(await _crm.SetQuotationStatus(Caller(), await Manager(), Company(), id, dto?.Status ?? ""));
@@ -143,6 +154,7 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetMasters(string kind)
             => Answer(await _crm.GetMasters(Caller(), await Manager(), Company(), kind));
 
+        [MenuRight("/crm/settings", MenuRightKind.Edit)]
         [HttpPost("masters/{kind}")]
         public async Task<IActionResult> SaveMaster(string kind, [FromBody] CrmMasterDto dto)
             => Answer(await _crm.SaveMaster(Caller(), await Manager(), Company(), kind, dto));
@@ -151,6 +163,7 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetMembers()
             => Answer(await _crm.GetMembers(Caller(), await Manager(), Company()));
 
+        [MenuRight("/crm/settings", MenuRightKind.Edit)]
         [HttpPost("members")]
         public async Task<IActionResult> SaveMember([FromBody] CrmMemberDto dto)
             => Answer(await _crm.SaveMember(Caller(), await Manager(), Company(), dto));

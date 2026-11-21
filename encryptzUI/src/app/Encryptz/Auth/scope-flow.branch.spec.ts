@@ -8,15 +8,19 @@ describe('branchToEnter', () => {
     expect(branchToEnter([main], null)).toBe(main);
   });
 
-  it('asks the first time when there are several', () => {
-    expect(branchToEnter([main, north], null)).toBeNull();
+  it('enters the first branch, without asking, when several are allowed', () => {
+    expect(branchToEnter([main, north], null)).toBe(main);
   });
 
   it('enters the branch chosen before', () => {
     expect(branchToEnter([main, north], 2)).toBe(north);
   });
 
-  it('asks again when the branch chosen before is no longer allowed', () => {
-    expect(branchToEnter([main, north], 9)).toBeNull();
+  it('enters the first branch when the one chosen before is no longer allowed', () => {
+    expect(branchToEnter([main, north], 9)).toBe(main);
+  });
+
+  it('has nothing to enter without a branch', () => {
+    expect(branchToEnter([], 2)).toBeNull();
   });
 });

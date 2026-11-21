@@ -15,7 +15,7 @@
       <textarea maxlength="2000" rows="3" [value]="note()" (input)="note.set($any($event.target).value)"></textarea></label>
     <div class="crm-actions">
       <button type="button" class="crm-btn" [disabled]="busy()" (click)="cancel()">Cancel</button>
-      <button type="button" class="crm-btn primary" [disabled]="!canConfirm()" (click)="confirm()">Confirm</button>
+      <button appRight="edit" appRightMenu="/crm/leads" type="button" class="crm-btn primary" [disabled]="!canConfirm()" (click)="confirm()">Confirm</button>
     </div>
   </div>
 </div>

@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ApiService } from '../../Services/API/api-service';
 import { ComplaintLookup, WarrantyReturnFilter, WarrantyReturnListItem, WarrantyReturnStatusDto } from '../../Models/ApiModels';
@@ -6,7 +7,7 @@ import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-warranty-returns-component',
-  imports: [CommonModule,FormsModule],
+  imports: [AppRightDirective, CommonModule,FormsModule],
   templateUrl: './warranty-returns-component.html',
   styleUrl: './warranty-returns-component.scss',
 })

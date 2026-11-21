@@ -227,7 +227,8 @@
                       </span>
                       <span class="lx-app-text">
                         <strong>{{ app.label }}</strong>
-                        @if (app.description) { <small>{{ app.description }}</small> }
+                        @if (openingModule() === app.key) { <small>Opening…</small> }
+                        @else if (app.description) { <small>{{ app.description }}</small> }
                       </span>
                       <span class="lx-go" aria-hidden="true"><span class="material-icons">arrow_forward</span></span>
                     </button>

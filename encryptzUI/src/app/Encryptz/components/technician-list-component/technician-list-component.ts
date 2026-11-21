@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ApiService } from '../../Services/API/api-service';
 import { Technician, TechnicianFilter, TechnicianListItem } from '../../Models/ApiModels';
@@ -7,7 +8,7 @@ import { DialogService } from '../../Services/dialog-service';
 
 @Component({
   selector: 'app-technician-list-component',
-    imports: [CommonModule,FormsModule],
+    imports: [AppRightDirective, CommonModule,FormsModule],
   templateUrl: './technician-list-component.html',
   styleUrl: './technician-list-component.scss',
 })

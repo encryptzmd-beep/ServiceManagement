@@ -30,7 +30,7 @@
     <button type="button" [class.on]="filter.pool" (click)="setPool(true)"><span class="material-icons" aria-hidden="true">bookmarks</span>My pool</button>
     <a routerLink="/consultancy/our-candidates" title="People you added yourself: only your company sees them"><span class="material-icons" aria-hidden="true">badge</span>Our candidates</a>
   </div>
-  <a class="jp-btn primary cd-add-candidate" routerLink="/consultancy/our-candidates" [queryParams]="{ add: 1 }"
+  <a appRight="create" appRightMenu="/consultancy/our-candidates" class="jp-btn primary cd-add-candidate" routerLink="/consultancy/our-candidates" [queryParams]="{ add: 1 }"
      title="Add a person you met outside Job Portal: only your company sees them"><span class="material-icons" aria-hidden="true">person_add</span>Add candidate</a>
 </div>
 
@@ -251,18 +251,25 @@
       <div class="cd-hero-text">
         <h3>{{ pg.profile.fullName }}@if (pg.profile.isVerified) { <app-verified-badge label="Verified" hint="Encryptz verified this person" /> }</h3>
         @if (pg.profile.headline) { <div class="jb-company">{{ pg.profile.headline }}</div> }
+        <div class="jb-meta cd-contact">
+          @if (pg.profile.city) { <span><span class="material-icons" aria-hidden="true">place</span>{{ pg.profile.city }}</span> }
+          @if (pg.profile.contactEmail) { <span><span class="material-icons" aria-hidden="true">mail_outline</span>{{ pg.profile.contactEmail }}</span> }
+          @if (pg.profile.contactPhone) { <span><span class="material-icons" aria-hidden="true">call</span>{{ pg.profile.contactPhone }}</span> }
+        </div>
       </div>
     </div>
-    @if (!pageMode) { <button class="jp-close" (click)="close()" aria-label="Close"><span class="material-icons">close</span></button> }
+    @if (pageMode) {
+      <div class="cd-head-actions">
+        <button class="jp-btn" (click)="message()" [disabled]="messaging()"><span class="material-icons" aria-hidden="true">chat_bubble_outline</span>Message</button>
+        <button appRight="create" appRightMenu="/consultancy/placements" class="jp-btn" (click)="recordPlacement()"><span class="material-icons" aria-hidden="true">verified</span>Record a placement</button>
+      </div>
+    } @else {
+      <button class="jp-close" (click)="close()" aria-label="Close"><span class="material-icons">close</span></button>
+    }
   </div>
   <div class="jp-dialog-body cd-body">
-    <div>
-      <div class="jb-meta cd-contact">
-        @if (pg.profile.city) { <span><span class="material-icons" aria-hidden="true">place</span>{{ pg.profile.city }}</span> }
-        @if (pg.profile.contactEmail) { <span><span class="material-icons" aria-hidden="true">mail_outline</span>{{ pg.profile.contactEmail }}</span> }
-        @if (pg.profile.contactPhone) { <span><span class="material-icons" aria-hidden="true">call</span>{{ pg.profile.contactPhone }}</span> }
-      </div>
-    </div>
+    <!-- what the company does with this person: a side panel on the full page -->
+    <aside class="cd-side" aria-label="Actions">
 
     <!-- the pool: stage and note of this company -->
     <section class="cd-pool">
@@ -281,9 +288,9 @@
       </div>
       <div class="cd-pool-actions">
         @if (c.inPool) {
-          <button class="jp-btn ghost" (click)="removeFromPool()" [disabled]="poolBusy()">Remove from pool</button>
+          <button appRight="delete" appRightMenu="/consultancy/candidates" class="jp-btn ghost" (click)="removeFromPool()" [disabled]="poolBusy()">Remove from pool</button>
         }
-        <button class="jp-btn primary" (click)="saveToPool()" [disabled]="poolBusy()">{{ c.inPool ? 'Save' : 'Save to my pool' }}</button>
+        <button appRight="edit" appRightMenu="/consultancy/candidates" class="jp-btn primary" (click)="saveToPool()" [disabled]="poolBusy()">{{ c.inPool ? 'Save' : 'Save to my pool' }}</button>
       </div>
     </section>
 
@@ -301,7 +308,7 @@
           </label>
         </div>
         <div class="cd-pool-actions">
-          <button class="jp-btn" (click)="invite()" [disabled]="inviting()"><span class="material-icons" aria-hidden="true">send</span>{{ inviting() ? 'Sending…' : 'Send invitation' }}</button>
+          <button appRight="create" appRightMenu="/consultancy/candidates" class="jp-btn" (click)="invite()" [disabled]="inviting()"><span class="material-icons" aria-hidden="true">send</span>{{ inviting() ? 'Sending…' : 'Send invitation' }}</button>
         </div>
         @for (t of invited(); track $index) {
           <p class="cd-invited"><span class="material-icons" aria-hidden="true">check_circle</span>Invitation sent for <strong>{{ t }}</strong>. {{ pg.profile.fullName }} is told now.</p>
@@ -312,7 +319,10 @@
     </section>
 
     @if (panelError()) { <div class="jp-error">{{ panelError() }}</div> }
+    </aside>
 
+    <!-- the profile -->
+    <div class="cd-main">
     @if (c.preferredJobs.length || c.preferredLocations.length || c.workModes.length) {
       <section>
         <h4>Looking for</h4>
@@ -385,13 +395,16 @@
         <p class="jp-empty">No resume uploaded.</p>
       }
     </section>
+    </div>
   </div>
-  <div class="jp-dialog-foot">
-    <button class="jp-btn" (click)="message()" [disabled]="messaging()"><span class="material-icons" aria-hidden="true">chat_bubble_outline</span>Message</button>
-    <button class="jp-btn" (click)="recordPlacement()"><span class="material-icons" aria-hidden="true">verified</span>Record a placement</button>
-    <span class="jb-grow"></span>
-    @if (!pageMode) { <button class="jp-btn ghost" (click)="close()">Close</button> }
-  </div>
+  @if (!pageMode) {
+    <div class="jp-dialog-foot">
+      <button class="jp-btn" (click)="message()" [disabled]="messaging()"><span class="material-icons" aria-hidden="true">chat_bubble_outline</span>Message</button>
+      <button appRight="create" appRightMenu="/consultancy/placements" class="jp-btn" (click)="recordPlacement()"><span class="material-icons" aria-hidden="true">verified</span>Record a placement</button>
+      <span class="jb-grow"></span>
+      <button class="jp-btn ghost" (click)="close()">Close</button>
+    </div>
+  }
 </ng-template>
 
 @if (!pageMode) {

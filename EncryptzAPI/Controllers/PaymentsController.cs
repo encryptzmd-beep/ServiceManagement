@@ -1,3 +1,4 @@
+using EncryptzBL.Common.Tenant;
 using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.User.Modules;
@@ -39,6 +40,7 @@ namespace EncryptzAPI.Controllers
             return Ok(new { data = amount });
         }
 
+        [MenuRight("/settings/general", MenuRightKind.Edit)]
         [HttpPut("ServiceCharge")]
         [Authorize(Roles = "Admin,CompanyAdmin,Manager")]
         public async Task<IActionResult> UpdateDefaultServiceCharge([FromBody] decimal amount)
@@ -57,6 +59,7 @@ namespace EncryptzAPI.Controllers
             return Ok(new { data = result });
         }
 
+        [MenuRight("/settings/general", MenuRightKind.Create)]
         [HttpPost("UPI")]
         [Authorize(Roles = "Admin,CompanyAdmin,Manager")]
         public async Task<IActionResult> AddUPIConfiguration([FromBody] UPIConfigurationDto dto)
@@ -66,6 +69,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/settings/general", MenuRightKind.Edit)]
         [HttpPut("UPI/{id}/Default")]
         [Authorize(Roles = "Admin,CompanyAdmin,Manager")]
         public async Task<IActionResult> SetDefaultUPI(int id)
@@ -74,6 +78,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/settings/general", MenuRightKind.Edit)]
         [HttpPut("UPI/{id}/Toggle")]
         [Authorize(Roles = "Admin,CompanyAdmin,Manager")]
         public async Task<IActionResult> ToggleUPIStatus(int id)
@@ -82,6 +87,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/settings/general", MenuRightKind.Delete)]
         [HttpDelete("UPI/{id}")]
         [Authorize(Roles = "Admin,CompanyAdmin,Manager")]
         public async Task<IActionResult> DeleteUPIConfiguration(int id)
@@ -100,6 +106,7 @@ namespace EncryptzAPI.Controllers
             return Ok(new { data = result });
         }
 
+        [MenuRight("/settings/payments", MenuRightKind.Create)]
         [HttpPost("Complaint")]
         public async Task<IActionResult> RecordComplaintPayment([FromBody] RecordPaymentRequest request)
         {
@@ -126,6 +133,7 @@ namespace EncryptzAPI.Controllers
             return Ok(new { data = result });
         }
 
+        [MenuRight("/settings/payments", MenuRightKind.Edit)]
         [HttpPut("Update")]
         [Authorize(Roles = "Admin,CompanyAdmin,Manager")]
         public async Task<IActionResult> UpdatePayment([FromBody] UpdatePaymentRequest request)
@@ -151,6 +159,7 @@ namespace EncryptzAPI.Controllers
             return Ok(new { data = result });
         }
 
+        [MenuRight("/settings/payments", MenuRightKind.Edit)]
         [HttpPut("Updatepay")]
         [Authorize(Roles = "Admin,CompanyAdmin,Manager")]
         public async Task<IActionResult> UpdatePayment1([FromBody] UpdatePaymentRequest request)
@@ -166,6 +175,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/settings/payments", MenuRightKind.Edit)]
         [HttpPut("Verify")]
         [Authorize(Roles = "Admin,CompanyAdmin,Manager")]
         public async Task<IActionResult> VerifyPayment([FromBody] VerifyPaymentRequest request)

@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -29,7 +30,7 @@ interface CandidateForm extends Omit<OwnCandidate, 'experienceYears'> {
 @Component({
   selector: 'app-own-candidates',
   standalone: true,
-  imports: [FormsModule, RouterModule, ScrollIntoViewOn, EscapeClose],
+  imports: [AppRightDirective, FormsModule, RouterModule, ScrollIntoViewOn, EscapeClose],
   templateUrl: './own-candidates-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',

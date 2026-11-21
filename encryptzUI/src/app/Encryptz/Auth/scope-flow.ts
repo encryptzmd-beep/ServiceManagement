@@ -72,12 +72,11 @@ export function branchDecision(count: number): 'none' | 'auto' | 'choose' {
 }
 
 /**
- * The branch to enter without asking: the only one, or the one the user last worked in if
- * this module still allows it. Null means the user has to choose (or there is none).
+ * The branch a module opens in, without asking: the one the user last worked in if this module
+ * allows it, else the first. The branch switcher in the header changes it. Null: there is none.
  */
 export function branchToEnter<T extends { locationId: number }>(list: T[], rememberedId: number | null): T | null {
-  if (list.length === 1) return list[0];
-  return list.find(b => b.locationId === rememberedId) ?? null;
+  return list.find(b => b.locationId === rememberedId) ?? list[0] ?? null;
 }
 
 /** First page of the Service module for a role. */

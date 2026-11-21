@@ -5,7 +5,7 @@
       <div class="fx-page-title">Warranty Returns</div>
       <div class="fx-page-sub">Manage product warranty claims and returns</div>
     </div>
-    <button class="fx-btn-new" (click)="openCreate()">
+    <button appRight="create" appRightMenu="/complaints/warranty" appRightTech class="fx-btn-new" (click)="openCreate()">
       <span class="material-icons" style="font-size:18px;">add</span>
       New Return
     </button>
@@ -106,10 +106,10 @@
                 <button class="fx-action-btn" (click)="viewReturn(r)" title="View">
                   <span class="material-icons">visibility</span>
                 </button>
-                <button class="fx-action-btn" *ngIf="r.statusId===1" (click)="updateStatus(r, 2)" title="Approve">
+                <button appRight="edit" appRightMenu="/complaints/warranty" class="fx-action-btn" *ngIf="r.statusId===1" (click)="updateStatus(r, 2)" title="Approve">
                   <span class="material-icons">check</span>
                 </button>
-                <button class="fx-action-btn is-danger" *ngIf="r.statusId===1" (click)="updateStatus(r, 3)" title="Reject">
+                <button appRight="edit" appRightMenu="/complaints/warranty" class="fx-action-btn is-danger" *ngIf="r.statusId===1" (click)="updateStatus(r, 3)" title="Reject">
                   <span class="material-icons">close</span>
                 </button>
               </div>
@@ -191,7 +191,7 @@
 
         <div class="wr-actions">
           <button type="button" class="wr-btn-ghost" (click)="closeCreate()" [disabled]="saving()">Cancel</button>
-          <button type="button" class="fx-btn-new" (click)="saveReturn()" [disabled]="!canSaveReturn()">
+          <button appRight="create" appRightMenu="/complaints/warranty" appRightTech type="button" class="fx-btn-new" (click)="saveReturn()" [disabled]="!canSaveReturn()">
             {{ saving() ? 'Saving...' : 'Create Return' }}
           </button>
         </div>

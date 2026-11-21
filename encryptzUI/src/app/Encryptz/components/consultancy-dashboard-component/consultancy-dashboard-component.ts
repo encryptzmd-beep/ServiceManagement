@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
@@ -22,7 +23,7 @@ interface DashCard { key: string; label: string; icon: string; value: string; li
 @Component({
   selector: 'app-consultancy-dashboard',
   standalone: true,
-  imports: [RouterModule, VerifiedBadgeComponent],
+  imports: [AppRightDirective, RouterModule, VerifiedBadgeComponent],
   templateUrl: './consultancy-dashboard-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',

@@ -1162,6 +1162,26 @@ createDespatch(dto: M.DespatchCreate): Observable<M.ApiResponse<M.DespatchCreate
   return this.post<M.ApiResponse<M.DespatchCreateResult>>('Sales/despatches', dto);
 }
 
+getSalesDocuments(salesOrderId: number): Observable<M.ApiResponse<M.SalesDocument[]>> {
+  return this.get<M.ApiResponse<M.SalesDocument[]>>(`Sales/orders/${salesOrderId}/documents`);
+}
+
+addSalesDocument(salesOrderId: number, file: File, documentType: string, despatchId?: number | null): Observable<M.ApiResponse<number>> {
+  const form = new FormData();
+  form.append('file', file, file.name);
+  form.append('documentType', documentType);
+  if (despatchId) form.append('despatchId', String(despatchId));
+  return this.post<M.ApiResponse<number>>(`Sales/orders/${salesOrderId}/documents`, form);
+}
+
+downloadSalesDocument(documentId: number): Observable<Blob> {
+  return this.http.get(`${this.api}/Sales/documents/${documentId}/file`, { responseType: 'blob' });
+}
+
+deleteSalesDocument(documentId: number): Observable<M.ApiResponse> {
+  return this.delete<M.ApiResponse>(`Sales/documents/${documentId}`);
+}
+
 warrantyLookup(filter: M.WarrantyLookupFilter): Observable<M.PagedResult<M.WarrantyLookupItem>> {
   return this.get<M.PagedResult<M.WarrantyLookupItem>>('Sales/warranty', filter);
 }

@@ -1,3 +1,5 @@
+using EncryptzBL.Common.Tenant;
+using EncryptzAPI.Middleware;
 using EncryptzBL.Common;
 using EncryptzBL.Common.Jobs;
 using EncryptzBL.DTO_s;
@@ -40,10 +42,12 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetClients()
             => Answer(await _consultancy.GetClients(Caller(), Company()));
 
+        [MenuRight("/consultancy/clients", MenuRightKind.Save, IdProperty = "ClientId")]
         [HttpPost("clients")]
         public async Task<IActionResult> SaveClient([FromBody] ConsultClientDto dto)
             => Answer(await _consultancy.SaveClient(Caller(), Company(), dto));
 
+        [MenuRight("/consultancy/clients", MenuRightKind.Delete)]
         [HttpDelete("clients/{id:int}")]
         public async Task<IActionResult> DeleteClient(int id)
             => Answer(await _consultancy.DeleteClient(Caller(), Company(), id));
@@ -52,6 +56,7 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetPostingClients()
             => Answer(await _consultancy.GetPostingClients(Caller(), Company()));
 
+        [MenuRight("/consultancy/postings", MenuRightKind.Edit)]
         [HttpPost("postings/{id:int}/client")]
         public async Task<IActionResult> SetPostingClient(int id, [FromBody] SetPostingClientRequest? req)
             => Answer(await _consultancy.SetPostingClient(Caller(), Company(), id, req?.ClientId));
@@ -81,10 +86,12 @@ namespace EncryptzAPI.Controllers
             return File(result.Data.Content, JobsRules.ContentTypeFor(result.Data.FileName), result.Data.FileName);
         }
 
+        [MenuRight("/consultancy/candidates", MenuRightKind.Edit)]
         [HttpPost("candidates/{key:guid}/pool")]
         public async Task<IActionResult> SaveTalent(Guid key, [FromBody] TalentSaveRequest? req)
             => Answer(await _consultancy.SaveTalent(Caller(), Company(), key, req ?? new TalentSaveRequest()));
 
+        [MenuRight("/consultancy/candidates", MenuRightKind.Delete)]
         [HttpDelete("candidates/{key:guid}/pool")]
         public async Task<IActionResult> RemoveTalent(Guid key)
             => Answer(await _consultancy.RemoveTalent(Caller(), Company(), key));
@@ -99,6 +106,7 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetPostingMatchCounts()
             => Answer(await _consultancy.GetPostingMatchCounts(Caller(), Company()));
 
+        [MenuRight("/consultancy/candidates", MenuRightKind.Create)]
         [HttpPost("candidates/{key:guid}/invite")]
         public async Task<IActionResult> InviteCandidate(Guid key, [FromBody] CandidateInviteRequest? req)
             => Answer(await _consultancy.InviteCandidate(Caller(), Company(), key, req ?? new CandidateInviteRequest()));
@@ -109,10 +117,12 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetPlacements()
             => Answer(await _consultancy.GetPlacements(Caller(), Company()));
 
+        [MenuRight("/consultancy/placements", MenuRightKind.Save, IdProperty = "PlacementId")]
         [HttpPost("placements")]
         public async Task<IActionResult> SavePlacement([FromBody] PlacementSaveRequest req)
             => Answer(await _consultancy.SavePlacement(Caller(), Company(), req));
 
+        [MenuRight("/consultancy/placements", MenuRightKind.Delete)]
         [HttpDelete("placements/{id:int}")]
         public async Task<IActionResult> DeletePlacement(int id)
             => Answer(await _consultancy.DeletePlacement(Caller(), Company(), id));

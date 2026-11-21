@@ -38,7 +38,7 @@
             <input class="ps-inp" type="number" min="0" step="0.01" [(ngModel)]="chargeInput"
                    placeholder="e.g. 200">
           </div>
-          <button class="ps-btn-save" (click)="saveCharge()" [disabled]="savingCharge()">
+          <button appRight="edit" appRightMenu="/settings/general" class="ps-btn-save" (click)="saveCharge()" [disabled]="savingCharge()">
             @if (savingCharge()) { <span class="ps-spinner-sm"></span> Saving… }
             @else { <span class="material-icons">save</span> Save }
           </button>
@@ -54,7 +54,7 @@
           <h3>UPI Configurations</h3>
           <p>{{ upiList().length }} UPI ID(s) configured</p>
         </div>
-        <button class="ps-btn-add" (click)="showAddForm.set(!showAddForm())">
+        <button appRight="create" appRightMenu="/settings/general" class="ps-btn-add" (click)="showAddForm.set(!showAddForm())">
           <span class="material-icons">{{ showAddForm() ? 'close' : 'add' }}</span>
           {{ showAddForm() ? 'Cancel' : 'Add UPI' }}
         </button>
@@ -71,7 +71,7 @@
               <label>Display Name <span class="req">*</span></label>
               <input class="ps-inp" [(ngModel)]="newUpi.displayName" placeholder="e.g. Main Business UPI">
             </div>
-            <button class="ps-btn-save" (click)="addUpi()" [disabled]="savingUpi()">
+            <button appRight="create" appRightMenu="/settings/general" class="ps-btn-save" (click)="addUpi()" [disabled]="savingUpi()">
               @if (savingUpi()) { <span class="ps-spinner-sm"></span> Adding… }
               @else { <span class="material-icons">add_circle</span> Add }
             </button>
@@ -106,17 +106,17 @@
                 </div>
                 <div class="upi-actions">
                   @if (!u.IsDefault) {
-                    <button class="upi-btn" title="Set as default" (click)="setDefault(u.Id)">
+                    <button appRight="edit" appRightMenu="/settings/general" class="upi-btn" title="Set as default" (click)="setDefault(u.Id)">
                       <span class="material-icons">star_outline</span> Set Default
                     </button>
                   }
-                  <button class="upi-btn toggle-btn" [class.deactivate]="u.IsActive" (click)="toggle(u.Id)"
+                  <button appRight="edit" appRightMenu="/settings/general" class="upi-btn toggle-btn" [class.deactivate]="u.IsActive" (click)="toggle(u.Id)"
                           title="{{ u.IsActive ? 'Deactivate' : 'Activate' }}">
                     <span class="material-icons">{{ u.IsActive ? 'toggle_on' : 'toggle_off' }}</span>
                     {{ u.IsActive ? 'Disable' : 'Enable' }}
                   </button>
                   @if (!u.IsDefault) {
-                    <button class="upi-btn delete-btn" title="Delete" (click)="deleteUpi(u.Id)">
+                    <button appRight="delete" appRightMenu="/settings/general" class="upi-btn delete-btn" title="Delete" (click)="deleteUpi(u.Id)">
                       <span class="material-icons">delete</span>
                     </button>
                   }

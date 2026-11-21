@@ -1,3 +1,4 @@
+using EncryptzBL.Common.Tenant;
 using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
@@ -32,6 +33,7 @@ namespace EncryptzAPI.Controllers
             _technicians = technicians;
         }
 
+        [MenuRight("/technicians/repair-parts", MenuRightKind.Create, AllowTechnician = true)]
         [HttpPost("create")]
         public async Task<IActionResult> Create([FromBody] RepairPartRequestCreateDto dto)
         {
@@ -46,6 +48,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/technicians/repair-parts", MenuRightKind.Edit, AllowTechnician = true)]
         [HttpPost("upload-image")]
         [RequestSizeLimit(10 * 1024 * 1024)]
         public async Task<IActionResult> UploadImage(
@@ -97,6 +100,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/technicians/repair-parts", MenuRightKind.Edit)]
         [HttpPatch("request/{id}/status")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateRepairStatusDto dto)
         {

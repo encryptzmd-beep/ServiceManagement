@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, DestroyRef, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -9,6 +10,8 @@ import { AutocompleteComponent } from '../autocomplete-component/autocomplete-co
 import { salesProductOptions } from './sales-product-options';
 import { TransactionMode, TransactionToolbarComponent } from '../shared/transaction-toolbar/transaction-toolbar';
 import { FindQuery, FindRow, TransactionFindComponent } from '../shared/transaction-toolbar/transaction-find';
+import { SalesDocumentsComponent } from '../shared/sales-documents/sales-documents';
+import { RightsService } from '../../Services/rights-service';
 import { DialogService } from '../../Services/dialog-service';
 import { AuthService } from '../../Auth/auth-service';
 import {
@@ -37,7 +40,7 @@ interface BillLine {
 @Component({
   selector: 'app-sales-order-entry',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, AutocompleteComponent, TransactionToolbarComponent, TransactionFindComponent],
+  imports: [AppRightDirective, CommonModule, FormsModule, RouterModule, AutocompleteComponent, TransactionToolbarComponent, TransactionFindComponent, SalesDocumentsComponent],
   templateUrl: './sales-order-entry-component.html',
   styleUrls: ['./sales-order-entry-component.scss'],
 })
@@ -48,6 +51,7 @@ export class SalesOrderEntryComponent implements OnInit {
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
   private dialog = inject(DialogService);
+  readonly rights = inject(RightsService);
 
   readonly paymentModes = SALES_PAYMENT_MODES;
   readonly gstRates = SALES_GST_RATES;

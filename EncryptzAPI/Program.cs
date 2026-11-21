@@ -30,6 +30,7 @@ builder.Services.AddControllers(options =>
     options.Filters.Add<CustomerBoundaryFilter>();   // customer tokens only reach customer-portal endpoints
     options.Filters.Add<TenantScopeExceptionFilter>();   // no scope selected -> 403, not 500
     options.Filters.Add<ModuleBoundaryFilter>();   // a token is issued for one module
+    options.Filters.Add<MenuRightFilter>();   // add / edit / delete rights of the caller on the menu
 });
 
 // 🔹 SignalR: notifications reach the open pages at once

@@ -514,6 +514,14 @@ export const routes: Routes = [
   canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
   data: { title: 'Sales Order', icon: 'receipt_long', menu: 'sales' }
 },
+{ path: 'sales/reports', redirectTo: 'sales/reports/register', pathMatch: 'full' },
+{
+  path: 'sales/reports/:report',
+  loadComponent: () => import('./Encryptz/components/sales-reports-component/sales-reports-component')
+    .then(m => m.SalesReportsComponent),
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
+  data: { title: 'Sales Reports', icon: 'bar_chart', menu: 'sales' }
+},
 {
   path: 'sales/despatch',
   loadComponent: () => import('./Encryptz/components/despatch-list-component/despatch-list-component')

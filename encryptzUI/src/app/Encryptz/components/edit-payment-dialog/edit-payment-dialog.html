@@ -58,7 +58,7 @@
 
     <div class="dialog-actions">
       <button type="button" class="btn-secondary" (click)="cancel()">Cancel</button>
-      <button type="submit" class="btn-primary" [disabled]="loading || form.invalid">
+      <button appRight="edit" appRightMenu="/settings/payments" type="submit" class="btn-primary" [disabled]="loading || form.invalid">
         {{ loading ? 'Saving...' : 'Save changes' }}
       </button>
     </div>

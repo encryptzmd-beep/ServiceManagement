@@ -1,6 +1,6 @@
 <div class="tb" role="toolbar" aria-label="Document actions">
   <div class="tb-group">
-    <button type="button" class="tb-btn" data-tb="new" [disabled]="busy()" (click)="newDoc.emit()" title="New">
+    <button type="button" class="tb-btn" data-tb="new" [disabled]="busy() || !canNew()" (click)="newDoc.emit()" title="New">
       <span class="material-icons" aria-hidden="true">add</span><span class="tb-text">New</span>
     </button>
     @if (mode() === 'edit') {

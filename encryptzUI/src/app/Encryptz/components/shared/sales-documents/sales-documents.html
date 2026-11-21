@@ -1,0 +1,44 @@
+<section class="sd-card" aria-labelledby="sd-title">
+  <div class="sd-head">
+    <div>
+      <h2 id="sd-title">Documents <span class="sd-count">{{ documents().length }}</span></h2>
+      <p>Invoices, e-way bills and other PDFs of this bill, up to 10 MB each.</p>
+    </div>
+    @if (addAllowed()) {
+      <div class="sd-add">
+        <select [(ngModel)]="documentType" aria-label="Type of document" [disabled]="uploading()">
+          @for (t of types; track t) { <option [value]="t">{{ t }}</option> }
+        </select>
+        <label class="sd-btn primary" [class.busy]="uploading()">
+          <span class="material-icons" aria-hidden="true">upload_file</span>{{ uploading() ? 'Uploading…' : 'Add PDF' }}
+          <input type="file" accept="application/pdf,.pdf" [disabled]="uploading()" (change)="onFile($event)" />
+        </label>
+      </div>
+    }
+  </div>
+
+  @if (error()) { <p class="sd-error" role="alert">{{ error() }}</p> }
+
+  @if (loading()) {
+    <p class="sd-empty">Loading documents…</p>
+  } @else {
+    <ul class="sd-list">
+      @for (d of documents(); track d.documentId) {
+        <li>
+          <span class="material-icons sd-icon" aria-hidden="true">picture_as_pdf</span>
+          <button type="button" class="sd-file" (click)="open(d)" [title]="'Open ' + d.fileName">
+            <strong>{{ d.fileName }}</strong>
+            <small>{{ d.documentType }} · {{ size(d.fileSize) }} · {{ d.uploadedAt | date:'dd MMM yyyy' }}@if (d.uploadedByName) { · {{ d.uploadedByName }} }@if (d.despatchNo) { · from despatch {{ d.despatchNo }} }</small>
+          </button>
+          @if (removeAllowed()) {
+            <button type="button" class="sd-remove" (click)="remove(d)" [attr.aria-label]="'Remove ' + d.fileName" title="Remove">
+              <span class="material-icons" aria-hidden="true">delete_outline</span>
+            </button>
+          }
+        </li>
+      } @empty {
+        <li class="sd-empty">No documents yet.</li>
+      }
+    </ul>
+  }
+</section>

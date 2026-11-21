@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ConvertPreviewDto, ConvertResultDto, QuotationSummaryDto } from '../../Models/CrmModels';
@@ -15,7 +16,7 @@ export const PAYMENT_MODES = ['Cash', 'UPI', 'Card', 'Bank Transfer', 'Cheque', 
 @Component({
   selector: 'app-crm-convert-dialog',
   standalone: true,
-  imports: [FormsModule],
+  imports: [AppRightDirective, FormsModule],
   templateUrl: './crm-convert-dialog-component.html',
   styleUrls: ['./crm-pages.scss', './crm-convert-dialog-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

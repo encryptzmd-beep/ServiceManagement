@@ -55,7 +55,7 @@
     @if (error()) { <p class="crm-error">{{ error() }}</p> }
     <div class="crm-actions">
       <button type="button" class="crm-btn cv-cancel" [disabled]="converting()" (click)="cancel()">Cancel</button>
-      <button type="button" class="crm-btn primary crm-confirm-convert" [disabled]="confirmDisabled()" (click)="confirm()">Confirm</button>
+      <button appRight="edit" appRightMenu="/crm/leads" type="button" class="crm-btn primary crm-confirm-convert" [disabled]="confirmDisabled()" (click)="confirm()">Confirm</button>
     </div>
   </div>
 </div>

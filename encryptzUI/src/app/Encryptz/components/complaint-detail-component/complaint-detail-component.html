@@ -46,7 +46,7 @@
           @for (s of statuses(); track s.statusId) { <option [ngValue]="s.statusId">{{ s.statusName }}</option> }
         </select>
         <textarea [(ngModel)]="remarks" placeholder="Add remarks..." class="textarea" rows="3"></textarea>
-        <button (click)="updateStatus(c.complaintId)" class="btn-primary">Update</button>
+        <button appRight="edit" appRightMenu="/complaints/list" appRightTech (click)="updateStatus(c.complaintId)" class="btn-primary">Update</button>
       </div>
       <h3 style="margin-top:20px">Assigned Technicians</h3>
       @for (a of c.assignments; track a.assignmentId) {

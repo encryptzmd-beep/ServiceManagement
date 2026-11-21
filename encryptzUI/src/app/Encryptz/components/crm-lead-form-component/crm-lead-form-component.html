@@ -24,7 +24,7 @@
       <app-crm-lead-fields [form]="form()" [sources]="sources()" [owners]="owners()" [isManager]="isManager()"
         [productName]="productName()" [leadNo]="leadNo()"
         (changed)="set($any($event.key), $event.value)" (productPicked)="productName.set('')" />
-      <button type="submit" class="lf-hidden-submit" tabindex="-1" aria-hidden="true">Save</button>
+      <button appRight="save" appRightMenu="/crm/leads" type="submit" class="lf-hidden-submit" tabindex="-1" aria-hidden="true">Save</button>
     </form>
   </div>
 }

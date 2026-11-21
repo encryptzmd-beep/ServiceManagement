@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, OnInit, inject, signal, computed, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -40,7 +41,7 @@ const REFUSED = "You don't have access to Job Consultancy. Ask your administrato
 @Component({
   selector: 'app-hiring-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, VerifiedBadgeComponent, AutocompleteComponent, ScrollIntoViewOn, EscapeClose],
+  imports: [AppRightDirective, CommonModule, FormsModule, RouterModule, VerifiedBadgeComponent, AutocompleteComponent, ScrollIntoViewOn, EscapeClose],
   templateUrl: './hiring-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',

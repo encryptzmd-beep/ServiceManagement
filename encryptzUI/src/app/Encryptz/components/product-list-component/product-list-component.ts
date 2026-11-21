@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 // components/product-list/product-list.component.ts
 import { RouterLink } from '@angular/router';
 import { Component, OnInit, signal, computed, effect } from '@angular/core';
@@ -11,7 +12,7 @@ import { ProductMasterDTO, DropdownData, ProductMaster } from '../../Models/ApiM
 @Component({
   selector: 'app-product-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, ProductFormComponent, ProductViewComponent],
+  imports: [AppRightDirective, CommonModule, FormsModule, RouterLink, ProductFormComponent, ProductViewComponent],
   templateUrl: './product-list-component.html',
   styleUrls: ['./product-list-component.scss']
 })

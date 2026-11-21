@@ -14,8 +14,8 @@
       </div>
       <div class="db-head-actions cd-actions">
         <a class="db-btn" routerLink="/consultancy/candidates"><span class="material-icons" aria-hidden="true">search</span>Find candidates</a>
-        <a class="db-btn" routerLink="/consultancy/our-candidates" [queryParams]="{ add: 1 }"><span class="material-icons" aria-hidden="true">person_add</span>Add candidate</a>
-        <a class="db-btn primary" routerLink="/consultancy/postings" [queryParams]="{ new: 1 }"><span class="material-icons" aria-hidden="true">add</span>Post a job</a>
+        <a appRight="create" appRightMenu="/consultancy/our-candidates" class="db-btn" routerLink="/consultancy/our-candidates" [queryParams]="{ add: 1 }"><span class="material-icons" aria-hidden="true">person_add</span>Add candidate</a>
+        <a appRight="create" appRightMenu="/consultancy/postings" class="db-btn primary" routerLink="/consultancy/postings" [queryParams]="{ new: 1 }"><span class="material-icons" aria-hidden="true">add</span>Post a job</a>
       </div>
     </header>
 
@@ -113,7 +113,7 @@
                   </a>
                 </li>
               } @empty {
-                <li class="db-empty">No open job. <a routerLink="/consultancy/postings" [queryParams]="{ new: 1 }">Post a job</a>: Encryptz checks it, and then it is on Job Portal.</li>
+                <li class="db-empty">No open job. <a appRight="create" appRightMenu="/consultancy/postings" routerLink="/consultancy/postings" [queryParams]="{ new: 1 }">Post a job</a>: Encryptz checks it, and then it is on Job Portal.</li>
               }
             </ul>
           }

@@ -63,7 +63,7 @@
             @if (m.alreadyInvited) {
               <span class="hr-invited"><span class="material-icons" aria-hidden="true">check_circle</span>Invited</span>
             } @else {
-              <button class="jp-btn primary" (click)="inviteMatch(m)" [disabled]="inviting() !== null || job.status !== 'Open'"
+              <button appRight="create" appRightMenu="/consultancy/candidates" class="jp-btn primary" (click)="inviteMatch(m)" [disabled]="inviting() !== null || job.status !== 'Open'"
                       [title]="job.status === 'Open' ? 'Invite to apply for this job' : 'The job takes applications once it is approved'">
                 <span class="material-icons" aria-hidden="true">send</span>{{ inviting() === m.candidateKey ? 'Sending…' : 'Invite' }}
               </button>
@@ -107,7 +107,7 @@
           <span [class]="statusClass(a.status)">{{ a.status }}</span>
           <button class="jp-btn" (click)="openApplicant(a)">View profile</button>
           @if (canInterview(a.status)) {
-            <button class="jp-btn" (click)="openInterview(a.applicationId)"><span class="material-icons" aria-hidden="true">event</span>{{ a.interviewAt ? 'Change interview' : 'Schedule interview' }}</button>
+            <button appRight="edit" appRightMenu="/consultancy/postings" class="jp-btn" (click)="openInterview(a.applicationId)"><span class="material-icons" aria-hidden="true">event</span>{{ a.interviewAt ? 'Change interview' : 'Schedule interview' }}</button>
           }
         </div>
       </article>
@@ -128,7 +128,7 @@
       <p>Jobs your company offers on Job Portal. People find a job once you publish it.</p>
     </div>
     <span class="jb-grow"></span>
-    <button class="jp-btn primary" (click)="openNew()" [disabled]="notClosed() >= maxNotClosed"
+    <button appRight="create" appRightMenu="/consultancy/postings" class="jp-btn primary" (click)="openNew()" [disabled]="notClosed() >= maxNotClosed"
             [title]="notClosed() >= maxNotClosed ? 'Close or remove a job first: at most ' + maxNotClosed + ' jobs that are not closed' : ''"><span class="material-icons" aria-hidden="true">add</span>New job</button>
   </div>
 
@@ -186,15 +186,15 @@
       <div class="jb-card-side">
         <span [class]="postingClass(p.status)">{{ postingLabel(p.status) }}</span>
         <div class="hr-actions">
-          @if (p.status === 'Draft') { <button class="jp-btn primary" (click)="publish(p)">Send for review</button> }
-          @if (p.status === 'Closed') { <button class="jp-btn" (click)="publish(p)">Reopen</button> }
+          @if (p.status === 'Draft') { <button appRight="edit" appRightMenu="/consultancy/postings" class="jp-btn primary" (click)="publish(p)">Send for review</button> }
+          @if (p.status === 'Closed') { <button appRight="edit" appRightMenu="/consultancy/postings" class="jp-btn" (click)="publish(p)">Reopen</button> }
           @if (p.status === 'Open') {
             <button class="jp-btn" (click)="shareJob(p)" title="Copy the public link of this job"><span class="material-icons" aria-hidden="true">share</span>Share</button>
             <a class="jp-btn" [routerLink]="['/jobs', p.postingId]" target="_blank" rel="noopener" title="See the job as people see it"><span class="material-icons">open_in_new</span></a>
           }
           @if (p.status === 'Open' || p.status === 'InReview') { <button class="jp-btn" (click)="close(p)">Close</button> }
-          <button class="jp-btn" (click)="openEdit(p)">Edit</button>
-          @if (applicantCount(p) === 0) { <button class="jp-btn ghost" (click)="remove(p)">Remove</button> }
+          <button appRight="edit" appRightMenu="/consultancy/postings" class="jp-btn" (click)="openEdit(p)">Edit</button>
+          @if (applicantCount(p) === 0) { <button appRight="delete" appRightMenu="/consultancy/postings" class="jp-btn ghost" (click)="remove(p)">Remove</button> }
         </div>
       </div>
     </article>
@@ -205,7 +205,7 @@
     <div class="jp-card jb-empty">
       <span class="material-icons">work_outline</span>
       <p>Your company has no job postings yet. A new job is saved as a draft; people find it once you publish it.</p>
-      <button class="jp-btn primary" (click)="openNew()">New job</button>
+      <button appRight="create" appRightMenu="/consultancy/postings" class="jp-btn primary" (click)="openNew()">New job</button>
     </div>
     }
   }
@@ -290,7 +290,7 @@
       </div>
       <div class="jp-dialog-foot">
         <button class="jp-btn ghost" (click)="closeForm()" [disabled]="saving()">Cancel</button>
-        <button class="jp-btn primary" (click)="save()" [disabled]="saving()">{{ saving() ? 'Saving…' : (f.postingId ? 'Save' : 'Save as draft') }}</button>
+        <button appRight="save" appRightMenu="/consultancy/postings" class="jp-btn primary" (click)="save()" [disabled]="saving()">{{ saving() ? 'Saving…' : (f.postingId ? 'Save' : 'Save as draft') }}</button>
       </div>
     </div>
   </div>
@@ -387,15 +387,15 @@
         <span [class]="statusClass(a.status)">{{ a.status }}</span>
         <button class="jp-btn" (click)="messageApplicant(a)" [disabled]="messaging()"><span class="material-icons" aria-hidden="true">chat_bubble_outline</span>Message</button>
         @if (canInterview(a.status)) {
-          <button class="jp-btn" (click)="openInterview(a.applicationId)"><span class="material-icons" aria-hidden="true">event</span>Interview</button>
+          <button appRight="edit" appRightMenu="/consultancy/postings" class="jp-btn" (click)="openInterview(a.applicationId)"><span class="material-icons" aria-hidden="true">event</span>Interview</button>
         }
         @if (a.status === 'Hired') {
-          <button class="jp-btn" (click)="recordPlacement(a)"><span class="material-icons" aria-hidden="true">verified</span>Record placement</button>
+          <button appRight="create" appRightMenu="/consultancy/placements" class="jp-btn" (click)="recordPlacement(a)"><span class="material-icons" aria-hidden="true">verified</span>Record placement</button>
         }
         <span class="jb-grow"></span>
         @for (state of applicantStates; track state) {
           @if (state !== a.status) {
-            <button class="jp-btn" [class.primary]="state === 'Shortlisted' || state === 'Hired'" [disabled]="statusBusy()"
+            <button appRight="edit" appRightMenu="/consultancy/postings" class="jp-btn" [class.primary]="state === 'Shortlisted' || state === 'Hired'" [disabled]="statusBusy()"
                     (click)="setApplicantStatus(a.applicationId, state)">
               {{ state === 'Applied' ? 'Back to new' : state === 'Shortlisted' ? 'Shortlist' : state === 'Rejected' ? 'Reject' : 'Mark hired' }}
             </button>
@@ -426,7 +426,7 @@
       </div>
       <div class="jp-dialog-foot">
         <button class="jp-btn ghost" (click)="rejecting.set(null)" [disabled]="statusBusy()">Cancel</button>
-        <button class="jp-btn danger" (click)="confirmReject()" [disabled]="statusBusy() || rejectShort() > 0">{{ statusBusy() ? 'Saving…' : 'Reject' }}</button>
+        <button appRight="edit" appRightMenu="/consultancy/postings" class="jp-btn danger" (click)="confirmReject()" [disabled]="statusBusy() || rejectShort() > 0">{{ statusBusy() ? 'Saving…' : 'Reject' }}</button>
       </div>
     </div>
   </div>
@@ -464,10 +464,10 @@
         @if (interviewError()) { <div class="jp-error" [scrollIntoViewOn]="interviewError()">{{ interviewError() }}</div> }
       </div>
       <div class="jp-dialog-foot">
-        @if (iv.isSet) { <button class="jp-btn ghost hr-calloff" (click)="callOffInterview()" [disabled]="interviewBusy()">Call off</button> }
+        @if (iv.isSet) { <button appRight="edit" appRightMenu="/consultancy/postings" class="jp-btn ghost hr-calloff" (click)="callOffInterview()" [disabled]="interviewBusy()">Call off</button> }
         <span class="jb-grow"></span>
         <button class="jp-btn ghost" (click)="interviewFor.set(null)" [disabled]="interviewBusy()">Cancel</button>
-        <button class="jp-btn primary" (click)="saveInterview()" [disabled]="interviewBusy()">{{ interviewBusy() ? 'Saving…' : (iv.isSet ? 'Save' : 'Schedule') }}</button>
+        <button appRight="edit" appRightMenu="/consultancy/postings" class="jp-btn primary" (click)="saveInterview()" [disabled]="interviewBusy()">{{ interviewBusy() ? 'Saving…' : (iv.isSet ? 'Save' : 'Schedule') }}</button>
       </div>
     </div>
   </div>

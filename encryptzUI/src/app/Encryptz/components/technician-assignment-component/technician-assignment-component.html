@@ -231,7 +231,7 @@
           </div>
         </div>
 
-        <button type="submit" class="btn-primary fw"
+        <button appRight="create" appRightMenu="/complaints/assign" type="submit" class="btn-primary fw"
           [disabled]="!form.complaintId || !form.technicianId || isScheduleInvalid() || saving()">
           @if (saving()) { <span class="spinner"></span> }
           @else { <span class="material-icons">{{ editingAssignment ? 'edit' : 'person_add' }}</span> }
@@ -289,7 +289,7 @@
               <textarea [(ngModel)]="completeForm.remarks" name="cremarks" class="inp textarea" placeholder="Describe work done..." rows="3"></textarea>
             </div>
           </div>
-          <button class="btn-complete fw" (click)="completeAssignment()" [disabled]="saving()">
+          <button appRight="edit" appRightMenu="/complaints/assign" appRightTech class="btn-complete fw" (click)="completeAssignment()" [disabled]="saving()">
             @if (saving()) { <span class="spinner"></span> } @else { <span class="material-icons">check_circle</span> }
             {{ saving() ? 'Completing...' : 'Mark as Complete' }}
           </button>

@@ -1,3 +1,5 @@
+using EncryptzBL.Common.Tenant;
+using EncryptzAPI.Middleware;
 ﻿using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.WarrantyReturn.Modules;
@@ -34,6 +36,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/complaints/warranty", MenuRightKind.Create, AllowTechnician = true)]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] WarrantyReturnCreateDto dto)
         {
@@ -44,6 +47,7 @@ namespace EncryptzAPI.Controllers
             return StatusCode(StatusCodes.Status201Created, result);
         }
 
+        [MenuRight("/complaints/warranty", MenuRightKind.Edit)]
         [HttpPut("status")]
         [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> UpdateStatus([FromBody] WarrantyReturnStatusDto dto)

@@ -18,7 +18,7 @@
         <h2>Categories</h2>
         <form class="pc-add pc-add-cat" (submit)="addCategory($event)">
           <input name="newCategory" maxlength="100" placeholder="New category" [value]="newCategory()" (input)="newCategory.set($any($event.target).value)" />
-          <button type="submit" class="fx-btn-new" [disabled]="saving()"><span class="material-icons" aria-hidden="true">add</span>Add</button>
+          <button appRight="edit" appRightMenu="/products" type="submit" class="fx-btn-new" [disabled]="saving()"><span class="material-icons" aria-hidden="true">add</span>Add</button>
         </form>
         <ul class="pc-list">
           @for (c of categories(); track c.categoryId) {
@@ -26,7 +26,7 @@
               @if (renamingId() === c.categoryId) {
                 <form class="pc-rename" (submit)="rename($event, c)">
                   <input name="rename" maxlength="100" [value]="renameText()" (input)="renameText.set($any($event.target).value)" />
-                  <button type="submit" class="pc-icon" [disabled]="saving()" aria-label="Save the name"><span class="material-icons">check</span></button>
+                  <button appRight="edit" appRightMenu="/products" type="submit" class="pc-icon" [disabled]="saving()" aria-label="Save the name"><span class="material-icons">check</span></button>
                   <button type="button" class="pc-icon" (click)="renamingId.set(null)" aria-label="Cancel"><span class="material-icons">close</span></button>
                 </form>
               } @else {
@@ -35,7 +35,7 @@
                   @if (!c.isActive) { <span class="pc-tag">Inactive</span> }
                   <span class="pc-count" title="Products">{{ c.productCount }}</span>
                 </button>
-                <button type="button" class="pc-icon" data-act="rename" (click)="startRename(c)" [attr.aria-label]="'Rename ' + c.name"><span class="material-icons">edit</span></button>
+                <button appRight="edit" appRightMenu="/products" type="button" class="pc-icon" data-act="rename" (click)="startRename(c)" [attr.aria-label]="'Rename ' + c.name"><span class="material-icons">edit</span></button>
                 <button type="button" class="pc-icon" data-act="toggle" [disabled]="saving()" (click)="toggle(c)"
                   [attr.aria-label]="(c.isActive ? 'Deactivate ' : 'Activate ') + c.name" [title]="c.isActive ? 'Deactivate' : 'Activate'">
                   <span class="material-icons">{{ c.isActive ? 'toggle_on' : 'toggle_off' }}</span>
@@ -54,7 +54,7 @@
         @if (selected()) {
           <form class="pc-add pc-add-sub" (submit)="addSub($event)">
             <input name="newSub" maxlength="100" placeholder="New sub category" [value]="newSub()" (input)="newSub.set($any($event.target).value)" />
-            <button type="submit" class="fx-btn-new" [disabled]="saving()"><span class="material-icons" aria-hidden="true">add</span>Add</button>
+            <button appRight="edit" appRightMenu="/products" type="submit" class="fx-btn-new" [disabled]="saving()"><span class="material-icons" aria-hidden="true">add</span>Add</button>
           </form>
           <ul class="pc-list">
             @for (c of subs(); track c.categoryId) {
@@ -62,7 +62,7 @@
                 @if (renamingId() === c.categoryId) {
                   <form class="pc-rename" (submit)="rename($event, c)">
                     <input name="rename" maxlength="100" [value]="renameText()" (input)="renameText.set($any($event.target).value)" />
-                    <button type="submit" class="pc-icon" [disabled]="saving()" aria-label="Save the name"><span class="material-icons">check</span></button>
+                    <button appRight="edit" appRightMenu="/products" type="submit" class="pc-icon" [disabled]="saving()" aria-label="Save the name"><span class="material-icons">check</span></button>
                     <button type="button" class="pc-icon" (click)="renamingId.set(null)" aria-label="Cancel"><span class="material-icons">close</span></button>
                   </form>
                 } @else {
@@ -71,7 +71,7 @@
                     @if (!c.isActive) { <span class="pc-tag">Inactive</span> }
                     <span class="pc-count" title="Products">{{ c.productCount }}</span>
                   </span>
-                  <button type="button" class="pc-icon" data-act="rename" (click)="startRename(c)" [attr.aria-label]="'Rename ' + c.name"><span class="material-icons">edit</span></button>
+                  <button appRight="edit" appRightMenu="/products" type="button" class="pc-icon" data-act="rename" (click)="startRename(c)" [attr.aria-label]="'Rename ' + c.name"><span class="material-icons">edit</span></button>
                   <button type="button" class="pc-icon" data-act="toggle" [disabled]="saving()" (click)="toggle(c)"
                     [attr.aria-label]="(c.isActive ? 'Deactivate ' : 'Activate ') + c.name" [title]="c.isActive ? 'Deactivate' : 'Activate'">
                     <span class="material-icons">{{ c.isActive ? 'toggle_on' : 'toggle_off' }}</span>

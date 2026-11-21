@@ -17,7 +17,7 @@
     <input class="jp-input" name="q" [(ngModel)]="query" maxlength="100" placeholder="Name, phone, e-mail, skill, city…" />
   </label>
   <button class="jp-btn" type="submit">Search</button>
-  <button class="jp-btn primary" type="button" (click)="openNew()"><span class="material-icons" aria-hidden="true">person_add</span>Add candidate</button>
+  <button appRight="create" appRightMenu="/consultancy/our-candidates" class="jp-btn primary" type="button" (click)="openNew()"><span class="material-icons" aria-hidden="true">person_add</span>Add candidate</button>
 </form>
 
 @if (loading()) {
@@ -54,7 +54,7 @@
             <button class="jp-btn" (click)="downloadResume(c)" title="Download the resume"><span class="material-icons">description</span></button>
           }
           <button class="jp-btn" (click)="openEdit(c)">Edit</button>
-          <button class="jp-btn ghost" (click)="remove(c)" title="Remove" aria-label="Remove"><span class="material-icons">delete_outline</span></button>
+          <button appRight="delete" appRightMenu="/consultancy/our-candidates" class="jp-btn ghost" (click)="remove(c)" title="Remove" aria-label="Remove"><span class="material-icons">delete_outline</span></button>
         </div>
       </div>
     </article>
@@ -66,7 +66,7 @@
         <button class="jp-btn" (click)="query = ''; search()">Show all</button>
       } @else {
         <p>No candidates of your own yet. Add the people you meet outside Job Portal; only your company sees them.</p>
-        <button class="jp-btn primary" (click)="openNew()">Add candidate</button>
+        <button appRight="create" appRightMenu="/consultancy/our-candidates" class="jp-btn primary" (click)="openNew()">Add candidate</button>
       }
     </div>
   }
@@ -160,7 +160,7 @@
 
         <div class="jp-dialog-foot oc-foot">
           <button class="jp-btn ghost" type="button" (click)="closeForm()" [disabled]="saving()">Cancel</button>
-          <button class="jp-btn primary" type="submit" [disabled]="saving()">{{ saving() ? 'Saving…' : (f.candidateId ? 'Save' : 'Add candidate') }}</button>
+          <button appRight="save" appRightMenu="/consultancy/our-candidates" class="jp-btn primary" type="submit" [disabled]="saving()">{{ saving() ? 'Saving…' : (f.candidateId ? 'Save' : 'Add candidate') }}</button>
         </div>
       </form>
     </div>

@@ -203,6 +203,8 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
                 SqlParameterHelper.Input("@VehicleNo", Clean(dto.VehicleNo)),
                 SqlParameterHelper.Input("@DriverName", Clean(dto.DriverName)),
                 SqlParameterHelper.Input("@TrackingNo", Clean(dto.TrackingNo)),
+                SqlParameterHelper.Input("@DespatchMode", Clean(dto.DespatchMode)),
+                SqlParameterHelper.Input("@ReferenceDate", dto.ReferenceDate?.Date),
                 SqlParameterHelper.Input("@Remarks", Clean(dto.Remarks)),
                 SqlParameterHelper.Input("@ItemsJson", JsonSerializer.Serialize(units, JsonOpts)),
                 SqlParameterHelper.Input("@CreateInstallationComplaint", dto.CreateInstallationComplaint),
@@ -211,7 +213,15 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
                 SqlParameterHelper.Input("@UserId", userId)
             };
 
-            var dt = await GetDataTableAsync("sp_Despatch_Create", p);
+            DataTable dt;
+            try
+            {
+                dt = await GetDataTableAsync("sp_Despatch_Create", p);
+            }
+            catch (SqlException ex) when (ex.Number == SqlTooManyArguments)
+            {
+                return ApiResponse<DespatchCreateResultDto>.Fail(DocumentsNotInstalled);
+            }
             if (dt == null || dt.Rows.Count == 0)
                 return ApiResponse<DespatchCreateResultDto>.Fail("No response from the database.");
 
@@ -254,6 +264,88 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
                 Despatch = ds.Tables[0].ToList<DespatchHeaderDto>().First(),
                 Units = ds.Tables.Count > 1 ? ds.Tables[1].ToList<DespatchUnitDetailDto>() : new()
             });
+        }
+
+        // =====================================================================
+        // Documents of a bill (script 23)
+        // =====================================================================
+        private const int SqlProcedureMissing = 2812;
+        private const int SqlTooManyArguments = 8144;
+        private const string DocumentsNotInstalled = "This company database needs script 23 (sales documents and despatch mode).";
+
+        public async Task<ApiResponse<List<SalesDocumentDto>>> GetDocuments(int salesOrderId)
+        {
+            try
+            {
+                return ApiResponse<List<SalesDocumentDto>>.Ok(await GetListAsync<SalesDocumentDto>("sp_SalesDocument_List",
+                    new[] { SqlParameterHelper.Input("@SalesOrderId", salesOrderId) }));
+            }
+            catch (SqlException ex) when (ex.Number == SqlProcedureMissing)
+            {
+                return ApiResponse<List<SalesDocumentDto>>.Fail(DocumentsNotInstalled);
+            }
+        }
+
+        public async Task<ApiResponse<int>> SaveDocument(int salesOrderId, int? despatchId, string? documentType, string? fileName, byte[] content, int userId)
+        {
+            var type = EncryptzBL.Common.Sales.SalesDocumentRules.KnownType(documentType);
+            if (type == null) return ApiResponse<int>.Fail("Choose the type of document.");
+            if (content == null || !EncryptzBL.Common.Sales.SalesDocumentRules.IsPdf(content)) return ApiResponse<int>.Fail("Only PDF files can be attached.");
+            if (content.Length > EncryptzBL.Common.Sales.SalesDocumentRules.MaxFileBytes) return ApiResponse<int>.Fail("The file is larger than 10 MB.");
+
+            try
+            {
+                var dt = await GetDataTableAsync("sp_SalesDocument_Save", new[]
+                {
+                    SqlParameterHelper.Input("@SalesOrderId", salesOrderId),
+                    SqlParameterHelper.Input("@DespatchId", despatchId),
+                    SqlParameterHelper.Input("@DocumentType", type),
+                    SqlParameterHelper.Input("@FileName", EncryptzBL.Common.Sales.SalesDocumentRules.CleanFileName(fileName)),
+                    new SqlParameter("@Content", SqlDbType.VarBinary, -1) { Value = content },
+                    SqlParameterHelper.Input("@UserId", userId)
+                });
+                if (dt == null || dt.Rows.Count == 0) return ApiResponse<int>.Fail("No response from the database.");
+                var row = dt.Rows[0];
+                return Convert.ToInt32(row["Success"]) == 1
+                    ? ApiResponse<int>.Ok(Convert.ToInt32(row["DocumentId"]), row["Message"]?.ToString() ?? "Saved")
+                    : ApiResponse<int>.Fail(row["Message"]?.ToString() ?? "The document could not be saved.");
+            }
+            catch (SqlException ex) when (ex.Number == SqlProcedureMissing)
+            {
+                return ApiResponse<int>.Fail(DocumentsNotInstalled);
+            }
+        }
+
+        public async Task<ApiResponse<SalesDocumentFile>> GetDocumentFile(int documentId)
+        {
+            try
+            {
+                var dt = await GetDataTableAsync("sp_SalesDocument_GetFile", new[] { SqlParameterHelper.Input("@DocumentId", documentId) });
+                if (dt == null || dt.Rows.Count == 0) return ApiResponse<SalesDocumentFile>.Fail("Document not found.");
+                return ApiResponse<SalesDocumentFile>.Ok(new SalesDocumentFile(dt.Rows[0]["FileName"]?.ToString() ?? "document.pdf", (byte[])dt.Rows[0]["Content"]));
+            }
+            catch (SqlException ex) when (ex.Number == SqlProcedureMissing)
+            {
+                return ApiResponse<SalesDocumentFile>.Fail(DocumentsNotInstalled);
+            }
+        }
+
+        public async Task<ApiResponse> DeleteDocument(int documentId, int userId)
+        {
+            try
+            {
+                var dt = await GetDataTableAsync("sp_SalesDocument_Delete", new[]
+                {
+                    SqlParameterHelper.Input("@DocumentId", documentId),
+                    SqlParameterHelper.Input("@UserId", userId)
+                });
+                if (dt == null || dt.Rows.Count == 0) return new ApiResponse(false, "No response from the database.");
+                return new ApiResponse(Convert.ToInt32(dt.Rows[0]["Success"]) == 1, dt.Rows[0]["Message"]?.ToString() ?? string.Empty);
+            }
+            catch (SqlException ex) when (ex.Number == SqlProcedureMissing)
+            {
+                return new ApiResponse(false, DocumentsNotInstalled);
+            }
         }
 
         // =====================================================================

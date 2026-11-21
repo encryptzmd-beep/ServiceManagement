@@ -1,3 +1,5 @@
+using EncryptzBL.Common.Tenant;
+using EncryptzAPI.Middleware;
 ﻿using EncryptzAPI.Middleware;
 using EncryptzBL.Common;
 using EncryptzBL.DTO_s;
@@ -45,6 +47,7 @@ namespace EncryptzAPI.Controllers
         }
 
         // 🔹 CREATE (Matches: Create(int customerId, ComplaintCreateDto dto))
+        [MenuRight("/complaints/list", MenuRightKind.Create, AllowTechnician = true)]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] ComplaintCreateDto dto)
         {
@@ -79,6 +82,7 @@ namespace EncryptzAPI.Controllers
         }
 
         // 🔹 UPDATE STATUS (Matches: UpdateStatus(int id, int userId, dto))
+        [MenuRight("/complaints/list", MenuRightKind.Edit, AllowTechnician = true)]
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] ComplaintUpdateStatusDto dto)
         {
@@ -87,6 +91,7 @@ namespace EncryptzAPI.Controllers
         }
 
         // 🔹 CONFIRM CLOSURE (Matches: ConfirmClosure(int complaintId, int customerId))
+        [MenuRight("/complaints/list", MenuRightKind.Edit, AllowTechnician = true)]
         [HttpPost("{id}/confirm-closure")]
         public async Task<IActionResult> ConfirmClosure(int id)
         {
@@ -100,6 +105,7 @@ namespace EncryptzAPI.Controllers
         }
 
         // 🔹 SET HOLD STATUS
+        [MenuRight("/complaints/list", MenuRightKind.Edit, AllowTechnician = true)]
         [HttpPost("{id}/hold")]
         public async Task<IActionResult> SetHold(int id, [FromBody] SetHoldDto? dto)
         {

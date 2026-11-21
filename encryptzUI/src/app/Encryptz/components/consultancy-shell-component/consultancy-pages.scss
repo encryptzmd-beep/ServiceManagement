@@ -6,6 +6,7 @@ $brand-red-dark: #b82424;
 $text: #1a2332;
 $muted: #5a6a7e;
 $border: #e2e8f0;
+$navy: #1b4a7a;
 
 :host-context(.cz-frame) {
   .jb-head h1, .db-head h1 { font-size: 22px; font-weight: 600; letter-spacing: 0; color: $text; }
@@ -17,11 +18,23 @@ $border: #e2e8f0;
     box-shadow: none;
   }
 
+  /* the buttons of the CRM pages: flat, 8px corners, the icon in the colour of the text */
+  .jp-btn, .db-btn {
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: none;
+
+    .material-icons { color: currentColor; }
+    &:hover:not(:disabled) { transform: none; box-shadow: none; }
+  }
+
+  .jp-btn:not(.primary):not(.ghost):hover:not(:disabled) { border-color: #94a3b8; background: #fff; color: #0f172a; }
+
   .jp-btn.primary, .db-btn.primary {
     border-color: $brand-red;
     background: $brand-red;
     color: #fff;
-    box-shadow: none;
 
     &:hover:not(:disabled) { border-color: $brand-red-dark; background: $brand-red-dark; color: #fff; }
   }
@@ -32,4 +45,90 @@ $border: #e2e8f0;
 
   /* stays below the fixed header while the page scrolls */
   .cd-filters { top: 64px; max-height: calc(100vh - 76px); }
+
+  /* ── one candidate: flat panels, in the dialog and on the page ── */
+  .jp-dialog-head { background: #fff; }
+  .cd-hero { align-items: flex-start; }
+  .cd-hero-text {
+    h3 { font-size: 20px; color: $text; }
+    .jb-company { color: $muted; }
+  }
+  .cd-contact { margin-top: 10px; }
+  .cd-side, .cd-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .cd-body h4 .material-icons { color: $navy; }
+  .cd-pool, .cd-invite {
+    border-radius: 12px;
+    background: #fff;
+  }
+  .cd-item::before { background: $navy; box-shadow: 0 0 0 3px #e8eef5; }
+
+  /* ── one candidate on its own page: the profile, with the actions in a side panel ── */
+  .jp-card.cd-page {
+    max-width: none;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+
+    .jp-dialog-head {
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 18px 20px;
+      border: 1px solid $border;
+      border-radius: 12px;
+    }
+
+    .cd-body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      align-items: start;
+      gap: 16px;
+      margin-top: 16px;
+      padding: 0;
+    }
+
+    .cd-main {
+      grid-column: 1;
+      grid-row: 1;
+      gap: 0;
+      padding: 4px 20px;
+      border: 1px solid $border;
+      border-radius: 12px;
+      background: #fff;
+
+      section { padding: 16px 0; }
+      section + section { border-top: 1px solid #f1f5f9; }
+      section:first-child { border-top: none; }
+    }
+
+    .cd-side {
+      grid-column: 2;
+      grid-row: 1;
+      position: sticky;
+      top: 64px;
+      gap: 12px;
+    }
+
+    .cd-pool-row { flex-direction: column; label { min-width: 0; } }
+    .cd-pool-actions .jp-btn { flex: 1 1 auto; justify-content: center; }
+    .cd-pool-actions { margin-top: 12px; }
+    app-autocomplete { display: block; width: 100%; }
+  }
+
+  .cd-head-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+
+  @media (max-width: 1050px) {
+    .jp-card.cd-page {
+      .cd-body { grid-template-columns: minmax(0, 1fr); }
+      .cd-main, .cd-side { grid-column: 1; grid-row: auto; }
+      .cd-side { position: static; }
+    }
+  }
+
+  @media (max-width: 640px) {
+    .jp-card.cd-page .jp-dialog-head { padding: 14px; }
+    .jp-card.cd-page .cd-main { padding: 2px 14px; }
+    .cd-head-actions { width: 100%; margin-left: 0; .jp-btn { flex: 1 1 auto; justify-content: center; } }
+  }
 }

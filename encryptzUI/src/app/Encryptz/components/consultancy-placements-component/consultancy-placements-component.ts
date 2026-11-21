@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -33,7 +34,7 @@ interface PlacementForm extends PlacementSave {
 @Component({
   selector: 'app-consultancy-placements-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, AutocompleteComponent, ScrollIntoViewOn, EscapeClose],
+  imports: [AppRightDirective, CommonModule, FormsModule, RouterModule, AutocompleteComponent, ScrollIntoViewOn, EscapeClose],
   templateUrl: './consultancy-placements-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',

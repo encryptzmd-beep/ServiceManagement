@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, OnInit, signal } from '@angular/core';
 import { ApiService } from '../../Services/API/api-service';
 import { ConflictResolveDto, ScheduleConflictItem } from '../../Models/ApiModels';
@@ -10,7 +11,7 @@ import { FormsModule } from '@angular/forms';
  */
 @Component({
   selector: 'app-schedule-conflicts-component',
-  imports: [CommonModule, FormsModule],
+  imports: [AppRightDirective, CommonModule, FormsModule],
   templateUrl: './schedule-conflicts-component.html',
   styleUrl: './schedule-conflicts-component.scss',
 })

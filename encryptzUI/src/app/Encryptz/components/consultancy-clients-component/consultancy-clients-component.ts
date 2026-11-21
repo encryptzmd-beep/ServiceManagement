@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -17,7 +18,7 @@ const PHONE = /^[0-9 +()\-]{6,30}$/;
 @Component({
   selector: 'app-consultancy-clients-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, ScrollIntoViewOn, EscapeClose],
+  imports: [AppRightDirective, CommonModule, FormsModule, RouterModule, ScrollIntoViewOn, EscapeClose],
   templateUrl: './consultancy-clients-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',

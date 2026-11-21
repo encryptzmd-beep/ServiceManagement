@@ -8,7 +8,7 @@
         <p>{{ isManager() ? 'All the leads of the team.' : 'The leads you own.' }}</p>
       </div>
       <div class="crm-page-actions">
-        <a class="crm-btn primary" routerLink="/crm/leads/new"><span class="material-icons" aria-hidden="true">add</span>New lead</a>
+        <a appRight="create" appRightMenu="/crm/leads" class="crm-btn primary" routerLink="/crm/leads/new"><span class="material-icons" aria-hidden="true">add</span>New lead</a>
       </div>
     </header>
 
@@ -108,7 +108,7 @@
                         <span class="material-icons" aria-hidden="true">edit</span>
                       </a>
                       @if (canDelete(r)) {
-                        <button type="button" class="fx-action-btn is-danger" title="Delete" [attr.aria-label]="'Delete ' + r.leadNo" (click)="askDelete(r)">
+                        <button appRight="delete" appRightMenu="/crm/leads" type="button" class="fx-action-btn is-danger" title="Delete" [attr.aria-label]="'Delete ' + r.leadNo" (click)="askDelete(r)">
                           <span class="material-icons" aria-hidden="true">delete_outline</span>
                         </button>
                       } @else {
@@ -151,7 +151,7 @@
         @if (deleteError()) { <p class="ld-modal-error" role="alert">{{ deleteError() }}</p> }
         <div class="ld-modal-actions">
           <button type="button" class="crm-btn" (click)="cancelDelete()" [disabled]="deleteBusy()">Cancel</button>
-          <button type="button" class="crm-btn ld-danger" (click)="confirmDelete()" [disabled]="deleteBusy()">
+          <button appRight="delete" appRightMenu="/crm/leads" type="button" class="crm-btn ld-danger" (click)="confirmDelete()" [disabled]="deleteBusy()">
             {{ deleteBusy() ? 'Deleting…' : 'Delete lead' }}
           </button>
         </div>

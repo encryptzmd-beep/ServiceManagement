@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -9,6 +10,7 @@ import { FORBIDDEN, amount, isoDate, pill, quoteTotals, refusalOf, showDate } fr
 import { TransactionMode, TransactionToolbarComponent } from '../shared/transaction-toolbar/transaction-toolbar';
 import { FindQuery, FindRow, TransactionFindComponent } from '../shared/transaction-toolbar/transaction-find';
 import { DialogService } from '../../Services/dialog-service';
+import { RightsService } from '../../Services/rights-service';
 
 export const GST_RATES = [0, 5, 12, 18, 28];
 const OPEN_FOR_CONVERT = ['Quotation', 'Negotiation'];
@@ -33,7 +35,7 @@ const blankCustomer = (): NewCustomer => ({ contactName: '', mobile: '', email: 
 @Component({
   selector: 'app-crm-quotation',
   standalone: true,
-  imports: [FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent, TransactionToolbarComponent, TransactionFindComponent],
+  imports: [AppRightDirective, FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent, TransactionToolbarComponent, TransactionFindComponent],
   templateUrl: './crm-quotation-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-quotation-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,6 +45,7 @@ export class CrmQuotationComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private dialog = inject(DialogService);
+  readonly rights = inject(RightsService);
 
   readonly forbidden = FORBIDDEN;
   readonly gstRates = GST_RATES;

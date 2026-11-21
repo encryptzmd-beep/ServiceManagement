@@ -4,6 +4,7 @@ import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
 import { DashboardStateService } from '../../Services/dashboard-state-service';
 import { PLATFORM_SECTIONS, PlatformNavService, PlatformTab } from '../../Services/platform-nav-service';
+import { inSideMenu, promoteComplaintMenus } from './sidebar-menu';
 
 @Component({
   selector: 'app-sidebar',
@@ -25,7 +26,7 @@ export class SidebarComponent {
   expandedMenus = new Set<number>();
 
   buildMenuTree() {
-    const menus = [...this.auth.menus()];
+    const menus = this.auth.menus().filter(inSideMenu);
     const menuMap = new Map<number, any>();
     const roots: any[] = [];
 
@@ -57,7 +58,7 @@ export class SidebarComponent {
       }
     });
 
-    return roots;
+    return promoteComplaintMenus(roots);
   }
 
   toggleMenu(menuId: number): void {

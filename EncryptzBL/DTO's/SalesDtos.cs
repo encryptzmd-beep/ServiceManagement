@@ -196,6 +196,8 @@ namespace EncryptzBL.DTO_s
         public string? VehicleNo { get; set; }
         public string? DriverName { get; set; }
         public string? TrackingNo { get; set; }
+        public string? DespatchMode { get; set; }
+        public DateTime? ReferenceDate { get; set; }
         public string? Remarks { get; set; }
         public string Status { get; set; } = string.Empty;
         public int? InstallationComplaintId { get; set; }
@@ -231,6 +233,8 @@ namespace EncryptzBL.DTO_s
         public string? VehicleNo { get; set; }
         public string? DriverName { get; set; }
         public string? TrackingNo { get; set; }
+        public string? DespatchMode { get; set; }
+        public DateTime? ReferenceDate { get; set; }
         public string? Remarks { get; set; }
         /// <summary>Create the "New Installation" complaint for the dashboard (default true).</summary>
         public bool CreateInstallationComplaint { get; set; } = true;
@@ -265,6 +269,8 @@ namespace EncryptzBL.DTO_s
         public string? TransporterName { get; set; }
         public string? VehicleNo { get; set; }
         public string? TrackingNo { get; set; }
+        public string? DespatchMode { get; set; }
+        public DateTime? ReferenceDate { get; set; }
         public int SalesOrderId { get; set; }
         public string OrderNo { get; set; } = string.Empty;
         public DateTime OrderDate { get; set; }
@@ -321,6 +327,22 @@ namespace EncryptzBL.DTO_s
         public DespatchHeaderDto Despatch { get; set; } = new();
         public List<DespatchUnitDetailDto> Units { get; set; } = new();
     }
+
+    /// <summary>A PDF attached to a bill, from the Sales Order or the Despatch screen.</summary>
+    public class SalesDocumentDto
+    {
+        public int DocumentId { get; set; }
+        public int SalesOrderId { get; set; }
+        public int? DespatchId { get; set; }
+        public string? DespatchNo { get; set; }
+        public string DocumentType { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
+        public int FileSize { get; set; }
+        public DateTime UploadedAt { get; set; }
+        public string? UploadedByName { get; set; }
+    }
+
+    public sealed record SalesDocumentFile(string FileName, byte[] Content);
 
     /// <summary>A unit of the installed base with its warranty and complaint history.</summary>
     public class WarrantyLookupDto

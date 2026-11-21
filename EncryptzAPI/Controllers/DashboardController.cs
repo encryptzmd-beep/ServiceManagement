@@ -1,3 +1,4 @@
+using EncryptzBL.Common.Tenant;
 using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Dashboard.Modules;
@@ -48,6 +49,7 @@ namespace EncryptzAPI.Controllers
         //   • No other behaviour changes — routes and signatures identical.
         // ═════════════════════════════════════════════════════════════════════════
 
+        [MenuRight("/complaints/list", MenuRightKind.Edit)]
         [HttpPost("manage")]
         [Authorize(Roles = "Admin,CompanyAdmin,Customer")]
         public async Task<IActionResult> ManageComplaintDetails([FromBody] ManageComplaintRequestModel request)
@@ -111,6 +113,7 @@ namespace EncryptzAPI.Controllers
         // Convenience Endpoints
         // ============================================
 
+        [MenuRight("/complaints/list", MenuRightKind.Edit)]
         [HttpPut("complaints/{complaintId}")]
         [Authorize(Roles = "Admin,CompanyAdmin,Customer")]
         public async Task<IActionResult> UpdateComplaint(int complaintId, [FromBody] UpdateComplaintRequestModel request)
@@ -136,6 +139,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/complaints/list", MenuRightKind.Delete)]
         [HttpDelete("complaints/{complaintId}")]
         [Authorize(Roles = "Admin,CompanyAdmin,Customer")]
         public async Task<IActionResult> DeleteComplaint(int complaintId)
@@ -152,6 +156,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/complaints/list", MenuRightKind.Edit)]
         [HttpPut("customers/{customerId}")]
         [Authorize(Roles = "Admin,CompanyAdmin")]
         public async Task<IActionResult> UpdateCustomer(int customerId, [FromBody] UpdateCustomerRequestModel request)
@@ -179,6 +184,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/complaints/list", MenuRightKind.Edit)]
         [HttpPut("products/{productId}")]
         [Authorize(Roles = "Admin,CompanyAdmin")]
         public async Task<IActionResult> UpdateProduct(int productId, [FromBody] UpdateProductRequestModel request)
@@ -202,6 +208,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/complaints/list", MenuRightKind.Edit)]
         [HttpPut("locations/{complaintId}")]
         [Authorize(Roles = "Admin,CompanyAdmin")]
         public async Task<IActionResult> UpdateLocation(int complaintId, [FromBody] UpdateLocationRequestModel request)
@@ -222,6 +229,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/complaints/assign", MenuRightKind.Create)]
         [HttpPost("assignments")]
         [Authorize(Roles = "Admin,CompanyAdmin")]
         public async Task<IActionResult> AssignTechnician([FromBody] AssignTechnicianRequestModel request)
@@ -246,6 +254,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/complaints/assign", MenuRightKind.Edit)]
         [HttpPut("assignments/{assignmentId}")]
         [Authorize(Roles = "Admin,CompanyAdmin")]
         public async Task<IActionResult> UpdateAssignment(int assignmentId, [FromBody] UpdateAssignmentRequestModel request)
@@ -273,6 +282,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/complaints/assign", MenuRightKind.Delete)]
         [HttpDelete("assignments/{assignmentId}")]
         [Authorize(Roles = "Admin,CompanyAdmin")]
         public async Task<IActionResult> UnassignTechnician(int assignmentId)
@@ -289,6 +299,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/technicians/spare-requests", MenuRightKind.Create, AllowTechnician = true)]
         [HttpPost("spare-parts")]
         [Authorize(Roles = "Admin,CompanyAdmin,Technician")]
         public async Task<IActionResult> AddSparePart([FromBody] AddSparePartRequestModel request)
@@ -310,6 +321,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/technicians/spare-requests", MenuRightKind.Edit)]
         [HttpPut("spare-parts/{requestId}")]
         [Authorize(Roles = "Admin,CompanyAdmin")]
         public async Task<IActionResult> UpdateSparePart(int requestId, [FromBody] UpdateSparePartRequestModel request)
@@ -330,6 +342,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/technicians/spare-requests", MenuRightKind.Delete)]
         [HttpDelete("spare-parts/{requestId}")]
         [Authorize(Roles = "Admin,CompanyAdmin")]
         public async Task<IActionResult> DeleteSparePart(int requestId)
@@ -346,6 +359,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/complaints/list", MenuRightKind.Create, AllowTechnician = true)]
         [HttpPost("comments")]
         [Authorize(Roles = "Admin,CompanyAdmin,Technician")]
         public async Task<IActionResult> AddComment([FromBody] AddCommentRequestModel request)
@@ -364,6 +378,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/complaints/list", MenuRightKind.Edit)]
         [HttpPut("comments/{commentId}")]
         [Authorize(Roles = "Admin,CompanyAdmin")]
         public async Task<IActionResult> UpdateComment(int commentId, [FromBody] UpdateCommentRequestModel request)
@@ -381,6 +396,7 @@ namespace EncryptzAPI.Controllers
             return Ok(result);
         }
 
+        [MenuRight("/complaints/list", MenuRightKind.Delete)]
         [HttpDelete("comments/{commentId}")]
         [Authorize(Roles = "Admin,CompanyAdmin")]
         public async Task<IActionResult> DeleteComment(int commentId)
@@ -432,6 +448,7 @@ namespace EncryptzAPI.Controllers
                 return BadRequest(result);
             return Ok(result);
         }
+        [MenuRight("/complaints/list", MenuRightKind.Edit)]
         [HttpPost("complaints/{complaintId}/products")]
         [Authorize(Roles = "Admin,CompanyAdmin")]
         public async Task<IActionResult> CreateProductAndLink(

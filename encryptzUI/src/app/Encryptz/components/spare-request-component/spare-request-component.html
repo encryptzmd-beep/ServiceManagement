@@ -6,7 +6,7 @@
       <div class="fx-page-title">Spare Part Requests</div>
       <div class="fx-page-sub">Request and track spare parts for service jobs</div>
     </div>
-    <button class="fx-btn-new" (click)="openForm()">
+    <button appRight="create" appRightMenu="/technicians/spare-requests" appRightTech class="fx-btn-new" (click)="openForm()">
       <span class="material-icons" style="font-size:18px;">add</span> New Request
     </button>
   </div>
@@ -256,7 +256,7 @@
 
     <div class="form-footer">
       <button class="btn-cancel" (click)="showForm.set(false)">Cancel</button>
-      <button class="btn-submit" (click)="submit()" [disabled]="submitting() || cart().length === 0">
+      <button appRight="create" appRightMenu="/technicians/spare-requests" appRightTech class="btn-submit" (click)="submit()" [disabled]="submitting() || cart().length === 0">
         @if (submitting()) { <span class="mini-spin white"></span> Submitting {{ cart().length }} request(s)... }
         @else { <span class="material-icons">send</span> Submit {{ cart().length }} Request(s) }
       </button>

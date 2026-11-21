@@ -1,3 +1,5 @@
+using EncryptzBL.Common.Tenant;
+using EncryptzAPI.Middleware;
 using EncryptzBL.Common;
 using EncryptzBL.Common.Jobs;
 using EncryptzBL.DTO_s;
@@ -46,14 +48,17 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> GetPosting(int id)
             => Answer(await _jobs.GetCompanyPosting(Caller(), Company(), id));
 
+        [MenuRight("/consultancy/postings", MenuRightKind.Save, IdProperty = "PostingId")]
         [HttpPost("postings")]
         public async Task<IActionResult> SavePosting([FromBody] JobPostingDto dto)
             => Answer(await _jobs.SaveCompanyPosting(Caller(), Company(), dto));
 
+        [MenuRight("/consultancy/postings", MenuRightKind.Edit)]
         [HttpPost("postings/{id:int}/status")]
         public async Task<IActionResult> SetPostingStatus(int id, [FromBody] SetJobStatusRequest? req)
             => Answer(await _jobs.SetCompanyPostingStatus(Caller(), Company(), id, req?.Status));
 
+        [MenuRight("/consultancy/postings", MenuRightKind.Delete)]
         [HttpDelete("postings/{id:int}")]
         public async Task<IActionResult> DeletePosting(int id)
             => Answer(await _jobs.DeleteCompanyPosting(Caller(), Company(), id));
@@ -83,6 +88,7 @@ namespace EncryptzAPI.Controllers
             return File(result.Data.Content, JobsRules.ContentTypeFor(result.Data.FileName), result.Data.FileName);
         }
 
+        [MenuRight("/consultancy/postings", MenuRightKind.Edit)]
         [HttpPost("postings/{id:int}/applicants/{applicationId:int}/status")]
         public async Task<IActionResult> SetApplicantStatus(int id, int applicationId, [FromBody] SetJobStatusRequest? req)
             => Answer(await _jobs.SetApplicantStatus(Caller(), Company(), id, applicationId, req?.Status, req?.Reason));
@@ -93,6 +99,7 @@ namespace EncryptzAPI.Controllers
             => Answer(await _jobs.GetCompanyDashboard(Caller(), Company()));
 
         /// <summary>Sets, changes or (with no time) calls off the interview of an applicant; the person is told.</summary>
+        [MenuRight("/consultancy/postings", MenuRightKind.Edit)]
         [HttpPost("postings/{id:int}/applicants/{applicationId:int}/interview")]
         public async Task<IActionResult> SetApplicantInterview(int id, int applicationId, [FromBody] JobInterviewRequest? req)
             => Answer(await _jobs.SetApplicantInterview(Caller(), Company(), id, applicationId, req));

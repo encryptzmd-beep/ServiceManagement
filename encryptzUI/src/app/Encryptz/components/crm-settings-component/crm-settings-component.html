@@ -42,7 +42,7 @@
               @for (u of available(); track u.userId) { <option [value]="u.userId">{{ u.fullName }}@if (u.email) { ({{ u.email }}) }</option> }
             </select></label>
           <label class="crm-check"><input type="checkbox" [checked]="newMemberManager()" (change)="newMemberManager.set(checked($event))" /> Manager</label>
-          <button type="button" class="crm-btn primary" [disabled]="!newMemberId()" (click)="addMember(newMemberId(), newMemberManager())">Add to team</button>
+          <button appRight="edit" appRightMenu="/crm/settings" type="button" class="crm-btn primary" [disabled]="!newMemberId()" (click)="addMember(newMemberId(), newMemberManager())">Add to team</button>
         </div>
       }
     </section>
@@ -72,7 +72,7 @@
         <form class="crm-filters st-add" (ngSubmit)="addMaster(l.kind, drafts()[l.kind])">
           <label class="crm-field grow"><span>New entry</span>
             <input maxlength="100" [name]="'new-' + l.kind" [ngModel]="drafts()[l.kind]" (ngModelChange)="setDraft(l.kind, $event)" /></label>
-          <button type="submit" class="crm-btn" [disabled]="!drafts()[l.kind]?.trim()">Add</button>
+          <button appRight="edit" appRightMenu="/crm/settings" type="submit" class="crm-btn" [disabled]="!drafts()[l.kind]?.trim()">Add</button>
         </form>
       </section>
     }

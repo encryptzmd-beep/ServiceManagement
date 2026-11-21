@@ -1,3 +1,4 @@
+import { AppRightDirective } from '../shared/app-right/app-right';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -30,7 +31,7 @@ const OPEN_FOR_CONVERT = ['Quotation', 'Negotiation'];
 @Component({
   selector: 'app-crm-lead-detail',
   standalone: true,
-  imports: [FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent, CrmLeadFieldsComponent, TransactionToolbarComponent, TransactionFindComponent],
+  imports: [AppRightDirective, FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent, CrmLeadFieldsComponent, TransactionToolbarComponent, TransactionFindComponent],
   templateUrl: './crm-lead-detail-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-lead-detail-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
