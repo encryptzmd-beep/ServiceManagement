@@ -168,8 +168,8 @@ namespace EncryptzAPI.Controllers
         }
 
         [HttpGet("complaints-lookup")]
-        public async Task<IActionResult> GetComplaintsForAssignment([FromQuery] string search = null, [FromQuery] bool includeClosed = false)
-        => Ok(await _service.GetComplaintsForAssignment(search, includeClosed));
+        public async Task<IActionResult> GetComplaintsForAssignment([FromQuery] string? search = null, [FromQuery] bool includeClosed = false)
+        => Ok(await _service.GetComplaintsForAssignment(search!, includeClosed));
 
         [HttpGet("active-assignments")]
         public async Task<IActionResult> GetActiveAssignments()

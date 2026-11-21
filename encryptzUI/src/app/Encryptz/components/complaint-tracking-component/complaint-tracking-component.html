@@ -108,7 +108,7 @@
       }
 
       <!-- Assigned Technicians -->
-      @if (c.assignments?.length) {
+      @if ($any(c.assignments)?.length) {
       <div class="technicians-bar">
         <span class="section-label">Assigned Technicians</span>
         <div class="tech-chips">
@@ -126,7 +126,7 @@
       }
 
       <!-- Timeline -->
-      @if (c.timeline?.length) {
+      @if ($any(c.timeline)?.length) {
       <div class="timeline-section">
         <button class="timeline-toggle" (click)="toggleTimeline(c.complaintId)">
           <span class="material-icons">{{ expandedTimelines.has(c.complaintId) ? 'expand_less' : 'expand_more' }}</span>

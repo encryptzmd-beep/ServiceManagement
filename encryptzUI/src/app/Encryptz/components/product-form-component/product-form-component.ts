@@ -1,4 +1,4 @@
-import { AppRightDirective } from '../shared/app-right/app-right';
+
 // components/product-form/product-form.component.ts
 import { Component, Input, Output, EventEmitter, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -11,7 +11,7 @@ import { ProductService } from '../../Services/product-service';
 @Component({
   selector: 'app-product-form',
   standalone: true,
-  imports: [AppRightDirective, CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="modal-overlay" (click)="close.emit(false)">
       <div class="modal" (click)="$event.stopPropagation()">

@@ -25,7 +25,7 @@ namespace EncryptzAPI.Controllers
             _svc = svc;
             _connectionResolver = connectionResolver;
         }
-        private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
         /// <summary>Largest page a customer list returns in one request.</summary>
         private const int MaxCustomerPageSize = 100;
@@ -180,8 +180,8 @@ namespace EncryptzAPI.Controllers
 
 
         [HttpGet("product-master")]
-        public async Task<IActionResult> GetProductMaster([FromQuery] string search = null, [FromQuery] string category = null)
-    => Ok(await _svc.GetProductMaster(search, category));
+        public async Task<IActionResult> GetProductMaster([FromQuery] string? search = null, [FromQuery] string? category = null)
+    => Ok(await _svc.GetProductMaster(search!, category!));
 
         // also read by the public complaint page, before anyone is signed in
         [HttpGet("complaint-categories")]
@@ -281,7 +281,7 @@ namespace EncryptzAPI.Controllers
 
             var result = await _svc.UploadComplaintImage(
                 id,
-                null, // no need path
+                null!, // no need path
                 imageType,
                 GetUserId(),
                 base64,

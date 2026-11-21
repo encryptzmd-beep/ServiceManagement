@@ -75,7 +75,7 @@
         <div class="ti"><label>Resolved</label><span>{{d.resolvedDate ? (d.resolvedDate | date:'dd MMM yyyy HH:mm') :
             '-'}}</span></div>
       </div>
-      <div class="timeline" *ngIf="d.statusHistory?.length">
+      <div class="timeline" *ngIf="$any(d.statusHistory)?.length">
         <h3>Status Timeline</h3>
         <div class="tl-item" *ngFor="let h of d.statusHistory">
           <div class="tl-dot"></div>

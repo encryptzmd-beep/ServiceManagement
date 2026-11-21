@@ -64,7 +64,7 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
             var ds = await GetDataSetAsync("sp_Technician_GetById", parameters);
 
             if (ds == null || ds.Tables.Count == 0)
-                return null;
+                return null!;
 
             var tech = ds.Tables[0].ToList<TechnicianDetail>().FirstOrDefault();
 
@@ -81,7 +81,7 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
             //        : new List<ScheduleListItem>();
             //}
 
-            return tech;
+            return tech!;
         }
 
 
@@ -517,7 +517,7 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
             var p = new[] { SqlParameterHelper.Input("@AssignmentId", assignmentId) };
             var ds = await GetDataSetAsync("sp_WorkOrder_GetDetails", p);
 
-            if (ds == null || ds.Tables.Count == 0) return null;
+            if (ds == null || ds.Tables.Count == 0) return null!;
 
             var detail = ds.Tables[0].ToList<WorkOrderDetailDto>().FirstOrDefault();
             if (detail == null) return null;

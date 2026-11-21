@@ -111,7 +111,7 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
 
             var response = new DashboardResponse_Dto
             {
-                Stats = stats,
+                Stats = stats!,
                 RecentComplaints = recentComplaints ?? new List<RecentComplaint_Dto>()
             };
 
@@ -272,7 +272,7 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
                 return ApiResponse<CustomerLoginResponse_Dto>.Fail("Invalid email or password");
 
             // Remove PasswordHash before sending to client
-            customer.PasswordHash = null;
+            customer.PasswordHash = null!;
 
             // Get menus
             var menus = new List<CustomerMenu_Dto>();
@@ -517,7 +517,7 @@ namespace EncryptzBL.Infrastructure.Customer.Modules
         }
 
 
-        public async Task<ApiResponse<List<ProductMasterDto>>> GetProductMaster(string searchTerm = null, string category = null)
+        public async Task<ApiResponse<List<ProductMasterDto>>> GetProductMaster(string? searchTerm = null, string? category = null)
         {
             var p = new[]
             {

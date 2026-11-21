@@ -1,6 +1,5 @@
 using EncryptzBL.Common.Tenant;
 using EncryptzAPI.Middleware;
-﻿using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.WarrantyReturn.Modules;
 using Microsoft.AspNetCore.Authorization;

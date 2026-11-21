@@ -116,7 +116,7 @@
             @for (t of filteredTechnicians(); track t.technicianId) {
             <div class="tech-opt" [class.sel]="form.technicianId === t.technicianId" (click)="selectTechnician(t.technicianId)">
               <div class="t-avatar" [class.av]="t.availabilityStatus === 1" [class.busy]="t.availabilityStatus === 2" [class.leave]="t.availabilityStatus === 3">
-                {{ t.fullName?.charAt(0) || '?' }}
+                {{ $any(t.fullName)?.charAt(0) || '?' }}
               </div>
               <div class="t-info">
                 <strong>{{ t.fullName }}</strong>

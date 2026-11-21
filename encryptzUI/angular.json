@@ -24,6 +24,19 @@
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
+            "allowedCommonJsDependencies": [
+              "archiver",
+              "dayjs",
+              "dayjs/plugin/customParseFormat",
+              "dayjs/plugin/utc",
+              "exceljs",
+              "fast-csv",
+              "jszip",
+              "readable-stream",
+              "saxes",
+              "tmp",
+              "unzipper"
+            ],
             "assets": [
               {
                 "glob": "**/*",

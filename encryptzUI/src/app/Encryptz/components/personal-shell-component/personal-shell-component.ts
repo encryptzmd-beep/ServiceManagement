@@ -5,6 +5,8 @@ import { NotificationBellComponent } from '../notification-bell-component/notifi
 import { WalletChipComponent } from '../wallet-chip-component/wallet-chip-component';
 import { MessageAlertsService } from '../../Services/message-alerts-service';
 import { MessageSide } from '../../Services/messages-service';
+import { DashboardStateService } from '../../Services/dashboard-state-service';
+import { FooterComponent } from '../footer-component/footer-component';
 
 /** The Messages page of each side: its menu line gets the number of unread messages. */
 const MESSAGE_PAGES: Record<string, MessageSide> = { '/apps/jobs/messages': 'person', '/consultancy/messages': 'company' };
@@ -30,10 +32,16 @@ export interface PersonalMenuItem {
 @Component({
   selector: 'app-personal-shell',
   standalone: true,
-  imports: [RouterModule, NotificationBellComponent, WalletChipComponent],
+  imports: [RouterModule, NotificationBellComponent, WalletChipComponent, FooterComponent],
   template: `
+    <div class="crm-layout">
     <header class="ps-bar">
       <div class="ps-bar-in">
+        @if (menu().length) {
+          <button type="button" class="ps-menu-btn" aria-label="Open menu" (click)="dash.toggleSidebar()">
+            <span class="material-icons" aria-hidden="true">menu</span>
+          </button>
+        }
         <a class="ps-back" [routerLink]="backRoute()" [attr.aria-label]="backLabel()">
           <span class="material-icons" aria-hidden="true">chevron_left</span><span class="ps-back-label">{{ backLabel() }}</span>
         </a>
@@ -57,38 +65,54 @@ export interface PersonalMenuItem {
         </div>
       </div>
     </header>
-    <div class="ps-body" [class.with-nav]="menu().length">
-      @if (menu().length) {
-        <nav class="ps-nav" [attr.aria-label]="appName() + ' menu'">
-          @for (item of shownMenu(); track item.label) {
-            @if (item.route) {
-              <a class="ps-nav-item" [routerLink]="item.route" routerLinkActive="active"
-                 [routerLinkActiveOptions]="{ exact: !!item.exact }">
-                <span class="material-icons" aria-hidden="true">{{ item.icon }}</span>
-                <span class="ps-nav-label">{{ item.label }}</span>
-                @if (item.badge) {
-                  <span class="ps-nav-badge" [attr.aria-label]="item.badge + ' unread'">{{ item.badge > 99 ? '99+' : item.badge }}</span>
-                }
-              </a>
-            } @else {
-              <span class="ps-nav-item soon" aria-disabled="true" title="Not available yet">
-                <span class="material-icons" aria-hidden="true">{{ item.icon }}</span>
-                <span class="ps-nav-label">{{ item.label }}</span>
-                <span class="ps-nav-soon">Soon</span>
-              </span>
+    @if (menu().length) {
+      <aside class="crm-side" [class.collapsed]="!dash.sidebarOpen()" [class.mobile-open]="dash.sidebarOpen()" [attr.aria-label]="appName()">
+        <div class="side-header">
+          <span class="side-brand"></span>
+          <button type="button" class="side-toggle" (click)="dash.toggleSidebar()" title="Toggle sidebar">
+            <span class="material-icons">{{ dash.sidebarOpen() ? 'menu_open' : 'menu' }}</span>
+          </button>
+        </div>
+        <nav class="side-nav" [attr.aria-label]="appName() + ' menu'">
+          <div class="nav-section">
+            @for (item of shownMenu(); track item.label) {
+              @if (item.route) {
+                <a class="ps-nav-item nav-item" [routerLink]="item.route" routerLinkActive="active"
+                   [routerLinkActiveOptions]="{ exact: !!item.exact }" [title]="item.label" (click)="closeOnPhone()">
+                  <span class="material-icons nav-icon" aria-hidden="true">{{ item.icon }}</span>
+                  <span class="ps-nav-label nav-label">{{ item.label }}</span>
+                  @if (item.badge) {
+                    <span class="ps-nav-badge" [attr.aria-label]="item.badge + ' unread'">{{ item.badge > 99 ? '99+' : item.badge }}</span>
+                  }
+                </a>
+              } @else {
+                <span class="ps-nav-item nav-item soon" aria-disabled="true" title="Not available yet">
+                  <span class="material-icons nav-icon" aria-hidden="true">{{ item.icon }}</span>
+                  <span class="ps-nav-label nav-label">{{ item.label }}</span>
+                  <span class="ps-nav-soon">Soon</span>
+                </span>
+              }
             }
-          }
+          </div>
         </nav>
+      </aside>
+      @if (dash.sidebarOpen()) {
+        <div class="crm-backdrop" (click)="dash.closeSidebar()"></div>
       }
-      <main class="ps-content">
+    }
+    <main class="crm-main" [class.no-nav]="!menu().length" [class.sidebar-open]="dash.sidebarOpen()">
+      <div class="crm-content ps-content">
         <ng-content />
-      </main>
+      </div>
+      <app-footer />
+    </main>
     </div>
   `,
-  styleUrl: './personal-shell-component.scss',
+  styleUrls: ['../crm-shell-component/crm-shell-component.scss', './personal-shell-component.scss'],
 })
 export class PersonalShellComponent {
   readonly auth = inject(AuthService);
+  readonly dash = inject(DashboardStateService);
 
   appName = input.required<string>();
   icon = input<string>('apps');
@@ -123,6 +147,11 @@ export class PersonalShellComponent {
       const sides = new Set(this.menu().map(i => (i.route ? MESSAGE_PAGES[i.route] : undefined)).filter((s): s is MessageSide => !!s));
       untracked(() => sides.forEach(side => this.messageAlerts.watch(side)));
     });
+  }
+
+  /** On a phone the menu is a drawer over the page: it closes once a page is chosen. */
+  closeOnPhone(): void {
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) this.dash.closeSidebar();
   }
 
   /** The first letters of the first two words of the name, for the picture place. */

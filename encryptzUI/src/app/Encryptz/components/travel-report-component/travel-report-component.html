@@ -117,7 +117,7 @@
           <tr>
             <td>
               <div class="tech-cell">
-                <div class="tc-avatar">{{ r.technicianName?.charAt(0) || 'T' }}</div>
+                <div class="tc-avatar">{{ $any(r.technicianName)?.charAt(0) || 'T' }}</div>
                 <strong>{{ r.technicianName }}</strong>
               </div>
             </td>
