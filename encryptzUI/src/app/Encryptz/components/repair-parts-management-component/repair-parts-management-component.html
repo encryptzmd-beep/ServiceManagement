@@ -70,12 +70,12 @@
     <div class="rpm-date-range">
       <div class="rpm-date-field">
         <label>From</label>
-        <input type="date" [(ngModel)]="fromVal" (change)="onDateChange()" [max]="toVal || today" class="rpm-date-input" />
+        <input data-range="from" type="date" [(ngModel)]="fromVal" (change)="onDateChange()" [max]="toVal || today" class="rpm-date-input" />
       </div>
       <span class="rpm-date-sep">—</span>
       <div class="rpm-date-field">
         <label>To</label>
-        <input type="date" [(ngModel)]="toVal" (change)="onDateChange()" [min]="fromVal" [max]="today" class="rpm-date-input" />
+        <input data-range="to" type="date" [(ngModel)]="toVal" (change)="onDateChange()" [min]="fromVal" [max]="today" class="rpm-date-input" />
       </div>
       <div class="rpm-date-presets">
         <button class="rpm-preset-btn" [class.active]="isActiveDatePreset(15)" (click)="setLast15()">15d</button>
@@ -215,7 +215,7 @@
 
 <!-- ══ DETAIL PANEL ══ -->
 @if (selected()) {
-  <div class="rpm-overlay" (click)="closeDetail()"></div>
+  <div class="rpm-overlay"></div>
   <div class="rpm-panel">
     <div class="rpm-panel-header">
       <span class="material-icons">construction</span>
@@ -311,7 +311,7 @@
 
 <!-- ══ STATUS MODAL ══ -->
 @if (showStatusModal()) {
-  <div class="rpm-modal-overlay" (click)="closeStatusModal()"></div>
+  <div class="rpm-modal-overlay"></div>
   <div class="rpm-modal">
     <div class="rpm-modal-header">
       <span class="material-icons">sync</span>
@@ -355,13 +355,11 @@
 
 <!-- ══ LIGHTBOX ══ -->
 @if (lightboxImg()) {
-  <div class="rpm-lightbox-overlay" (click)="closeLightbox()">
+  <div class="rpm-lightbox-overlay">
     <img [src]="lightboxImg()!" class="rpm-lightbox-img" (click)="$event.stopPropagation()" />
     <button class="rpm-lightbox-close" (click)="closeLightbox()"><span class="material-icons">close</span></button>
   </div>
 }
 
 <!-- ══ TOAST ══ -->
-@if (showToast()) {
-  <div class="rpm-toast" [class.err]="toastErr()">{{ toastMsg() }}</div>
-}
+@if (showToast()) { <app-toast [text]="toastMsg()" [kind]="toastErr() ? 'error' : 'success'" /> }

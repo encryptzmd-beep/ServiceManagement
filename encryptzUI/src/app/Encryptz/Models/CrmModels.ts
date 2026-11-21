@@ -30,6 +30,48 @@ export interface LeadSaveDto {
   ownerUserId?: number | null;
   priority?: string | null;
   remarks?: string | null;
+  /** The products of the lead, first one first; left out to keep them as they are. */
+  products?: LeadProductDto[];
+}
+
+export interface LeadDataAccessDto {
+  isAdmin: boolean; canImport: boolean; canExport: boolean; importApproved: boolean; exportApproved: boolean;
+  importPending: boolean; exportPending: boolean; pendingCount: number;
+}
+
+export interface LeadDataRequestRowDto {
+  requestId: number; requestType: 'Import' | 'Export'; requestedBy: number; requestedByName: string; requestedAt: string; note: string;
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Used'; decidedByName: string; decidedAt?: string | null; decisionNote: string; usedAt?: string | null;
+}
+
+export interface LeadExportRowDto {
+  leadNo: string; leadDate: string; contactName: string; mobile: string; email: string; address: string; city: string; state: string;
+  pinCode: string; landmark: string; sourceName: string; productCategory: string; products: string; modelRequirement: string;
+  estimatedQty?: number | null; expectedPurchaseDate?: string | null; ownerName: string; priority: string; status: string; remarks: string;
+}
+
+export interface LeadImportRowDto {
+  rowNumber: number; contactName?: string; mobile?: string; email?: string; address?: string; city?: string; state?: string;
+  pinCode?: string; landmark?: string; productCategory?: string; modelRequirement?: string; priority?: string; remarks?: string;
+}
+
+export interface LeadImportResultDto {
+  created: number; skipped: number; failed: number;
+  problems: { rowNumber: number; contactName: string; message: string }[];
+}
+
+/** A product of a lead, with its quantity. */
+export interface LeadProductDto {
+  productMasterId: number;
+  productCode: string;
+  productName: string;
+  brand: string;
+  model: string;
+  category: string;
+  mrp: number;
+  warrantyMonths: number;
+  hsnSac?: string | null;
+  qty: number;
 }
 
 /** One status tab of the lead list: how many leads have the status under the list's other filters. */
@@ -95,6 +137,7 @@ export interface FollowUpDto {
 }
 
 export interface LeadDetailDto {
+  products?: LeadProductDto[];
   leadId: number;
   leadNo: string;
   leadDate: string;
@@ -265,6 +308,7 @@ export interface ConvertRequestDto {
   customerId?: number | null;
   orderDate: string;
   paymentMode?: string | null;
+  comment?: string | null;
 }
 
 export interface LinkOrderDto { orderNo: string; quotationId?: number | null; }

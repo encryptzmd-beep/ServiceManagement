@@ -2,7 +2,9 @@ using System.Security.Claims;
 using EncryptzAPI.Middleware;
 using EncryptzBL.Common.Tenant;
 using EncryptzBL.DTO_s;
+using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Crm;
+using EncryptzBL.Infrastructure.Products.Modules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,11 +23,13 @@ namespace EncryptzAPI.Controllers
         private readonly ICrmService _crm;
 
         private readonly TenantContext _tenant;
+        private readonly IProductMasterService _products;
 
-        public CrmController(ICrmService crm, TenantContext tenant)
+        public CrmController(ICrmService crm, TenantContext tenant, IProductMasterService products)
         {
             _crm = crm;
             _tenant = tenant;
+            _products = products;
         }
 
         private int Caller() => User.GetTenantUserId();
@@ -37,6 +41,9 @@ namespace EncryptzAPI.Controllers
         private Task<bool> Manager() => _crm.IsManager(Caller(), User.FindFirst(ClaimTypes.Role)?.Value, Company());
 
         private IActionResult Answer<T>(ApiResponse<T> result) => result.Success ? Ok(result) : BadRequest(result);
+
+        /// <summary>Decided by the token's role, never by the request.</summary>
+        private bool IsCompanyAdmin() => ModuleAccess.IsCompanyAdminRole(User.FindFirst(ClaimTypes.Role)?.Value);
 
         [HttpGet("me")]
         public async Task<IActionResult> Me()
@@ -55,6 +62,34 @@ namespace EncryptzAPI.Controllers
         [HttpGet("leads/status-counts")]
         public async Task<IActionResult> GetLeadStatusCounts([FromQuery] LeadFilterDto filter)
             => Answer(await _crm.GetLeadStatusCounts(Caller(), await Manager(), Company(), filter));
+
+        /// <summary>What the caller may do with the lead Excel files now.</summary>
+        [HttpGet("leads/data-access")]
+        public async Task<IActionResult> GetLeadDataAccess()
+            => Answer(await _crm.GetLeadDataAccess(Caller(), await Manager(), Company(), IsCompanyAdmin()));
+
+        [MenuRight("/crm/leads", MenuRightKind.Create)]
+        [HttpPost("leads/data-requests")]
+        public async Task<IActionResult> RequestLeadData([FromBody] LeadDataRequestDto dto)
+            => Answer(await _crm.RequestLeadData(Caller(), await Manager(), Company(), dto));
+
+        [HttpGet("leads/data-requests")]
+        public async Task<IActionResult> GetLeadDataRequests()
+            => Answer(await _crm.GetLeadDataRequests(Caller(), await Manager(), Company(), IsCompanyAdmin()));
+
+        [MenuRight("/crm/leads", MenuRightKind.Edit)]
+        [HttpPost("leads/data-requests/{id:int}/decide")]
+        public async Task<IActionResult> DecideLeadData(int id, [FromBody] LeadDataDecisionDto dto)
+            => Answer(await _crm.DecideLeadData(Caller(), await Manager(), Company(), IsCompanyAdmin(), id, dto));
+
+        [HttpGet("leads/export")]
+        public async Task<IActionResult> ExportLeads()
+            => Answer(await _crm.ExportLeads(Caller(), await Manager(), Company(), IsCompanyAdmin()));
+
+        [MenuRight("/crm/leads", MenuRightKind.Create)]
+        [HttpPost("leads/import")]
+        public async Task<IActionResult> ImportLeads([FromBody] List<LeadImportRowDto> rows)
+            => Answer(await _crm.ImportLeads(Caller(), await Manager(), Company(), IsCompanyAdmin(), rows));
 
         [HttpGet("leads/{id:int}")]
         public async Task<IActionResult> GetLead(int id)
@@ -149,6 +184,28 @@ namespace EncryptzAPI.Controllers
         [HttpGet("product-categories")]
         public async Task<IActionResult> GetProductCategories()
             => Answer(await _crm.GetProductCategories(Caller(), await Manager(), Company()));
+
+        /// <summary>A new product while writing a lead or a quotation: the Products menu's Create right decides. Only adds.</summary>
+        [MenuRight("/products", MenuRightKind.Create)]
+        [HttpPost("products")]
+        public async Task<IActionResult> CreateProduct([FromBody] ProductMasterRequestDto dto)
+            => Answer(await _products.CreateProduct(dto));
+
+        [HttpGet("product-category-master")]
+        public async Task<IActionResult> GetProductCategoryMaster()
+            => Answer(await _products.GetCategories());
+
+        /// <summary>A new category or sub category from the product popup, on the same right as Products. Never renames or switches off one.</summary>
+        [MenuRight("/products", MenuRightKind.Edit)]
+        [Authorize(Roles = "Admin,CompanyAdmin,ServiceManager,Manager")]
+        [HttpPost("product-category-master")]
+        public async Task<IActionResult> AddProductCategory([FromBody] ProductCategorySaveDto dto)
+        {
+            if (dto == null) return BadRequest(ApiResponse<int>.Fail("Enter the name"));
+            dto.CategoryId = 0;
+            dto.IsActive = true;
+            return Answer(await _products.SaveCategory(dto));
+        }
 
         [HttpGet("masters/{kind}")]
         public async Task<IActionResult> GetMasters(string kind)

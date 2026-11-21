@@ -56,7 +56,7 @@
       <div class="card-body grid-4">
         <div class="field">
           <label>Despatch Date <span class="req">*</span></label>
-          <input type="date" [(ngModel)]="despatchDate" (ngModelChange)="onDateChange()" />
+          <input type="date" [(ngModel)]="despatchDate" (ngModelChange)="onDateChange()" [min]="billDate()" />
           <small class="hint">Warranty of every unit starts on this date</small>
         </div>
         <div class="field">
@@ -74,7 +74,7 @@
           </select>
         </div>
         <div class="field">
-          <label for="dspRef">{{ modeInfo().reference }}</label>
+          <label for="dspRef">{{ modeInfo().reference }} <span class="req">*</span></label>
           <input id="dspRef" type="text" maxlength="100" [(ngModel)]="trackingNo" />
         </div>
         <div class="field">
@@ -83,8 +83,8 @@
         </div>
         @if (modeInfo().carrier) {
           <div class="field">
-            <label for="dspCarrier">{{ despatchMode() === 'Courier' ? 'Courier Company' : 'Transporter' }}</label>
-            <input id="dspCarrier" type="text" maxlength="150" [(ngModel)]="transporterName" />
+            <label>{{ despatchMode() === 'Courier' ? 'Courier Company' : 'Transporter' }}</label>
+            <app-transporter-picker [value]="transporterName" [label]="despatchMode() === 'Courier' ? 'Courier Company' : 'Transporter'" (valueChange)="transporterName = $event" />
           </div>
         }
         @if (modeInfo().vehicle) {
@@ -179,7 +179,7 @@
             </div>
             <div class="field">
               <label>Preferred installation date</label>
-              <input type="date" [(ngModel)]="preferredDate" [disabled]="!createInstallationComplaint" />
+              <input type="date" [(ngModel)]="preferredDate" [min]="today" [disabled]="!createInstallationComplaint" />
             </div>
             <div class="field span-2">
               <label for="dspTech">Assign to technician <span class="opt">(optional)</span></label>
@@ -261,7 +261,7 @@
           @if (v.despatch.installationComplaintId) {
             <div class="install-no">
               <span class="mono big">{{ v.despatch.installationComplaintNo }}</span>
-              <span class="status-badge" [style.background]="(v.despatch.installationStatusColor || '#64748b') + '20'" [style.color]="v.despatch.installationStatusColor || '#64748b'">{{ v.despatch.installationStatus }}</span>
+              <span class="status-badge" [style.background]="(v.despatch.installationStatusColor || '#64748b') + '20'" [style.color]="v.despatch.installationStatusColor || '#64748b'">{{ statusText(v.despatch.installationStatus) }}</span>
             </div>
             <div class="tech" [class.unassigned]="!v.despatch.assignedTechnicians">
               <span class="material-icons">{{ v.despatch.assignedTechnicians ? 'engineering' : 'person_off' }}</span>
@@ -346,7 +346,7 @@
 }
 
 @if (showAssign() && detail(); as v) {
-  <div class="dlg-overlay" (click)="closeAssign()">
+  <div class="dlg-overlay">
     <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="asgTitle" (click)="$event.stopPropagation()" (keydown.escape)="closeAssign()">
       <div class="dlg-head">
         <div>
@@ -380,7 +380,7 @@
           </div>
           <div class="field">
             <label for="asgDate">Visit date</label>
-            <input id="asgDate" type="date" [(ngModel)]="assignDate" />
+            <input id="asgDate" type="date" [(ngModel)]="assignDate" [min]="today" />
           </div>
         </div>
         <div class="field">
@@ -400,8 +400,4 @@
   </div>
 }
 
-@if (toast(); as t) {
-  <div class="toast" [class.success]="t.type === 'success'" [class.error]="t.type === 'error'">
-    <span class="material-icons">{{ t.type === 'success' ? 'check_circle' : 'error' }}</span>{{ t.text }}
-  </div>
-}
+@if (toast(); as t) { <app-toast [text]="t.text" [kind]="t.type" /> }

@@ -73,7 +73,7 @@
         <div class="card-header-right">
           <span class="status-badge" [style.background]="(c.statusColor || '#64748b') + '18'"
             [style.color]="c.statusColor || '#64748b'">
-            {{ c.statusName }}
+            {{ statusText(c.statusName) }}
           </span>
           <span class="priority-badge" [attr.data-priority]="c.priority">
             {{ c.priority }}
@@ -108,7 +108,7 @@
       }
 
       <!-- Assigned Technicians -->
-      @if (c.assignments?.length) {
+      @if ($any(c.assignments)?.length) {
       <div class="technicians-bar">
         <span class="section-label">Assigned Technicians</span>
         <div class="tech-chips">
@@ -126,7 +126,7 @@
       }
 
       <!-- Timeline -->
-      @if (c.timeline?.length) {
+      @if ($any(c.timeline)?.length) {
       <div class="timeline-section">
         <button class="timeline-toggle" (click)="toggleTimeline(c.complaintId)">
           <span class="material-icons">{{ expandedTimelines.has(c.complaintId) ? 'expand_less' : 'expand_more' }}</span>
@@ -141,7 +141,7 @@
             <div class="tl-line"></div>
             <div class="tl-content">
               <div class="tl-top">
-                <strong class="tl-status">{{ t.statusName }}</strong>
+                <strong class="tl-status">{{ statusText(t.statusName) }}</strong>
                 <span class="tl-time">{{ t.actionAt | date:'dd MMM, hh:mm a' }}</span>
               </div>
               @if (t.remarks) {
@@ -222,18 +222,7 @@
   }
 
   <!-- Toast Notification -->
-  @if (toastVisible()) {
-  <div class="toast-stack">
-    <div class="app-toast" [class.toast-error]="toastType() === 'error'" [class.toast-success]="toastType() === 'success'">
-      <div class="toast-icon">{{ toastType() === 'success' ? '✓' : '!' }}</div>
-      <div class="toast-copy">
-        <div class="toast-title">{{ toastType() === 'success' ? 'Success' : 'Error' }}</div>
-        <div class="toast-message">{{ toastMessage() }}</div>
-      </div>
-      <button class="toast-close" (click)="hideToast()" aria-label="Close notification">×</button>
-    </div>
-  </div>
-  }
+  @if (toastVisible()) { <app-toast [text]="toastMessage()" [kind]="toastType()" (closed)="hideToast()" /> }
 
   <!-- Edit Complaint Modal -->
   @if (showEditModal()) {

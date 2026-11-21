@@ -7,6 +7,7 @@ import {environment} from '../../../../src/environments/environment'
 import { MenuAccessDto, RoleDto, UserDto } from '../components/auth-management-component/auth-management-component';
 import { LocationMonitorService } from '../Services/location-monitor-service';
 import { legacyModuleKey, ScopeState } from './scope-flow';
+import { tabSession } from './tab-session';
 import { CompanyCreationState, NewCompanyForm } from './company-creation';
 
 export interface Company {
@@ -114,14 +115,18 @@ export class AuthService {
 
   constructor(private http: HttpClient, private router: Router) {
     this.migrateStorageKeys();
+    tabSession.start();
     this.loadFromStorage();
 
-    // another tab changed the session this tab is really using (the token is shared): reload to show it
+    // each tab keeps its own module and branch; only the end of the login reaches the other tabs
     const onStorage = (event: StorageEvent) => {
-      // a tab without a session (the login page) has nothing to mislabel; a customer page uses other keys
+      // a tab without a session (the login page) has nothing to end; a customer page uses other keys
       if (!this.isLoggedIn() || this.currentPath().startsWith('/customer')) return;
-      const watched = ['encryptz_token', 'selected_company_id', 'selected_module_key', 'selected_location_id'];
-      if (event.key === null || (watched.includes(event.key) && event.oldValue !== event.newValue)) {
+      const loggedOut = event.key === null || (event.key === 'encryptz_token' && !event.newValue);
+      const otherUser = event.key === 'encryptz_user' && !!event.newValue
+        && tabSession.userIdOf(event.newValue) !== tabSession.userIdOf(tabSession.getItem('encryptz_user'));
+      if (loggedOut || otherUser) {
+        tabSession.forgetTab();
         this.reloadPage();
       }
     };
@@ -162,7 +167,7 @@ export class AuthService {
     if (!current) return;
 
     const updated = { ...current, ...changes };
-    localStorage.setItem('encryptz_user', JSON.stringify(updated));
+    tabSession.setItem('encryptz_user', JSON.stringify(updated));
     this._currentUser.set(updated);
   }
 
@@ -207,17 +212,17 @@ export class AuthService {
 
   /** Clear auth state without triggering navigation. Safe to call from /login. */
   clearSession(): void {
-    localStorage.removeItem('encryptz_token');
-    localStorage.removeItem('encryptz_user');
-    localStorage.removeItem('selected_company_id');
-    localStorage.removeItem('selected_company_role');
-    localStorage.removeItem('selected_project_key');
-    localStorage.removeItem('selected_project_id');
-    localStorage.removeItem('selected_location_id');
-    localStorage.removeItem('selected_module_key');
-    localStorage.removeItem('selected_location_name');
-    localStorage.removeItem('encryptz_menus');
-    localStorage.removeItem('temp_login');
+    tabSession.removeItem('encryptz_token');
+    tabSession.removeItem('encryptz_user');
+    tabSession.removeItem('selected_company_id');
+    tabSession.removeItem('selected_company_role');
+    tabSession.removeItem('selected_project_key');
+    tabSession.removeItem('selected_project_id');
+    tabSession.removeItem('selected_location_id');
+    tabSession.removeItem('selected_module_key');
+    tabSession.removeItem('selected_location_name');
+    tabSession.removeItem('encryptz_menus');
+    tabSession.removeItem('temp_login');
     this._currentUser.set(null);
     this._menus.set([]);
     this._companies.set([]);
@@ -230,12 +235,12 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    const token = localStorage.getItem('encryptz_token');
+    const token = tabSession.getItem('encryptz_token');
     if (token) return token;
 
     // Between login and company selection only the login token exists; the
     // select-company / invitation calls are authenticated with it.
-    const temp = localStorage.getItem('temp_login');
+    const temp = tabSession.getItem('temp_login');
     if (temp) {
       try { return JSON.parse(temp).token || null; } catch { return null; }
     }
@@ -256,16 +261,16 @@ export class AuthService {
   }
 
 setSession(data: any): void {
-  localStorage.setItem('encryptz_token', data.token);
-  localStorage.setItem('encryptz_user', JSON.stringify(data));
-  localStorage.setItem('encryptz_menus', JSON.stringify(data.menus || []));
+  tabSession.setItem('encryptz_token', data.token);
+  tabSession.setItem('encryptz_user', JSON.stringify(data));
+  tabSession.setItem('encryptz_menus', JSON.stringify(data.menus || []));
 
   this._currentUser.set(data);
   this._menus.set(data.menus || []);
 }
 
   // private loadFromStorage(): void {
-  //   const stored = localStorage.getItem('encryptz_user');
+  //   const stored = tabSession.getItem('encryptz_user');
   //   if (stored) {
   //     try {
   //       const user: LoginResponse = JSON.parse(stored);
@@ -306,7 +311,7 @@ private setTempSession(data: ExtendedLoginResponse): void {
   // Only store temporary login + companies.
   // Do NOT store menus yet because company is not selected.
 
-  localStorage.setItem('temp_login', JSON.stringify(data));
+  tabSession.setItem('temp_login', JSON.stringify(data));
 
   this._currentUser.set({
     ...data,
@@ -328,16 +333,16 @@ selectCompany(companyId: number): Observable<ApiResponse<any>> {
         if (res.success && res.data) {
           const data = res.data;
 
-          localStorage.setItem('encryptz_token', data.token);
-          localStorage.setItem('encryptz_user', JSON.stringify(data));
-          localStorage.setItem('encryptz_menus', JSON.stringify(data.menus || []));
-          localStorage.setItem('selected_company_id', companyId.toString());
-          localStorage.setItem('selected_company_role', data.role);
+          tabSession.setItem('encryptz_token', data.token);
+          tabSession.setItem('encryptz_user', JSON.stringify(data));
+          tabSession.setItem('encryptz_menus', JSON.stringify(data.menus || []));
+          tabSession.setItem('selected_company_id', companyId.toString());
+          tabSession.setItem('selected_company_role', data.role);
 
           // a company token has no module or branch yet: forget those of the previous company
           this.clearScope();
 
-          localStorage.removeItem('temp_login');
+          tabSession.removeItem('temp_login');
 
           this._selectedCompanyId.set(companyId);
           this._selectedCompanyRole.set(data.role);
@@ -388,9 +393,9 @@ setScope(moduleKey: string, locationId: number, locationName = ''): Observable<A
     .pipe(timeout({ first: 45_000 }), tap(res => {
       if (res.success && res.data) {
         const data = res.data;
-        localStorage.setItem('encryptz_token', data.token);
-        localStorage.setItem('encryptz_user', JSON.stringify(data));
-        localStorage.setItem('encryptz_menus', JSON.stringify(data.menus || []));
+        tabSession.setItem('encryptz_token', data.token);
+        tabSession.setItem('encryptz_user', JSON.stringify(data));
+        tabSession.setItem('encryptz_menus', JSON.stringify(data.menus || []));
         this._currentUser.set(data);
         this._menus.set(data.menus || []);
         this.persistScope(data.moduleKey || moduleKey, data.locationId || locationId, locationName, data.projectId);
@@ -400,18 +405,18 @@ setScope(moduleKey: string, locationId: number, locationName = ''): Observable<A
 
 /** Store the module and branch of the session in localStorage + signals. */
 private persistScope(moduleKey: string, locationId: number, locationName: string, scopeId?: number): void {
-  localStorage.setItem('selected_module_key', moduleKey);
-  localStorage.setItem('selected_location_id', locationId.toString());
-  localStorage.setItem('selected_location_name', locationName);
+  tabSession.setItem('selected_module_key', moduleKey);
+  tabSession.setItem('selected_location_id', locationId.toString());
+  tabSession.setItem('selected_location_name', locationName);
   this._selectedModuleKey.set(moduleKey || null);
   this._selectedLocationId.set(locationId || null);
   this._selectedLocationName.set(locationName);
 
   const rememberKey = this.branchMemoryKey();
-  if (rememberKey && locationId) localStorage.setItem(rememberKey, locationId.toString());
+  if (rememberKey && locationId) tabSession.setItem(rememberKey, locationId.toString());
 
   if (scopeId != null) {
-    localStorage.setItem('selected_project_id', scopeId.toString());
+    tabSession.setItem('selected_project_id', scopeId.toString());
     this._selectedProjectId.set(scopeId || null);
   }
 }
@@ -431,17 +436,17 @@ private branchMemoryKey(): string | null {
 /** The branch this user last worked in for the selected company (null = none yet). */
 rememberedBranchId(): number | null {
   const key = this.branchMemoryKey();
-  const stored = key ? Number(localStorage.getItem(key)) : 0;
+  const stored = key ? Number(tabSession.getItem(key)) : 0;
   return stored > 0 ? stored : null;
 }
 
 /** Forget the module and branch (another company was selected). */
 private clearScope(): void {
-  localStorage.removeItem('selected_module_key');
-  localStorage.removeItem('selected_project_key');
-  localStorage.removeItem('selected_project_id');
-  localStorage.removeItem('selected_location_id');
-  localStorage.removeItem('selected_location_name');
+  tabSession.removeItem('selected_module_key');
+  tabSession.removeItem('selected_project_key');
+  tabSession.removeItem('selected_project_id');
+  tabSession.removeItem('selected_location_id');
+  tabSession.removeItem('selected_location_name');
   this._selectedModuleKey.set(null);
   this._selectedProjectId.set(null);
   this._selectedLocationId.set(null);
@@ -449,17 +454,17 @@ private clearScope(): void {
 }
 
 private loadFromStorage(): void {
-  const storedUser = localStorage.getItem('encryptz_user');
-  const storedMenus = localStorage.getItem('encryptz_menus');
-  const storedCompanyId = localStorage.getItem('selected_company_id');
-  const storedCompanyRole = localStorage.getItem('selected_company_role');
-  const storedProjectId = localStorage.getItem('selected_project_id');
-  const storedLocationId = localStorage.getItem('selected_location_id');
-  const tempLogin = localStorage.getItem('temp_login');
+  const storedUser = tabSession.getItem('encryptz_user');
+  const storedMenus = tabSession.getItem('encryptz_menus');
+  const storedCompanyId = tabSession.getItem('selected_company_id');
+  const storedCompanyRole = tabSession.getItem('selected_company_role');
+  const storedProjectId = tabSession.getItem('selected_project_id');
+  const storedLocationId = tabSession.getItem('selected_location_id');
+  const tempLogin = tabSession.getItem('temp_login');
 
   if (storedProjectId) this._selectedProjectId.set(+storedProjectId);
   if (storedLocationId) this._selectedLocationId.set(+storedLocationId);
-  this._selectedLocationName.set(localStorage.getItem('selected_location_name') || '');
+  this._selectedLocationName.set(tabSession.getItem('selected_location_name') || '');
 
   if (storedUser) {
     try {
@@ -491,13 +496,13 @@ private loadFromStorage(): void {
   }
 
   // A session scoped by the previous UI has no module stored: it was the Service module.
-  const storedModuleKey = localStorage.getItem('selected_module_key');
+  const storedModuleKey = tabSession.getItem('selected_module_key');
   this._selectedModuleKey.set(storedModuleKey || legacyModuleKey(this._currentUser()));
 }
 private setSessionWithCompanies(data: ExtendedLoginResponse): void {
 
-  localStorage.setItem('encryptz_token', data.token);
-  localStorage.setItem('encryptz_user', JSON.stringify(data));
+  tabSession.setItem('encryptz_token', data.token);
+  tabSession.setItem('encryptz_user', JSON.stringify(data));
   this._currentUser.set(data);
   this._menus.set(data.menus);
   this._companies.set(data.companies || []);
@@ -509,7 +514,7 @@ private setSessionWithCompanies(data: ExtendedLoginResponse): void {
   //     .pipe(tap(res => {
   //       if (res.success && res.data) {
   //         // Update token with company context
-  //         localStorage.setItem('encryptz_token', res.data.token);
+  //         tabSession.setItem('encryptz_token', res.data.token);
   //         this._selectedCompanyId.set(companyId);
   //         this._selectedCompanyRole.set(res.data.role);
 
@@ -517,7 +522,7 @@ private setSessionWithCompanies(data: ExtendedLoginResponse): void {
   //         const currentUser = this._currentUser();
   //         if (currentUser) {
   //           const updatedUser = { ...currentUser, role: res.data.role };
-  //           localStorage.setItem('encryptz_user', JSON.stringify(updatedUser));
+  //           tabSession.setItem('encryptz_user', JSON.stringify(updatedUser));
   //           this._currentUser.set(updatedUser);
   //         }
   //       }
@@ -554,7 +559,7 @@ private setSessionWithCompanies(data: ExtendedLoginResponse): void {
       tap(companies => {
         this._companies.set(companies);
         // Check if user has companies in storage
-        const storedCompanyId = localStorage.getItem('selected_company_id');
+        const storedCompanyId = tabSession.getItem('selected_company_id');
         if (storedCompanyId && companies.length > 0) {
           const found = companies.find(c => c.companyId.toString() === storedCompanyId);
           if (found) {
@@ -589,14 +594,14 @@ private setSessionWithCompanies(data: ExtendedLoginResponse): void {
 
   // NEW: Get current selected company ID from storage
   getStoredCompanyId(): number | null {
-    const id = localStorage.getItem('selected_company_id');
+    const id = tabSession.getItem('selected_company_id');
     return id ? parseInt(id) : null;
   }
 
   // NEW: Clear selected company (on logout)
   clearSelectedCompany(): void {
-    localStorage.removeItem('selected_company_id');
-    localStorage.removeItem('selected_company_role');
+    tabSession.removeItem('selected_company_id');
+    tabSession.removeItem('selected_company_role');
     this._selectedCompanyId.set(null);
     this._selectedCompanyRole.set(null);
     this._companies.set([]);
@@ -608,8 +613,8 @@ private setSessionWithCompanies(data: ExtendedLoginResponse): void {
     return !!this._selectedCompanyId();
   }
 //  private setSessionWithCompanies(data: ExtendedLoginResponse): void {
-//     localStorage.setItem('encryptz_token', data.token);
-//     localStorage.setItem('encryptz_user', JSON.stringify(data));
+//     tabSession.setItem('encryptz_token', data.token);
+//     tabSession.setItem('encryptz_user', JSON.stringify(data));
 //     this._currentUser.set(data);
 //     this._menus.set(data.menus);
 //     this._companies.set(data.companies || []);
@@ -619,8 +624,8 @@ private setSessionWithCompanies(data: ExtendedLoginResponse): void {
 //       const singleCompany = data.companies[0];
 //       this._selectedCompanyId.set(singleCompany.companyId);
 //       this._selectedCompanyRole.set(singleCompany.roleInCompany);
-//       localStorage.setItem('selected_company_id', singleCompany.companyId.toString());
-//       localStorage.setItem('selected_company_role', singleCompany.roleInCompany);
+//       tabSession.setItem('selected_company_id', singleCompany.companyId.toString());
+//       tabSession.setItem('selected_company_role', singleCompany.roleInCompany);
 //     }
 //   }
 

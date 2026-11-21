@@ -208,7 +208,7 @@
             <td>
               <span class="status-badge"
                 [style.background]="$any(c).statusColor?$any(c).statusColor+'20':''"
-                [style.color]="$any(c).statusColor||''">{{ $any(c).statusName }}</span>
+                [style.color]="$any(c).statusColor||''">{{ statusText($any(c).statusName) }}</span>
             </td>
             <td>
               @if ($any(c).isSLABreached) {
@@ -351,7 +351,7 @@
               </span>
               <span class="rc-status"
                 [style.background]="c.statusColor ? c.statusColor + '1a' : null"
-                [style.color]="c.statusColor || null">{{ c.statusName }}</span>
+                [style.color]="c.statusColor || null">{{ statusText(c.statusName) }}</span>
               <span class="rc-date">{{ c.createdAt | date:'dd MMM' }}</span>
             </button>
           </li>
@@ -389,7 +389,7 @@
 
 <!-- ═══ ASSIGN PANEL ══════════════════════════════════════ -->
 @if (showPanel()) {
-<div class="panel-overlay" (click)="closePanel()"></div>
+<div class="panel-overlay"></div>
 <div class="assign-panel">
 
   <div class="ap-header">
@@ -761,7 +761,7 @@
 
 <!-- ═══ SPARE DECISION DIALOG (confirm / cost / reject reason) ═══ -->
 @if (spareDecision(); as d) {
-<div class="sd-overlay" (click)="closeSpareDecision()">
+<div class="sd-overlay">
   <div class="sd-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
     <h3>{{ spareDecisionVerb(d.status) }} spare request{{ d.ids.length > 1 ? 's' : '' }}</h3>
 
@@ -815,7 +815,7 @@
 
 <!-- ═══ SPARE APPROVAL PANEL ═════════════════════════════ -->
 @if (showSparePanel()) {
-<div class="panel-overlay" (click)="closeSparePanel()"></div>
+<div class="panel-overlay"></div>
 <div class="spare-panel">
 
   <div class="sp-header">
@@ -989,7 +989,7 @@
 
 <!-- ═══ UNASSIGN CONFIRM DIALOG ═══════════════════════════ -->
 @if (showUnAssignConfirm()) {
-<div class="ua-overlay" (click)="closeUnAssign()"></div>
+<div class="ua-overlay"></div>
 <div class="ua-dialog">
 
   <div class="ua-header">

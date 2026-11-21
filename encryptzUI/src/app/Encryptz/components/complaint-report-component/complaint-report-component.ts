@@ -1,4 +1,5 @@
 // src/app/modules/reports/components/complaint-report/complaint-report.component.ts
+import { statusText } from '../shared/sales-input-rules';
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -18,6 +19,7 @@ import {
   styleUrls: ['./complaint-report-component.scss'],
 })
 export class ComplaintReportComponent {
+  readonly statusText = statusText;
   private api = inject(ApiService);
   /** Status filter options: the statuses of this tenant database. */
   statuses = signal<ComplaintStatus[]>([]);

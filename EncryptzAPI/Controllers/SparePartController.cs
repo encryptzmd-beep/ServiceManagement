@@ -1,12 +1,10 @@
 using EncryptzBL.Common.Tenant;
 using EncryptzAPI.Middleware;
-﻿using EncryptzAPI.Middleware;
 using EncryptzBL.Common;
 using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Spareparts.Modules;
 using EncryptzBL.Infrastructure.Technician.modules;
-using Microsoft.AspNet.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -338,7 +336,7 @@ using System.Security.Claims;
 
 public class BulkDeleteRequest
 {
-    public string Ids { get; set; }
+    public string Ids { get; set; } = null!;
 }
 
 

@@ -1,3 +1,4 @@
+import { statusText } from '../shared/sales-input-rules';
 import { AppRightDirective } from '../shared/app-right/app-right';
 // src/app/modules/backoffice/components/complaint-detail/complaint-detail.component.ts
 import { Component, inject, OnInit, signal } from '@angular/core';
@@ -16,6 +17,7 @@ import { Complaint, ComplaintStatus } from '../../Models/ApiModels';
   styleUrls: ['./complaint-detail-component.scss'],
 })
 export class ComplaintDetailComponent implements OnInit {
+  readonly statusText = statusText;
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
   complaint = signal<Complaint | null>(null);

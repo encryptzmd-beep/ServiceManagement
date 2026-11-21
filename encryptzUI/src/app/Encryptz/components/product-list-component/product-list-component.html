@@ -259,16 +259,7 @@
   (close)="closeViewModal()">
 </app-product-view>
 
-<div class="toast-stack" *ngIf="toastVisible()">
-  <div class="app-toast" [class.toast-error]="toastType() === 'error'" [class.toast-success]="toastType() === 'success'">
-    <div class="toast-icon">{{ toastType() === 'success' ? '✓' : '!' }}</div>
-    <div class="toast-copy">
-      <div class="toast-title">{{ toastType() === 'success' ? 'Success' : 'Something went wrong' }}</div>
-      <div class="toast-message">{{ toastMessage() }}</div>
-    </div>
-    <button class="toast-close" (click)="hideToast()" aria-label="Close notification">×</button>
-  </div>
-</div>
+<app-toast *ngIf="toastVisible()" [text]="toastMessage()" [kind]="toastType()" (closed)="hideToast()" />
 
 <div class="confirm-overlay" *ngIf="confirmVisible()">
   <div class="confirm-dialog">

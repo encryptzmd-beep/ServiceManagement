@@ -42,15 +42,5 @@
 }
 
 @if (notices.incoming(); as n) {
-  <div class="nb-toast" role="status" aria-live="polite">
-    <span class="nb-icon"><span class="material-icons">{{ icon(n) }}</span></span>
-    <button class="nb-toast-text" type="button" (click)="openIncoming()">
-      <span class="nb-meta">{{ appLabel(n.app) }}</span>
-      <span class="nb-title">{{ n.title }}</span>
-      @if (n.body) { <span class="nb-body">{{ n.body }}</span> }
-    </button>
-    <button class="nb-toast-close" type="button" (click)="dismiss()" aria-label="Close">
-      <span class="material-icons">close</span>
-    </button>
-  </div>
+  <app-toast kind="info" [title]="n.title" [text]="n.body" [meta]="appLabel(n.app)" [icon]="icon(n)" [clickable]="true" (opened)="openIncoming()" (closed)="dismiss()" />
 }

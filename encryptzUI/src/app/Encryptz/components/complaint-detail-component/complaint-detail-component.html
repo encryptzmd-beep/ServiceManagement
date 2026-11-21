@@ -5,8 +5,7 @@
       <h1 class="page-title">{{ c.complaintNumber }}</h1>
       <p class="page-sub">{{ c.subject }}</p>
     </div>
-    <span class="status-badge" [style.background]="c.statusColor + '20'" [style.color]="c.statusColor">{{ c.statusName
-      }}</span>
+    <span class="status-badge" [style.background]="c.statusColor + '20'" [style.color]="c.statusColor">{{ statusText(c.statusName) }}</span>
   </div>
   <div class="grid-2">
     <div class="card">
@@ -43,7 +42,7 @@
       <h3>Update Status</h3>
       <div class="update-form">
         <select [(ngModel)]="newStatusId" class="sel">
-          @for (s of statuses(); track s.statusId) { <option [ngValue]="s.statusId">{{ s.statusName }}</option> }
+          @for (s of statuses(); track s.statusId) { <option [ngValue]="s.statusId">{{ statusText(s.statusName) }}</option> }
         </select>
         <textarea [(ngModel)]="remarks" placeholder="Add remarks..." class="textarea" rows="3"></textarea>
         <button appRight="edit" appRightMenu="/complaints/list" appRightTech (click)="updateStatus(c.complaintId)" class="btn-primary">Update</button>
@@ -64,7 +63,7 @@
       <div class="tl-item">
         <div class="tl-dot" [style.background]="t.statusColor"></div>
         <div class="tl-content">
-          <div class="tl-header"><strong>{{ t.statusName }}</strong><span class="tl-time">{{ t.actionAt | date:'dd MMM
+          <div class="tl-header"><strong>{{ statusText(t.statusName) }}</strong><span class="tl-time">{{ t.actionAt | date:'dd MMM
               HH:mm' }}</span></div>
           @if (t.remarks) { <p class="tl-remarks">{{ t.remarks }}</p> }
           @if (t.actionByName) { <small class="muted">by {{ t.actionByName }}</small> }

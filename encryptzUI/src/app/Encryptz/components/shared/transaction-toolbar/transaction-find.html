@@ -1,4 +1,4 @@
-<div class="tf-overlay" (click)="close.emit()">
+<div class="tf-overlay">
   <div class="tf-dialog" role="dialog" aria-modal="true" [attr.aria-label]="title()" (click)="$event.stopPropagation()">
     <div class="tf-head">
       <h2>{{ title() }}</h2>
@@ -11,9 +11,9 @@
       <label class="tf-field grow"><span>Search</span>
         <input name="term" type="search" autocomplete="off" [placeholder]="placeholder()" [value]="term()" (input)="term.set($any($event.target).value)" /></label>
       <label class="tf-field"><span>From</span>
-        <input name="from" type="date" [value]="from()" (input)="from.set($any($event.target).value)" /></label>
+        <input data-range="from" name="from" type="date" [value]="from()" (input)="from.set($any($event.target).value)" /></label>
       <label class="tf-field"><span>To</span>
-        <input name="to" type="date" [value]="to()" (input)="to.set($any($event.target).value)" /></label>
+        <input data-range="to" name="to" type="date" [value]="to()" (input)="to.set($any($event.target).value)" /></label>
       <button type="submit" class="tf-search"><span class="material-icons" aria-hidden="true">search</span>Search</button>
     </form>
 

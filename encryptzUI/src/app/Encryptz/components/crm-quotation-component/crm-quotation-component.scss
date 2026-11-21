@@ -170,3 +170,14 @@
 /* the product suggestions open over the lines: the card must not clip them */
 .crm-table-card { overflow: visible; }
 .q-search { z-index: 5; }
+
+.q-results .q-list-none { padding: 8px 10px; font-size: 13px; color: #64748b; }
+.q-results .q-create {
+  position: sticky; bottom: -4px; margin-top: 2px; border-top: 1px solid #e2e8f0; background: #fff;
+  button {
+    display: flex; align-items: center; gap: 6px; width: 100%; padding: 8px 10px; border: none; border-radius: 0 0 7px 7px;
+    background: #fff; color: #1B4A7A; font: inherit; font-size: 13px; font-weight: 600; text-align: left; cursor: pointer;
+    &:hover { background: #e8eef5; }
+  }
+  .material-icons { font-size: 17px; }
+}

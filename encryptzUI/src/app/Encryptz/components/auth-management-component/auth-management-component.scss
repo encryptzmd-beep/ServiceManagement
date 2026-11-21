@@ -1608,37 +1608,8 @@ tr.editing {
   opacity: .5;
   cursor: not-allowed;
 }
-.toast-container {
-  position: fixed;
-  top: 24px;
-  right: 24px;
-  z-index: 99999; /* higher than modal */
 
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 
-  pointer-events: none;
-}
-
-.toast {
-  min-width: 320px;
-  max-width: 420px;
-  padding: 14px 18px;
-  border-radius: 12px;
-  background: #16a34a;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.22);
-  animation: toastSlide .25s ease;
-  pointer-events: auto;
-}
-
-.toast.error {
-  background: #dc2626;
-}
 .confirm-modal {
   width: 380px;
   background: #fff;

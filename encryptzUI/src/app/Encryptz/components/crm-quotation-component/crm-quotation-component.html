@@ -107,7 +107,7 @@
             } @else {
               <div class="q-grid">
                 <label class="crm-field span-2"><span>Name <em>*</em></span>
-                  <input maxlength="200" [ngModel]="newCust().contactName" (ngModelChange)="setCust('contactName', $event)" placeholder="Full name or company" /></label>
+                  <input appUppercase maxlength="200" [ngModel]="newCust().contactName" (ngModelChange)="setCust('contactName', $event)" placeholder="Full name or company" /></label>
                 <label class="crm-field"><span>Mobile <em>*</em></span>
                   <input inputmode="tel" maxlength="20" [ngModel]="newCust().mobile" (ngModelChange)="setCust('mobile', $event)" placeholder="10-digit number" /></label>
                 <label class="crm-field"><span>E-mail</span>
@@ -159,18 +159,27 @@
         @if (editable()) {
           <div class="q-search">
             <label class="crm-field grow"><span>Add a product</span>
-              <input type="search" placeholder="Search by name, code or model" [value]="term()" (input)="search(text($event))" /></label>
+              <input type="search" placeholder="Search by name, code or model" [value]="term()" (input)="search(text($event))"
+                (focus)="openProductSearch()" (blur)="searchOpen.set(false)" /></label>
             <button type="button" class="crm-btn" (click)="addLine()"><span class="material-icons" aria-hidden="true">add</span>Blank line</button>
-            @if (products().length) {
+            @if (searchOpen() ? (products().length || canAddProduct()) : (term().trim() && products().length)) {
               <ul class="q-results">
                 @for (p of products(); track p.productMasterId) {
-                  <li><button type="button" (click)="pick(p)">
+                  <li><button type="button" (mousedown)="$event.preventDefault()" (click)="pick(p)">
                     <strong>{{ p.productName }}</strong> <span class="crm-muted">{{ p.productCode }}@if (p.brand) { · {{ p.brand }} }@if (p.model) { · {{ p.model }} }</span>
                     <span class="q-mrp">{{ amount(p.mrp) }}</span>
                   </button></li>
                 }
+                @if (searchOpen() && term().trim() && !searching() && !products().length) {
+                  <li class="q-list-none">No product matches</li>
+                }
+                @if (canAddProduct()) {
+                  <li class="q-create"><button type="button" (mousedown)="$event.preventDefault()" (click)="startNewProduct()">
+                    <span class="material-icons" aria-hidden="true">add</span>Add new product
+                  </button></li>
+                }
               </ul>
-            } @else if (term().trim().length >= 2 && !searching()) {
+            } @else if (term().trim() && !searching()) {
               <p class="crm-muted q-none">No product matches. Use a blank line to type it.</p>
             }
           </div>
@@ -247,4 +256,8 @@
     <app-crm-convert-dialog [leadId]="q.leadId" [quotationId]="q.quotationId" [quotations]="[q]" [mobile]="q.mobile"
       (converted)="converted($event)" (cancelled)="convertOpen.set(false)" (forbidden)="convertForbidden()" />
   }
+}
+
+@if (newProduct()) {
+  <app-product-form source="crm" [isEditMode]="false" [initialName]="newProductName()" (close)="closeNewProduct($event)" />
 }

@@ -1,3 +1,6 @@
+import { ProductMasterDTO, ProductMasterRequest } from '../Models/ApiModels';
+import { LeadDataAccessDto, LeadDataRequestRowDto, LeadExportRowDto, LeadImportResultDto, LeadImportRowDto } from '../Models/CrmModels';
+import { ProductCategory } from '../components/product-categories-component/product-category-options';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -111,6 +114,43 @@ export class CrmService {
 
   searchProducts(term?: string, category?: string, top?: number): Observable<ApiResponse<CrmProductDto[]>> {
     return this.http.get<ApiResponse<CrmProductDto[]>>(`${this.base}/products`, { params: this.params({ term, category, top }) });
+  }
+
+  leadDataAccess(): Observable<ApiResponse<LeadDataAccessDto>> {
+    return this.http.get<ApiResponse<LeadDataAccessDto>>(`${this.base}/leads/data-access`);
+  }
+
+  requestLeadData(dto: { requestType: 'Import' | 'Export'; note: string }): Observable<ApiResponse<number>> {
+    return this.http.post<ApiResponse<number>>(`${this.base}/leads/data-requests`, dto);
+  }
+
+  leadDataRequests(): Observable<ApiResponse<LeadDataRequestRowDto[]>> {
+    return this.http.get<ApiResponse<LeadDataRequestRowDto[]>>(`${this.base}/leads/data-requests`);
+  }
+
+  decideLeadData(id: number, dto: { approve: boolean; note: string }): Observable<ApiResponse<number>> {
+    return this.http.post<ApiResponse<number>>(`${this.base}/leads/data-requests/${id}/decide`, dto);
+  }
+
+  exportLeads(): Observable<ApiResponse<LeadExportRowDto[]>> {
+    return this.http.get<ApiResponse<LeadExportRowDto[]>>(`${this.base}/leads/export`);
+  }
+
+  importLeads(rows: LeadImportRowDto[]): Observable<ApiResponse<LeadImportResultDto>> {
+    return this.http.post<ApiResponse<LeadImportResultDto>>(`${this.base}/leads/import`, rows);
+  }
+
+  /** A new product from a lead or a quotation. */
+  createProduct(product: ProductMasterRequest): Observable<ApiResponse<ProductMasterDTO>> {
+    return this.http.post<ApiResponse<ProductMasterDTO>>(`${this.base}/products`, product);
+  }
+
+  productCategoryMaster(): Observable<ApiResponse<ProductCategory[]>> {
+    return this.http.get<ApiResponse<ProductCategory[]>>(`${this.base}/product-category-master`);
+  }
+
+  addProductCategory(dto: { categoryId: number; parentId: number | null; name: string; isActive: boolean }): Observable<ApiResponse<number>> {
+    return this.http.post<ApiResponse<number>>(`${this.base}/product-category-master`, dto);
   }
 
   getMasters(kind: CrmMasterKind | string): Observable<ApiResponse<CrmMasterDto[]>> {

@@ -1,3 +1,5 @@
+import { UppercaseInputDirective } from '../shared/uppercase-input';
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { AppRightDirective } from '../shared/app-right/app-right';
 // complaint-detail-popup.component.ts  (v5)
 // Changes vs v4:
@@ -22,13 +24,14 @@ import { LeafletLoaderService } from '../../Services/leaflet-loader-service';
 import { statusIdByName } from '../../Models/ApiModels';
 import { environment } from '../../../../environments/environment';
 import { DialogService } from '../../Services/dialog-service';
+import { statusText } from '../shared/sales-input-rules';
 
 declare var L: any;
 
 @Component({
   selector: 'app-complaint-detail-popup',
   standalone: true,
-  imports: [AppRightDirective, CommonModule, FormsModule],
+  imports: [UppercaseInputDirective, AppToastComponent, AppRightDirective, CommonModule, FormsModule],
   templateUrl: './complaint-detail-popup-component.html',
   styleUrls: ['./complaint-detail-popup-component.scss']
 })
@@ -69,6 +72,12 @@ activeTab = signal<'overview'|'customer'|'product'|'location'|'assignments'|'spa
   }
   jobTitle(): string { return this.isInstallation() ? 'Installation' : 'Complaint'; }
   jobNoun(): string { return this.isInstallation() ? 'installation job' : 'complaint'; }
+
+  /** Work can still be done: not completed, closed or cancelled (by name, the ids differ between databases). */
+  jobOpen(): boolean {
+    return !['workcompleted', 'closed', 'cancelled'].includes(String(this.complaintData()?.StatusName ?? '').trim().toLowerCase());
+  }
+  statusText = statusText;
 
   customerData  = signal<any>(null);
   productData   = signal<any>(null);
@@ -662,6 +671,10 @@ nextImage()   { if (this.imagePage()   < this.imageTotalPages())   this.imagePag
   }
 
   async markComplaintResolved() {
+    if (this.assignments().some(a => !['completed', 'removed'].includes(String(a.Status ?? '').toLowerCase()))) {
+      this.showMessage('Complete or remove the open technician assignment first', 'error');
+      return;
+    }
     if (!(await this.dialog.confirm(this.isInstallation() ? 'Mark this installation job as completed?' : 'Mark this complaint as completed/resolved?'))) return;
     this.saving.set(true);
     // the id of "WorkCompleted" is looked up: it used to be sent as 5, which is another

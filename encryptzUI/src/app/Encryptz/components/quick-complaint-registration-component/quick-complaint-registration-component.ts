@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { Component, ElementRef, EventEmitter, Input, Output, ViewChild, signal, AfterViewInit, OnInit, NgZone, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -10,7 +11,7 @@ declare var L: any;
 @Component({
   selector: 'app-quick-complaint-registration',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [AppToastComponent, CommonModule, FormsModule],
   template: `
     <!-- Quick Complaint Button -->
     <button class="quick-complaint-btn" (click)="openModal()" [class.floating]="position === 'floating'">
@@ -20,7 +21,7 @@ declare var L: any;
 
     <!-- Modal Overlay -->
     @if (isOpen()) {
-      <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-overlay">
         <div class="modal-container" (click)="$event.stopPropagation()">
 
           <div class="modal-header">
@@ -285,12 +286,7 @@ declare var L: any;
     }
 
     <!-- Success Toast -->
-    @if (showSuccess()) {
-      <div class="success-toast">
-        <span class="material-icons">check_circle</span>
-        <span>{{ successMessage() }}</span>
-      </div>
-    }
+    @if (showSuccess()) { <app-toast [text]="successMessage()" kind="success" /> }
   `,
   styles: [`
     /* ===== BUTTON ===== */
@@ -858,27 +854,6 @@ declare var L: any;
     }
 
     /* ===== SUCCESS TOAST ===== */
-    .success-toast {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #10b981;
-      color: white;
-      padding: 12px 20px;
-      border-radius: 50px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      z-index: 3000;
-      animation: slideUp 0.3s ease;
-      box-shadow: 0 4px 16px rgba(16,185,129,0.4);
-      white-space: nowrap;
-
-      .material-icons { font-size: 20px; }
-    }
 
     /* ===== ANIMATIONS ===== */
     @keyframes fadeIn {

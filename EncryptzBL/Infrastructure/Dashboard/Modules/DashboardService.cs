@@ -34,7 +34,7 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
 
             var response = new DashboardResponse
             {
-                Stats = ds.Tables[0].ToList<DashboardStats>().FirstOrDefault(),
+                Stats = ds.Tables[0].ToList<DashboardStats>().FirstOrDefault()!,
                 RecentComplaints = ds.Tables.Count > 1
                     ? ds.Tables[1].ToList<RecentComplaint>()
                     : new List<RecentComplaint>(),
@@ -174,6 +174,43 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
         {
             try
             {
+                // Start / Complete of an assignment: the one procedure that moves the assignment
+                // and the job together and finds the statuses by name
+                if (request.OperationType == "UPDATE_ASSIGNMENT" && request.AssignmentId.HasValue
+                    && !string.IsNullOrWhiteSpace(request.AssignmentStatus))
+                {
+                    var status = request.AssignmentStatus.Trim();
+                    if (status != "InProgress" && status != "Completed")
+                        return ApiResponse<dynamic>.Fail("Invalid assignment status");
+
+                    var changed = await GetDataTableAsync("sp_Assignment_UpdateStatus", new[]
+                    {
+                        SqlParameterHelper.Input("@AssignmentId", request.AssignmentId.Value),
+                        SqlParameterHelper.Input("@Status", status),
+                        SqlParameterHelper.Input("@UpdatedBy", request.UserId ?? 0),
+                        SqlParameterHelper.Input("@Remarks", string.IsNullOrWhiteSpace(request.CompletionRemarks) ? null : request.CompletionRemarks.Trim()),
+                        SqlParameterHelper.Input("@WorkDone", string.IsNullOrWhiteSpace(request.WorkDone) ? null : request.WorkDone.Trim()),
+                        SqlParameterHelper.Input("@PartsUsed", string.IsNullOrWhiteSpace(request.PartsUsed) ? null : request.PartsUsed.Trim())
+                    });
+                    if (changed == null || changed.Rows.Count == 0) return ApiResponse<dynamic>.Fail("Operation failed");
+                    var message = changed.Rows[0]["Message"]?.ToString();
+                    if (Convert.ToInt32(changed.Rows[0]["Result"]) != 1) return ApiResponse<dynamic>.Fail(message);
+                    return ApiResponse<dynamic>.Ok(new OperationResultModel { Success = true, Message = message!, AssignmentId = request.AssignmentId }, message);
+                }
+
+                // the job window edits a spare request: its despatch is made on the Despatch screen only
+                if (request.OperationType == "UPDATE_SPARE" && request.SpareRequestId.HasValue && !string.IsNullOrWhiteSpace(request.SpareStatus))
+                {
+                    var spare = await GetDataTableByQueryAsync(
+                        "SELECT Status FROM dbo.SparePartRequests WHERE RequestId = @RequestId",
+                        new[] { SqlParameterHelper.Input("@RequestId", request.SpareRequestId.Value) });
+                    if (spare.Rows.Count > 0)
+                    {
+                        var flow = EncryptzBL.Common.Sales.ServiceDespatchRules.SpareStatusProblem(spare.Rows[0]["Status"]?.ToString(), request.SpareStatus);
+                        if (flow != null) return ApiResponse<dynamic>.Fail(flow);
+                    }
+                }
+
                 var parameters = new List<SqlParameter>
                 {
                     SqlParameterHelper.Input("@OperationType", request.OperationType)
@@ -331,7 +368,7 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
                         var result = new OperationResultModel
                         {
                             Success = cols.Contains("Success") && Convert.ToBoolean(row["Success"]),
-                            Message = cols.Contains("Message") ? row["Message"]?.ToString() : null,
+                            Message = (cols.Contains("Message") ? row["Message"]?.ToString() : null)!,
                             AssignmentId = (cols.Contains("AssignmentId") && row["AssignmentId"] != DBNull.Value) ? Convert.ToInt32(row["AssignmentId"]) : (int?)null,
                             CommentId = (cols.Contains("CommentId") && row["CommentId"] != DBNull.Value) ? Convert.ToInt32(row["CommentId"]) : (int?)null,
                             RequestId = (cols.Contains("RequestId") && row["RequestId"] != DBNull.Value) ? Convert.ToInt32(row["RequestId"]) : (int?)null
@@ -395,27 +432,27 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
             return new ComplaintResponseModel
             {
                 ComplaintId = Convert.ToInt32(row["ComplaintId"]),
-                ComplaintNumber = row["ComplaintNumber"]?.ToString(),
-                Subject = row["Subject"]?.ToString(),
-                Description = row["Description"]?.ToString(),
-                NatureOfJob = row.Table.Columns.Contains("NatureOfJob") && row["NatureOfJob"] != DBNull.Value ? row["NatureOfJob"]?.ToString() : null,
+                ComplaintNumber = row["ComplaintNumber"]?.ToString()!,
+                Subject = row["Subject"]?.ToString()!,
+                Description = row["Description"]?.ToString()!,
+                NatureOfJob = (row.Table.Columns.Contains("NatureOfJob") && row["NatureOfJob"] != DBNull.Value ? row["NatureOfJob"]?.ToString() : null)!,
                 CreatedAt = Convert.ToDateTime(row["CreatedAt"]),
                 UpdatedAt = row["UpdatedAt"] != DBNull.Value ? Convert.ToDateTime(row["UpdatedAt"]) : (DateTime?)null,
-                Priority = row["Priority"]?.ToString(),
+                Priority = row["Priority"]?.ToString()!,
                 PriorityId = Convert.ToInt32(row["PriorityId"]),
                 StatusId = Convert.ToInt32(row["StatusId"]),
-                StatusName = row["StatusName"]?.ToString(),
-                StatusColor = row["StatusColor"]?.ToString(),
+                StatusName = row["StatusName"]?.ToString()!,
+                StatusColor = row["StatusColor"]?.ToString()!,
                 IsSLABreached = Convert.ToBoolean(row["IsSLABreached"]),
                 SLADeadline = row["SLADeadline"] != DBNull.Value ? Convert.ToDateTime(row["SLADeadline"]) : (DateTime?)null,
-                ContactNumber = row["ContactNumber"]?.ToString(),
+                ContactNumber = row["ContactNumber"]?.ToString()!,
                 PreferredDate = row["PreferredDate"] != DBNull.Value ? Convert.ToDateTime(row["PreferredDate"]) : (DateTime?)null,
-                PreferredTimeSlot = row["PreferredTimeSlot"]?.ToString(),
-                Category = row["Category"]?.ToString(),
-                BrandName = row["BrandName"]?.ToString(),
-                ModelNumber = row["ModelNumber"]?.ToString(),
-                LocationName = row["LocationName"]?.ToString(),
-                LocationAddress = row["LocationAddress"]?.ToString(),
+                PreferredTimeSlot = row["PreferredTimeSlot"]?.ToString()!,
+                Category = row["Category"]?.ToString()!,
+                BrandName = row["BrandName"]?.ToString()!,
+                ModelNumber = row["ModelNumber"]?.ToString()!,
+                LocationName = row["LocationName"]?.ToString()!,
+                LocationAddress = row["LocationAddress"]?.ToString()!,
                 Latitude = row["Latitude"] != DBNull.Value ? Convert.ToDecimal(row["Latitude"]) : (decimal?)null,
                 Longitude = row["Longitude"] != DBNull.Value ? Convert.ToDecimal(row["Longitude"]) : (decimal?)null,
                 ClosedAt = row["ClosedAt"] != DBNull.Value ? Convert.ToDateTime(row["ClosedAt"]) : (DateTime?)null
@@ -427,15 +464,15 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
             return new CustomerResponseModel
             {
                 CustomerId = Convert.ToInt32(row["CustomerId"]),
-                CustomerName = row["CustomerName"]?.ToString(),
-                Email = row["Email"]?.ToString(),
-                MobileNumber = row["MobileNumber"]?.ToString(),
-                AlternatePhone = row["AlternatePhone"]?.ToString(),
-                Address = row["Address"]?.ToString(),
-                City = row["City"]?.ToString(),
-                State = row["State"]?.ToString(),
-                PinCode = row["PinCode"]?.ToString(),
-                Landmark = row["Landmark"]?.ToString(),
+                CustomerName = row["CustomerName"]?.ToString()!,
+                Email = row["Email"]?.ToString()!,
+                MobileNumber = row["MobileNumber"]?.ToString()!,
+                AlternatePhone = row["AlternatePhone"]?.ToString()!,
+                Address = row["Address"]?.ToString()!,
+                City = row["City"]?.ToString()!,
+                State = row["State"]?.ToString()!,
+                PinCode = row["PinCode"]?.ToString()!,
+                Landmark = row["Landmark"]?.ToString()!,
                 Latitude = row["Latitude"] != DBNull.Value ? Convert.ToDecimal(row["Latitude"]) : (decimal?)null,
                 Longitude = row["Longitude"] != DBNull.Value ? Convert.ToDecimal(row["Longitude"]) : (decimal?)null,
                 CreatedAt = Convert.ToDateTime(row["CreatedAt"]),
@@ -448,14 +485,14 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
             return new ProductResponseModel
             {
                 ProductId = Convert.ToInt32(row["ProductId"]),
-                ProductName = row["ProductName"]?.ToString(),
-                SerialNumber = row["SerialNumber"]?.ToString(),
-                ModelNumber = row["ModelNumber"]?.ToString(),
-                Brand = row["Brand"]?.ToString(),
-                ProductCategory = row["ProductCategory"]?.ToString(),
+                ProductName = row["ProductName"]?.ToString()!,
+                SerialNumber = row["SerialNumber"]?.ToString()!,
+                ModelNumber = row["ModelNumber"]?.ToString()!,
+                Brand = row["Brand"]?.ToString()!,
+                ProductCategory = row["ProductCategory"]?.ToString()!,
                 PurchaseDate = row["PurchaseDate"] != DBNull.Value ? Convert.ToDateTime(row["PurchaseDate"]) : (DateTime?)null,
                 WarrantyExpiryDate = row["WarrantyExpiryDate"] != DBNull.Value ? Convert.ToDateTime(row["WarrantyExpiryDate"]) : (DateTime?)null,
-                WarrantyStatus = row["WarrantyStatus"]?.ToString(),
+                WarrantyStatus = row["WarrantyStatus"]?.ToString()!,
                 CreatedAt = Convert.ToDateTime(row["CreatedAt"]),
                 UpdatedAt = row["UpdatedAt"] != DBNull.Value ? Convert.ToDateTime(row["UpdatedAt"]) : (DateTime?)null
             };
@@ -467,24 +504,24 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
             {
                 AssignmentId = Convert.ToInt32(row["AssignmentId"]),
                 TechnicianId = Convert.ToInt32(row["TechnicianId"]),
-                TechnicianName = row["TechnicianName"]?.ToString(),
-                TechnicianPhone = row["TechnicianPhone"]?.ToString(),
-                Specialization = row["Specialization"]?.ToString(),
-                EmployeeCode = row["EmployeeCode"]?.ToString(),
-                Role = row["Role"]?.ToString(),
-                Status = row["Status"]?.ToString(),
+                TechnicianName = row["TechnicianName"]?.ToString()!,
+                TechnicianPhone = row["TechnicianPhone"]?.ToString()!,
+                Specialization = row["Specialization"]?.ToString()!,
+                EmployeeCode = row["EmployeeCode"]?.ToString()!,
+                Role = row["Role"]?.ToString()!,
+                Status = row["Status"]?.ToString()!,
                 AssignedAt = Convert.ToDateTime(row["AssignedAt"]),
                 CompletedAt = row["CompletedAt"] != DBNull.Value ? Convert.ToDateTime(row["CompletedAt"]) : (DateTime?)null,
                 ScheduledDate = row["ScheduledDate"] != DBNull.Value ? Convert.ToDateTime(row["ScheduledDate"]) : (DateTime?)null,
-                StartTime = row["StartTime"]?.ToString(),
-                EndTime = row["EndTime"]?.ToString(),
+                StartTime = row["StartTime"]?.ToString()!,
+                EndTime = row["EndTime"]?.ToString()!,
                 EstimatedDuration = row["EstimatedDuration"] != DBNull.Value ? Convert.ToInt32(row["EstimatedDuration"]) : (int?)null,
-                Notes = row["Notes"]?.ToString(),
-                Priority = row["Priority"]?.ToString(),
-                WorkDone = row["WorkDone"]?.ToString(),
-                PartsUsed = row["PartsUsed"]?.ToString(),
-                CompletionRemarks = row["CompletionRemarks"]?.ToString(),
-                AssignedByName = row["AssignedByName"]?.ToString()
+                Notes = row["Notes"]?.ToString()!,
+                Priority = row["Priority"]?.ToString()!,
+                WorkDone = row["WorkDone"]?.ToString()!,
+                PartsUsed = row["PartsUsed"]?.ToString()!,
+                CompletionRemarks = row["CompletionRemarks"]?.ToString()!,
+                AssignedByName = row["AssignedByName"]?.ToString()!
             };
         }
 
@@ -494,18 +531,18 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
             {
                 RequestId = Convert.ToInt32(row["RequestId"]),
                 SparePartId = row["SparePartId"] != DBNull.Value ? Convert.ToInt32(row["SparePartId"]) : (int?)null,
-                PartName = row["PartName"]?.ToString(),
-                PartNumber = row["PartNumber"]?.ToString(),
+                PartName = row["PartName"]?.ToString()!,
+                PartNumber = row["PartNumber"]?.ToString()!,
                 UnitPrice = row["UnitPrice"] != DBNull.Value ? Convert.ToDecimal(row["UnitPrice"]) : (decimal?)null,
                 Quantity = Convert.ToInt32(row["Quantity"]),
-                Status = row["Status"]?.ToString(),
-                UrgencyLevel = row["UrgencyLevel"]?.ToString(),
+                Status = row["Status"]?.ToString()!,
+                UrgencyLevel = row["UrgencyLevel"]?.ToString()!,
                 RequestedAt = Convert.ToDateTime(row["RequestedAt"]),
                 ApprovedAt = row["ApprovedAt"] != DBNull.Value ? Convert.ToDateTime(row["ApprovedAt"]) : (DateTime?)null,
-                Remarks = row["Remarks"]?.ToString(),
-                TechnicianName = row["TechnicianName"]?.ToString(),
+                Remarks = row["Remarks"]?.ToString()!,
+                TechnicianName = row["TechnicianName"]?.ToString()!,
                 TechnicianId = Convert.ToInt32(row["TechnicianId"]),
-                ApprovedByName = row["ApprovedByName"]?.ToString()
+                ApprovedByName = row["ApprovedByName"]?.ToString()!
             };
         }
 
@@ -514,9 +551,9 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
             return new CommentResponseModel
             {
                 CommentId = Convert.ToInt32(row["CommentId"]),
-                Comment = row["Comment"]?.ToString(),
-                PostedByRole = row["PostedByRole"]?.ToString(),
-                PostedBy = row["PostedBy"]?.ToString(),
+                Comment = row["Comment"]?.ToString()!,
+                PostedByRole = row["PostedByRole"]?.ToString()!,
+                PostedBy = row["PostedBy"]?.ToString()!,
                 PostedAt = Convert.ToDateTime(row["PostedAt"]),
                 IsInternal = Convert.ToBoolean(row["IsInternal"])
             };
@@ -527,8 +564,8 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
             return new SparePartDropdownModel
             {
                 SparePartId = Convert.ToInt32(row["SparePartId"]),
-                PartName = row["PartName"]?.ToString(),
-                PartNumber = row["PartNumber"]?.ToString(),
+                PartName = row["PartName"]?.ToString()!,
+                PartNumber = row["PartNumber"]?.ToString()!,
                 StockQuantity = Convert.ToInt32(row["StockQuantity"]),
                 UnitPrice = row["UnitPrice"] != DBNull.Value ? Convert.ToDecimal(row["UnitPrice"]) : (decimal?)null
             };
@@ -539,10 +576,10 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
             return new TechnicianDropdownModel
             {
                 TechnicianId = Convert.ToInt32(row["TechnicianId"]),
-                TechnicianName = row["TechnicianName"]?.ToString(),
-                Specialization = row["Specialization"]?.ToString(),
+                TechnicianName = row["TechnicianName"]?.ToString()!,
+                Specialization = row["Specialization"]?.ToString()!,
                 AvailabilityStatus = Convert.ToInt32(row["AvailabilityStatus"]),
-                EmployeeCode = row["EmployeeCode"]?.ToString()
+                EmployeeCode = row["EmployeeCode"]?.ToString()!
             };
         }
     }

@@ -12,9 +12,9 @@
     </div>
   </header>
 
-  <!-- the reports of Sales, also reachable before the sidebar script has been run -->
-  <nav class="crm-stabs sr-tabs" aria-label="Sales reports">
-    @for (r of reports; track r.key) {
+  <!-- the reports of this menu (Sales or Despatch), also reachable before the sidebar script has been run -->
+  <nav class="crm-stabs sr-tabs" [attr.aria-label]="isDespatchReport() ? 'Despatch reports' : 'Sales reports'">
+    @for (r of reports(); track r.key) {
       <a class="crm-stab" [class.on]="r.key === current().key" [attr.aria-current]="r.key === current().key ? 'page' : null" [href]="'/sales/reports/' + r.key" (click)="$event.preventDefault(); go(r.key)">{{ r.label }}</a>
     }
   </nav>
@@ -49,9 +49,9 @@
         @if (v.dated) {
           <div class="crm-range" role="group" aria-label="Dates">
             <span class="material-icons" aria-hidden="true">event</span>
-            <input type="date" aria-label="From" [value]="from()" (change)="from.set($any($event.target).value)" />
+            <input data-range="from" type="date" aria-label="From" [value]="from()" (change)="from.set($any($event.target).value)" />
             <span aria-hidden="true">–</span>
-            <input type="date" aria-label="To" [value]="to()" (change)="to.set($any($event.target).value)" />
+            <input data-range="to" type="date" aria-label="To" [value]="to()" (change)="to.set($any($event.target).value)" />
           </div>
         }
         <span class="crm-spacer"></span>

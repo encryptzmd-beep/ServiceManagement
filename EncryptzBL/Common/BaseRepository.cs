@@ -53,37 +53,37 @@ namespace EncryptzBL.Common
             return (extra != null && extra.Length > 0) ? head.Concat(extra).ToArray() : head;
         }
 
-        protected async Task<List<T>> GetListAsync<T>(string sp, SqlParameter[] parameters = null) where T : new()
+        protected async Task<List<T>> GetListAsync<T>(string sp, SqlParameter[]? parameters = null) where T : new()
         {
             var dt = await _db.ExecuteDataTableAsync(sp, parameters);
             return dt.ToList<T>();
         }
 
-        protected async Task<T> GetSingleAsync<T>(string sp, SqlParameter[] parameters = null) where T : new()
+        protected async Task<T> GetSingleAsync<T>(string sp, SqlParameter[]? parameters = null) where T : new()
         {
             var dt = await _db.ExecuteDataTableAsync(sp, parameters);
-            return dt.ToList<T>().FirstOrDefault();
+            return dt.ToList<T>().FirstOrDefault()!;
         }
 
-        protected async Task<int> ExecuteAsync(string sp, SqlParameter[] parameters = null)
+        protected async Task<int> ExecuteAsync(string sp, SqlParameter[]? parameters = null)
         {
             return await _db.ExecuteNonQueryAsync(sp, parameters);
         }
 
-        protected async Task<DataSet> GetDataSetAsync(string sp, SqlParameter[] parameters = null)
+        protected async Task<DataSet> GetDataSetAsync(string sp, SqlParameter[]? parameters = null)
         {
             return await _db.ExecuteDataSetAsync(sp, parameters);
         }
 
-        protected async Task<object> ExecuteScalarAsync(string sp, SqlParameter[] parameters = null)
+        protected async Task<object> ExecuteScalarAsync(string sp, SqlParameter[]? parameters = null)
         {
-            return await _db.ExecuteScalarAsync(sp, parameters);
+            return (await _db.ExecuteScalarAsync(sp, parameters))!;
         }
-        protected async Task<DataTable> GetDataTableAsync(string sp, SqlParameter[] parameters = null)
+        protected async Task<DataTable> GetDataTableAsync(string sp, SqlParameter[]? parameters = null)
         {
             return await _db.ExecuteDataTableAsync(sp, parameters);
         }
-        protected async Task<DataTable> GetDataTableByQueryAsync(string query, SqlParameter[] parameters = null)
+        protected async Task<DataTable> GetDataTableByQueryAsync(string query, SqlParameter[]? parameters = null)
         {
             return await _db.ExecuteQueryDataTableAsync(query, parameters);
         }

@@ -145,7 +145,7 @@
 
 
   <!-- Create/Edit Modal -->
-  <div class="modal-overlay" *ngIf="showCreateModal || showEditModal" (click)="closeModals()">
+  <div class="modal-overlay" *ngIf="showCreateModal || showEditModal">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>{{ showEditModal ? 'Edit' : 'Add' }} Technician</h2>
@@ -205,7 +205,7 @@
   </div>
 
   <!-- Detail Modal -->
-  <div class="modal-overlay" *ngIf="selectedTech()" (click)="selectedTech.set(null)">
+  <div class="modal-overlay" *ngIf="selectedTech()">
     <div class="modal-content wide" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>Technician Detail</h2>

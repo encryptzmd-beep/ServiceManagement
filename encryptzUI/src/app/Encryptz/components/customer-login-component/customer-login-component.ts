@@ -165,7 +165,7 @@ import { apiErrorMessage } from '../../Auth/api-error';
     </main>
 
     @if (forgotPasswordOpen()) {
-      <div class="forgot-backdrop" (click)="closeForgotPassword()">
+      <div class="forgot-backdrop">
         <section class="forgot-panel" role="dialog" aria-modal="true" aria-labelledby="forgotTitle" (click)="$event.stopPropagation()">
           <button type="button" class="forgot-close" (click)="closeForgotPassword()" aria-label="Close">×</button>
           <h2 id="forgotTitle">Reset customer password</h2>

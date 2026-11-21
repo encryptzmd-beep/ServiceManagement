@@ -1,14 +1,14 @@
+import { ProductFormComponent, ProductFormResult } from '../product-form-component/product-form-component';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { CrmProductDto } from '../../Models/CrmModels';
 import { CrmService } from '../../Services/crm-service';
+import { RightsService } from '../../Services/rights-service';
 import { amount } from './crm-ui';
 
 /** The most products one category shows; the API allows up to 100. */
 export const PRODUCT_LIMIT = 100;
 /** The most products a search over every category shows. */
 export const SEARCH_LIMIT = 20;
-/** Letters needed before searching every category. */
-export const MIN_SEARCH = 2;
 
 /**
  * Category select (an optional filter) and a product autocomplete over the product master, each row with
@@ -17,6 +17,7 @@ export const MIN_SEARCH = 2;
  */
 @Component({
   selector: 'app-crm-product-picker',
+  imports: [ProductFormComponent],
   standalone: true,
   templateUrl: './crm-product-picker-component.html',
   styleUrls: ['./crm-pages.scss', './crm-product-picker-component.scss'],
@@ -24,6 +25,7 @@ export const MIN_SEARCH = 2;
 })
 export class CrmProductPickerComponent {
   private crm = inject(CrmService);
+  private rights = inject(RightsService);
   private static seq = 0;
   readonly listId = `pp-list-${++CrmProductPickerComponent.seq}`;
   readonly amount = amount;
@@ -32,6 +34,9 @@ export class CrmProductPickerComponent {
   productMasterId = input<number | null | undefined>(null);
   /** The name of the current product, to show it when the list of its category does not hold it. */
   productName = input<string | null | undefined>('');
+
+  /** Adds products to a list: picking leaves the box and the category filter as they are. */
+  multi = input(false);
 
   categoryChange = output<string>();
   productMasterIdChange = output<number | null>();
@@ -50,7 +55,10 @@ export class CrmProductPickerComponent {
   open = signal(false);
   active = signal(-1);
   searching = signal(false);
-  /** Results of a search over every category (no category chosen). */
+  /** Every product, shown as soon as the box opens with no category chosen. */
+  private all = signal<CrmProductDto[]>([]);
+  private allAsked = false;
+  /** Results of a server search, when there are more products than the list holds. */
   private found = signal<CrmProductDto[]>([]);
   private picked = signal<CrmProductDto | null>(null);
 
@@ -66,6 +74,7 @@ export class CrmProductPickerComponent {
     const id = this.productMasterId();
     if (!id) return '';
     return this.products().find(p => p.productMasterId === id)?.productName
+      ?? this.all().find(p => p.productMasterId === id)?.productName
       ?? (this.picked()?.productMasterId === id ? this.picked()!.productName : null)
       ?? (this.productName() ?? '').trim();
   });
@@ -73,26 +82,22 @@ export class CrmProductPickerComponent {
   readonly displayValue = computed(() => this.query() ?? this.selectedName());
 
   readonly results = computed(() => {
-    if (!this.hasCategory()) return this.found();
     const q = (this.query() ?? '').trim().toLowerCase();
-    if (!q) return this.products();
-    return this.products().filter(p =>
+    const list = this.hasCategory() ? this.products() : this.all();
+    if (!q) return list;
+    if (!this.hasCategory() && list.length >= PRODUCT_LIMIT) return this.found();
+    return list.filter(p =>
       [p.productName, p.productCode, p.model, p.brand].some(v => (v ?? '').toLowerCase().includes(q)));
   });
 
+  /** The list holds only the first products: typing finds the others. */
+  readonly capped = computed(() => (this.hasCategory() ? this.products() : this.all()).length >= PRODUCT_LIMIT);
+
   readonly showList = computed(() => this.open() && this.results().length > 0);
-
-  /** No category and fewer letters than a search needs: say how to start. */
-  readonly showHint = computed(() =>
-    this.open() && !this.hasCategory() && !this.productMasterId() && (this.query() ?? '').trim().length < MIN_SEARCH);
-
-  /** Exposed for the template's hint text. */
-  readonly minSearch = MIN_SEARCH;
 
   readonly showNone = computed(() => {
     const q = (this.query() ?? '').trim();
-    return this.open() && !this.searching() && this.results().length === 0 && !!q
-      && (this.hasCategory() || q.length >= MIN_SEARCH);
+    return this.open() && !this.searching() && this.results().length === 0 && !!q;
   });
 
   constructor() {
@@ -114,6 +119,51 @@ export class CrmProductPickerComponent {
     });
   }
 
+  newProduct = signal(false);
+  newProductName = signal('');
+  /** Adding a product needs the Create right of the Products menu. */
+  readonly canCreate = computed(() => this.rights.can('create', '/products'));
+  readonly panelOpen = computed(() => this.open()
+    && (this.canCreate() || this.showList() || this.showNone() || this.searching()));
+
+  startNew(): void {
+    this.newProductName.set((this.query() ?? '').trim());
+    this.open.set(false);
+    this.newProduct.set(true);
+  }
+
+  /** A product made in the popup is chosen, with its own category. */
+  closeNewProduct(result: ProductFormResult): void {
+    this.newProduct.set(false);
+    if (typeof result !== 'object' || !result.product) return;
+    const x = result.product;
+    const p: CrmProductDto = {
+      productMasterId: x.productMasterId, productCode: x.productCode, productName: x.productName,
+      brand: x.brand ?? '', model: x.model ?? '', category: x.category ?? '',
+      mrp: Number(x.mrp ?? 0), warrantyMonths: Number(x.warrantyMonths ?? 0),
+    };
+    this.crm.productCategories().subscribe({
+      next: res => { if (res.success) this.master.set(res.data ?? []); }, error: () => {},
+    });
+    this.all.update(list => [p, ...list.filter(y => y.productMasterId !== p.productMasterId)]);
+    if (this.multi()) {
+      if ((this.category() ?? '').trim() === p.category.trim()) this.products.update(list => [p, ...list.filter(y => y.productMasterId !== p.productMasterId)]);
+      this.productPicked.emit(p);
+      this.query.set(null);
+      return;
+    }
+    const current = (this.category() ?? '').trim();
+    if (p.category.trim() === current) {
+      if (current) this.products.update(list => [p, ...list.filter(y => y.productMasterId !== p.productMasterId)]);
+    } else {
+      this.categoryChange.emit(p.category);
+    }
+    this.picked.set(p);
+    this.productMasterIdChange.emit(p.productMasterId);
+    this.productPicked.emit(p);
+    this.query.set(null);
+  }
+
   meta(p: CrmProductDto): string {
     return [p.productCode, p.brand, p.model].filter(v => !!(v ?? '').trim()).join(' · ');
   }
@@ -127,6 +177,21 @@ export class CrmProductPickerComponent {
   onFocus(): void {
     this.open.set(true);
     this.active.set(-1);
+    this.loadAll();
+  }
+
+  private loadAll(): void {
+    if (this.allAsked || this.hasCategory()) return;
+    this.allAsked = true;
+    this.searching.set(true);
+    this.crm.searchProducts(undefined, undefined, PRODUCT_LIMIT).subscribe({
+      next: res => {
+        this.searching.set(false);
+        if (res.success) this.all.set(res.data ?? []);
+        else { this.allAsked = false; this.loadFailed.set(true); }
+      },
+      error: () => { this.searching.set(false); this.allAsked = false; this.loadFailed.set(true); },
+    });
   }
 
   onBlur(): void {
@@ -142,7 +207,8 @@ export class CrmProductPickerComponent {
     if (this.hasCategory()) return;
 
     const term = text.trim();
-    if (term.length < MIN_SEARCH) { this.found.set([]); this.searching.set(false); return; }
+    // the whole list is here: it is filtered without asking the server
+    if (!term || this.all().length < PRODUCT_LIMIT) { this.found.set([]); return; }
     this.searching.set(true);
     this.crm.searchProducts(term, undefined, SEARCH_LIMIT).subscribe({
       next: res => {
@@ -156,18 +222,20 @@ export class CrmProductPickerComponent {
 
   onKey(e: KeyboardEvent): void {
     const list = this.results();
+    const count = list.length + (this.canCreate() ? 1 : 0);
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
         this.open.set(true);
-        if (list.length) this.active.set((this.active() + 1) % list.length);
+        if (count) this.active.set((this.active() + 1) % count);
         break;
       case 'ArrowUp':
         e.preventDefault();
-        if (list.length) this.active.set(this.active() <= 0 ? list.length - 1 : this.active() - 1);
+        if (count) this.active.set(this.active() <= 0 ? count - 1 : this.active() - 1);
         break;
       case 'Enter':
-        if (this.open() && this.active() >= 0 && list[this.active()]) { e.preventDefault(); this.pick(list[this.active()]); }
+        if (this.open() && this.canCreate() && this.active() === list.length) { e.preventDefault(); this.startNew(); }
+        else if (this.open() && this.active() >= 0 && list[this.active()]) { e.preventDefault(); this.pick(list[this.active()]); }
         break;
       case 'Escape':
         this.open.set(false);
@@ -176,6 +244,13 @@ export class CrmProductPickerComponent {
   }
 
   pick(p: CrmProductDto): void {
+    if (this.multi()) {
+      this.productPicked.emit(p);
+      this.query.set(null);
+      this.open.set(false);
+      this.active.set(-1);
+      return;
+    }
     if (!this.hasCategory() && (p.category ?? '').trim()) this.categoryChange.emit(p.category);
     this.picked.set(p);
     this.productMasterIdChange.emit(p.productMasterId);

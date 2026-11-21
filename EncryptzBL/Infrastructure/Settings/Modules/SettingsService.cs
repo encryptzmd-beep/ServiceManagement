@@ -12,7 +12,7 @@ namespace EncryptzBL.Infrastructure.Settings.Modules
         public SettingsService(DbHelper db) : base(db) { }
 
         // 🔥 GET ALL SETTINGS (OPTIONAL GROUP FILTER)
-        public async Task<List<SystemSetting>> GetAll(string settingGroup = null)
+        public async Task<List<SystemSetting>> GetAll(string? settingGroup = null)
         {
             var parameters = new[]
             {

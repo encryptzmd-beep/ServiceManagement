@@ -1,4 +1,4 @@
-import { DespatchListItem, SalesOrderListItem } from '../../Models/ApiModels';
+import { DespatchListItem, SalesOrderListItem, ServiceDespatchItem } from '../../Models/ApiModels';
 import { ReportColumn } from '../crm-reports-component/crm-export';
 
 export type SalesReportKey = 'register' | 'customers' | 'gst' | 'pending' | 'despatch' | 'modes';
@@ -16,7 +16,22 @@ export const SALES_REPORTS: SalesReportLink[] = [
   { key: 'modes', label: 'Despatch by mode', icon: 'alt_route' },
 ];
 
-export interface SalesReportData { orders: SalesOrderListItem[]; despatches: DespatchListItem[]; }
+/** The reports of the Despatch menu; the others stay under Sales. */
+export const DESPATCH_REPORT_KEYS: SalesReportKey[] = ['pending', 'despatch', 'modes'];
+export const reportsBeside = (key: SalesReportKey) => {
+  const despatch = DESPATCH_REPORT_KEYS.includes(key);
+  return SALES_REPORTS.filter(r => DESPATCH_REPORT_KEYS.includes(r.key) === despatch);
+};
+
+export interface SalesReportData {
+  orders: SalesOrderListItem[];
+  despatches: DespatchListItem[];
+  /** Spare and repaired parts: waiting, and despatched. */
+  servicePending?: ServiceDespatchItem[];
+  serviceDespatched?: ServiceDespatchItem[];
+}
+
+const serviceType = (x: ServiceDespatchItem) => x.sourceType === 'Repair' ? 'Repair part' : 'Spare part';
 
 export interface SalesReportView {
   key: SalesReportKey;
@@ -130,59 +145,79 @@ function gst(d: SalesReportData, from: string, to: string): SalesReportView {
 }
 
 function pending(d: SalesReportData, today: Date): SalesReportView {
-  const list = d.orders.filter(o => o.status === 'Billed')
-    .map(o => ({ o, age: daysSince(o.orderDate, today) })).sort((a, b) => b.age - a.age);
+  const bills = d.orders.filter(o => o.status === 'Billed');
+  const parts = d.servicePending ?? [];
+  const rows: (SalesReportRow & { age: number })[] = [
+    ...bills.map(o => ({
+      type: 'Sales', bill: o.orderNo, item: `${o.lineCount ?? 0} line(s)`, date: showDay(o.orderDate), customer: o.customerName, mobile: o.customerMobile ?? '',
+      city: o.city ?? '', qty: o.totalQty ?? null, total: o.grandTotal, age: daysSince(o.orderDate, today),
+    })),
+    ...parts.map(x => ({
+      type: serviceType(x), bill: x.complaintNumber ?? '', item: x.partName ?? '', date: showDay(x.readyAt), customer: x.customerName ?? '', mobile: x.customerMobile ?? '',
+      city: '', qty: x.quantity, total: null, age: daysSince(x.readyAt ?? '', today),
+    })),
+  ].sort((a, b) => b.age - a.age);
   return {
-    key: 'pending', title: 'Pending despatch', note: 'Bills not despatched yet, the oldest first.', dated: false,
+    key: 'pending', title: 'Pending despatch', note: 'Bills, approved spare parts and repaired parts not despatched yet, the oldest first.', dated: false,
     stats: [
-      { label: 'Bills waiting', value: String(list.length) },
-      { label: 'Value', value: rupees(sum(list, x => x.o.grandTotal)) },
-      { label: 'Over 3 days', value: String(list.filter(x => x.age > 3).length) },
-      { label: 'Oldest', value: list.length ? `${list[0].age} days` : '–' },
+      { label: 'Bills waiting', value: String(bills.length) },
+      { label: 'Parts waiting', value: String(parts.length) },
+      { label: 'Bill value', value: rupees(sum(bills, o => o.grandTotal)) },
+      { label: 'Over 3 days', value: String(rows.filter(x => x.age > 3).length) },
     ],
     columns: [
-      { key: 'bill', title: 'Bill No' }, { key: 'date', title: 'Date' }, { key: 'customer', title: 'Customer' }, { key: 'mobile', title: 'Mobile' },
+      { key: 'type', title: 'Type' }, { key: 'bill', title: 'Bill / Job No' }, { key: 'item', title: 'Item' }, { key: 'date', title: 'Date' }, { key: 'customer', title: 'Customer' }, { key: 'mobile', title: 'Mobile' },
       { key: 'city', title: 'City' }, { key: 'qty', title: 'Qty', kind: 'number' }, { key: 'total', title: 'Total', kind: 'money' }, { key: 'age', title: 'Days waiting', kind: 'number' },
     ],
-    rows: list.map(({ o, age }) => ({
-      bill: o.orderNo, date: showDay(o.orderDate), customer: o.customerName, mobile: o.customerMobile ?? '', city: o.city ?? '',
-      qty: o.totalQty ?? null, total: o.grandTotal, age,
-    })),
+    rows,
   };
 }
 
 function despatch(d: SalesReportData, from: string, to: string): SalesReportView {
-  const list = d.despatches.filter(x => inRange(x.despatchDate, from, to)).sort((a, b) => day(b.despatchDate).localeCompare(day(a.despatchDate)) || b.despatchId - a.despatchId);
+  const list = d.despatches.filter(x => inRange(x.despatchDate, from, to));
+  const parts = (d.serviceDespatched ?? []).filter(x => inRange(x.despatchDate ?? '', from, to));
+  const rows = [
+    ...list.map(x => ({
+      sort: day(x.despatchDate), type: 'Sales', no: x.despatchNo, date: showDay(x.despatchDate), bill: x.orderNo, item: `${x.unitCount} unit(s)`, customer: x.customerName, mode: x.despatchMode ?? '', reference: x.trackingNo ?? '',
+      carrier: x.transporterName ?? '', vehicle: x.vehicleNo ?? '', units: x.unitCount, value: x.grandTotal as number | null, install: x.installationStatus ?? '',
+    })),
+    ...parts.map(x => ({
+      sort: day(x.despatchDate), type: serviceType(x), no: x.despatchNo ?? '', date: showDay(x.despatchDate), bill: x.complaintNumber ?? '', item: x.partName ?? '', customer: x.customerName ?? '', mode: x.despatchMode ?? '', reference: x.referenceNo ?? '',
+      carrier: x.transporterName ?? '', vehicle: x.vehicleNo ?? '', units: x.quantity, value: null, install: x.status ?? '',
+    })),
+  ].sort((a, b) => b.sort.localeCompare(a.sort));
   return {
-    key: 'despatch', title: 'Despatch register', note: 'Filtered by despatch date.', dated: true,
+    key: 'despatch', title: 'Despatch register', note: 'Sales, spare part and repair part despatches, filtered by despatch date.', dated: true,
     stats: [
-      { label: 'Despatches', value: String(list.length) },
-      { label: 'Units', value: String(sum(list, x => x.unitCount)) },
+      { label: 'Despatches', value: String(rows.length) },
+      { label: 'Sales / Parts', value: `${list.length} / ${parts.length}` },
       { label: 'Bill value', value: rupees(sum(list, x => x.grandTotal)) },
-      { label: 'No reference', value: String(list.filter(x => !x.trackingNo?.trim()).length) },
+      { label: 'No reference', value: String(rows.filter(x => !x.reference.trim()).length) },
     ],
     columns: [
-      { key: 'no', title: 'Despatch No' }, { key: 'date', title: 'Date' }, { key: 'bill', title: 'Bill No' }, { key: 'customer', title: 'Customer' },
+      { key: 'type', title: 'Type' }, { key: 'no', title: 'Despatch No' }, { key: 'date', title: 'Date' }, { key: 'bill', title: 'Bill / Job No' }, { key: 'item', title: 'Item' }, { key: 'customer', title: 'Customer' },
       { key: 'mode', title: 'Mode' }, { key: 'reference', title: 'Reference' }, { key: 'carrier', title: 'Transporter' }, { key: 'vehicle', title: 'Vehicle' },
-      { key: 'units', title: 'Units', kind: 'number' }, { key: 'value', title: 'Bill value', kind: 'money' }, { key: 'install', title: 'Installation' },
+      { key: 'units', title: 'Units', kind: 'number' }, { key: 'value', title: 'Bill value', kind: 'money' }, { key: 'install', title: 'Status' },
     ],
-    rows: list.map(x => ({
-      no: x.despatchNo, date: showDay(x.despatchDate), bill: x.orderNo, customer: x.customerName, mode: x.despatchMode ?? '', reference: x.trackingNo ?? '',
-      carrier: x.transporterName ?? '', vehicle: x.vehicleNo ?? '', units: x.unitCount, value: x.grandTotal, install: x.installationStatus ?? '',
-    })),
+    rows: rows.map(({ sort, ...row }) => row),
   };
 }
 
 function modes(d: SalesReportData, from: string, to: string): SalesReportView {
-  const list = d.despatches.filter(x => inRange(x.despatchDate, from, to));
-  const groups = new Map<string, DespatchListItem[]>();
-  for (const x of list) { const m = x.despatchMode?.trim() || 'Not set'; groups.set(m, [...(groups.get(m) ?? []), x]); }
+  const list = [
+    ...d.despatches.filter(x => inRange(x.despatchDate, from, to))
+      .map(x => ({ mode: x.despatchMode, units: x.unitCount, value: x.grandTotal, reference: x.trackingNo })),
+    ...(d.serviceDespatched ?? []).filter(x => inRange(x.despatchDate ?? '', from, to))
+      .map(x => ({ mode: x.despatchMode, units: x.quantity, value: 0, reference: x.referenceNo })),
+  ];
+  const groups = new Map<string, typeof list>();
+  for (const x of list) { const m = x.mode?.trim() || 'Not set'; groups.set(m, [...(groups.get(m) ?? []), x]); }
   const rows = [...groups.entries()].map<SalesReportRow>(([mode, g]) => ({
-    mode, count: g.length, share: list.length ? Math.round((g.length / list.length) * 1000) / 10 : 0, units: sum(g, x => x.unitCount),
-    value: sum(g, x => x.grandTotal), noRef: g.filter(x => !x.trackingNo?.trim()).length,
+    mode, count: g.length, share: list.length ? Math.round((g.length / list.length) * 1000) / 10 : 0, units: sum(g, x => x.units),
+    value: sum(g, x => x.value), noRef: g.filter(x => !x.reference?.trim()).length,
   })).sort((a, b) => Number(b['count']) - Number(a['count']));
   return {
-    key: 'modes', title: 'Despatch by mode', note: 'Despatches made before the mode was recorded show as Not set.', dated: true,
+    key: 'modes', title: 'Despatch by mode', note: 'Sales, spare and repair despatches. Those made before the mode was recorded show as Not set.', dated: true,
     stats: [
       { label: 'Despatches', value: String(list.length) },
       { label: 'Modes used', value: String(rows.filter(r => r['mode'] !== 'Not set').length) },

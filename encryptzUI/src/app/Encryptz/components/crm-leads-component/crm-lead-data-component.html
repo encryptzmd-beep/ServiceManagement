@@ -1,0 +1,100 @@
+@if (access(); as a) {
+  @if (a.isAdmin) {
+    <button type="button" class="crm-btn" (click)="openRequests()">
+      <span class="material-icons" aria-hidden="true">how_to_reg</span>Requests
+      @if (pendingCount()) { <span class="ldx-count">{{ pendingCount() }}</span> }
+    </button>
+  }
+  <button type="button" class="crm-btn" [disabled]="waiting('Import')" (click)="openImport()">
+    <span class="material-icons" aria-hidden="true">upload_file</span>{{ label('Import') }}
+  </button>
+  <button type="button" class="crm-btn" [disabled]="busy() || waiting('Export')" (click)="exportLeads()">
+    <span class="material-icons" aria-hidden="true">download</span>{{ label('Export') }}
+  </button>
+}
+
+@if (asking(); as kind) {
+  <div class="crm-overlay">
+    <div class="crm-dialog" role="dialog" aria-modal="true" aria-labelledby="ldx-ask-title" (keydown.escape)="asking.set(null)">
+      <h2 id="ldx-ask-title">Ask to {{ kind === 'Import' ? 'import' : 'export' }} leads</h2>
+      <p class="crm-muted ldx-text">You need approval from your admin. One approval is good for one {{ kind === 'Import' ? 'import' : 'export' }} within 24 hours.</p>
+      <label class="crm-field"><span>Reason (optional)</span>
+        <textarea rows="3" maxlength="500" [value]="askNote()" (input)="askNote.set($any($event.target).value)"></textarea></label>
+      @if (askError()) { <p class="crm-error" role="alert">{{ askError() }}</p> }
+      <div class="crm-actions">
+        <button type="button" class="crm-btn" [disabled]="busy()" (click)="asking.set(null)">Cancel</button>
+        <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="sendRequest()">Send Request</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (importOpen()) {
+  <div class="crm-overlay">
+    <div class="crm-dialog" role="dialog" aria-modal="true" aria-labelledby="ldx-import-title" (keydown.escape)="importOpen.set(false)">
+      <h2 id="ldx-import-title">Import Leads</h2>
+      @if (result(); as r) {
+        <div class="ldx-result">
+          <div><strong>{{ r.created }}</strong><span>Imported</span></div>
+          <div><strong>{{ r.skipped }}</strong><span>Already leads</span></div>
+          <div><strong>{{ r.failed }}</strong><span>Failed</span></div>
+        </div>
+        @if (r.problems.length) {
+          <ul class="ldx-problems">
+            @for (p of r.problems; track p.rowNumber) { <li><strong>Row {{ p.rowNumber }}</strong> {{ p.contactName }}: {{ p.message }}</li> }
+          </ul>
+        }
+      } @else {
+        <p class="crm-muted ldx-text">Fill the template, then choose the file. Contact Name and Mobile are required. Up to 1000 leads.</p>
+        <button type="button" class="crm-btn ldx-template" (click)="template()">
+          <span class="material-icons" aria-hidden="true">description</span>Download Template
+        </button>
+        <label class="ldx-file">
+          <span class="material-icons" aria-hidden="true">attach_file</span>
+          <span>{{ fileName() || 'Choose an .xlsx file' }}</span>
+          <input type="file" accept=".xlsx" (change)="chooseFile($event)" />
+        </label>
+        @if (fileRows().length) { <p class="ldx-ready">{{ fileRows().length }} leads ready to import</p> }
+      }
+      @if (fileProblem()) { <p class="crm-error" role="alert">{{ fileProblem() }}</p> }
+      <div class="crm-actions">
+        <button type="button" class="crm-btn" [disabled]="busy()" (click)="importOpen.set(false)">{{ result() ? 'Close' : 'Cancel' }}</button>
+        @if (!result()) {
+          <button type="button" class="crm-btn primary" [disabled]="busy() || !fileRows().length" (click)="runImport()">{{ busy() ? 'Importing…' : 'Import' }}</button>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+@if (requestsOpen()) {
+  <div class="crm-overlay">
+    <div class="crm-dialog wide" role="dialog" aria-modal="true" aria-labelledby="ldx-req-title" (keydown.escape)="requestsOpen.set(false)">
+      <h2 id="ldx-req-title">Import and Export Requests</h2>
+      @if (requestsError()) { <p class="crm-error" role="alert">{{ requestsError() }}</p> }
+      <div class="ldx-requests">
+        @for (r of requests(); track r.requestId) {
+          <div class="ldx-request">
+            <div class="ldx-request-main">
+              <strong>{{ r.requestedByName || 'User' }} · {{ r.requestType }}</strong>
+              <small>{{ showDateTime(r.requestedAt) }}@if (r.note) { · {{ r.note }} }</small>
+            </div>
+            @if (r.status === 'Pending') {
+              <div class="ldx-request-actions">
+                <button type="button" class="crm-btn" [disabled]="busy()" (click)="decide(r, false)">Reject</button>
+                <button type="button" class="crm-btn primary" [disabled]="busy()" (click)="decide(r, true)">Approve</button>
+              </div>
+            } @else {
+              <span class="ldx-status">{{ r.status }}</span>
+            }
+          </div>
+        } @empty {
+          <p class="crm-muted ldx-text">No requests yet.</p>
+        }
+      </div>
+      <div class="crm-actions">
+        <button type="button" class="crm-btn" (click)="requestsOpen.set(false)">Close</button>
+      </div>
+    </div>
+  </div>
+}

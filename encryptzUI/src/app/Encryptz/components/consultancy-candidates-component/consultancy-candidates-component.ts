@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, NgTemplateOutlet } from '@angular/common';
@@ -41,7 +42,7 @@ export function takesApplications(p: { status: string; closesOn?: string | null 
 @Component({
   selector: 'app-consultancy-candidates-component',
   standalone: true,
-  imports: [AppRightDirective, CommonModule, NgTemplateOutlet, FormsModule, RouterModule, VerifiedBadgeComponent, AutocompleteComponent, EscapeClose],
+  imports: [AppToastComponent, AppRightDirective, CommonModule, NgTemplateOutlet, FormsModule, RouterModule, VerifiedBadgeComponent, AutocompleteComponent, EscapeClose],
   templateUrl: './consultancy-candidates-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',

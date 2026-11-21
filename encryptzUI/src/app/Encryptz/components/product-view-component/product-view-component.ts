@@ -8,7 +8,7 @@ import { ProductMasterDTO } from '../../Models/ApiModels';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="modal-overlay" (click)="close.emit()">
+    <div class="modal-overlay">
       <div class="modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-heading">

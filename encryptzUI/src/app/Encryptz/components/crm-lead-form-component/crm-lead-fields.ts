@@ -1,11 +1,24 @@
+import { UppercaseInputDirective } from '../shared/uppercase-input';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CrmMasterDto, CrmMemberDto, LeadSaveDto } from '../../Models/CrmModels';
+import { CrmMasterDto, CrmMemberDto, CrmProductDto, LeadProductDto, LeadSaveDto } from '../../Models/CrmModels';
 import { CrmProductPickerComponent } from '../crm-shell-component/crm-product-picker-component';
 import { showDate } from '../crm-shell-component/crm-ui';
 
 /** One change of a lead field: the key and the new value. */
 export interface LeadFieldChange { key: keyof LeadSaveDto; value: any; }
+
+/** What a lead sends: its list, with the first product and the total kept on the lead. */
+export function leadProductsForSave(f: LeadSaveDto): Pick<LeadSaveDto, 'products' | 'productMasterId' | 'estimatedQty'> {
+  const list = f.products ?? [];
+  if (list.length) {
+    const products = list.map(p => ({ ...p, qty: Math.max(1, Math.floor(Number(p.qty) || 1)) }));
+    return { products, productMasterId: products[0].productMasterId, estimatedQty: products.reduce((sum, p) => sum + p.qty, 0) };
+  }
+  const estimatedQty = f.estimatedQty ? Number(f.estimatedQty) : null;
+  // a single product set without the list (an older screen) keeps working
+  return f.productMasterId ? { productMasterId: f.productMasterId, estimatedQty } : { products: [], productMasterId: null, estimatedQty };
+}
 
 /**
  * The two cards of a lead, Contact and Requirement, for the new lead page and the lead page:
@@ -14,7 +27,7 @@ export interface LeadFieldChange { key: keyof LeadSaveDto; value: any; }
 @Component({
   selector: 'app-crm-lead-fields',
   standalone: true,
-  imports: [FormsModule, CrmProductPickerComponent],
+  imports: [UppercaseInputDirective, FormsModule, CrmProductPickerComponent],
   templateUrl: './crm-lead-fields.html',
   styleUrl: './crm-lead-fields.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -41,6 +54,29 @@ export class CrmLeadFieldsComponent {
 
   set<K extends keyof LeadSaveDto>(key: K, value: LeadSaveDto[K]): void {
     this.changed.emit({ key, value });
+  }
+
+  private setProducts(products: LeadProductDto[]): void {
+    this.changed.emit({ key: 'products', value: products });
+    this.changed.emit({ key: 'productMasterId', value: products[0]?.productMasterId ?? null });
+  }
+
+  /** Picking a product already listed adds one to its quantity. */
+  addProduct(p: CrmProductDto): void {
+    const list = this.form().products ?? [];
+    const at = list.findIndex(x => x.productMasterId === p.productMasterId);
+    this.setProducts(at >= 0
+      ? list.map((x, i) => (i === at ? { ...x, qty: (Number(x.qty) || 0) + 1 } : x))
+      : [...list, { ...p, qty: 1 }]);
+    this.productPicked.emit();
+  }
+
+  setProductQty(index: number, value: string): void {
+    this.setProducts((this.form().products ?? []).map((x, i) => (i === index ? { ...x, qty: Number(value) } : x)));
+  }
+
+  removeProduct(index: number): void {
+    this.setProducts((this.form().products ?? []).filter((_, i) => i !== index));
   }
 
   /** The owner select: the owner when listed, else "Me" (the signed-in manager owns it, and is not in the list). */

@@ -142,7 +142,7 @@ namespace EncryptzAPI.Controllers
             var email = User.FindFirstValue(ClaimTypes.Email);
             if (string.IsNullOrEmpty(email)) return Unauthorized("User email not found in token");
 
-            var loginResult = await _authService.Login(email, request.AdminPassword);
+            var loginResult = await _authService.Login(email!, request.AdminPassword!);
             if (loginResult == null)
             {
                 return Unauthorized(new { Message = "Invalid admin password. Modification not allowed." });
@@ -167,7 +167,7 @@ namespace EncryptzAPI.Controllers
             // Verify admin password via auth service
             var email = User.FindFirstValue(ClaimTypes.Email);
 
-            var loginResult = await _authService.Login(email, request.AdminPassword);
+            var loginResult = await _authService.Login(email!, request.AdminPassword!);
             if (loginResult.Data == null )
                 return Unauthorized(new { Message = "Invalid admin password. Modification not allowed." });
 

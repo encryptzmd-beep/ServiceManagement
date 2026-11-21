@@ -1,4 +1,35 @@
-import { inSideMenu, promoteComplaintMenus } from './sidebar-menu';
+import { groupDespatchMenus, inSideMenu, promoteComplaintMenus } from './sidebar-menu';
+
+describe('groupDespatchMenus', () => {
+  const item = (menuId: number, menuPath: string, menuName = menuPath) => ({ menuId, menuPath, menuName, children: [] });
+  const sales = (...children: any[]) => ({ menuId: 9, menuName: 'Sales', menuPath: '', children });
+  const products = { menuId: 20, menuName: 'Products', menuPath: '', children: [item(21, 'products')] };
+
+  it('makes Despatch a main menu after Sales, with its reports', () => {
+    const menu = groupDespatchMenus([sales(item(1, 'sales/orders'), item(4, 'sales/reports/modes'), item(2, 'sales/despatch'),
+      item(3, 'sales/reports/pending'), item(5, 'sales/reports/despatch'), item(6, 'sales/reports/gst')), products]);
+    expect(menu.map(m => m.menuName)).toEqual(['Sales', 'Despatch', 'Products']);
+    expect(menu[0].children.map((c: any) => c.menuPath)).toEqual(['sales/orders', 'sales/reports/gst']);
+    expect(menu[1].children.map((c: any) => c.menuName)).toEqual(['All Despatches', 'Pending Despatch', 'Despatch Register', 'Despatch by Mode']);
+  });
+
+  it('removes a Sales group left empty', () => {
+    expect(groupDespatchMenus([sales(item(2, '/sales/despatch')), products]).map(m => m.menuName)).toEqual(['Products', 'Despatch']);
+  });
+
+  it('gives a Storekeeper the Despatch menu without a menu row', () => {
+    const menu = groupDespatchMenus([products], 'Storekeeper');
+    expect(menu.map(m => m.menuName)).toEqual(['Products', 'Despatch']);
+    expect(menu[1].children.map((c: any) => c.menuPath)).toEqual(['sales/despatch']);
+    expect(groupDespatchMenus([products], 'Manager').map(m => m.menuName)).toEqual(['Products']);
+  });
+
+  it('shows only the pages the user has, and nothing without any', () => {
+    expect(groupDespatchMenus([sales(item(1, 'sales/orders'), item(3, 'sales/reports/pending'))])[1].children.length).toBe(1);
+    const none = [sales(item(1, 'sales/orders'))];
+    expect(groupDespatchMenus(none)).toBe(none);
+  });
+});
 
 describe('inSideMenu', () => {
   it('leaves out the administration pages only', () => {

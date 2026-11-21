@@ -29,6 +29,10 @@ export function rowAllows(row: RightRow | undefined, right: RightKind): boolean 
   }
 }
 
+/** A Storekeeper issues spare and repaired parts on the Despatch screen (its Sales tab is not shown to them). */
+export const storekeeperMayIssue = (role: string | null | undefined, right: RightKind, menuPath: string) =>
+  role === 'Storekeeper' && (right === 'create' || right === 'edit') && normalizeMenuPath(menuPath) === 'sales/despatch';
+
 /**
  * What the signed-in person may do, read from the API per module. It only decides what the
  * screens enable; the API checks every change again (MenuRightFilter).
@@ -60,6 +64,7 @@ export class RightsService {
     if (!this.http || role === null) return true;     // no API here (a component test)
     if (role === 'Admin' || role === 'CompanyAdmin' || role === 'Customer') return true;
     if (allowTechnician && role === 'Technician') return true;
+    if (storekeeperMayIssue(role, right, menuPath)) return true;
 
     const module = moduleOfMenu(menuPath);
     const key = `${this.auth?.selectedCompanyId?.() ?? 0}:${module}`;

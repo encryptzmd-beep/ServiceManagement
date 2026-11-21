@@ -7,8 +7,8 @@ $muted: #6b7489;
 $faint: #9aa3b5;
 $line: #e4e8f0;
 $hair: #eef1f6;
-$accent: #2563eb;
-$navy: #1d4ed8;
+$accent: #1b4a7a;
+$navy: #153a60;
 $tint: #eef4ff;
 
 .ms {
@@ -85,7 +85,7 @@ $tint: #eef4ff;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: linear-gradient(135deg, #e7f0ff 0%, #eee9ff 100%);
+  background: #eef3f8;
   font-family: $display;
   font-size: 16px;
   font-weight: 600;
@@ -205,7 +205,7 @@ $tint: #eef4ff;
   .mine & {
     border-color: transparent;
     border-radius: 16px 16px 5px 16px;
-    background: linear-gradient(135deg, #2f6df0 0%, $navy 100%);
+    background: $navy;
 
     p { color: #fff; }
   }
@@ -238,7 +238,7 @@ $tint: #eef4ff;
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  background: linear-gradient(135deg, #e7f0ff 0%, #eee9ff 100%);
+  background: #eef3f8;
   font-weight: 700;
   color: $navy;
 }

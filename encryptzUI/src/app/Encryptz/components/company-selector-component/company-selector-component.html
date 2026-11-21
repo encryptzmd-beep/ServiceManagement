@@ -302,7 +302,7 @@
           <div class="frame-body">
             <form class="create-form" (ngSubmit)="submitCreate()">
               <label>Company name *
-                <input class="form-input" name="companyName" [(ngModel)]="createForm.companyName"
+                <input appUppercase class="form-input" name="companyName" [(ngModel)]="createForm.companyName"
                        (ngModelChange)="onNameTyped()" maxlength="200" autocomplete="organization" />
               </label>
               <label>Company code *
@@ -418,7 +418,7 @@
 
 <!-- ── CHANGE PASSWORD MODAL ── -->
 @if (showChangePasswordModal()) {
-  <div class="modal-backdrop" (click)="closeChangePassword()">
+  <div class="modal-backdrop">
     <div class="modal-card" (click)="$event.stopPropagation()">
       <h2>Change Password</h2>
       <p class="modal-sub">Update your account password securely.</p>

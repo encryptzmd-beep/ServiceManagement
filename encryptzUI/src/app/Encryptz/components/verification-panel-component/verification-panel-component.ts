@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -25,7 +26,7 @@ export type ReviewItem =
 @Component({
   selector: 'app-verification-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule, VerifiedBadgeComponent],
+  imports: [AppToastComponent, CommonModule, FormsModule, VerifiedBadgeComponent],
   templateUrl: './verification-panel-component.html',
   styleUrl: './verification-panel-component.scss',
 })

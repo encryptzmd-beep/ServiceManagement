@@ -22,7 +22,7 @@
         </form>
         <ul class="pc-list">
           @for (c of categories(); track c.categoryId) {
-            <li class="pc-row" [class.chosen]="selected()?.categoryId === c.categoryId" [class.off]="!c.isActive">
+            <li class="pc-row" [class.chosen]="$any(selected())?.categoryId === c.categoryId" [class.off]="!c.isActive">
               @if (renamingId() === c.categoryId) {
                 <form class="pc-rename" (submit)="rename($event, c)">
                   <input name="rename" maxlength="100" [value]="renameText()" (input)="renameText.set($any($event.target).value)" />

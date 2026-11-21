@@ -1,6 +1,5 @@
 using EncryptzBL.Common.Tenant;
 using EncryptzAPI.Middleware;
-﻿using EncryptzAPI.Middleware;
 using EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Tracking.Modules;
 using Microsoft.AspNetCore.Authorization;

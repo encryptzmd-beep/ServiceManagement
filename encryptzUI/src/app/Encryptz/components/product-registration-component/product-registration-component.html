@@ -192,7 +192,7 @@
           </span>
         </div>
       </div>
-      @if (product.images?.length) {
+      @if ($any(product.images)?.length) {
       <div class="images-section">
         <span class="images-label">Uploaded Images ({{ product.images.length }})</span>
         <div class="images-row">

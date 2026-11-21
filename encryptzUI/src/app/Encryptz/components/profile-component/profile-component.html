@@ -265,7 +265,7 @@
 </div>
 
 @if (showLocationPopup) {
-  <div class="popup-backdrop" (click)="showLocationPopup = false">
+  <div class="popup-backdrop">
     <div class="popup-card" (click)="$event.stopPropagation()">
       <h3>Select Location</h3>
       <p>Choose how you want to set your location.</p>
@@ -288,7 +288,7 @@
 }
 
 @if (showMapInputPopup) {
-  <div class="popup-backdrop" (click)="showMapInputPopup = false">
+  <div class="popup-backdrop">
     <div class="popup-card" (click)="$event.stopPropagation()">
       <h3>Enter Map Coordinates</h3>
       <p>Google Maps has been opened in a new tab. Paste the coordinates below.</p>
@@ -313,11 +313,7 @@
   </div>
 }
 
-@if (toast.show) {
-  <div class="custom-toast" [class]="toast.type">
-    {{ toast.message }}
-  </div>
-}
+@if (toast.show) { <app-toast [text]="toast.message" [kind]="toast.type" (closed)="toast.show = false" /> }
 
 @if (isFetchingLocation) {
   <div class="popup-backdrop">

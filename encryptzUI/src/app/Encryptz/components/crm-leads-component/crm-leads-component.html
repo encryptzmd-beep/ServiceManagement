@@ -8,6 +8,7 @@
         <p>{{ isManager() ? 'All the leads of the team.' : 'The leads you own.' }}</p>
       </div>
       <div class="crm-page-actions">
+        <app-crm-lead-data (imported)="reload()" />
         <a appRight="create" appRightMenu="/crm/leads" class="crm-btn primary" routerLink="/crm/leads/new"><span class="material-icons" aria-hidden="true">add</span>New lead</a>
       </div>
     </header>
@@ -45,9 +46,9 @@
         </select>
         <div class="crm-range" role="group" aria-label="Lead date">
           <span class="material-icons" aria-hidden="true">event</span>
-          <input type="date" name="from" aria-label="Lead date from" [ngModel]="filter().from ?? ''" (change)="setAndApply('from', $any($event.target).value)" />
+          <input data-range="from" type="date" name="from" aria-label="Lead date from" [ngModel]="filter().from ?? ''" (change)="setAndApply('from', $any($event.target).value)" />
           <span aria-hidden="true">–</span>
-          <input type="date" name="to" aria-label="Lead date to" [ngModel]="filter().to ?? ''" (change)="setAndApply('to', $any($event.target).value)" />
+          <input data-range="to" type="date" name="to" aria-label="Lead date to" [ngModel]="filter().to ?? ''" (change)="setAndApply('to', $any($event.target).value)" />
         </div>
         <span class="crm-spacer"></span>
         <span class="crm-result">{{ total() }} {{ total() === 1 ? 'lead' : 'leads' }}</span>
@@ -139,7 +140,7 @@
   </div>
 
   @if (deleting(); as d) {
-    <div class="ld-modal-backdrop" (click)="cancelDelete()">
+    <div class="ld-modal-backdrop">
       <div class="ld-modal" role="alertdialog" aria-modal="true" aria-labelledby="ld-del-title" aria-describedby="ld-del-text"
            (click)="$event.stopPropagation()" (keydown.escape)="cancelDelete()">
         <div class="ld-modal-icon"><span class="material-icons" aria-hidden="true">delete_outline</span></div>

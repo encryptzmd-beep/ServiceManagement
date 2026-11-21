@@ -283,7 +283,7 @@
   </div>
 
   @if (draft(); as u) {
-    <button type="button" class="ca-scrim" aria-label="Close" (click)="closeUser()"></button>
+    <div class="ca-scrim"></div>
     <aside class="ca-drawer" role="dialog" aria-modal="true" [attr.aria-label]="u.userId ? 'Edit user' : 'Add user'" (keydown.escape)="closeUser()">
       <div class="ca-drawer-head">
         <h2>{{ u.userId ? 'Edit user' : 'Add user' }}</h2>
@@ -380,7 +380,5 @@
     </aside>
   }
 
-  @if (toast()) {
-    <div class="ca-toast" role="status"><span class="material-icons" aria-hidden="true">check_circle</span>{{ toast() }}</div>
-  }
+  @if (toast()) { <app-toast [text]="toast()" kind="success" /> }
 </div>

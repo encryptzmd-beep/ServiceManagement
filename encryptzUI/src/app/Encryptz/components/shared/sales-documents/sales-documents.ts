@@ -67,6 +67,10 @@ export class SalesDocumentsComponent {
     if (!file) return;
     if (!file.name.toLowerCase().endsWith('.pdf')) { this.error.set('Only PDF files can be attached'); return; }
     if (file.size > MAX_BYTES) { this.error.set('The file is larger than 10 MB'); return; }
+    if (this.documents().some(d => d.fileName.toLowerCase() === file.name.toLowerCase() && d.fileSize === file.size)) {
+      this.error.set(`${file.name} is already attached to this bill`);
+      return;
+    }
 
     this.uploading.set(true);
     this.error.set('');

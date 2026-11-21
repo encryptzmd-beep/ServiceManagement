@@ -12,9 +12,9 @@
         @if (current().dates) {
           <div class="crm-range" role="group" aria-label="Dates">
             <span class="material-icons" aria-hidden="true">event</span>
-            <input type="date" name="from" aria-label="From" [ngModel]="from()" (change)="setFilter('from', $any($event.target).value)" />
+            <input data-range="from" type="date" name="from" aria-label="From" [ngModel]="from()" (change)="setFilter('from', $any($event.target).value)" />
             <span aria-hidden="true">–</span>
-            <input type="date" name="to" aria-label="To" [ngModel]="to()" (change)="setFilter('to', $any($event.target).value)" />
+            <input data-range="to" type="date" name="to" aria-label="To" [ngModel]="to()" (change)="setFilter('to', $any($event.target).value)" />
           </div>
         } @else {
           <span class="rp-now"><span class="material-icons" aria-hidden="true">schedule</span>Open leads as they stand now</span>

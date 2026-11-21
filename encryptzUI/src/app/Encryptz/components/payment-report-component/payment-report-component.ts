@@ -1,8 +1,9 @@
 import { AppRightDirective } from '../shared/app-right/app-right';
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../Services/API/api-service';
+import { DialogService } from '../../Services/dialog-service';
 import { EditPaymentDialog } from '../edit-payment-dialog/edit-payment-dialog';
 
 interface AdminPayment {
@@ -39,6 +40,7 @@ interface AdminPayment {
   styleUrls: ['./payment-report-component.scss']
 })
 export class PaymentReportComponent implements OnInit {
+  private dialog = inject(DialogService);
   loading        = signal(false);
   payments       = signal<AdminPayment[]>([]);
   editingPayment = signal<AdminPayment | null>(null);
@@ -341,17 +343,17 @@ export class PaymentReportComponent implements OnInit {
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 body { font-family: Arial, sans-serif; font-size: 8pt; color: #111827; }
 
-.hd { border-bottom: 2px solid #1e1b4b; padding-bottom: 6px; margin-bottom: 10px; }
-.co { font-size: 10pt; font-weight: 700; color: #1e1b4b; }
+.hd { border-bottom: 2px solid #1b4a7a; padding-bottom: 6px; margin-bottom: 10px; }
+.co { font-size: 10pt; font-weight: 700; color: #1b4a7a; }
 .rt { font-size: 13pt; font-weight: 700; margin: 2px 0; color: #111827; }
 .mt { display: flex; gap: 12px; font-size: 8pt; color: #4b5563; margin-top: 5px; flex-wrap: wrap; align-items: center; }
 .sp { color: #d1d5db; }
 .mc { font-weight: 700; color: #15803d; }
 .mu { font-weight: 700; color: #4338ca; }
-.mg { font-weight: 700; color: #1e1b4b; }
+.mg { font-weight: 700; color: #1b4a7a; }
 
 table { width: 100%; border-collapse: collapse; font-size: 7.5pt; table-layout: fixed; }
-thead tr { background: #1e1b4b; }
+thead tr { background: #1b4a7a; }
 th { padding: 6px 5px; font-weight: 600; color: #fff; text-align: left;
      border-right: 1px solid rgba(255,255,255,.12); white-space: nowrap; vertical-align: top; overflow: hidden; }
 th:last-child { border-right: none; }
@@ -370,8 +372,8 @@ small { font-size: 6.5pt; color: #6b7280; display: block; margin-top: 1px; }
 .st-recv { background: #dcfce7; color: #15803d; padding: 2px 6px; border-radius: 4px; font-size: 6.5pt; font-weight: 600; white-space: nowrap; display: inline-block; }
 .st-pend { background: #fef9c3; color: #a16207; padding: 2px 6px; border-radius: 4px; font-size: 6.5pt; font-weight: 600; white-space: nowrap; display: inline-block; }
 .st-part { background: #ffedd5; color: #c2410c; padding: 2px 6px; border-radius: 4px; font-size: 6.5pt; font-weight: 600; white-space: nowrap; display: inline-block; }
-tfoot tr { background: #1e1b4b; }
-tfoot td { padding: 7px 5px; color: #fff; border-top: 2px solid #3730a3; }
+tfoot tr { background: #1b4a7a; }
+tfoot td { padding: 7px 5px; color: #fff; border-top: 2px solid #153a60; }
 .fl  { color: #c7d2fe; font-size: 8.5pt; font-weight: 600; }
 .flc { color: #6ee7b7; font-size: 8.5pt; font-weight: 700; text-align: right; }
 .flu { color: #c4b5fd; font-size: 8.5pt; font-weight: 700; text-align: right; }
@@ -458,10 +460,11 @@ tfoot td { padding: 7px 5px; color: #fff; border-top: 2px solid #3730a3; }
     }
   }
 
-  verifyAll(): void {
-    this.filteredPayments()
-      .filter(p => !p.isVerified && !this.isVerifying(p.paymentId))
-      .forEach(p => this.toggleVerify(p));
+  async verifyAll(): Promise<void> {
+    const open = this.filteredPayments().filter(p => !p.isVerified && !this.isVerifying(p.paymentId));
+    if (!open.length) return;
+    if (!(await this.dialog.confirm({ message: `Verify ${open.length} payment${open.length === 1 ? '' : 's'}?`, okText: 'Verify' }))) return;
+    open.forEach(p => this.toggleVerify(p));
   }
 
   // ── Edit dialog

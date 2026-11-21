@@ -1,3 +1,4 @@
+import { ToastService } from '../../Services/toast-service';
 import { Component, ElementRef, AfterViewInit, ViewChild, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -18,6 +19,7 @@ declare var L: any;
   styleUrls: ['./complaint-registration-component.scss'],
 })
 export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
+  private readonly toasts = inject(ToastService);
   private dialog = inject(DialogService);
   @ViewChild('mapContainer') mapContainer!: ElementRef;
   @ViewChild('locationSearchInput') locationSearchInput!: ElementRef;
@@ -309,11 +311,7 @@ export class ComplaintRegistrationComponent implements OnInit, AfterViewInit {
           (locateBtn as HTMLButtonElement).disabled = false;
 
           // Show success message
-          const successDiv = document.createElement('div');
-          successDiv.className = 'location-toast';
-          successDiv.innerHTML = '<span class="material-icons">check_circle</span> Location updated to your current position';
-          document.body.appendChild(successDiv);
-          setTimeout(() => successDiv.remove(), 3000);
+          this.toasts.flash('Location updated to your current position');
         },
         (error) => {
           console.error('Geolocation error:', error);

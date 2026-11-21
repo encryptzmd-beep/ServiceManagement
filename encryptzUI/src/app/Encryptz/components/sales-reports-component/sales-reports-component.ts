@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { EMPTY, Observable, expand, forkJoin, map, reduce } from 'rxjs';
+import { EMPTY, Observable, catchError, expand, forkJoin, map, of, reduce } from 'rxjs';
 import { AuthService } from '../../Auth/auth-service';
-import { PagedResult } from '../../Models/ApiModels';
+import { PagedResult, ServiceDespatchItem } from '../../Models/ApiModels';
 import { ApiService } from '../../Services/API/api-service';
 import { ReportColumn, ReportExport, exportExcel, openPrint, printReportHtml } from '../crm-reports-component/crm-export';
-import { SALES_REPORTS, SalesReportData, SalesReportRow, buildSalesReport, rupees } from './sales-reports';
+import { DESPATCH_REPORT_KEYS, SALES_REPORTS, SalesReportData, SalesReportRow, buildSalesReport, reportsBeside, rupees } from './sales-reports';
 
 /** The API gives at most 200 rows a page; a report reads at most this many pages. */
 const PAGE_SIZE = 200;
@@ -35,7 +35,9 @@ export class SalesReportsComponent {
   private exporter = inject(SalesReportExporter);
   private destroyRef = inject(DestroyRef);
 
-  readonly reports = SALES_REPORTS;
+  /** The tabs: the Sales reports, or the reports of the Despatch menu. */
+  readonly reports = computed(() => reportsBeside(this.current().key));
+  readonly isDespatchReport = computed(() => DESPATCH_REPORT_KEYS.includes(this.current().key));
   loading = signal(true);
   error = signal('');
   /** More rows exist than a report reads. */
@@ -72,9 +74,14 @@ export class SalesReportsComponent {
     forkJoin({
       orders: this.all(page => this.api.getSalesOrders({ pageNumber: page, pageSize: PAGE_SIZE })),
       despatches: this.all(page => this.api.getDespatches({ pageNumber: page, pageSize: PAGE_SIZE })),
+      servicePending: this.serviceRows('Pending'),
+      serviceDespatched: this.serviceRows('Despatched'),
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: r => {
-        this.data.set({ orders: r.orders.items, despatches: r.despatches.items });
+        this.data.set({
+          orders: r.orders.items, despatches: r.despatches.items,
+          servicePending: r.servicePending, serviceDespatched: r.serviceDespatched,
+        });
         this.partial.set(r.orders.items.length < r.orders.total || r.despatches.items.length < r.despatches.total);
         this.loading.set(false);
       },
@@ -83,6 +90,16 @@ export class SalesReportsComponent {
         this.error.set(e?.status === 403 ? 'You do not have access to the Sales reports.' : e?.error?.message || 'The report could not be read. Please try again.');
       },
     });
+  }
+
+  /** Spare and repaired parts; a database without script 25 still shows the sales rows. */
+  private serviceRows(stage: 'Pending' | 'Despatched'): Observable<ServiceDespatchItem[]> {
+    if (typeof this.api.getServiceDespatches !== 'function') return of([]);
+    return this.all(page => this.api.getServiceDespatches({ stage, pageNumber: page, pageSize: PAGE_SIZE })
+      .pipe(map(r => r?.data ?? ({ items: [], totalCount: 0 } as unknown as PagedResult<ServiceDespatchItem>)))).pipe(
+      map(r => r.items),
+      catchError(() => of([])),
+    );
   }
 
   private all<T>(read: (page: number) => Observable<PagedResult<T>>): Observable<{ items: T[]; total: number }> {
@@ -125,7 +142,7 @@ export class SalesReportsComponent {
       key: v.key, title: v.title, filters: this.query().trim() ? `${range} · Search: ${this.query().trim()}` : range,
       columns: v.columns, rows: this.shownRows(),
       companyName: this.auth.companies?.().find(c => c.companyId === id)?.companyName ?? '',
-      fileName: `Sales-${v.key}-${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}.xlsx`,
+      fileName: `${this.isDespatchReport() ? 'Despatch' : 'Sales'}-${v.key}-${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}.xlsx`,
     };
   }
 

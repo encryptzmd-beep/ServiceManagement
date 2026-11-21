@@ -11,16 +11,16 @@ $muted: #6b7489;
 $faint: #9aa3b5;
 $line: #e4e8f0;
 $hair: #eef1f6;
-$navy: #1d4ed8;
+$navy: #153a60;
 $navy-dark: #1e40af;
 $red: #d42b2b;
-$accent: #2563eb;
+$accent: #1b4a7a;
 $tint: #eef4ff;
 $soft: 0 1px 2px rgba(20, 40, 90, 0.04), 0 6px 20px rgba(20, 40, 90, 0.06);
 
 /* ── tones of the section icons ── */
 [data-tone] { color: var(--tone); background: var(--tone-bg); }
-[data-tone='blue']   { --tone: #2563eb; --tone-bg: #e7f0ff; }
+[data-tone='blue']   { --tone: #1b4a7a; --tone-bg: #e7f0ff; }
 [data-tone='violet'] { --tone: #6d4ae8; --tone-bg: #eee9ff; }
 [data-tone='green']  { --tone: #0ea371; --tone-bg: #ddf7ec; }
 [data-tone='amber']  { --tone: #d97706; --tone-bg: #fff1dd; }
@@ -54,7 +54,7 @@ $soft: 0 1px 2px rgba(20, 40, 90, 0.04), 0 6px 20px rgba(20, 40, 90, 0.06);
 
 .jp-aside {
   position: sticky;
-  top: 80px;
+  top: 68px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -148,7 +148,7 @@ $soft: 0 1px 2px rgba(20, 40, 90, 0.04), 0 6px 20px rgba(20, 40, 90, 0.06);
 
   /* the main action: a light blue, not a solid one */
   &.primary {
-    background: linear-gradient(135deg, #e7f0ff 0%, #dde9ff 100%);
+    background: #eef3f8;
     border-color: #c9d8f5;
     color: $navy;
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
@@ -192,10 +192,7 @@ $soft: 0 1px 2px rgba(20, 40, 90, 0.04), 0 6px 20px rgba(20, 40, 90, 0.06);
     content: '';
     display: block;
     height: 112px;
-    background:
-      radial-gradient(circle at 88% -30%, rgba(255, 255, 255, 0.7) 0 70px, transparent 71px),
-      radial-gradient(circle at 72% 130%, rgba(255, 255, 255, 0.55) 0 90px, transparent 91px),
-      linear-gradient(110deg, #e3eeff 0%, #ece8ff 50%, #fde8f1 100%);
+    background: #eef3f8;
     border-bottom: 1px solid #edf0f6;
   }
 }
@@ -221,7 +218,7 @@ $soft: 0 1px 2px rgba(20, 40, 90, 0.04), 0 6px 20px rgba(20, 40, 90, 0.06);
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: linear-gradient(135deg, #dbe8ff 0%, #e9e2ff 100%);
+  background: #eef3f8;
   color: $navy;
   font-size: 30px;
   font-weight: 600;
@@ -735,12 +732,12 @@ $soft: 0 1px 2px rgba(20, 40, 90, 0.04), 0 6px 20px rgba(20, 40, 90, 0.06);
 }
 
 /* the side cards: a soft blue wash on the completeness card */
-.jp-complete { background: linear-gradient(160deg, #f3f7ff 0%, #fff 60%); }
-.jp-visibility.on { border-color: #bfe3cb; background: linear-gradient(160deg, #effaf3 0%, #fff 60%); }
+.jp-complete { background: #eef3f8; }
+.jp-visibility.on { border-color: #bfe3cb; background: #eef3f8; }
 .jp-visibility.on .jp-switch input:checked { background: #6fd3a8; }
 
 .jp-bar { height: 10px; border-radius: 999px; background: #eef1f7; overflow: hidden; }
-.jp-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #93b8ff 0%, #8ee3cf 100%); transition: width 0.4s; }
+.jp-bar-fill { height: 100%; border-radius: 999px; background: #1b4a7a; transition: width 0.4s; }
 .jp-complete-hint { display: block; margin-top: 10px; font-size: 12.5px; line-height: 1.45; color: $muted; }
 
 /* ── who viewed the profile ── */
@@ -816,32 +813,12 @@ $soft: 0 1px 2px rgba(20, 40, 90, 0.04), 0 6px 20px rgba(20, 40, 90, 0.06);
 }
 
 /* ── toast ── */
-.jp-toast {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: calc(100vw - 40px);
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: $ink;
-  color: #fff;
-  font-size: 13px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-  z-index: 60;
-
-  .material-icons { font-size: 18px; color: #6ee7a8; }
-  &.bad .material-icons { color: #fda29b; }
-}
 
 /* ── dialog ── */
 .jp-overlay {
   position: fixed;
   inset: 0;
   background: rgba(17, 24, 39, 0.5);
-  backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -867,7 +844,7 @@ $soft: 0 1px 2px rgba(20, 40, 90, 0.04), 0 6px 20px rgba(20, 40, 90, 0.06);
   justify-content: space-between;
   padding: 16px 14px 16px 24px;
   border-bottom: 1px solid $line;
-  background: linear-gradient(110deg, #f3f7ff 0%, #fff 70%);
+  background: #eef3f8;
 
   h3 { margin: 0; font-family: $display; font-size: 18px; font-weight: 600; color: $ink; }
 }

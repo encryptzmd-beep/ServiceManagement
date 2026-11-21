@@ -209,7 +209,8 @@
                   @if (isEditable()) {
                     <app-autocomplete [ngModel]="l.productMasterId" (ngModelChange)="onProductChange(l, $event)"
                       [options]="productOptions()" placeholder="Search product by name, code or model"
-                      emptyText="No product matches" ariaLabel="Product" />
+                      emptyText="No product matches" ariaLabel="Product"
+                      [createLabel]="rights.can('create', '/products') ? 'Add new product' : ''" (create)="openNewProduct(l, $event)" />
 
                     @if (l.productMasterId === null && l.productName) {
                       <small class="muted">{{ l.productName }}</small>
@@ -287,7 +288,7 @@
                 <div class="despatch-meta">
                   @if (d.installationComplaintNo) {
                     Installation job <span class="mono">{{ d.installationComplaintNo }}</span>
-                    <span class="status-badge" [style.background]="(d.installationStatusColor || '#64748b') + '20'" [style.color]="d.installationStatusColor || '#64748b'">{{ d.installationStatus }}</span>
+                    <span class="status-badge" [style.background]="(d.installationStatusColor || '#64748b') + '20'" [style.color]="d.installationStatusColor || '#64748b'">{{ statusText(d.installationStatus) }}</span>
                     @if (d.assignedTechnicians) { · Technician: {{ d.assignedTechnicians }} } @else { · <em>not assigned yet</em> }
                   } @else { No installation job was created. }
                 </div>
@@ -460,7 +461,7 @@
 
 <!-- ── new / edit customer (customer master) ───────────────── -->
 @if (customerPanelOpen()) {
-  <div class="modal-overlay" (click)="closeCustomerPanel()">
+  <div class="modal-overlay">
     <div class="modal" (click)="$event.stopPropagation()">
       <div class="modal-head">
         <div>
@@ -473,7 +474,7 @@
         <div class="grid-2">
           <div class="field">
             <label>Customer Name <span class="req">*</span></label>
-            <input type="text" [(ngModel)]="customerForm.customerName" placeholder="Full name / company" />
+            <input appUppercase type="text" [(ngModel)]="customerForm.customerName" placeholder="Full name / company" />
           </div>
           <div class="field">
             <label>Mobile Number <span class="req">*</span></label>
@@ -538,8 +539,8 @@
   </div>
 }
 
-@if (toast(); as t) {
-  <div class="toast" [class.success]="t.type === 'success'" [class.error]="t.type === 'error'">
-    <span class="material-icons">{{ t.type === 'success' ? 'check_circle' : 'error' }}</span>{{ t.text }}
-  </div>
+@if (toast(); as t) { <app-toast [text]="t.text" [kind]="t.type" /> }
+
+@if (newProductLine()) {
+  <app-product-form [isEditMode]="false" [initialName]="newProductName()" (close)="closeNewProduct($event)" />
 }

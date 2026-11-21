@@ -1,3 +1,4 @@
+import { ToastService } from '../../Services/toast-service';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -107,12 +108,13 @@ describe('NotificationBellComponent', () => {
 
     notices.incoming.set(note({ title: 'You are shortlisted for Clerk', app: 'JOBPORTAL' }));
     fixture.detectChanges();
-    expect(el(fixture, '.nb-toast')?.textContent).toContain('You are shortlisted for Clerk');
+    const toasts = TestBed.inject(ToastService);
+    expect(toasts.items()[0]?.title).toContain('You are shortlisted for Clerk');
 
-    (el(fixture, '.nb-toast-close') as HTMLButtonElement).click();
+    toasts.close(toasts.items()[0].id);
     fixture.detectChanges();
     expect(notices.incoming()).toBeNull();
-    expect(el(fixture, '.nb-toast')).toBeNull();
+    expect(toasts.items().length).toBe(0);
   });
 
   it('reloads an open list when one arrives', () => {

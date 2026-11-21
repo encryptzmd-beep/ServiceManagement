@@ -30,6 +30,9 @@ namespace EncryptzAPI.Middleware
 
         /// <summary>A technician's own field work (check-in, job status, spare request).</summary>
         public bool AllowTechnician { get; set; }
+
+        /// <summary>A role whose job is this action, whatever is ticked (a Storekeeper issues spare and repaired parts).</summary>
+        public string? AllowRole { get; set; }
     }
 
     /// <summary>Refuses a change the caller has no right for, whatever the screen showed.</summary>
@@ -46,7 +49,8 @@ namespace EncryptzAPI.Middleware
 
             // customers have their own boundary (CustomerBoundaryFilter)
             if (need == null || user?.Identity?.IsAuthenticated != true || user.IsInRole("Customer")
-                || (need.AllowTechnician && user.IsInRole("Technician")))
+                || (need.AllowTechnician && user.IsInRole("Technician"))
+                || (need.AllowRole != null && user.IsInRole(need.AllowRole)))
             {
                 await next();
                 return;

@@ -6,6 +6,7 @@ import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { CrmMasterDto, CrmMemberDto, LEAD_STATUSES, LeadFilterDto, LeadListDto } from '../../Models/CrmModels';
 import { CrmService } from '../../Services/crm-service';
 import { CrmRefusedComponent } from '../crm-shell-component/crm-refused';
+import { CrmLeadDataComponent } from './crm-lead-data-component';
 import { FORBIDDEN, pill, refusalOf, showDate, showDateTime } from '../crm-shell-component/crm-ui';
 
 const PAGE_SIZE = 20;
@@ -15,7 +16,7 @@ const KEYS = ['search', 'status', 'sourceId', 'ownerUserId', 'from', 'to', 'due'
 @Component({
   selector: 'app-crm-leads',
   standalone: true,
-  imports: [AppRightDirective, FormsModule, RouterLink, CrmRefusedComponent],
+  imports: [AppRightDirective, FormsModule, RouterLink, CrmRefusedComponent, CrmLeadDataComponent],
   templateUrl: './crm-leads-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-leads-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -111,6 +112,11 @@ export class CrmLeadsComponent {
     f.closedTo = text('closedTo');
     f.page = num('page') ?? 1;
     return f;
+  }
+
+  /** New leads came from an Excel file. */
+  reload(): void {
+    this.load(this.fromQuery(this.route.snapshot.queryParamMap));
   }
 
   private load(f: LeadFilterDto): void {

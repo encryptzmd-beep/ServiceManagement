@@ -321,20 +321,6 @@ $red: #b42318;
   color: $muted;
 }
 
-.vp-toast {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  padding: 10px 16px;
-  border-radius: 10px;
-  background: $ink;
-  color: #fff;
-  font-size: 13.5px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
-  z-index: 60;
-
-  &.bad { background: $red; }
-}
 
 /* ── rejections ── */
 .vp-rejection-top {

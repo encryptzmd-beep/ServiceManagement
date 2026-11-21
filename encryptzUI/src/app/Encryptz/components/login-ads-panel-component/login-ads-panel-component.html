@@ -46,7 +46,7 @@
 </div>
 
 @if (form(); as f) {
-  <div class="modal-overlay" (click)="close()" (escapeClose)="close()">
+  <div class="modal-overlay" (escapeClose)="close()">
     <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="la-form-title" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2 id="la-form-title">{{ f.loginAdId ? 'Edit slide' : 'New slide' }}</h2>

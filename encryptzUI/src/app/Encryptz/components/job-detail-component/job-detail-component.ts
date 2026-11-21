@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -22,7 +23,7 @@ import { EscapeClose } from '../shared/escape-close';
 @Component({
   selector: 'app-job-detail',
   standalone: true,
-  imports: [FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent, EscapeClose],
+  imports: [AppToastComponent, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent, EscapeClose],
   templateUrl: './job-detail-component.html',
   styleUrls: [
     '../job-profile-component/job-profile-component.scss',

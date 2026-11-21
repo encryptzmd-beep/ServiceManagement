@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { Component, ElementRef, ViewChild, signal, AfterViewInit, OnInit, NgZone, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -10,7 +11,7 @@ declare var L: any;
 @Component({
   selector: 'app-public-quick-complaint',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [AppToastComponent, CommonModule, FormsModule],
   template: `
     <div class="page-wrapper">
       <div class="page-card">
@@ -372,15 +373,7 @@ declare var L: any;
     </div>
 
     <!-- Success Toast -->
-    @if (showSuccess()) {
-      <div class="success-toast">
-        <span class="material-icons">check_circle</span>
-        <div>
-          <strong>Complaint Submitted!</strong>
-          <p>{{ successMessage() }}</p>
-        </div>
-      </div>
-    }
+    @if (showSuccess()) { <app-toast title="Complaint Submitted!" [text]="successMessage()" kind="success" /> }
   `,
   styles: [`
     /* Public quick complaint: a customer reports a fault from a phone, usually from an SMS link.
@@ -559,18 +552,6 @@ declare var L: any;
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* success */
-    .success-toast {
-      position: fixed; left: 12px; right: 12px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 1000;
-      max-width: 480px; margin: 0 auto;
-      display: flex; align-items: flex-start; gap: 10px;
-      padding: 14px 16px; border-radius: 10px;
-      background: #14532d; color: #fff;
-      box-shadow: 0 8px 24px rgba(15, 23, 42, .18);
-      animation: slideUp .25s ease-out;
-    }
-    .success-toast .material-icons { color: #86efac; }
-    .success-toast strong { display: block; font-size: 15px; }
-    .success-toast p { margin: 2px 0 0; font-size: 14px; color: #dcfce7; }
     @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
   `]
 })

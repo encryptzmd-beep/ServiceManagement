@@ -1,13 +1,20 @@
-import { Component, signal } from '@angular/core';
+import { Component, PLATFORM_ID, inject, signal } from '@angular/core';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { installDateRangeGuard } from './Encryptz/Services/date-range-guard';
 import { RouterOutlet } from '@angular/router';
 import { AppDialogComponent } from './Encryptz/components/app-dialog-component/app-dialog-component';
+import { AppToastHostComponent } from './Encryptz/components/app-toast-component/app-toast-component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, AppDialogComponent],
+  imports: [RouterOutlet, AppDialogComponent, AppToastHostComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class App {
   protected readonly title = signal('encryptzUI');
+
+  constructor() {
+    if (isPlatformBrowser(inject(PLATFORM_ID))) installDateRangeGuard(inject(DOCUMENT));
+  }
 }

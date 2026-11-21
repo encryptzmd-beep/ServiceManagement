@@ -196,6 +196,6 @@
   </div>
 
   <!-- Save Success -->
-  <div class="toast" *ngIf="saveSuccess()">✅ Settings saved successfully!</div>
-  <div class="toast toast-error" *ngIf="saveError()">{{ saveError() }}</div>
+  <app-toast *ngIf="saveSuccess()" text="Settings saved successfully" kind="success" />
+  <app-toast *ngIf="saveError()" [text]="saveError()" kind="error" />
 </div>

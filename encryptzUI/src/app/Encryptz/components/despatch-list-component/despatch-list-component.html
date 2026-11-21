@@ -3,12 +3,164 @@
   <div class="fx-page-header">
     <div>
       <div class="fx-page-title">Despatch</div>
-      <div class="fx-page-sub">Despatch billed products to the customer · each unit gets its serial number, warranty starts, and a New Installation job goes to the dashboard</div>
+      <div class="fx-page-sub">Sales orders, approved spare parts and repaired parts, all despatched from one place</div>
     </div>
+    @if (!refused()) {
+      <button type="button" class="fx-btn-outline tr-open" (click)="transportersOpen.set(true)">
+        <span class="material-icons" aria-hidden="true">local_shipping</span>Transporters
+      </button>
+    }
   </div>
+  @if (transportersOpen()) { <app-transporter-master (closed)="transportersOpen.set(false)" /> }
 
   @if (refused()) {
   <app-module-refused moduleName="Service Management" />
+  } @else {
+
+  <div class="sources" role="tablist" aria-label="What to despatch">
+    @for (s of sources; track s.key) {
+      <button type="button" role="tab" class="source" [class.active]="source() === s.key" [attr.aria-selected]="source() === s.key" (click)="setSource(s.key)">
+        <span class="material-icons" aria-hidden="true">{{ s.icon }}</span>{{ s.label }}
+      </button>
+    }
+  </div>
+
+  @if (source() !== 'sales') {
+    <div class="fx-stats-row">
+      <div class="fx-stat-card">
+        <div class="fx-stat-label">Waiting for Despatch</div>
+        <div class="fx-stat-val is-pending">{{ serviceStats().waiting }}</div>
+        <div class="fx-stat-pill pill-amber">{{ source() === 'spare' ? 'Approved, not yet despatched' : 'Repaired, not yet despatched' }}</div>
+      </div>
+      <div class="fx-stat-card">
+        <div class="fx-stat-label">Despatched</div>
+        <div class="fx-stat-val is-navy">{{ serviceStats().despatched }}</div>
+        <div class="fx-stat-pill pill-navy">All records</div>
+      </div>
+      <div class="fx-stat-card">
+        <div class="fx-stat-label">{{ source() === 'spare' ? 'Urgent Waiting' : 'Waiting Over 3 Days' }}</div>
+        <div class="fx-stat-val" [class.is-inactive]="serviceStats().attention > 0">{{ serviceStats().attention }}</div>
+        <div class="fx-stat-pill" [class.pill-red]="serviceStats().attention > 0" [class.pill-green]="serviceStats().attention === 0">{{ serviceStats().attention > 0 ? 'Despatch these first' : 'Nothing overdue' }}</div>
+      </div>
+      <div class="fx-stat-card">
+        <div class="fx-stat-label">Details Missing</div>
+        <div class="fx-stat-val" [class.is-inactive]="serviceStats().missing > 0">{{ serviceStats().missing }}</div>
+        <div class="fx-stat-pill" [class.pill-red]="serviceStats().missing > 0" [class.pill-green]="serviceStats().missing === 0">{{ serviceStats().missing > 0 ? 'Add mode and reference' : 'All recorded' }}</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab" [class.active]="serviceStage() === 'Pending'" (click)="setServiceStage('Pending')">
+        <span class="material-icons">pending_actions</span> Waiting <span class="tab-count">{{ serviceStats().waiting }}</span>
+      </button>
+      <button class="tab" [class.active]="serviceStage() === 'Despatched'" (click)="setServiceStage('Despatched')">
+        <span class="material-icons">local_shipping</span> Despatched <span class="tab-count">{{ serviceStats().despatched }}</span>
+      </button>
+    </div>
+
+    <div class="fx-table-wrap">
+      <div class="fx-table-toolbar">
+        <div class="fx-toolbar-left">
+          <span class="fx-table-title">{{ source() === 'spare' ? 'Spare parts' : 'Repaired parts' }} · {{ serviceStage() === 'Pending' ? 'waiting for despatch' : 'despatched' }}</span>
+          <span class="fx-table-count">{{ serviceRows().length }} shown · {{ serviceTotal() }} total</span>
+        </div>
+        <div class="fx-toolbar-right">
+          <div class="fx-search-box">
+            <input type="text" class="fx-search-input" placeholder="Part, job, customer, technician, reference…" [(ngModel)]="serviceSearch" (keyup.enter)="searchService()" />
+          </div>
+          @if (serviceStage() === 'Despatched') {
+            <input data-range="from" type="date" class="fx-filter-select" [(ngModel)]="serviceFrom" (change)="searchService()" title="From date" />
+            <input data-range="to" type="date" class="fx-filter-select" [(ngModel)]="serviceTo" (change)="searchService()" title="To date" />
+          }
+          <button class="fx-btn-navy" style="padding:8px 14px" (click)="searchService()">Apply</button>
+          <button class="fx-btn-outline" style="padding:8px 14px" (click)="resetService()">Reset</button>
+        </div>
+      </div>
+      @if (serviceError()) { <div class="service-error" role="alert">{{ serviceError() }}</div> }
+      <div class="table-scroll">
+        <table class="fx-table">
+          <thead>
+            @if (serviceStage() === 'Pending') {
+              <tr><th>Part</th><th>Job</th><th>Customer</th><th>Product</th><th>Technician</th><th>Qty</th><th>{{ source() === 'spare' ? 'Value / Stock' : 'Repair Notes' }}</th><th>Ready Since</th><th>Actions</th></tr>
+            } @else {
+              <tr><th>Despatch No</th><th>Date</th><th>Part</th><th>Job</th><th>Customer</th><th>Qty</th><th>Mode / Reference</th><th>Technician</th><th>Status</th><th>Actions</th></tr>
+            }
+          </thead>
+          <tbody>
+            @if (serviceLoading()) {
+              <tr><td colspan="10" class="fx-empty-row">Loading…</td></tr>
+            } @else {
+              @for (r of serviceRows(); track r.sourceType + r.sourceId) {
+                <tr class="row-click" (click)="viewService(r)">
+                  @if (serviceStage() === 'Despatched') {
+                    <td class="mono">{{ r.despatchNo || '—' }}</td>
+                    <td class="nowrap">{{ r.despatchDate | date:'dd MMM yyyy' }}</td>
+                  }
+                  <td>
+                    <div class="cell-2">
+                      <strong>{{ r.partName || '—' }}</strong>
+                      @if (r.partReference) { <small>{{ r.partReference }}</small> }
+                      @if (r.urgencyLevel && r.urgencyLevel !== 'Normal') { <span class="urgent-chip">{{ r.urgencyLevel }}</span> }
+                    </div>
+                  </td>
+                  <td><div class="cell-2 job-cell"><span class="mono">{{ r.complaintNumber || '—' }}</span>@if (r.complaintSubject) { <small [title]="r.complaintSubject">{{ r.complaintSubject }}</small> }</div></td>
+                  <td><div class="cell-2"><strong>{{ r.customerName || '—' }}</strong><small>{{ r.customerMobile }}@if (r.customerCity) { · {{ r.customerCity }} }</small></div></td>
+                  @if (serviceStage() === 'Pending') {
+                    <td><div class="cell-2 job-cell"><span>{{ r.productName || '—' }}</span>@if (r.productSerial) { <small class="mono-small">{{ r.productSerial }}</small> }</div></td>
+                    <td><div class="cell-2"><span>{{ r.technicianName || '—' }}</span><small>{{ r.technicianMobile }}</small></div></td>
+                    <td>{{ r.quantity }}</td>
+                    @if (source() === 'spare') {
+                      <td><div class="cell-2"><span class="nowrap">@if (r.unitPrice !== null && r.unitPrice !== undefined) { ₹{{ r.unitPrice * r.quantity | number:'1.2-2' }} } @else { — }</span><small [class.short]="isShort(r)">{{ stockText(r) }}</small></div></td>
+                    } @else {
+                      <td class="job-cell"><small class="muted-text" [title]="r.statusNotes || r.requestNotes || ''">{{ r.statusNotes || r.requestNotes || '—' }}</small></td>
+                    }
+                    <td><div class="cell-2"><span class="nowrap">{{ r.readyAt | date:'dd MMM yyyy' }}</span><small>{{ daysWaiting(r) }}</small></div></td>
+                    <td (click)="$event.stopPropagation()">
+                      <div class="actions">
+                        <button class="fx-action-btn" title="View details" aria-label="View details" (click)="viewService(r)"><span class="material-icons">visibility</span></button>
+                        <button appRight="create" appRightMenu="/sales/despatch" class="fx-btn-navy btn-xs" (click)="openServiceDespatch([r])"><span class="material-icons" style="font-size:15px">local_shipping</span> Despatch</button>
+                      </div>
+                    </td>
+                  } @else {
+                    <td>{{ r.quantity }}</td>
+                    <td>
+                      @if (r.despatchMode || r.referenceNo) {
+                        <div class="cell-2">
+                          <span>{{ r.despatchMode || 'Mode not set' }}</span>
+                          <small>{{ r.referenceNo || 'No reference' }}</small>
+                          @if (r.transporterName || r.vehicleNo) { <small>{{ r.transporterName }} {{ r.vehicleNo }}</small> }
+                        </div>
+                      } @else { <span class="muted">—</span> }
+                    </td>
+                    <td><div class="cell-2"><span>{{ r.technicianName || '—' }}</span><small>{{ r.technicianMobile }}</small></div></td>
+                    <td><span class="status-badge plain">{{ statusText(r.status) }}</span></td>
+                    <td (click)="$event.stopPropagation()">
+                      <div class="actions">
+                        <button class="fx-action-btn" title="View details" aria-label="View details" (click)="viewService(r)"><span class="material-icons">visibility</span></button>
+                        @if (missingDetails(r.despatchMode, r.referenceNo)) {
+                          <button appRight="edit" appRightMenu="/sales/despatch" class="fx-btn-outline btn-xs" (click)="openServiceDetails(r)">Add details</button>
+                        }
+                      </div>
+                    </td>
+                  }
+                </tr>
+              } @empty {
+                <tr><td colspan="10" class="fx-empty-row">{{ serviceStage() === 'Pending' ? 'Nothing is waiting for despatch.' : 'Nothing despatched yet.' }}</td></tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="fx-pagination">
+        <div class="fx-pagination-info">Page {{ servicePage }} of {{ servicePages() }} &nbsp;·&nbsp; {{ serviceTotal() }} records</div>
+        <div class="fx-pagination-actions">
+          <button class="fx-page-btn" (click)="goService(servicePage - 1)" [disabled]="servicePage <= 1">‹ Prev</button>
+          <button class="fx-page-btn" (click)="goService(servicePage + 1)" [disabled]="servicePage >= servicePages()">Next ›</button>
+        </div>
+      </div>
+    </div>
+
+
   } @else {
 
   <div class="fx-stats-row">
@@ -118,16 +270,17 @@
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="#8a9ab0" stroke-width="1.5"/><path d="M11 11l3 3" stroke="#8a9ab0" stroke-width="1.5" stroke-linecap="round"/></svg>
             <input type="text" class="fx-search-input" placeholder="Despatch no, bill, customer, serial, complaint…" [(ngModel)]="filter.searchTerm" (keyup.enter)="search()" />
           </div>
-          <input type="date" class="fx-filter-select" [(ngModel)]="filter.fromDate" (change)="search()" title="From date" />
-          <input type="date" class="fx-filter-select" [(ngModel)]="filter.toDate" (change)="search()" title="To date" />
+          <input data-range="from" type="date" class="fx-filter-select" [(ngModel)]="filter.fromDate" (change)="search()" title="From date" />
+          <input data-range="to" type="date" class="fx-filter-select" [(ngModel)]="filter.toDate" (change)="search()" title="To date" />
           <button class="fx-btn-navy" style="padding:8px 14px" (click)="search()">Apply</button>
+          <button class="fx-btn-outline" style="padding:8px 14px" (click)="resetDespatched()">Reset</button>
         </div>
       </div>
       <div class="table-scroll">
         <table class="fx-table">
           <thead>
             <tr>
-              <th>Despatch No</th><th>Date</th><th>Bill</th><th>Customer</th><th>Units</th><th>Transport</th>
+              <th>Despatch No</th><th>Date</th><th>Bill</th><th>Customer</th><th>Units</th><th>Mode / Reference</th>
               <th>Warranty</th><th>Installation</th><th>Technician</th><th>Actions</th>
             </tr>
           </thead>
@@ -143,8 +296,12 @@
                   <td><div class="cell-2"><strong>{{ d.customerName }}</strong><small>{{ d.customerMobile }}@if (d.city) { · {{ d.city }} }</small></div></td>
                   <td>{{ d.unitCount }}</td>
                   <td>
-                    @if (d.transporterName || d.vehicleNo) {
-                      <div class="cell-2"><span>{{ d.transporterName || '—' }}</span><small>{{ d.vehicleNo }}@if (d.trackingNo) { · {{ d.trackingNo }} }</small></div>
+                    @if (d.despatchMode || d.trackingNo || d.transporterName || d.vehicleNo) {
+                      <div class="cell-2">
+                        <span>{{ d.despatchMode || 'Mode not set' }}</span>
+                        <small>{{ d.trackingNo || 'No reference' }}</small>
+                        @if (d.transporterName || d.vehicleNo) { <small>{{ d.transporterName }} {{ d.vehicleNo }}</small> }
+                      </div>
                     } @else { <span class="muted">—</span> }
                   </td>
                   <td>
@@ -159,7 +316,7 @@
                     @if (d.installationComplaintNo) {
                       <div class="cell-2">
                         <span class="mono">{{ d.installationComplaintNo }}</span>
-                        <span class="status-badge" [style.background]="(d.installationStatusColor || '#64748b') + '20'" [style.color]="d.installationStatusColor || '#64748b'">{{ d.installationStatus }}</span>
+                        <span class="status-badge" [style.background]="(d.installationStatusColor || '#64748b') + '20'" [style.color]="d.installationStatusColor || '#64748b'">{{ statusText(d.installationStatus) }}</span>
                       </div>
                     } @else { <span class="muted">—</span> }
                   </td>
@@ -171,7 +328,12 @@
                     } @else { <span class="muted">—</span> }
                   </td>
                   <td (click)="$event.stopPropagation()">
-                    <button class="fx-action-btn" title="Despatch & warranty details" (click)="view(d)"><span class="material-icons">visibility</span></button>
+                    <div class="actions">
+                      <button class="fx-action-btn" title="Despatch & warranty details" (click)="view(d)"><span class="material-icons">visibility</span></button>
+                      @if (missingDetails(d.despatchMode, d.trackingNo)) {
+                        <button appRight="edit" appRightMenu="/sales/despatch" class="fx-btn-outline btn-xs" (click)="openSalesDetails(d)">Add details</button>
+                      }
+                    </div>
                   </td>
                 </tr>
               } @empty {
@@ -200,5 +362,126 @@
       </div>
     </div>
   }
+  }
+
+  <!-- everything about one spare or repair despatch -->
+  @if (viewing(); as v) {
+    <div class="sd-overlay">
+      <div class="sd-box sv-box" role="dialog" aria-modal="true" aria-labelledby="sv-title" (click)="$event.stopPropagation()">
+        <div class="sd-head">
+          <div>
+            <h2 id="sv-title">{{ v.despatchNo || (v.sourceType === 'Spare' ? 'Spare part' : 'Repair part') }}</h2>
+            <p>{{ v.partName }} · {{ statusText(v.status) }}</p>
+          </div>
+          <button type="button" class="sd-close" aria-label="Close" (click)="viewing.set(null)"><span class="material-icons">close</span></button>
+        </div>
+        <div class="sv-body">
+          <section>
+            <h3>Despatch</h3>
+            <dl>
+              <div><dt>Despatch No</dt><dd class="mono">{{ v.despatchNo || '—' }}</dd></div>
+              <div><dt>Date</dt><dd>{{ v.despatchNo ? (v.despatchDate | date:'dd MMM yyyy') : 'Not despatched' }}</dd></div>
+              <div><dt>Mode</dt><dd>{{ v.despatchMode || '—' }}</dd></div>
+              <div><dt>{{ referenceLabel(v.despatchMode) }}</dt><dd>{{ v.referenceNo || '—' }}</dd></div>
+              <div><dt>Reference Date</dt><dd>{{ v.referenceDate ? (v.referenceDate | date:'dd MMM yyyy') : '—' }}</dd></div>
+              <div><dt>Transporter</dt><dd>{{ v.transporterName || '—' }}</dd></div>
+              <div><dt>Vehicle / Driver</dt><dd>{{ [v.vehicleNo, v.driverName].join(' ').trim() || '—' }}</dd></div>
+              <div><dt>Despatched By</dt><dd>{{ v.despatchedByName || '—' }}@if (v.addedLater) { <small> · details added later</small> }</dd></div>
+              <div class="full"><dt>Remarks</dt><dd>{{ v.remarks || '—' }}</dd></div>
+            </dl>
+          </section>
+          <section>
+            <h3>{{ v.sourceType === 'Spare' ? 'Spare Part' : 'Repair Part' }}</h3>
+            <dl>
+              <div><dt>Part</dt><dd>{{ v.partName || '—' }}</dd></div>
+              <div><dt>{{ v.sourceType === 'Spare' ? 'Part No' : 'Serial No' }}</dt><dd class="mono">{{ v.partReference || '—' }}</dd></div>
+              <div><dt>Quantity</dt><dd>{{ v.quantity }}</dd></div>
+              @if (v.sourceType === 'Spare') {
+                <div><dt>Urgency</dt><dd>{{ v.urgencyLevel || 'Normal' }}</dd></div>
+                <div><dt>Unit Cost</dt><dd>@if (v.unitPrice !== null && v.unitPrice !== undefined) { ₹{{ v.unitPrice | number:'1.2-2' }} } @else { — }</dd></div>
+                <div><dt>Value</dt><dd>@if (v.unitPrice !== null && v.unitPrice !== undefined) { ₹{{ v.unitPrice * v.quantity | number:'1.2-2' }} } @else { — }</dd></div>
+                <div><dt>Stock</dt><dd>{{ stockText(v) }}</dd></div>
+                <div><dt>Approved By</dt><dd>{{ v.approvedByName || '—' }}@if (v.approvedAt) { <small> · {{ v.approvedAt | date:'dd MMM yyyy' }}</small> }</dd></div>
+              }
+              <div><dt>Requested</dt><dd>{{ v.requestedAt ? (v.requestedAt | date:'dd MMM yyyy') : '—' }}</dd></div>
+              <div class="full"><dt>Request Notes</dt><dd>{{ v.requestNotes || '—' }}</dd></div>
+              @if (v.sourceType === 'Repair') { <div class="full"><dt>Status Notes</dt><dd>{{ v.statusNotes || '—' }}</dd></div> }
+            </dl>
+          </section>
+          <section>
+            <h3>Job &amp; Customer</h3>
+            <dl>
+              <div><dt>Job No</dt><dd class="mono">{{ v.complaintNumber || '—' }}</dd></div>
+              <div><dt>Technician</dt><dd>{{ v.technicianName || '—' }}@if (v.technicianMobile) { <small> · {{ v.technicianMobile }}</small> }</dd></div>
+              <div class="full"><dt>Subject</dt><dd>{{ v.complaintSubject || '—' }}</dd></div>
+              <div><dt>Product</dt><dd>{{ v.productName || '—' }}</dd></div>
+              <div><dt>Product Serial</dt><dd class="mono">{{ v.productSerial || '—' }}</dd></div>
+              <div><dt>Customer</dt><dd>{{ v.customerName || '—' }}</dd></div>
+              <div><dt>Mobile</dt><dd>{{ v.customerMobile || '—' }}</dd></div>
+              <div class="full"><dt>Address</dt><dd>{{ addressText(v) }}</dd></div>
+            </dl>
+          </section>
+        </div>
+        <div class="sd-foot">
+          @if (!isStorekeeper && v.complaintId) {
+            <button type="button" class="fx-btn-outline" style="padding:8px 14px" (click)="openJob(v)">View Job</button>
+          }
+          @if (!v.despatchNo && serviceStage() === 'Pending') {
+            <button appRight="create" appRightMenu="/sales/despatch" type="button" class="fx-btn-navy" style="padding:8px 14px" (click)="viewing.set(null); openServiceDespatch([v])">Despatch</button>
+          } @else if (missingDetails(v.despatchMode, v.referenceNo)) {
+            <button appRight="edit" appRightMenu="/sales/despatch" type="button" class="fx-btn-navy" style="padding:8px 14px" (click)="viewing.set(null); openServiceDetails(v)">Add details</button>
+          }
+          <button type="button" class="fx-btn-outline" style="padding:8px 14px" (click)="viewing.set(null)">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (jobId(); as id) {
+    <app-complaint-detail-popup [complaintId]="id" [viewOnly]="true" (closed)="jobId.set(null)" (refreshed)="loadService()"></app-complaint-detail-popup>
+  }
+
+  <!-- the one despatch window: every tab uses it -->
+    @if (despatching().length || fillSales()) {
+      <div class="sd-overlay">
+        <div class="sd-box" role="dialog" aria-modal="true" aria-labelledby="sd-title" (click)="$event.stopPropagation()">
+          <div class="sd-head">
+            <div>
+              @if (fillSales() || fillService()) {
+                <h2 id="sd-title">Add despatch details</h2>
+              } @else {
+                <h2 id="sd-title">Despatch {{ despatching().length > 1 ? despatching().length + ' ' : '' }}{{ source() === 'spare' ? 'spare part' : 'repaired part' }}{{ despatching().length > 1 ? 's' : '' }}</h2>
+              }
+              @if (fillSales(); as d) { <p>{{ d.despatchNo }} · {{ d.orderNo }} · {{ d.customerName }}</p> }
+              @for (r of despatching(); track r.sourceId) { <p>{{ r.partName }} · Qty {{ r.quantity }} · {{ r.complaintNumber }} · {{ r.technicianName }}</p> }
+            </div>
+            <button type="button" class="sd-close" aria-label="Close" (click)="closeServiceDespatch()"><span class="material-icons">close</span></button>
+          </div>
+          <div class="sd-body">
+            @if (!fillSales()) { <label>Despatch date *<input type="date" [(ngModel)]="sd.despatchDate" [max]="today" /></label> }
+            <label>Mode of despatch *
+              <select [ngModel]="sd.despatchMode" [disabled]="modeLocked()" (ngModelChange)="sd.despatchMode = $event">
+                @for (m of modes; track m.value) { <option [value]="m.value">{{ m.value }}</option> }
+              </select>
+            </label>
+            <label>{{ sdMode().reference }} *<input type="text" maxlength="100" required [(ngModel)]="sd.referenceNo" /></label>
+            <label>Reference date<input type="date" [(ngModel)]="sd.referenceDate" [max]="today" /></label>
+            @if (sdMode().carrier) { <div class="sd-field"><span>{{ sd.despatchMode === 'Courier' ? 'Courier company' : 'Transporter' }}</span><app-transporter-picker [value]="sd.transporterName" [label]="sd.despatchMode === 'Courier' ? 'Courier company' : 'Transporter'" (valueChange)="sd.transporterName = $event" /></div> }
+            @if (sdMode().vehicle) {
+              <label>Vehicle no<input type="text" maxlength="50" placeholder="KL-07-AB-1234" [(ngModel)]="sd.vehicleNo" /></label>
+              <label>Driver<input type="text" maxlength="150" [(ngModel)]="sd.driverName" /></label>
+            }
+            @if (!fillSales()) { <label class="full">Remarks<input type="text" maxlength="500" [(ngModel)]="sd.remarks" /></label> }
+            @if (sdError()) { <div class="service-error full" role="alert">{{ sdError() }}</div> }
+          </div>
+          <div class="sd-foot">
+            <button type="button" class="fx-btn-outline" style="padding:8px 14px" (click)="closeServiceDespatch()">Cancel</button>
+            <button [appRight]="fillSales() || fillService() ? 'edit' : 'create'" appRightMenu="/sales/despatch" type="button" class="fx-btn-navy" style="padding:8px 14px" [disabled]="sdSaving()" (click)="saveServiceDespatch()">{{ sdSaving() ? 'Saving…' : (fillSales() || fillService() ? 'Save Details' : 'Save Despatch') }}</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (serviceToast()) { <app-toast [text]="serviceToast()" kind="success" /> }
   }
 </div>

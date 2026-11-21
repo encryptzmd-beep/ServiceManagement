@@ -1,3 +1,5 @@
+import { TransporterPickerComponent } from '../transporter-component/transporter-component';
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -17,6 +19,7 @@ interface TechOption {
 }
 import { ComplaintDetailPopupComponent } from '../complaint-detail-popup-component/complaint-detail-popup-component';
 import { DialogService } from '../../Services/dialog-service';
+import { statusText, todayInIndia } from '../shared/sales-input-rules';
 import { isProductLine } from './despatch-units';
 
 /** One unit (bill line × qty) that receives a serial number at despatch. */
@@ -38,7 +41,7 @@ interface UnitRow {
 @Component({
   selector: 'app-despatch-entry',
   standalone: true,
-  imports: [AppRightDirective, CommonModule, FormsModule, RouterModule, ComplaintDetailPopupComponent, SalesDocumentsComponent],
+  imports: [TransporterPickerComponent, AppToastComponent, AppRightDirective, CommonModule, FormsModule, RouterModule, ComplaintDetailPopupComponent, SalesDocumentsComponent],
   templateUrl: './despatch-entry-component.html',
   styleUrls: ['./despatch-entry-component.scss'],
 })
@@ -214,6 +217,11 @@ export class DespatchEntryComponent implements OnInit {
   }
 
   onDateChange(): void { this.despatchDateSig.set(this.despatchDate); }
+
+  /** The earliest despatch date: goods cannot leave before they are billed. */
+  billDate = computed(() => String(this.order()?.order?.orderDate ?? '').slice(0, 10));
+  readonly today = todayInIndia();
+  readonly statusText = statusText;
   touchUnits(): void { this.units.update(u => [...u]); }
 
   async submit(): Promise<void> {
@@ -221,6 +229,9 @@ export class DespatchEntryComponent implements OnInit {
     if (!o) return;
     if (o.order.status !== 'Billed') { this.error.set('This bill cannot be despatched.'); return; }
     if (!this.despatchDate) { this.error.set('Despatch date is required'); return; }
+    if (this.billDate() && this.despatchDate < this.billDate()) { this.error.set('Despatch date cannot be before the bill date'); return; }
+    if (!this.trackingNo.trim()) { this.error.set(`Enter the ${this.modeInfo().reference}`); return; }
+    if (this.preferredDate && this.preferredDate < this.today) { this.error.set('Preferred installation date cannot be in the past'); return; }
     const dup = this.duplicateSerial();
     if (dup) { this.error.set(`Serial number ${dup} is entered more than once`); return; }
     if (this.missingSerials() > 0 && !(await this.dialog.confirm(`${this.missingSerials()} unit(s) have no serial number. A serial number will be generated from the bill number. Continue?`))) return;
@@ -324,6 +335,7 @@ export class DespatchEntryComponent implements OnInit {
   async confirmAssign(): Promise<void> {
     const d = this.detail()?.despatch;
     if (!d?.installationComplaintId || !this.assignTechId) { this.assignError.set('Choose a technician'); return; }
+    if (this.assignDate && this.assignDate < this.today) { this.assignError.set('Visit date cannot be in the past'); return; }
     this.assigning.set(true);
     this.assignError.set('');
     const failed = await this.assign({

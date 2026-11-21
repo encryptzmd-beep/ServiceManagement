@@ -27,6 +27,17 @@ namespace EncryptzBL.DTO_s
     }
 
     /// <summary>Create / update a customer of the master from the bill.</summary>
+    public class TransporterDto
+    {
+        public int TransporterId { get; set; }
+        public string TransporterName { get; set; } = string.Empty;
+        public string ContactPerson { get; set; } = string.Empty;
+        public string Mobile { get; set; } = string.Empty;
+        public string GSTIN { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public bool IsActive { get; set; } = true;
+    }
+
     public class SalesCustomerSaveDto
     {
         public int CustomerId { get; set; }
@@ -258,6 +269,95 @@ namespace EncryptzBL.DTO_s
         public DateTime? ToDate { get; set; }
         public int PageNumber { get; set; } = 1;
         public int PageSize { get; set; } = 20;
+    }
+
+    /// <summary>Spare and repaired parts in the single Despatch screen (script 25).</summary>
+    public class ServiceDespatchFilterDto
+    {
+        /// <summary>Pending or Despatched.</summary>
+        public string? Stage { get; set; } = "Pending";
+        /// <summary>Spare, Repair, or empty for both.</summary>
+        public string? SourceType { get; set; }
+        public string? SearchTerm { get; set; }
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+        public int PageNumber { get; set; } = 1;
+        public int PageSize { get; set; } = 20;
+    }
+
+    public class ServiceDespatchListDto
+    {
+        public string SourceType { get; set; } = string.Empty;
+        public int SourceId { get; set; }
+        public int? ComplaintId { get; set; }
+        public string? ComplaintNumber { get; set; }
+        public string? PartName { get; set; }
+        public string? PartReference { get; set; }
+        public int Quantity { get; set; }
+        public string? UrgencyLevel { get; set; }
+        public string? Status { get; set; }
+        public string? TechnicianName { get; set; }
+        public string? CustomerName { get; set; }
+        public string? CustomerMobile { get; set; }
+        public DateTime? ReadyAt { get; set; }
+        public int? ServiceDespatchId { get; set; }
+        public string? DespatchNo { get; set; }
+        public DateTime? DespatchDate { get; set; }
+        public string? DespatchMode { get; set; }
+        public string? ReferenceNo { get; set; }
+        public DateTime? ReferenceDate { get; set; }
+        public string? TransporterName { get; set; }
+        public string? VehicleNo { get; set; }
+        public string? DriverName { get; set; }
+        public string? Remarks { get; set; }
+        public decimal? UnitPrice { get; set; }
+        public int? StockQuantity { get; set; }
+        public string? RequestNotes { get; set; }
+        public string? StatusNotes { get; set; }
+        public DateTime? RequestedAt { get; set; }
+        public DateTime? ApprovedAt { get; set; }
+        public string? ApprovedByName { get; set; }
+        public string? ComplaintSubject { get; set; }
+        public string? ProductName { get; set; }
+        public string? ProductSerial { get; set; }
+        public string? CustomerAddress { get; set; }
+        public string? CustomerCity { get; set; }
+        public string? TechnicianMobile { get; set; }
+        public DateTime? DespatchedAt { get; set; }
+        public string? DespatchedByName { get; set; }
+        public bool AddedLater { get; set; }
+        public int TotalCount { get; set; }
+    }
+
+    public class ServiceDespatchCreateDto
+    {
+        public string? SourceType { get; set; }
+        public int SourceId { get; set; }
+        public DateTime? DespatchDate { get; set; }
+        public string? DespatchMode { get; set; }
+        public string? ReferenceNo { get; set; }
+        public DateTime? ReferenceDate { get; set; }
+        public string? TransporterName { get; set; }
+        public string? VehicleNo { get; set; }
+        public string? DriverName { get; set; }
+        public string? Remarks { get; set; }
+    }
+
+    /// <summary>The missing mode and reference of an older sales despatch.</summary>
+    public class DespatchDetailsDto
+    {
+        public string? DespatchMode { get; set; }
+        public string? ReferenceNo { get; set; }
+        public DateTime? ReferenceDate { get; set; }
+        public string? TransporterName { get; set; }
+        public string? VehicleNo { get; set; }
+        public string? DriverName { get; set; }
+    }
+
+    public class ServiceDespatchResultDto
+    {
+        public int ServiceDespatchId { get; set; }
+        public string DespatchNo { get; set; } = string.Empty;
     }
 
     public class DespatchListDto

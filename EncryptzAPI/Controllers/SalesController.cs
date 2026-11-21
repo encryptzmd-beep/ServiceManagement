@@ -54,6 +54,19 @@ namespace EncryptzAPI.Controllers
             return Ok(ApiResponse<Dictionary<string, string>>.Ok(map));
         }
 
+        // ---------------- transporter master ----------------
+        [HttpGet("transporters")]
+        public async Task<IActionResult> GetTransporters([FromQuery] bool includeInactive = false)
+            => Ok(ApiResponse<List<TransporterDto>>.Ok(await _svc.GetTransporters(includeInactive)));
+
+        [MenuRight("/sales/despatch", MenuRightKind.Save, IdProperty = "TransporterId", AllowRole = "Storekeeper")]
+        [HttpPost("transporters")]
+        public async Task<IActionResult> SaveTransporter([FromBody] TransporterDto dto)
+        {
+            var result = await _svc.SaveTransporter(dto);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
         // ---------------- customer master ----------------
         [HttpGet("customers")]
         public async Task<IActionResult> SearchCustomers([FromQuery] string? search = null, [FromQuery] int top = 50)
@@ -121,6 +134,44 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> CreateDespatch([FromBody] DespatchCreateDto dto)
         {
             var result = await _svc.CreateDespatch(dto, UserId);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        // ---------------- spare and repaired parts, same Despatch screen ----------------
+        [HttpGet("service-despatches")]
+        [Authorize(Roles = "Admin,CompanyAdmin,ServiceManager,Manager,Storekeeper")]
+        public async Task<IActionResult> GetServiceDespatches([FromQuery] ServiceDespatchFilterDto filter)
+        {
+            var result = await _svc.GetServiceDespatches(filter);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        [MenuRight("/sales/despatch", MenuRightKind.Create, AllowRole = "Storekeeper")]
+        [HttpPost("service-despatches")]
+        [Authorize(Roles = "Admin,CompanyAdmin,ServiceManager,Manager,Storekeeper")]
+        public async Task<IActionResult> CreateServiceDespatch([FromBody] ServiceDespatchCreateDto dto)
+        {
+            var result = await _svc.CreateServiceDespatch(dto, UserId);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>The missing mode and reference of an older spare or repair despatch.</summary>
+        [MenuRight("/sales/despatch", MenuRightKind.Edit, AllowRole = "Storekeeper")]
+        [HttpPost("service-despatches/details")]
+        [Authorize(Roles = "Admin,CompanyAdmin,ServiceManager,Manager,Storekeeper")]
+        public async Task<IActionResult> AddServiceDespatchDetails([FromBody] ServiceDespatchCreateDto dto)
+        {
+            var result = await _svc.AddServiceDespatchDetails(dto, UserId);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>The missing mode and reference of an older sales despatch.</summary>
+        [MenuRight("/sales/despatch", MenuRightKind.Edit)]
+        [HttpPost("despatches/{id:int}/details")]
+        [Authorize(Roles = "Admin,CompanyAdmin,ServiceManager,Manager")]
+        public async Task<IActionResult> AddDespatchDetails(int id, [FromBody] DespatchDetailsDto dto)
+        {
+            var result = await _svc.AddDespatchDetails(id, dto, UserId);
             return result.Success ? Ok(result) : BadRequest(result);
         }
 

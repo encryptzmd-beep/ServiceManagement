@@ -1,3 +1,4 @@
+import { UppercaseInputDirective } from '../shared/uppercase-input';
 import { Component, DestroyRef, ElementRef, HostListener, computed, inject, signal, viewChild } from '@angular/core';
 import { NotificationBellComponent } from '../notification-bell-component/notification-bell-component';
 import { moduleLanding, moduleRoute } from '../shared/module-route';
@@ -43,7 +44,7 @@ const SEARCH_ABOVE = 6;
 
 @Component({
   selector: 'app-company-selector-component',
-  imports: [CommonModule, FormsModule, RouterModule, NotificationBellComponent],
+  imports: [UppercaseInputDirective, CommonModule, FormsModule, RouterModule, NotificationBellComponent],
   templateUrl: './company-selector-component.html',
   styleUrl: './company-selector-component.scss',
 })

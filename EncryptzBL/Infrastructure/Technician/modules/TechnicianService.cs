@@ -64,7 +64,7 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
             var ds = await GetDataSetAsync("sp_Technician_GetById", parameters);
 
             if (ds == null || ds.Tables.Count == 0)
-                return null;
+                return null!;
 
             var tech = ds.Tables[0].ToList<TechnicianDetail>().FirstOrDefault();
 
@@ -81,7 +81,7 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
             //        : new List<ScheduleListItem>();
             //}
 
-            return tech;
+            return tech!;
         }
 
 
@@ -203,6 +203,10 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
 
         public async Task<ApiResponse<int>> AssignTechnician(AssignTechnicianDto dto, int userId)
         {
+            var today = DateTime.UtcNow.AddMinutes(330).Date;
+            if (dto.ScheduledDate.HasValue && dto.ScheduledDate.Value.Date < today)
+                return ApiResponse<int>.Fail("Visit date cannot be in the past");
+
             var p = new[] {
         SqlParameterHelper.Input("@ComplaintId", dto.ComplaintId),
         SqlParameterHelper.Input("@TechnicianId", dto.TechnicianId),
@@ -517,7 +521,7 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
             var p = new[] { SqlParameterHelper.Input("@AssignmentId", assignmentId) };
             var ds = await GetDataSetAsync("sp_WorkOrder_GetDetails", p);
 
-            if (ds == null || ds.Tables.Count == 0) return null;
+            if (ds == null || ds.Tables.Count == 0) return null!;
 
             var detail = ds.Tables[0].ToList<WorkOrderDetailDto>().FirstOrDefault();
             if (detail == null) return null;

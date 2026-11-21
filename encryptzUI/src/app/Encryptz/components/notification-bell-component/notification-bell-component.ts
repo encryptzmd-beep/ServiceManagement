@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { Component, ElementRef, HostListener, OnDestroy, OnInit, effect, inject, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import { AppNotification, NotificationService, appLabel, safeLink } from '../../Services/notification-service';
@@ -7,7 +8,7 @@ import { AppNotification, NotificationService, appLabel, safeLink } from '../../
  * newest of them in a list, and a short notice when one arrives while the page is open.
  */
 @Component({
-  selector: 'app-notification-bell',
+  selector: 'app-notification-bell', imports: [AppToastComponent],
   standalone: true,
   templateUrl: './notification-bell-component.html',
   styleUrl: './notification-bell-component.scss',

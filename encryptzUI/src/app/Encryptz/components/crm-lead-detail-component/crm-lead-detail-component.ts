@@ -5,7 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   ConvertResultDto, CrmMasterDto, CrmMemberDto, FollowUpSaveDto, LEAD_STATUSES, LeadDetailDto, LeadSaveDto, QuotationSummaryDto,
 } from '../../Models/CrmModels';
-import { CrmLeadFieldsComponent } from '../crm-lead-form-component/crm-lead-fields';
+import { CrmLeadFieldsComponent, leadProductsForSave } from '../crm-lead-form-component/crm-lead-fields';
 import { TransactionMode, TransactionToolbarComponent } from '../shared/transaction-toolbar/transaction-toolbar';
 import { FindQuery, FindRow, TransactionFindComponent } from '../shared/transaction-toolbar/transaction-find';
 import { DialogService } from '../../Services/dialog-service';
@@ -309,7 +309,7 @@ export class CrmLeadDetailComponent {
       address: l.address, city: l.city, state: l.state, pinCode: l.pinCode, landmark: l.landmark, leadSourceId: l.leadSourceId ?? null,
       productCategory: l.productCategory, productMasterId: l.productMasterId ?? null, modelRequirement: l.modelRequirement,
       estimatedQty: l.estimatedQty ?? null, expectedPurchaseDate: l.expectedPurchaseDate ? l.expectedPurchaseDate.slice(0, 10) : null,
-      ownerUserId: l.ownerUserId, priority: l.priority || 'Medium', remarks: l.remarks,
+      ownerUserId: l.ownerUserId, priority: l.priority || 'Medium', remarks: l.remarks, products: l.products ?? [],
     };
   }
 
@@ -351,8 +351,8 @@ export class CrmLeadDetailComponent {
       ...f,
       leadSourceId: f.leadSourceId ? Number(f.leadSourceId) : null,
       ownerUserId: f.ownerUserId ? Number(f.ownerUserId) : null,
-      estimatedQty: f.estimatedQty ? Number(f.estimatedQty) : null,
       expectedPurchaseDate: f.expectedPurchaseDate || null,
+      ...leadProductsForSave(f),
     }).subscribe({
       next: res => {
         this.busy.set(false);

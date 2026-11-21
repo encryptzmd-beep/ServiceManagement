@@ -42,8 +42,26 @@ namespace EncryptzBL.Infrastructure.Spareparts.Modules
             return await GetListAsync<SpareRequestByComplaintDto>("sp_SparePart_GetByComplaint", p);
         }
 
+        /// <summary>Why these spare requests cannot move to the status (a despatch is made on the Despatch screen only).</summary>
+        private async Task<string?> SpareFlowProblem(IEnumerable<int> requestIds, string? status)
+        {
+            var dt = await GetDataTableByQueryAsync(
+                @"SELECT r.Status FROM dbo.SparePartRequests r
+                  INNER JOIN STRING_SPLIT(@Ids, ',') i ON TRY_CAST(i.value AS INT) = r.RequestId",
+                new[] { SqlParameterHelper.Input("@Ids", string.Join(",", requestIds)) });
+            foreach (DataRow row in dt.Rows)
+            {
+                var problem = EncryptzBL.Common.Sales.ServiceDespatchRules.SpareStatusProblem(row["Status"]?.ToString(), status);
+                if (problem != null) return problem;
+            }
+            return null;
+        }
+
         public async Task<ApiResponse> BulkUpdateStatus(List<int> requestIds, string status, int updatedBy, string? rejectReason = null)
         {
+            var flow = await SpareFlowProblem(requestIds, status);
+            if (flow != null) return new ApiResponse(false, flow);
+
             var ids = string.Join(",", requestIds);
             var p = new[]
             {
@@ -120,6 +138,9 @@ namespace EncryptzBL.Infrastructure.Spareparts.Modules
             int requestId, string status, int updatedBy,
             string? rejectReason = null, decimal? unitPrice = null, bool allowNoStock = false)
         {
+            var flow = await SpareFlowProblem(new[] { requestId }, status);
+            if (flow != null) return new SpareStatusResult(false, flow);
+
             var p = new[]
             {
                 SqlParameterHelper.Input("@RequestId",    requestId),
@@ -157,8 +178,8 @@ namespace EncryptzBL.Infrastructure.Spareparts.Modules
 
         private async Task<string?> ValidateSparePart(SparePartRequest_Model request)
         {
-            request.PartName = request.PartName?.Trim();
-            request.PartNumber = string.IsNullOrWhiteSpace(request.PartNumber) ? null : request.PartNumber.Trim();
+            request.PartName = request.PartName?.Trim()!;
+            request.PartNumber = (string.IsNullOrWhiteSpace(request.PartNumber) ? null : request.PartNumber.Trim())!;
 
             if (string.IsNullOrWhiteSpace(request.PartName))
                 return "Part name is required";
@@ -487,8 +508,8 @@ namespace EncryptzBL.Infrastructure.Spareparts.Modules
                 var items = dt.Rows.Cast<DataRow>().Select(row => new SparePart_Model
                 {
                     SparePartId = Convert.ToInt32(row["SparePartId"]),
-                    PartName = row["PartName"].ToString(),
-                    PartNumber = row["PartNumber"]?.ToString(),
+                    PartName = row["PartName"].ToString()!,
+                    PartNumber = row["PartNumber"]?.ToString()!,
                     StockQuantity = Convert.ToInt32(row["StockQuantity"]),
                     UnitPrice = row["UnitPrice"] != DBNull.Value ? Convert.ToDecimal(row["UnitPrice"]) : (decimal?)null,
                     IsActive = Convert.ToBoolean(row["IsActive"]),
@@ -536,8 +557,8 @@ namespace EncryptzBL.Infrastructure.Spareparts.Modules
                 var sparePart = new SparePart_Model
                 {
                     SparePartId = Convert.ToInt32(row["SparePartId"]),
-                    PartName = row["PartName"].ToString(),
-                    PartNumber = row["PartNumber"]?.ToString(),
+                    PartName = row["PartName"].ToString()!,
+                    PartNumber = row["PartNumber"]?.ToString()!,
                     StockQuantity = Convert.ToInt32(row["StockQuantity"]),
                     UnitPrice = row["UnitPrice"] != DBNull.Value ? Convert.ToDecimal(row["UnitPrice"]) : (decimal?)null,
                     IsActive = Convert.ToBoolean(row["IsActive"]),
@@ -614,7 +635,7 @@ namespace EncryptzBL.Infrastructure.Spareparts.Modules
                 var parameters = new[]
                 {
                     SqlParameterHelper.Input("@OperationType", "UPDATE"),
-                    SqlParameterHelper.Input("@SparePartId", request.SparePartId.Value),
+                    SqlParameterHelper.Input("@SparePartId", request.SparePartId!.Value),
                     SqlParameterHelper.Input("@PartName", request.PartName),
                     SqlParameterHelper.Input("@PartNumber", request.PartNumber),
                     SqlParameterHelper.Input("@StockQuantity", request.StockQuantity),
@@ -728,8 +749,8 @@ namespace EncryptzBL.Infrastructure.Spareparts.Modules
                 var items = dt.Rows.Cast<DataRow>().Select(row => new SparePartDropdown_Model
                 {
                     SparePartId = Convert.ToInt32(row["SparePartId"]),
-                    PartName = row["PartName"].ToString(),
-                    PartNumber = row["PartNumber"]?.ToString(),
+                    PartName = row["PartName"].ToString()!,
+                    PartNumber = row["PartNumber"]?.ToString()!,
                     StockQuantity = Convert.ToInt32(row["StockQuantity"])
                 }).ToList();
 

@@ -20,7 +20,7 @@ namespace EncryptzAPI.Controllers
         private int GetUserId() => User.GetTenantUserId();
 
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] string group = null)
+        public async Task<IActionResult> GetAll([FromQuery] string? group = null)
         {
             var result = await _service.GetAll(group);
             return Ok(result);

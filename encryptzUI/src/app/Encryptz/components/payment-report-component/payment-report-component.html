@@ -78,11 +78,11 @@
       <div class="filter-group">
         <label class="filter-label">Date Range</label>
         <div class="filter-date-pair">
-          <input type="date" class="filter-date-input"
+          <input data-range="from" type="date" class="filter-date-input"
                  [ngModel]="fromDate()"
                  (ngModelChange)="fromDate.set($event); onDateChange()" />
           <span class="date-sep">–</span>
-          <input type="date" class="filter-date-input"
+          <input data-range="to" type="date" class="filter-date-input"
                  [ngModel]="toDate()"
                  (ngModelChange)="toDate.set($event); onDateChange()" />
         </div>

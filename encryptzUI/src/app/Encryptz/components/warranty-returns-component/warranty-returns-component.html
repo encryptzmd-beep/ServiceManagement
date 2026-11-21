@@ -139,7 +139,7 @@
   </div>
 
   <!-- New Return Modal -->
-  <div class="modal-overlay" *ngIf="showCreateModal()" (click)="closeCreate()">
+  <div class="modal-overlay" *ngIf="showCreateModal()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2>New Warranty Return</h2>
@@ -200,7 +200,7 @@
   </div>
 
   <!-- Detail Modal -->
-  <div class="modal-overlay" *ngIf="selectedReturn()" (click)="selectedReturn.set(null)">
+  <div class="modal-overlay" *ngIf="selectedReturn()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header"><h2>Return Details</h2><button class="modal-close" (click)="selectedReturn.set(null)">✕</button></div>
       <div class="modal-body" *ngIf="selectedReturn() as r">

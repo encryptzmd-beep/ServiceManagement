@@ -45,6 +45,7 @@ export class CrmConvertDialogComponent implements OnInit {
   chosenCustomerId = signal<number | null>(null);
   orderDate = signal(isoDate(new Date()));
   paymentMode = signal('Cash');
+  comment = signal('');
   error = signal('');
   busy = signal(false);
   /** The convert call is out: the dialog stays open until its answer, so the page learns what was made. */
@@ -103,6 +104,7 @@ export class CrmConvertDialogComponent implements OnInit {
     this.error.set('');
     this.crm.convert(this.leadId(), {
       quotationId, customerId: p.matches.length ? this.chosenCustomerId() : null, orderDate: this.orderDate(), paymentMode: this.paymentMode() || null,
+      ...(this.comment().trim() ? { comment: this.comment().trim() } : {}),
     }).subscribe({
       next: res => {
         this.busy.set(false);

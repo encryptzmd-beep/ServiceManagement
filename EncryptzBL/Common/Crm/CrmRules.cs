@@ -40,7 +40,7 @@ namespace EncryptzBL.Common.Crm
         {
             if (l == null) return "Nothing to save";
 
-            l.ContactName = T(l.ContactName);
+            l.ContactName = T(l.ContactName).ToUpperInvariant();
             l.Mobile = NormaliseMobile(l.Mobile);
             if (l.ProductMasterId <= 0) l.ProductMasterId = null;
             l.Email = T(l.Email);
@@ -219,6 +219,8 @@ namespace EncryptzBL.Common.Crm
             if (r.QuotationId <= 0) return "Choose the quotation to convert";
             r.PaymentMode = T(r.PaymentMode);
             if (r.PaymentMode.Length > 30) return "The payment mode is too long";
+            r.Comment = T(r.Comment);
+            if (r.Comment.Length > 1000) return "The comment is too long";
             if (r.OrderDate == default) return "Enter the order date";
             return null;
         }
@@ -253,7 +255,7 @@ namespace EncryptzBL.Common.Crm
                 State = lead.State,
                 PinCode = lead.PinCode,
                 IsInterState = q.IsInterState,
-                Notes = $"From lead {lead.LeadNo}",
+                Notes = string.IsNullOrWhiteSpace(req.Comment) ? $"From lead {lead.LeadNo}" : $"From lead {lead.LeadNo}\n{T(req.Comment)}",
                 Items = q.Items.Select(i => new SalesOrderItemSaveDto
                 {
                     ProductMasterId = i.ProductMasterId,

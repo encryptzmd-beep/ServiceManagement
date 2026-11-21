@@ -4,9 +4,6 @@ import { RegisterComponent } from './Encryptz/components/register-component/regi
 import { Routes } from '@angular/router';
 import { MainLayoutComponent } from './Encryptz/components/main-layout-component/main-layout-component';
 import { authGuard, companySelectedGuard, companyUsersRolesGuard, dashboardRedirectGuard, roleGuard, scopeGuard } from './Encryptz/Auth/guard-guard';
-import { CompanySelectorComponent } from './Encryptz/components/company-selector-component/company-selector-component';
-import { NoCompanyComponent } from './Encryptz/components/no-company-component/no-company-component';
-import { AddUserComponent } from './Encryptz/components/add-user-component/add-user-component';
 import { CUSTOMER_ROUTES } from './Encryptz/Routes/customer.routes';
 
 export const routes: Routes = [
@@ -46,11 +43,11 @@ export const routes: Routes = [
     path: 'customer',
     children: CUSTOMER_ROUTES
   },
-  { path: 'select-company', component: CompanySelectorComponent, canActivate: [authGuard], data: { stage: 'company' } },
+  { path: 'select-company', loadComponent: () => import('./Encryptz/components/company-selector-component/company-selector-component').then(m => m.CompanySelectorComponent), canActivate: [authGuard], data: { stage: 'company' } },
   // the app list on select-company replaced the separate module page; old links and bookmarks land there
   { path: 'select-module', redirectTo: 'select-company', pathMatch: 'full' },
-  { path: 'select-branch', component: CompanySelectorComponent, canActivate: [authGuard], data: { stage: 'branch' } },
-  { path: 'no-company', component: NoCompanyComponent, canActivate: [authGuard] },
+  { path: 'select-branch', loadComponent: () => import('./Encryptz/components/company-selector-component/company-selector-component').then(m => m.CompanySelectorComponent), canActivate: [authGuard], data: { stage: 'branch' } },
+  { path: 'no-company', loadComponent: () => import('./Encryptz/components/no-company-component/no-company-component').then(m => m.NoCompanyComponent), canActivate: [authGuard] },
   // Users & Roles belong to the company, not to a module
   {
     path: 'company/users-roles',
@@ -173,7 +170,7 @@ export const routes: Routes = [
       // },
       {
         path: 'admin/add-user',
-        component: AddUserComponent,
+        loadComponent: () => import('./Encryptz/components/add-user-component/add-user-component').then(m => m.AddUserComponent),
         canActivate: [companyUsersRolesGuard, roleGuard(['Admin', 'CompanyAdmin'])],
         data: { scope: 'company' },
       },
@@ -526,7 +523,8 @@ export const routes: Routes = [
   path: 'sales/despatch',
   loadComponent: () => import('./Encryptz/components/despatch-list-component/despatch-list-component')
     .then(m => m.DespatchListComponent),
-  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
+  // a Storekeeper sees the Spare Parts and Repair Parts tabs only
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager', 'Storekeeper'])],
   data: { title: 'Despatch', icon: 'local_shipping', menu: 'sales' }
 },
 {

@@ -1,3 +1,5 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
+import { statusText } from '../shared/sales-input-rules';
 import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -11,11 +13,12 @@ import { DialogService } from '../../Services/dialog-service';
 @Component({
   selector: 'app-sales-order-list',
   standalone: true,
-  imports: [AppRightDirective, CommonModule, FormsModule, RouterModule, ModuleRefusedComponent],
+  imports: [AppToastComponent, AppRightDirective, CommonModule, FormsModule, RouterModule, ModuleRefusedComponent],
   templateUrl: './sales-order-list-component.html',
   styleUrls: ['./sales-order-list-component.scss'],
 })
 export class SalesOrderListComponent implements OnInit {
+  readonly statusText = statusText;
   private dialog = inject(DialogService);
   private api = inject(ApiService);
   private router = inject(Router);

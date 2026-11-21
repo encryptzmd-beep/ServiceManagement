@@ -1,19 +1,25 @@
-import { AppRightDirective } from '../shared/app-right/app-right';
+
 // components/product-form/product-form.component.ts
-import { Component, Input, Output, EventEmitter, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, Input, Output, EventEmitter, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { ProductCategory, categoryOptions, subCategoryOptions } from '../product-categories-component/product-category-options';
 import { ProductMasterDTO, ProductMasterRequest } from '../../Models/ApiModels';
+import { Observable } from 'rxjs';
+import { CrmService } from '../../Services/crm-service';
 import { ProductService } from '../../Services/product-service';
+import { ToastService } from '../../Services/toast-service';
+import { AppRightDirective } from '../shared/app-right/app-right';
+
+/** What the form tells its page when it closes; a saved product comes with it. */
+export type ProductFormResult = boolean | { refresh?: boolean; message?: string; type?: 'success' | 'error'; product?: ProductMasterDTO };
 
 @Component({
   selector: 'app-product-form',
   standalone: true,
-  imports: [AppRightDirective, CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, AppRightDirective],
   template: `
-    <div class="modal-overlay" (click)="close.emit(false)">
+    <div class="modal-overlay">
       <div class="modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <div class="modal-heading">
@@ -26,7 +32,7 @@ import { ProductService } from '../../Services/product-service';
               }}
             </p>
           </div>
-          <button class="modal-close" (click)="close.emit(false)" aria-label="Close">×</button>
+          <button type="button" class="modal-close" (click)="close.emit(false)" aria-label="Close">×</button>
         </div>
 
         <div class="modal-body">
@@ -47,149 +53,148 @@ import { ProductService } from '../../Services/product-service';
               {{ submitError }}
             </div>
 
-            <div class="tab-content" [class.active]="activeTab === 'basic'">
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Product Code *</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    [(ngModel)]="formData.productCode"
-                    name="productCode"
-                    required
-                    #code="ngModel">
-                  <div class="error-message" *ngIf="code.touched && code.errors?.['required']">
-                    Product code is required
+            <div class="tab-panels">
+              <div class="tab-content" [class.active]="activeTab === 'details'">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="pf-code">Product Code *</label>
+                    <input id="pf-code" type="text" class="form-control" [(ngModel)]="formData.productCode" name="productCode" required #code="ngModel">
+                    <div class="error-message" *ngIf="code.touched && code.errors?.['required']">Product code is required</div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="pf-name">Product Name *</label>
+                    <input id="pf-name" type="text" class="form-control" [(ngModel)]="formData.productName" name="productName" required #name="ngModel">
+                    <div class="error-message" *ngIf="name.touched && name.errors?.['required']">Product name is required</div>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="pf-brand">Brand</label>
+                    <input id="pf-brand" type="text" class="form-control" [(ngModel)]="formData.brand" name="brand">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="pf-model">Model</label>
+                    <input id="pf-model" type="text" class="form-control" [(ngModel)]="formData.model" name="model">
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <div class="label-line">
+                      <label class="form-label" for="pf-category">Category</label>
+                      <button type="button" class="new-link" appRight="edit" appRightMenu="/products" (click)="openQuickAdd('category')">
+                        <span class="material-icons" aria-hidden="true">add</span>New
+                      </button>
+                    </div>
+                    <select id="pf-category" class="form-control" [ngModel]="formData.category" (ngModelChange)="chooseCategory($event)" name="category">
+                      <option value="">Select category</option>
+                      <option *ngFor="let c of categoryChoices()" [value]="c">{{ c }}</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <div class="label-line">
+                      <label class="form-label" for="pf-sub">Sub Category</label>
+                      <button type="button" class="new-link" appRight="edit" appRightMenu="/products" [disabled]="!formData.category"
+                        [title]="formData.category ? 'Add a sub category' : 'Choose the category first'" (click)="openQuickAdd('sub')">
+                        <span class="material-icons" aria-hidden="true">add</span>New
+                      </button>
+                    </div>
+                    <select id="pf-sub" class="form-control" [(ngModel)]="formData.subCategory" name="subCategory" [disabled]="!formData.category">
+                      <option value="">{{ formData.category ? 'Select sub category' : 'Choose the category first' }}</option>
+                      <option *ngFor="let s of subCategoryChoices()" [value]="s">{{ s }}</option>
+                    </select>
                   </div>
                 </div>
 
                 <div class="form-group">
-                  <label class="form-label">Product Name *</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    [(ngModel)]="formData.productName"
-                    name="productName"
-                    required
-                    #name="ngModel">
-                  <div class="error-message" *ngIf="name.touched && name.errors?.['required']">
-                    Product name is required
+                  <label class="form-label" for="pf-description">Description</label>
+                  <textarea id="pf-description" class="form-control" rows="3" [(ngModel)]="formData.description" name="description"></textarea>
+                </div>
+
+                <label class="active-line">
+                  <input type="checkbox" [(ngModel)]="formData.isActive" name="isActive">
+                  <span>Active product</span>
+                </label>
+              </div>
+
+              <div class="tab-content" [class.active]="activeTab === 'pricing'">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="pf-mrp">MRP (INR)</label>
+                    <input id="pf-mrp" type="number" min="0" class="form-control" [(ngModel)]="formData.mrp" name="mrp">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="pf-warranty">Warranty (Months)</label>
+                    <input id="pf-warranty" type="number" min="0" class="form-control" [(ngModel)]="formData.warrantyMonths" name="warrantyMonths">
                   </div>
                 </div>
-              </div>
 
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Model</label>
-                  <input type="text" class="form-control" [(ngModel)]="formData.model" name="model">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="pf-price-status">Price Change Status</label>
+                    <select id="pf-price-status" class="form-control" [(ngModel)]="formData.priceChangeStatus" name="priceChangeStatus">
+                      <option value="">No Change</option>
+                      <option value="Changed">Changed</option>
+                      <option value="New">New</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="pf-price-date">Price Effective Date</label>
+                    <input id="pf-price-date" type="date" class="form-control" [(ngModel)]="formData.priceEffectiveDate" name="priceEffectiveDate">
+                  </div>
                 </div>
 
-                <div class="form-group">
-                  <label class="form-label">Brand</label>
-                  <input type="text" class="form-control" [(ngModel)]="formData.brand" name="brand">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="pf-org">Organization</label>
+                    <input id="pf-org" type="text" class="form-control" [(ngModel)]="formData.org" name="org" maxlength="50" placeholder="Organization / business unit (optional)">
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            <div class="tab-content" [class.active]="activeTab === 'category'">
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Category</label>
-                  <select class="form-control" [ngModel]="formData.category" (ngModelChange)="chooseCategory($event)" name="category">
-                    <option value="">Select category</option>
-                    <option *ngFor="let c of categoryChoices()" [value]="c">{{ c }}</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label">Sub Category</label>
-                  <select class="form-control" [(ngModel)]="formData.subCategory" name="subCategory" [disabled]="!formData.category">
-                    <option value="">{{ formData.category ? 'Select sub category' : 'Choose the category first' }}</option>
-                    <option *ngFor="let s of subCategoryChoices()" [value]="s">{{ s }}</option>
-                  </select>
-                </div>
-              </div>
-              <p class="cat-hint">
-                The lists come from the category master.
-                <a routerLink="/products/categories" (click)="close.emit(false)">Manage categories</a>
-              </p>
-            </div>
-
-            <div class="tab-content" [class.active]="activeTab === 'pricing'">
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">MRP (INR)</label>
-                  <input type="number" class="form-control" [(ngModel)]="formData.mrp" name="mrp">
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label">Organization</label>
-                  <input type="text" class="form-control" [(ngModel)]="formData.org" name="org" maxlength="50"
-                    placeholder="Organization / business unit (optional)">
-                </div>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Price Change Status</label>
-                  <select class="form-control" [(ngModel)]="formData.priceChangeStatus" name="priceChangeStatus">
-                    <option value="">No Change</option>
-                    <option value="Changed">Changed</option>
-                    <option value="New">New</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label">Price Effective Date</label>
-                  <input
-                    type="date"
-                    class="form-control"
-                    [(ngModel)]="formData.priceEffectiveDate"
-                    name="priceEffectiveDate">
-                </div>
-              </div>
-            </div>
-
-            <div class="tab-content" [class.active]="activeTab === 'warranty'">
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Warranty (Months)</label>
-                  <input
-                    type="number"
-                    class="form-control"
-                    [(ngModel)]="formData.warrantyMonths"
-                    name="warrantyMonths">
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label">Status</label>
-                  <label class="checkbox-label">
-                    <input type="checkbox" [(ngModel)]="formData.isActive" name="isActive">
-                    <span>Active</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div class="tab-content" [class.active]="activeTab === 'description'">
-              <div class="form-group">
-                <label class="form-label">Description</label>
-                <textarea
-                  class="form-control"
-                  rows="5"
-                  [(ngModel)]="formData.description"
-                  name="description"></textarea>
               </div>
             </div>
           </form>
         </div>
 
         <div class="modal-footer">
-          <button class="btn btn-outline" (click)="close.emit(false)">Cancel</button>
-          <button class="btn btn-primary" (click)="onSubmit()" [disabled]="isSubmitting">
+          <button type="button" class="btn btn-outline" (click)="close.emit(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="onSubmit()" [disabled]="isSubmitting">
             <span *ngIf="isSubmitting" class="spinner"></span>
             {{ isEditMode ? 'Update Product' : 'Create Product' }}
           </button>
+        </div>
+      </div>
+
+      <!-- on top of the product form, which stays open with what was typed -->
+      <div class="qa-overlay" *ngIf="quickAdd() as q" (click)="$event.stopPropagation()">
+        <div class="qa-box" role="dialog" aria-modal="true" aria-labelledby="qa-title" (keydown.escape)="closeQuickAdd()">
+          <div class="qa-head">
+            <h4 id="qa-title">{{ q.level === 'sub' ? 'New Sub Category' : 'New Category' }}</h4>
+            <button type="button" class="qa-close" aria-label="Close" (click)="closeQuickAdd()">
+              <span class="material-icons" aria-hidden="true">close</span>
+            </button>
+          </div>
+          <div class="qa-body">
+            <p class="qa-note" *ngIf="q.note">{{ q.note }}</p>
+            <div class="form-group" *ngIf="q.level === 'sub'">
+              <span class="form-label">Category</span>
+              <div class="qa-parent">{{ q.parentName }}</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="qa-name">{{ q.level === 'sub' ? 'Sub Category Name *' : 'Category Name *' }}</label>
+              <input #qaName id="qa-name" type="text" class="form-control" maxlength="100" autocomplete="off"
+                [value]="qaText()" (input)="qaText.set($any($event.target).value); qaError.set('')"
+                (keydown.enter)="$event.preventDefault(); saveQuickAdd()">
+              <div class="error-message" role="alert" *ngIf="qaError()">{{ qaError() }}</div>
+            </div>
+          </div>
+          <div class="qa-foot">
+            <button type="button" class="btn btn-outline" (click)="closeQuickAdd()" [disabled]="qaSaving()">Cancel</button>
+            <button type="button" class="btn btn-primary" (click)="saveQuickAdd()" [disabled]="qaSaving()">
+              <span *ngIf="qaSaving()" class="spinner"></span>
+              Save
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -202,7 +207,7 @@ import { ProductService } from '../../Services/product-service';
     .modal-overlay {
       position: fixed;
       inset: 0;
-      z-index: 1000;
+      z-index: 2000;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -212,7 +217,7 @@ import { ProductService } from '../../Services/product-service';
     }
 
     .modal {
-      width: min(1080px, 96vw);
+      width: min(820px, 96vw);
       max-height: 92vh;
       display: flex;
       flex-direction: column;
@@ -313,20 +318,142 @@ import { ProductService } from '../../Services/product-service';
       line-height: 1;
     }
 
-    .cat-hint {
-      margin: 10px 0 0;
+    .label-line {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .new-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      padding: 0 4px;
+      border: none;
+      border-radius: 4px;
+      background: none;
+      color: #1B4A7A;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      .material-icons { font-size: 15px; }
+      &:hover:not(:disabled) { background: #e8eef5; }
+      &:disabled { color: #94a3b8; cursor: not-allowed; }
+    }
+
+    .qa-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(15, 23, 42, 0.45);
+    }
+
+    .qa-box {
+      width: min(420px, 100%);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .qa-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid #e2e8f0;
+      h4 { margin: 0; font-size: 16px; font-weight: 600; color: #1a2332; }
+    }
+
+    .qa-close {
+      width: 30px;
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 6px;
+      background: none;
+      color: #64748b;
+      cursor: pointer;
+      &:hover { background: #f1f5f9; }
+    }
+
+    .qa-body {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 16px 18px;
+    }
+
+    .qa-note {
+      margin: 0;
+      padding: 9px 11px;
+      border-radius: 8px;
+      background: #eef3f8;
+      color: #1B4A7A;
       font-size: 12.5px;
-      color: #5a6a7e;
-      a { color: #1B4A7A; font-weight: 600; text-decoration: none; margin-left: 4px; }
-      a:hover { text-decoration: underline; }
+      line-height: 1.4;
+    }
+
+    .qa-parent {
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      border-radius: 10px;
+      background: #f5f7fa;
+      color: #1a2332;
+      font-size: 14px;
+      overflow-wrap: anywhere;
+    }
+
+    .qa-foot {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 12px 18px;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    /* both tabs share one cell, so the window keeps its height when switching */
+    .tab-panels {
+      display: grid;
     }
 
     .tab-content {
-      display: none;
+      grid-area: 1 / 1;
+      min-width: 0;
+      visibility: hidden;
     }
 
     .tab-content.active {
-      display: block;
+      visibility: visible;
+    }
+
+    .active-line {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 14px;
+      color: #1a2332;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .active-line input {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      accent-color: #1B4A7A;
     }
 
     .form-row {
@@ -362,7 +489,7 @@ import { ProductService } from '../../Services/product-service';
     }
 
     textarea.form-control {
-      min-height: 132px;
+      min-height: 78px;
       resize: vertical;
     }
 
@@ -389,22 +516,6 @@ import { ProductService } from '../../Services/product-service';
       background: #fdf1f1;
       border: 1px solid #f3c9c9;
       color: #b42318;
-    }
-
-    .checkbox-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      min-height: 42px;
-      padding: 10px 12px;
-      border: 1px solid #d8e0ea;
-      border-radius: 10px;
-      color: #1a2332;
-      font-size: 14px;
-    }
-
-    .checkbox-label input {
-      margin: 0;
     }
 
     .modal-footer {
@@ -471,7 +582,7 @@ import { ProductService } from '../../Services/product-service';
       }
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 640px) {
       .modal {
         width: 100%;
         max-height: 100vh;
@@ -481,9 +592,7 @@ import { ProductService } from '../../Services/product-service';
       .form-row {
         grid-template-columns: 1fr;
       }
-    }
 
-    @media (max-width: 640px) {
       .modal-overlay {
         padding: 0;
       }
@@ -506,9 +615,17 @@ import { ProductService } from '../../Services/product-service';
   `]
 })
 export class ProductFormComponent implements OnInit {
+  private changes = inject(ChangeDetectorRef);
   @Input() product: ProductMasterDTO | null = null;
   @Input() isEditMode = false;
-  @Output() close = new EventEmitter<boolean | { refresh?: boolean; message?: string; type?: 'success' | 'error' }>();
+  /** Which module's API this page may use; CRM can only add. */
+  @Input() source: 'service' | 'crm' = 'service';
+  /** A new product starts in this category. */
+  @Input() initialCategory = '';
+  /** A new product starts with the name typed in the search. */
+  @Input() initialName = '';
+  @Output() close = new EventEmitter<ProductFormResult>();
+  private readonly crm = inject(CrmService);
 
   formData: ProductMasterRequest = {
     productCode: '',
@@ -531,21 +648,21 @@ export class ProductFormComponent implements OnInit {
   };
 
   isSubmitting = false;
-  activeTab = 'basic';
+  activeTab = 'details';
   submitError = '';
   tabs = [
-    { id: 'basic', name: 'Basic Info', icon: 'inventory_2' },
-    { id: 'category', name: 'Category', icon: 'category' },
-    { id: 'pricing', name: 'Pricing', icon: 'payments' },
-    { id: 'warranty', name: 'Warranty', icon: 'verified_user' },
-    { id: 'description', name: 'Description', icon: 'notes' }
+    { id: 'details', name: 'Product Details', icon: 'inventory_2' },
+    { id: 'pricing', name: 'Price & Warranty', icon: 'payments' }
   ];
 
-  constructor(private productService: ProductService) {
-    this.productService.getCategories().subscribe({
-      next: r => this.categoryMaster.set(r?.success ? r.data ?? [] : []),
-      error: () => this.categoryMaster.set([]),
-    });
+  constructor(private productService: ProductService) {}
+
+  private readCategories() {
+    return this.source === 'crm' ? this.crm.productCategoryMaster() : this.productService.getCategories();
+  }
+
+  private writeCategory(dto: { categoryId: number; parentId: number | null; name: string; isActive: boolean }) {
+    return this.source === 'crm' ? this.crm.addProductCategory(dto) : this.productService.saveCategory(dto);
   }
 
   // ── category master (Products › Manage categories) ──
@@ -561,7 +678,92 @@ export class ProductFormComponent implements OnInit {
     this.formData.category = value ?? '';
   }
 
+  // ── a new category or sub category, without leaving the product form ──
+  private readonly toasts = inject(ToastService);
+  quickAdd = signal<{ level: 'category' | 'sub'; parentId: number | null; parentName: string; note: string } | null>(null);
+  qaText = signal('');
+  qaError = signal('');
+  qaSaving = signal(false);
+
+  @ViewChild('qaName') set qaNameInput(input: ElementRef<HTMLInputElement> | undefined) {
+    input?.nativeElement.focus();
+  }
+
+  openQuickAdd(level: 'category' | 'sub'): void {
+    this.qaError.set('');
+    this.qaText.set('');
+    if (level === 'category') {
+      this.quickAdd.set({ level, parentId: null, parentName: '', note: '' });
+      return;
+    }
+    const chosen = (this.formData.category ?? '').trim();
+    if (!chosen) return;
+    const parent = this.categoryMaster().find(c => c.parentId == null && c.name.trim().toLowerCase() === chosen.toLowerCase());
+    if (parent) {
+      this.quickAdd.set({ level, parentId: parent.categoryId, parentName: parent.name, note: '' });
+    } else {
+      // an older product's category that is not in the master yet
+      this.qaText.set(chosen);
+      this.quickAdd.set({ level: 'category', parentId: null, parentName: '', note: 'This category is not in the list yet. Save it first, then add the sub category.' });
+    }
+  }
+
+  closeQuickAdd(): void {
+    if (!this.qaSaving()) this.quickAdd.set(null);
+  }
+
+  saveQuickAdd(): void {
+    const q = this.quickAdd();
+    if (!q || this.qaSaving()) return;
+    const name = this.qaText().trim();
+    if (!name) { this.qaError.set('Enter the name'); return; }
+
+    this.qaSaving.set(true);
+    this.qaError.set('');
+    this.writeCategory({ categoryId: 0, parentId: q.parentId, name, isActive: true }).subscribe({
+      next: r => {
+        if (!r?.success) {
+          this.qaSaving.set(false);
+          this.qaError.set(r?.message || 'The category could not be saved');
+          return;
+        }
+        if (!r.data) {
+          this.qaSaving.set(false);
+          this.qaError.set('The category could not be saved');
+          return;
+        }
+        const saved: ProductCategory = { categoryId: r.data, parentId: q.parentId, name, isActive: true, productCount: 0 };
+        this.readCategories().subscribe({
+          next: list => this.finishQuickAdd(q.level, saved, list?.success ? list.data ?? [] : [...this.categoryMaster(), saved]),
+          error: () => this.finishQuickAdd(q.level, saved, [...this.categoryMaster(), saved]),
+        });
+      },
+      error: e => {
+        this.qaSaving.set(false);
+        this.qaError.set(e?.error?.message || 'The category could not be saved');
+      },
+    });
+  }
+
+  /** The list is fresh: the new name is chosen in its dropdown and the popup closes. */
+  private finishQuickAdd(level: 'category' | 'sub', saved: ProductCategory, list: ProductCategory[]): void {
+    const master = list.some(c => c.categoryId === saved.categoryId) ? list : [...list, saved];
+    this.categoryMaster.set(master);
+    if (level === 'category') this.chooseCategory(saved.name);
+    else this.formData.subCategory = saved.name;
+    this.qaSaving.set(false);
+    this.quickAdd.set(null);
+    this.toasts.flash(`${level === 'category' ? 'Category' : 'Sub category'} ${saved.name} added`);
+    this.changes.markForCheck();
+  }
+
   ngOnInit(): void {
+    this.readCategories().subscribe({
+      next: r => this.categoryMaster.set(r?.success ? r.data ?? [] : []),
+      error: () => this.categoryMaster.set([]),
+    });
+    if (!this.isEditMode && this.initialCategory) this.formData.category = this.initialCategory;
+    if (!this.isEditMode && this.initialName) this.formData.productName = this.initialName;
     if (this.isEditMode && this.product) {
       this.formData = {
         productCode: this.product.productCode,
@@ -586,18 +788,21 @@ export class ProductFormComponent implements OnInit {
   }
 
   onSubmit(): void {
-    if (!this.formData.productCode || !this.formData.productName) {
+    if (!this.formData.productCode?.trim() || !this.formData.productName?.trim()) {
+      this.activeTab = 'details';
       this.submitError = 'Please fill all required fields before saving.';
       return;
     }
+    if (Number(this.formData.mrp ?? 0) < 0) { this.activeTab = 'pricing'; this.submitError = 'MRP cannot be negative'; return; }
+    if (Number(this.formData.warrantyMonths ?? 0) < 0) { this.activeTab = 'pricing'; this.submitError = 'Warranty months cannot be negative'; return; }
 
     this.submitError = '';
     this.isSubmitting = true;
     const request = { ...this.formData };
 
-    const apiCall = this.isEditMode && this.product
+    const apiCall: Observable<{ success: boolean; message?: string; data?: unknown }> = this.isEditMode && this.product
       ? this.productService.updateProduct(this.product.productMasterId, request)
-      : this.productService.createProduct(request);
+      : this.source === 'crm' ? this.crm.createProduct(request) : this.productService.createProduct(request);
 
     apiCall.subscribe({
       next: (response) => {
@@ -605,17 +810,20 @@ export class ProductFormComponent implements OnInit {
           this.close.emit({
             refresh: true,
             message: this.isEditMode ? 'Product updated successfully' : 'Product created successfully',
-            type: 'success'
+            type: 'success',
+            product: response.data as ProductMasterDTO | undefined
           });
         } else {
           this.submitError = response.message || 'Operation failed';
         }
         this.isSubmitting = false;
+        this.changes.markForCheck();     // plain fields: the answer of the API must still show
       },
       error: (error) => {
         console.error('Error saving product:', error);
         this.submitError = error.error?.message || 'Error saving product';
         this.isSubmitting = false;
+        this.changes.markForCheck();
       }
     });
   }

@@ -120,7 +120,7 @@
     <app-crm-convert-dialog [leadId]="leadId" [quotationId]="convertQuotationId()" [quotations]="convertible()" [mobile]="l.mobile"
       (converted)="converted($event)" (cancelled)="close()" (forbidden)="convertForbidden()" />
   } @else if (dialog()) {
-    <div class="crm-overlay" (click)="close()">
+    <div class="crm-overlay">
       <div class="crm-dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
         @switch (dialog()) {
           @case ('followup') {

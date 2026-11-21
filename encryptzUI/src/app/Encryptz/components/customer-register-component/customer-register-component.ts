@@ -260,7 +260,7 @@ import { CustomerAuthService, CustomerTenantProject } from '../../Services/custo
     </main>
 
     @if (showCompanyPopup()) {
-      <div class="popup-backdrop" (click)="showCompanyPopup.set(false)">
+      <div class="popup-backdrop">
         <div class="popup-card" (click)="$event.stopPropagation()">
           <div class="popup-header">
             <h3>Select user details</h3>

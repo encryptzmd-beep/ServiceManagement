@@ -1,3 +1,5 @@
+import { UppercaseInputDirective } from '../shared/uppercase-input';
+import { ProductFormComponent, ProductFormResult } from '../product-form-component/product-form-component';
 import { AppRightDirective } from '../shared/app-right/app-right';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -35,7 +37,7 @@ const blankCustomer = (): NewCustomer => ({ contactName: '', mobile: '', email: 
 @Component({
   selector: 'app-crm-quotation',
   standalone: true,
-  imports: [AppRightDirective, FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent, TransactionToolbarComponent, TransactionFindComponent],
+  imports: [UppercaseInputDirective, ProductFormComponent, AppRightDirective, FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent, TransactionToolbarComponent, TransactionFindComponent],
   templateUrl: './crm-quotation-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-quotation-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -252,6 +254,12 @@ export class CrmQuotationComponent {
 
   /** A lead with a chosen product: the empty first line starts with it, at its MRP, warranty and HSN. */
   private startWithProduct(lead: LeadDetailDto): void {
+    // every product of the lead becomes a line, with its quantity
+    if (lead.products?.length) {
+      lead.products.forEach(p => this.pick(p, p.qty));
+      this.markSaved();
+      return;
+    }
     const id = lead.productMasterId;
     if (!id) return;
     const missed = () => this.warning.set("The lead's product was not found in the product master");
@@ -411,19 +419,51 @@ export class CrmQuotationComponent {
 
   search(term: string): void {
     this.term.set(term);
-    if (term.trim().length < 2) { this.products.set([]); return; }
     this.searching.set(true);
-    this.crm.searchProducts(term.trim()).subscribe({
+    this.crm.searchProducts(term.trim() || undefined, undefined, 100).subscribe({
       next: res => { this.searching.set(false); if (this.term() === term) this.products.set(res.success ? res.data ?? [] : []); },
       error: () => { this.searching.set(false); this.products.set([]); },
     });
   }
 
+  newProduct = signal(false);
+  newProductName = signal('');
+  searchOpen = signal(false);
+
+  /** Every product shows as soon as the box opens, before anything is typed. */
+  openProductSearch(): void {
+    this.searchOpen.set(true);
+    if (!this.products().length) this.search(this.term());
+  }
+
+  canAddProduct(): boolean {
+    return this.rights.can('create', '/products');
+  }
+
+  startNewProduct(): void {
+    this.newProductName.set(this.term().trim());
+    this.searchOpen.set(false);
+    this.newProduct.set(true);
+  }
+
+  /** A product made here goes on the quotation like a picked one. */
+  closeNewProduct(result: ProductFormResult): void {
+    this.newProduct.set(false);
+    if (typeof result !== 'object' || !result.product) return;
+    const p = result.product;
+    this.pick({
+      productMasterId: p.productMasterId, productCode: p.productCode, productName: p.productName,
+      brand: p.brand ?? '', model: p.model ?? '', category: p.category ?? '',
+      mrp: Number(p.mrp ?? 0), warrantyMonths: Number(p.warrantyMonths ?? 0),
+    });
+  }
+
   /** The product goes on the first empty line, or a new one, at its MRP and warranty. */
-  pick(p: CrmProductDto): void {
+  pick(p: CrmProductDto, qty = 1): void {
     const line: Partial<QuotationItemDto> = {
       productMasterId: p.productMasterId,
       productName: p.productName,
+      qty,
       rate: p.mrp ?? 0,
       warrantyMonths: p.warrantyMonths ?? 0,
       ...(p.hsnSac ? { hsnSac: p.hsnSac } : {}),
@@ -435,6 +475,7 @@ export class CrmQuotationComponent {
     });
     this.term.set('');
     this.products.set([]);
+    this.searchOpen.set(false);
   }
 
   private problem(): string | null {

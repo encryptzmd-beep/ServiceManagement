@@ -1,3 +1,4 @@
+import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -29,7 +30,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 @Component({
   selector: 'app-job-board-component',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent, EscapeClose],
+  imports: [AppToastComponent, CommonModule, FormsModule, RouterModule, PersonalShellComponent, VerifiedBadgeComponent, EscapeClose],
   templateUrl: './job-board-component.html',
   styleUrls: ['../job-profile-component/job-profile-component.scss', './job-board-component.scss'],
 })

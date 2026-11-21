@@ -53,8 +53,8 @@
           <option value="">All Statuses</option>
           @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
         </select>
-        <input type="date" class="fx-filter-select" [(ngModel)]="filter.fromDate" (change)="search()" title="From date" />
-        <input type="date" class="fx-filter-select" [(ngModel)]="filter.toDate" (change)="search()" title="To date" />
+        <input data-range="from" type="date" class="fx-filter-select" [(ngModel)]="filter.fromDate" (change)="search()" title="From date" />
+        <input data-range="to" type="date" class="fx-filter-select" [(ngModel)]="filter.toDate" (change)="search()" title="To date" />
         <button class="fx-btn-navy" style="padding:8px 14px" (click)="search()">Apply</button>
         <button class="fx-page-btn" style="padding:0 12px" (click)="resetFilters()">Reset</button>
       </div>
@@ -105,7 +105,7 @@
                 </td>
                 <td>
                   @if (o.installationComplaintNo) {
-                    <div class="cell-2"><span class="mono">{{ o.installationComplaintNo }}</span><small>{{ o.installationStatus }}</small></div>
+                    <div class="cell-2"><span class="mono">{{ o.installationComplaintNo }}</span><small>{{ statusText(o.installationStatus) }}</small></div>
                   } @else { <span class="muted">—</span> }
                 </td>
                 <td (click)="$event.stopPropagation()">
@@ -143,8 +143,4 @@
   }
 </div>
 
-@if (toast(); as t) {
-  <div class="toast" [class.success]="t.type === 'success'" [class.error]="t.type === 'error'">
-    <span class="material-icons">{{ t.type === 'success' ? 'check_circle' : 'error' }}</span>{{ t.text }}
-</div>
-}
+@if (toast(); as t) { <app-toast [text]="t.text" [kind]="t.type" /> }

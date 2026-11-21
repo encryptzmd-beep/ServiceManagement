@@ -875,7 +875,8 @@ submitQuickComplaint(data: {
       priority: data.priority,
       workDone: data.workDone,
       partsUsed: data.partsUsed,
-      completionRemarks: data.completionRemarks
+      completionRemarks: data.completionRemarks,
+      assignmentStatus: data.status
     });
   }
 
@@ -1160,6 +1161,30 @@ getDespatch(id: number): Observable<M.ApiResponse<M.DespatchDetail>> {
 
 createDespatch(dto: M.DespatchCreate): Observable<M.ApiResponse<M.DespatchCreateResult>> {
   return this.post<M.ApiResponse<M.DespatchCreateResult>>('Sales/despatches', dto);
+}
+
+addServiceDespatchDetails(dto: M.ServiceDespatchCreate): Observable<M.ApiResponse> {
+  return this.post<M.ApiResponse>('Sales/service-despatches/details', dto);
+}
+
+addDespatchDetails(despatchId: number, dto: M.DespatchDetailsSave): Observable<M.ApiResponse> {
+  return this.post<M.ApiResponse>(`Sales/despatches/${despatchId}/details`, dto);
+}
+
+getTransporters(includeInactive = false): Observable<M.ApiResponse<M.TransporterDto[]>> {
+  return this.get<M.ApiResponse<M.TransporterDto[]>>('Sales/transporters', { includeInactive });
+}
+
+saveTransporter(dto: M.TransporterSave): Observable<M.ApiResponse<number>> {
+  return this.post<M.ApiResponse<number>>('Sales/transporters', dto);
+}
+
+getServiceDespatches(filter: M.ServiceDespatchFilter): Observable<M.ApiResponse<M.PagedResult<M.ServiceDespatchItem>>> {
+  return this.get<M.ApiResponse<M.PagedResult<M.ServiceDespatchItem>>>('Sales/service-despatches', filter as any);
+}
+
+createServiceDespatch(dto: M.ServiceDespatchCreate): Observable<M.ApiResponse<{ serviceDespatchId: number; despatchNo: string }>> {
+  return this.post<M.ApiResponse<{ serviceDespatchId: number; despatchNo: string }>>('Sales/service-despatches', dto);
 }
 
 getSalesDocuments(salesOrderId: number): Observable<M.ApiResponse<M.SalesDocument[]>> {

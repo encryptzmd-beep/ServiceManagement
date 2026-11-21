@@ -66,7 +66,7 @@ namespace EncryptzBL.Infrastructure.CustomerPortal.Modules
             var ds = await GetDataSetAsync("sp_CustomerPortal_TrackComplaint", parameters);
 
             if (ds.Tables.Count == 0 || ds.Tables[0].Rows.Count == 0)
-                return null;
+                return null!;
 
             // Table 0 → Complaint Detail
             var detail = ds.Tables[0].ToList<ComplaintTrackingDetail>().FirstOrDefault();
@@ -79,7 +79,7 @@ namespace EncryptzBL.Infrastructure.CustomerPortal.Modules
                     : new List<StatusHistoryItem>();
             }
 
-            return detail;
+            return detail!;
         }
 
         // 🔥 CREATE SERVICE REQUEST
