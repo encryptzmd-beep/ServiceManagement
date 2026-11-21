@@ -37,6 +37,8 @@
     <Content Include="Database\ProjectDB\21_Product_Categories.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Database\ProjectDB\22_CRM_Lead_Delete.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Database\ProjectDB\23_Sales_Documents_Despatch_Mode.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Database\ProjectDB\24_QA_Product_Job_Fixes.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Database\ProjectDB\25_Unified_Despatch.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

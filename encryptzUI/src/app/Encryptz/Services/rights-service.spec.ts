@@ -1,6 +1,14 @@
-import { moduleOfMenu, normalizeMenuPath, rowAllows } from './rights-service';
+import { moduleOfMenu, normalizeMenuPath, rowAllows, storekeeperMayIssue } from './rights-service';
 
 describe('user rights', () => {
+  it('a Storekeeper may issue on the Despatch screen and nowhere else', () => {
+    expect(storekeeperMayIssue('Storekeeper', 'create', '/sales/despatch')).toBe(true);
+    expect(storekeeperMayIssue('Storekeeper', 'edit', '/sales/despatch')).toBe(true);
+    expect(storekeeperMayIssue('Storekeeper', 'delete', '/sales/despatch')).toBe(false);
+    expect(storekeeperMayIssue('Storekeeper', 'create', '/sales/orders')).toBe(false);
+    expect(storekeeperMayIssue('Manager', 'create', '/sales/despatch')).toBe(false);
+  });
+
   const row = (over: any = {}) => ({ path: 'sales/orders', canView: true, canCreate: false, canEdit: false, canDelete: false, ...over });
 
   it('compares menu paths with or without slashes', () => {

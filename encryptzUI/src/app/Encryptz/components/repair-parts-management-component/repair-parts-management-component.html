@@ -70,12 +70,12 @@
     <div class="rpm-date-range">
       <div class="rpm-date-field">
         <label>From</label>
-        <input type="date" [(ngModel)]="fromVal" (change)="onDateChange()" [max]="toVal || today" class="rpm-date-input" />
+        <input data-range="from" type="date" [(ngModel)]="fromVal" (change)="onDateChange()" [max]="toVal || today" class="rpm-date-input" />
       </div>
       <span class="rpm-date-sep">—</span>
       <div class="rpm-date-field">
         <label>To</label>
-        <input type="date" [(ngModel)]="toVal" (change)="onDateChange()" [min]="fromVal" [max]="today" class="rpm-date-input" />
+        <input data-range="to" type="date" [(ngModel)]="toVal" (change)="onDateChange()" [min]="fromVal" [max]="today" class="rpm-date-input" />
       </div>
       <div class="rpm-date-presets">
         <button class="rpm-preset-btn" [class.active]="isActiveDatePreset(15)" (click)="setLast15()">15d</button>

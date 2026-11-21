@@ -1,3 +1,4 @@
+import { statusText } from '../shared/sales-input-rules';
 import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -16,6 +17,7 @@ import { DialogService } from '../../Services/dialog-service';
   styleUrls: ['./sales-order-list-component.scss'],
 })
 export class SalesOrderListComponent implements OnInit {
+  readonly statusText = statusText;
   private dialog = inject(DialogService);
   private api = inject(ApiService);
   private router = inject(Router);

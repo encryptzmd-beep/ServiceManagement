@@ -424,6 +424,8 @@ a.db-item-title:hover { color: $accent-dark; text-decoration: underline; }
   .db-kpi:nth-child(-n + 2) { border-top: none; }
   .db-item-side { display: none; }
   .db-banner { flex-wrap: wrap; }
+  /* section links are big enough for a finger */
+  .db-card-head a, .db-section-head a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 4px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

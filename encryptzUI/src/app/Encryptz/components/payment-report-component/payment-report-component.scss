@@ -356,7 +356,7 @@
   min-width: 1460px;
 
   thead tr {
-    background: #1e1b4b;
+    background: #1b4a7a;
   }
 
   th {
@@ -372,7 +372,7 @@
     position: sticky;
     top: 0;
     z-index: 5;
-    background: #1e1b4b;
+    background: #1b4a7a;
 
     &:last-child { border-right: none; }
   }
@@ -654,9 +654,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #1e1b4b;
+  background: #1b4a7a;
   padding: 10px 20px;
-  border-top: 2px solid #3730a3;
+  border-top: 2px solid #153a60;
   flex-wrap: wrap;
   gap: 12px;
 }
@@ -710,7 +710,7 @@
 .tb-divider {
   width: 1px;
   height: 32px;
-  background: #3730a3;
+  background: #153a60;
 }
 
 /* ── Action button ───────────────────────────────────────────────────────── */

@@ -36,14 +36,14 @@
     <div class="filter-bar">
       <select [(ngModel)]="filter.statusId" (change)="filter.pageNumber=1; load()" class="fx-filter-select">
         <option [ngValue]="undefined">All Statuses</option>
-        @for (s of statuses(); track s.statusId) { <option [ngValue]="s.statusId">{{ s.statusName }}</option> }
+        @for (s of statuses(); track s.statusId) { <option [ngValue]="s.statusId">{{ statusText(s.statusName) }}</option> }
       </select>
       <select [(ngModel)]="filter.priority" (change)="filter.pageNumber=1; load()" class="fx-filter-select">
         <option value="">All Priorities</option>
         @for (p of priorities; track p) { <option [value]="p">{{ p }}</option> }
       </select>
-      <input type="date" [(ngModel)]="filter.fromDate" (change)="filter.pageNumber=1; load()" class="filter-input" placeholder="From" />
-      <input type="date" [(ngModel)]="filter.toDate" (change)="filter.pageNumber=1; load()" class="filter-input" placeholder="To" />
+      <input data-range="from" type="date" [(ngModel)]="filter.fromDate" (change)="filter.pageNumber=1; load()" class="filter-input" placeholder="From" />
+      <input data-range="to" type="date" [(ngModel)]="filter.toDate" (change)="filter.pageNumber=1; load()" class="filter-input" placeholder="To" />
     </div>
   }
 
@@ -124,7 +124,7 @@
                 </div>
               </td>
               <td><span class="priority-badge" [attr.data-priority]="c.priority">{{ c.priority }}</span></td>
-              <td><span class="status-badge" [style.background]="c.statusColor + '20'" [style.color]="c.statusColor">{{ c.statusName }}</span></td>
+              <td><span class="status-badge" [style.background]="c.statusColor + '20'" [style.color]="c.statusColor">{{ statusText(c.statusName) }}</span></td>
               <td>
                 @if (c.isSLABreached) {
                   <span class="fx-badge is-inactive"><span class="fx-dot"></span>Breached</span>

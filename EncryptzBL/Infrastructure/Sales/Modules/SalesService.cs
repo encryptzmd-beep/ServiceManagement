@@ -23,7 +23,7 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
         {
             var p = new[]
             {
-                SqlParameterHelper.Input("@SearchTerm", Clean(searchTerm)),
+                SqlParameterHelper.Input("@SearchTerm", EncryptzBL.Common.Sales.SalesInputRules.LikeTerm(searchTerm)),
                 SqlParameterHelper.Input("@Top", top)
             };
             return await GetListAsync<SalesCustomerDto>("sp_Sales_Customer_Search", p);
@@ -33,13 +33,16 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
         {
             if (dto == null) return ApiResponse<SalesCustomerSaveResultDto>.Fail("No customer data.");
             if (string.IsNullOrWhiteSpace(dto.CustomerName)) return ApiResponse<SalesCustomerSaveResultDto>.Fail("Customer name is required.");
-            if (string.IsNullOrWhiteSpace(dto.MobileNumber)) return ApiResponse<SalesCustomerSaveResultDto>.Fail("Mobile number is required.");
+            var mobile = EncryptzBL.Common.Sales.SalesInputRules.NormalizeMobile(dto.MobileNumber);
+            if (mobile == null) return ApiResponse<SalesCustomerSaveResultDto>.Fail("Enter a valid 10-digit mobile number.");
+            if (!EncryptzBL.Common.Sales.SalesInputRules.IsEmailOrBlank(dto.Email)) return ApiResponse<SalesCustomerSaveResultDto>.Fail("Enter a valid e-mail address.");
+            if (!EncryptzBL.Common.Sales.SalesInputRules.IsPinOrBlank(dto.PinCode)) return ApiResponse<SalesCustomerSaveResultDto>.Fail("PIN code must be 6 digits.");
 
             var p = new[]
             {
                 SqlParameterHelper.Input("@CustomerId", dto.CustomerId),
                 SqlParameterHelper.Input("@CustomerName", dto.CustomerName.Trim()),
-                SqlParameterHelper.Input("@MobileNumber", dto.MobileNumber.Trim()),
+                SqlParameterHelper.Input("@MobileNumber", mobile),
                 SqlParameterHelper.Input("@Email", Clean(dto.Email)),
                 SqlParameterHelper.Input("@AlternatePhone", Clean(dto.AlternatePhone)),
                 SqlParameterHelper.Input("@Address", Clean(dto.Address)),
@@ -70,7 +73,7 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
             // return the saved row so the screen can fill the billing details
             var list = await GetListAsync<SalesCustomerDto>("sp_Sales_Customer_Search", new[]
             {
-                SqlParameterHelper.Input("@SearchTerm", dto.MobileNumber.Trim()),
+                SqlParameterHelper.Input("@SearchTerm", mobile),
                 SqlParameterHelper.Input("@Top", 10)
             });
             result.Customer = list.FirstOrDefault(c => c.CustomerId == customerId);
@@ -150,7 +153,7 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
             filter ??= new SalesOrderFilterDto();
             var p = new[]
             {
-                SqlParameterHelper.Input("@SearchTerm", Clean(filter.SearchTerm)),
+                SqlParameterHelper.Input("@SearchTerm", EncryptzBL.Common.Sales.SalesInputRules.LikeTerm(filter.SearchTerm)),
                 SqlParameterHelper.Input("@Status", Clean(filter.Status)),
                 SqlParameterHelper.Input("@FromDate", filter.FromDate),
                 SqlParameterHelper.Input("@ToDate", filter.ToDate),
@@ -189,6 +192,16 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
         public async Task<ApiResponse<DespatchCreateResultDto>> CreateDespatch(DespatchCreateDto dto, int userId)
         {
             if (dto == null || dto.SalesOrderId <= 0) return ApiResponse<DespatchCreateResultDto>.Fail("Select the bill to despatch.");
+            var details = EncryptzBL.Common.Sales.ServiceDespatchRules.DetailsProblem(dto.DespatchMode, dto.TrackingNo);
+            if (details != null) return ApiResponse<DespatchCreateResultDto>.Fail(details);
+
+            // the warranty starts on this date, so goods cannot leave before they were billed
+            if (dto.DespatchDate.HasValue)
+            {
+                var bill = await GetOrder(dto.SalesOrderId);
+                if (bill.Success && bill.Data?.Order != null && dto.DespatchDate.Value.Date < bill.Data.Order.OrderDate.Date)
+                    return ApiResponse<DespatchCreateResultDto>.Fail($"Despatch date cannot be before the bill date ({bill.Data.Order.OrderDate:dd MMM yyyy}).");
+            }
 
             var units = (dto.Units ?? new()).Where(u => u != null && u.SalesOrderItemId > 0).ToList();
 
@@ -243,7 +256,7 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
             filter ??= new DespatchFilterDto();
             var p = new[]
             {
-                SqlParameterHelper.Input("@SearchTerm", Clean(filter.SearchTerm)),
+                SqlParameterHelper.Input("@SearchTerm", EncryptzBL.Common.Sales.SalesInputRules.LikeTerm(filter.SearchTerm)),
                 SqlParameterHelper.Input("@FromDate", filter.FromDate),
                 SqlParameterHelper.Input("@ToDate", filter.ToDate),
                 SqlParameterHelper.Input("@PageNumber", filter.PageNumber),
@@ -270,6 +283,138 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
         // Documents of a bill (script 23)
         // =====================================================================
         private const int SqlProcedureMissing = 2812;
+        // =====================================================================
+        // Spare and repaired parts in the single Despatch screen
+        // =====================================================================
+        private const string ServiceDespatchNotInstalled = "This company database needs script 25 (single despatch).";
+
+        public async Task<ApiResponse<PagedResult<ServiceDespatchListDto>>> GetServiceDespatches(ServiceDespatchFilterDto filter)
+        {
+            filter ??= new ServiceDespatchFilterDto();
+            var stage = string.Equals(filter.Stage?.Trim(), "Despatched", StringComparison.OrdinalIgnoreCase) ? "Despatched" : "Pending";
+            try
+            {
+                var items = await GetListAsync<ServiceDespatchListDto>("sp_ServiceDespatch_List", new[]
+                {
+                    SqlParameterHelper.Input("@Stage", stage),
+                    SqlParameterHelper.Input("@SourceType", EncryptzBL.Common.Sales.ServiceDespatchRules.Source(filter.SourceType)),
+                    SqlParameterHelper.Input("@SearchTerm", EncryptzBL.Common.Sales.SalesInputRules.LikeTerm(filter.SearchTerm)),
+                    SqlParameterHelper.Input("@FromDate", filter.FromDate?.Date),
+                    SqlParameterHelper.Input("@ToDate", filter.ToDate?.Date),
+                    SqlParameterHelper.Input("@PageNumber", filter.PageNumber),
+                    SqlParameterHelper.Input("@PageSize", filter.PageSize)
+                });
+                return ApiResponse<PagedResult<ServiceDespatchListDto>>.Ok(Page(items, items.FirstOrDefault()?.TotalCount ?? 0, filter.PageNumber, filter.PageSize));
+            }
+            catch (SqlException ex) when (ex.Number == SqlProcedureMissing)
+            {
+                return ApiResponse<PagedResult<ServiceDespatchListDto>>.Fail(ServiceDespatchNotInstalled);
+            }
+        }
+
+        public async Task<ApiResponse<ServiceDespatchResultDto>> CreateServiceDespatch(ServiceDespatchCreateDto dto, int userId)
+        {
+            if (dto == null) return ApiResponse<ServiceDespatchResultDto>.Fail("Select the request to despatch.");
+            var today = DateTime.UtcNow.AddMinutes(330).Date;
+            var problem = EncryptzBL.Common.Sales.ServiceDespatchRules.Problem(dto.SourceType, dto.SourceId, dto.DespatchDate, dto.DespatchMode, dto.ReferenceNo, dto.ReferenceDate, today);
+            if (problem != null) return ApiResponse<ServiceDespatchResultDto>.Fail(problem);
+            var markup = InputSanitizer.Validate(("Reference", dto.ReferenceNo), ("Transporter", dto.TransporterName),
+                ("Vehicle", dto.VehicleNo), ("Driver", dto.DriverName), ("Remarks", dto.Remarks));
+            if (markup != null) return ApiResponse<ServiceDespatchResultDto>.Fail(markup);
+
+            try
+            {
+                var dt = await GetDataTableAsync("sp_ServiceDespatch_Create", new[]
+                {
+                    SqlParameterHelper.Input("@SourceType", EncryptzBL.Common.Sales.ServiceDespatchRules.Source(dto.SourceType)),
+                    SqlParameterHelper.Input("@SourceId", dto.SourceId),
+                    SqlParameterHelper.Input("@DespatchDate", dto.DespatchDate!.Value.Date),
+                    SqlParameterHelper.Input("@DespatchMode", EncryptzBL.Common.Sales.ServiceDespatchRules.Mode(dto.DespatchMode)),
+                    SqlParameterHelper.Input("@ReferenceNo", Clean(dto.ReferenceNo)),
+                    SqlParameterHelper.Input("@ReferenceDate", dto.ReferenceDate?.Date),
+                    SqlParameterHelper.Input("@TransporterName", Clean(dto.TransporterName)),
+                    SqlParameterHelper.Input("@VehicleNo", Clean(dto.VehicleNo)),
+                    SqlParameterHelper.Input("@DriverName", Clean(dto.DriverName)),
+                    SqlParameterHelper.Input("@Remarks", Clean(dto.Remarks)),
+                    SqlParameterHelper.Input("@UserId", userId)
+                });
+                if (dt == null || dt.Rows.Count == 0) return ApiResponse<ServiceDespatchResultDto>.Fail("No response from the database.");
+                var row = dt.Rows[0];
+                if (Convert.ToInt32(row["Success"]) != 1)
+                    return ApiResponse<ServiceDespatchResultDto>.Fail(row["Message"]?.ToString() ?? "Despatch could not be saved.");
+                return ApiResponse<ServiceDespatchResultDto>.Ok(new ServiceDespatchResultDto
+                {
+                    ServiceDespatchId = Convert.ToInt32(row["ServiceDespatchId"]),
+                    DespatchNo = row["DespatchNo"]?.ToString() ?? string.Empty
+                }, row["Message"]?.ToString() ?? "Saved");
+            }
+            catch (SqlException ex) when (ex.Number == SqlProcedureMissing)
+            {
+                return ApiResponse<ServiceDespatchResultDto>.Fail(ServiceDespatchNotInstalled);
+            }
+        }
+
+        public async Task<ApiResponse> AddServiceDespatchDetails(ServiceDespatchCreateDto dto, int userId)
+        {
+            if (dto == null) return new ApiResponse(false, "Select the despatch.");
+            var today = DateTime.UtcNow.AddMinutes(330).Date;
+            var problem = EncryptzBL.Common.Sales.ServiceDespatchRules.Problem(dto.SourceType, dto.SourceId, dto.DespatchDate, dto.DespatchMode, dto.ReferenceNo, dto.ReferenceDate, today)
+                ?? InputSanitizer.Validate(("Reference", dto.ReferenceNo), ("Transporter", dto.TransporterName),
+                    ("Vehicle", dto.VehicleNo), ("Driver", dto.DriverName), ("Remarks", dto.Remarks));
+            if (problem != null) return new ApiResponse(false, problem);
+
+            return await DetailsResult("sp_ServiceDespatch_AddDetails", new[]
+            {
+                SqlParameterHelper.Input("@SourceType", EncryptzBL.Common.Sales.ServiceDespatchRules.Source(dto.SourceType)),
+                SqlParameterHelper.Input("@SourceId", dto.SourceId),
+                SqlParameterHelper.Input("@DespatchDate", dto.DespatchDate!.Value.Date),
+                SqlParameterHelper.Input("@DespatchMode", EncryptzBL.Common.Sales.ServiceDespatchRules.Mode(dto.DespatchMode)),
+                SqlParameterHelper.Input("@ReferenceNo", Clean(dto.ReferenceNo)),
+                SqlParameterHelper.Input("@ReferenceDate", dto.ReferenceDate?.Date),
+                SqlParameterHelper.Input("@TransporterName", Clean(dto.TransporterName)),
+                SqlParameterHelper.Input("@VehicleNo", Clean(dto.VehicleNo)),
+                SqlParameterHelper.Input("@DriverName", Clean(dto.DriverName)),
+                SqlParameterHelper.Input("@Remarks", Clean(dto.Remarks)),
+                SqlParameterHelper.Input("@UserId", userId)
+            });
+        }
+
+        public async Task<ApiResponse> AddDespatchDetails(int despatchId, DespatchDetailsDto dto, int userId)
+        {
+            if (dto == null || despatchId <= 0) return new ApiResponse(false, "Select the despatch.");
+            var problem = EncryptzBL.Common.Sales.ServiceDespatchRules.DetailsProblem(dto.DespatchMode, dto.ReferenceNo)
+                ?? (dto.ReferenceDate?.Date > DateTime.UtcNow.AddMinutes(330).Date ? "Reference date cannot be in the future." : null)
+                ?? InputSanitizer.Validate(("Reference", dto.ReferenceNo), ("Transporter", dto.TransporterName),
+                    ("Vehicle", dto.VehicleNo), ("Driver", dto.DriverName));
+            if (problem != null) return new ApiResponse(false, problem);
+
+            return await DetailsResult("sp_Despatch_AddDetails", new[]
+            {
+                SqlParameterHelper.Input("@DespatchId", despatchId),
+                SqlParameterHelper.Input("@DespatchMode", EncryptzBL.Common.Sales.ServiceDespatchRules.Mode(dto.DespatchMode)),
+                SqlParameterHelper.Input("@ReferenceNo", Clean(dto.ReferenceNo)),
+                SqlParameterHelper.Input("@ReferenceDate", dto.ReferenceDate?.Date),
+                SqlParameterHelper.Input("@TransporterName", Clean(dto.TransporterName)),
+                SqlParameterHelper.Input("@VehicleNo", Clean(dto.VehicleNo)),
+                SqlParameterHelper.Input("@DriverName", Clean(dto.DriverName)),
+                SqlParameterHelper.Input("@UserId", userId)
+            });
+        }
+
+        private async Task<ApiResponse> DetailsResult(string procedure, SqlParameter[] parameters)
+        {
+            try
+            {
+                var dt = await GetDataTableAsync(procedure, parameters);
+                if (dt == null || dt.Rows.Count == 0) return new ApiResponse(false, "No response from the database.");
+                return new ApiResponse(Convert.ToInt32(dt.Rows[0]["Success"]) == 1, dt.Rows[0]["Message"]?.ToString() ?? string.Empty);
+            }
+            catch (SqlException ex) when (ex.Number == SqlProcedureMissing)
+            {
+                return new ApiResponse(false, ServiceDespatchNotInstalled);
+            }
+        }
+
         private const int SqlTooManyArguments = 8144;
         private const string DocumentsNotInstalled = "This company database needs script 23 (sales documents and despatch mode).";
 
@@ -356,7 +501,7 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
             filter ??= new WarrantyLookupFilterDto();
             var p = new[]
             {
-                SqlParameterHelper.Input("@SearchTerm", Clean(filter.Search)),
+                SqlParameterHelper.Input("@SearchTerm", EncryptzBL.Common.Sales.SalesInputRules.LikeTerm(filter.Search)),
                 SqlParameterHelper.Input("@CustomerId", filter.CustomerId),
                 SqlParameterHelper.Input("@OnlyActive", filter.OnlyActive),
                 SqlParameterHelper.Input("@PageNumber", filter.PageNumber),

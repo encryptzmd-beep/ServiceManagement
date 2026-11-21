@@ -124,7 +124,8 @@ export class ProductListComponent implements OnInit {
       sortDirection: this.sortDirection(),
       searchTerm: this.searchTerm() || undefined,
       category: this.selectedCategory() || undefined,
-      subCategory: this.selectedSubCategory() || undefined
+      subCategory: this.selectedSubCategory() || undefined,
+      includeInactive: true     // an inactive product stays here, so it can be activated again
     };
 
     this.productService.getAllProducts(request).subscribe({

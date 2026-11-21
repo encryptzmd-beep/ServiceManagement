@@ -1,5 +1,6 @@
 // Sales Order (bill) entry — matches the shared Felix list/page look
-.so-page {
+// on the host: the customer dialog and the toast sit outside .so-page
+:host {
   --navy: #1B4A7A;
   --navy-mid: #4a7ab5;
   --navy-light: #e8eef5;
@@ -10,7 +11,9 @@
   --muted: #8a9ab0;
   --border: #e2e8f0;
   --bg: #f5f7fa;
+}
 
+.so-page {
   width: 100%;
   padding: 4px 0 24px;
   color: var(--text);

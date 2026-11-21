@@ -287,7 +287,7 @@
                 <div class="despatch-meta">
                   @if (d.installationComplaintNo) {
                     Installation job <span class="mono">{{ d.installationComplaintNo }}</span>
-                    <span class="status-badge" [style.background]="(d.installationStatusColor || '#64748b') + '20'" [style.color]="d.installationStatusColor || '#64748b'">{{ d.installationStatus }}</span>
+                    <span class="status-badge" [style.background]="(d.installationStatusColor || '#64748b') + '20'" [style.color]="d.installationStatusColor || '#64748b'">{{ statusText(d.installationStatus) }}</span>
                     @if (d.assignedTechnicians) { · Technician: {{ d.assignedTechnicians }} } @else { · <em>not assigned yet</em> }
                   } @else { No installation job was created. }
                 </div>

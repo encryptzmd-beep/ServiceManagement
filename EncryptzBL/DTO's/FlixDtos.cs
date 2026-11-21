@@ -2130,6 +2130,8 @@ namespace EncryptzBL.DTO_s
             public DateTime? PriceEffectiveDate { get; set; }
             public int? WarrantyMonths { get; set; }
             public bool? IsActive { get; set; }
+            /// <summary>The product master screen also lists inactive products.</summary>
+            public bool IncludeInactive { get; set; }
             public string? SearchTerm { get; set; }
             public int PageNumber { get; set; } = 1;
             public int PageSize { get; set; } = 20;
@@ -2204,6 +2206,9 @@ namespace EncryptzBL.DTO_s
             {
                 [Required]
                 public string OperationType { get; set; } = null!;
+
+                /// <summary>UPDATE_ASSIGNMENT: InProgress (Start) or Completed.</summary>
+                public string? AssignmentStatus { get; set; }
 
                 // Common
                 public int? ComplaintId { get; set; }

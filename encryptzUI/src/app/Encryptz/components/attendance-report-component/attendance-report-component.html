@@ -50,11 +50,11 @@
 
       <div class="filter-field">
         <label>From Date</label>
-        <input type="date" [(ngModel)]="fromDate" class="input" />
+        <input data-range="from" type="date" [(ngModel)]="fromDate" class="input" />
       </div>
       <div class="filter-field">
         <label>To Date</label>
-        <input type="date" [(ngModel)]="toDate" class="input" />
+        <input data-range="to" type="date" [(ngModel)]="toDate" class="input" />
       </div>
       <button class="btn-primary" (click)="load()" [disabled]="loading()">
         @if (loading()) { <span class="spinner"></span> }

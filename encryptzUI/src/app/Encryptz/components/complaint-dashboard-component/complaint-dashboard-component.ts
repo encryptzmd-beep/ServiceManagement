@@ -1,3 +1,4 @@
+import { statusText } from '../shared/sales-input-rules';
 import { AppRightDirective } from '../shared/app-right/app-right';
 import { CommonModule } from '@angular/common';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
@@ -27,6 +28,7 @@ interface TileConfig {
   styleUrl: './complaint-dashboard-component.scss',
 })
 export class ComplaintDashboardComponent implements OnInit {
+  readonly statusText = statusText;
   private api = inject(ApiService);
   private _destroyRef = inject(DestroyRef);
   readonly dashState = inject(DashboardStateService);
@@ -724,8 +726,15 @@ isCatalogPart(r: any): boolean {
 
 singleAction(requestId: number, status: string, event: Event): void {
   event.stopPropagation();
+  // every despatch is made on the Despatch screen, with its mode and reference
+  if (status === 'Dispatched') { this.openDespatch([requestId]); return; }
   const request = this.spareRequests().find((r: any) => r.requestId === requestId) ?? null;
   this.openSpareDecision(status, request, [requestId]);
+}
+
+/** Opens the Despatch screen with these approved spare requests ready for their mode and reference. */
+private openDespatch(ids: number[]): void {
+  this.router.navigate(['/sales/despatch'], { queryParams: { source: 'spare', ids: ids.join(',') } });
 }
 
 private openSpareDecision(status: string, request: any | null, ids: number[]): void {
@@ -986,6 +995,8 @@ bulkAction(targetStatus: string): void {
     this.spareActionErr.set(true);
     return;
   }
+
+  if (targetStatus === 'Dispatched') { this.openDespatch(validIds); return; }
 
   // confirmed (and, for a rejection, given a reason) in the decision dialog
   this.spareActionMsg.set('');

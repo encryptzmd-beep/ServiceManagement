@@ -523,7 +523,8 @@ export const routes: Routes = [
   path: 'sales/despatch',
   loadComponent: () => import('./Encryptz/components/despatch-list-component/despatch-list-component')
     .then(m => m.DespatchListComponent),
-  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
+  // a Storekeeper sees the Spare Parts and Repair Parts tabs only
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager', 'Storekeeper'])],
   data: { title: 'Despatch', icon: 'local_shipping', menu: 'sales' }
 },
 {

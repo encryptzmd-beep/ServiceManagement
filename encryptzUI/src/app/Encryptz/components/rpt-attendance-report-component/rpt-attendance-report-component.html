@@ -3,8 +3,8 @@
     <h1 class="page-title">Attendance Report</h1>
   </div>
   <div class="filter-row">
-    <input type="date" [(ngModel)]="from" class="input" placeholder="From" />
-    <input type="date" [(ngModel)]="to" class="input" placeholder="To" />
+    <input data-range="from" type="date" [(ngModel)]="from" class="input" placeholder="From" />
+    <input data-range="to" type="date" [(ngModel)]="to" class="input" placeholder="To" />
     <button (click)="load()" class="btn-primary">Generate</button>
   </div>
   <div class="table-card">

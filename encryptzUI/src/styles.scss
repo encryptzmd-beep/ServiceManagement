@@ -404,3 +404,6 @@ input, select, textarea { font-family: inherit; }
   background: #e6f6ec;
   color: #15803d;
 }
+
+/* a filter whose To date is before its From date (date-range-guard.ts) */
+input.date-range-bad { border-color: #d42b2b !important; outline: 1px solid #d42b2b; }

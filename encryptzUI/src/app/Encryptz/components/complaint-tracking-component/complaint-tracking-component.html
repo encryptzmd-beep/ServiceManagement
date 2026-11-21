@@ -73,7 +73,7 @@
         <div class="card-header-right">
           <span class="status-badge" [style.background]="(c.statusColor || '#64748b') + '18'"
             [style.color]="c.statusColor || '#64748b'">
-            {{ c.statusName }}
+            {{ statusText(c.statusName) }}
           </span>
           <span class="priority-badge" [attr.data-priority]="c.priority">
             {{ c.priority }}
@@ -141,7 +141,7 @@
             <div class="tl-line"></div>
             <div class="tl-content">
               <div class="tl-top">
-                <strong class="tl-status">{{ t.statusName }}</strong>
+                <strong class="tl-status">{{ statusText(t.statusName) }}</strong>
                 <span class="tl-time">{{ t.actionAt | date:'dd MMM, hh:mm a' }}</span>
               </div>
               @if (t.remarks) {

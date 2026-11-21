@@ -203,6 +203,10 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
 
         public async Task<ApiResponse<int>> AssignTechnician(AssignTechnicianDto dto, int userId)
         {
+            var today = DateTime.UtcNow.AddMinutes(330).Date;
+            if (dto.ScheduledDate.HasValue && dto.ScheduledDate.Value.Date < today)
+                return ApiResponse<int>.Fail("Visit date cannot be in the past");
+
             var p = new[] {
         SqlParameterHelper.Input("@ComplaintId", dto.ComplaintId),
         SqlParameterHelper.Input("@TechnicianId", dto.TechnicianId),

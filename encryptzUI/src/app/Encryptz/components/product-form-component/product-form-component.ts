@@ -1,6 +1,6 @@
 
 // components/product-form/product-form.component.ts
-import { Component, Input, Output, EventEmitter, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, Output, EventEmitter, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -506,6 +506,7 @@ import { ProductService } from '../../Services/product-service';
   `]
 })
 export class ProductFormComponent implements OnInit {
+  private changes = inject(ChangeDetectorRef);
   @Input() product: ProductMasterDTO | null = null;
   @Input() isEditMode = false;
   @Output() close = new EventEmitter<boolean | { refresh?: boolean; message?: string; type?: 'success' | 'error' }>();
@@ -586,10 +587,12 @@ export class ProductFormComponent implements OnInit {
   }
 
   onSubmit(): void {
-    if (!this.formData.productCode || !this.formData.productName) {
+    if (!this.formData.productCode?.trim() || !this.formData.productName?.trim()) {
       this.submitError = 'Please fill all required fields before saving.';
       return;
     }
+    if (Number(this.formData.mrp ?? 0) < 0) { this.submitError = 'MRP cannot be negative'; return; }
+    if (Number(this.formData.warrantyMonths ?? 0) < 0) { this.submitError = 'Warranty months cannot be negative'; return; }
 
     this.submitError = '';
     this.isSubmitting = true;
@@ -611,11 +614,13 @@ export class ProductFormComponent implements OnInit {
           this.submitError = response.message || 'Operation failed';
         }
         this.isSubmitting = false;
+        this.changes.markForCheck();     // plain fields: the answer of the API must still show
       },
       error: (error) => {
         console.error('Error saving product:', error);
         this.submitError = error.error?.message || 'Error saving product';
         this.isSubmitting = false;
+        this.changes.markForCheck();
       }
     });
   }

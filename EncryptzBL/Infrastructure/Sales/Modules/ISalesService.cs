@@ -26,6 +26,13 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
         Task<PagedResult<DespatchListDto>> GetDespatches(DespatchFilterDto filter);
         Task<ApiResponse<DespatchDetailDto>> GetDespatch(int despatchId);
 
+        // spare and repaired parts in the same Despatch screen (script 25)
+        Task<ApiResponse<PagedResult<ServiceDespatchListDto>>> GetServiceDespatches(ServiceDespatchFilterDto filter);
+        Task<ApiResponse<ServiceDespatchResultDto>> CreateServiceDespatch(ServiceDespatchCreateDto dto, int userId);
+        /// <summary>The missing mode and reference of an older despatch; what is recorded is never changed.</summary>
+        Task<ApiResponse> AddServiceDespatchDetails(ServiceDespatchCreateDto dto, int userId);
+        Task<ApiResponse> AddDespatchDetails(int despatchId, DespatchDetailsDto dto, int userId);
+
         // documents of a bill (PDF), shared by the Sales Order and Despatch screens
         Task<ApiResponse<List<SalesDocumentDto>>> GetDocuments(int salesOrderId);
         Task<ApiResponse<int>> SaveDocument(int salesOrderId, int? despatchId, string? documentType, string? fileName, byte[] content, int userId);

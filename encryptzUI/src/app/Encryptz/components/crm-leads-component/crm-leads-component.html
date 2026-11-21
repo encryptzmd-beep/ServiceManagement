@@ -45,9 +45,9 @@
         </select>
         <div class="crm-range" role="group" aria-label="Lead date">
           <span class="material-icons" aria-hidden="true">event</span>
-          <input type="date" name="from" aria-label="Lead date from" [ngModel]="filter().from ?? ''" (change)="setAndApply('from', $any($event.target).value)" />
+          <input data-range="from" type="date" name="from" aria-label="Lead date from" [ngModel]="filter().from ?? ''" (change)="setAndApply('from', $any($event.target).value)" />
           <span aria-hidden="true">–</span>
-          <input type="date" name="to" aria-label="Lead date to" [ngModel]="filter().to ?? ''" (change)="setAndApply('to', $any($event.target).value)" />
+          <input data-range="to" type="date" name="to" aria-label="Lead date to" [ngModel]="filter().to ?? ''" (change)="setAndApply('to', $any($event.target).value)" />
         </div>
         <span class="crm-spacer"></span>
         <span class="crm-result">{{ total() }} {{ total() === 1 ? 'lead' : 'leads' }}</span>

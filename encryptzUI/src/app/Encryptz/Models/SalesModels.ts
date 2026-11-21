@@ -229,7 +229,84 @@ export const DESPATCH_MODES: { value: string; reference: string; carrier: boolea
   { value: 'Customer Pickup', reference: 'Gate Pass No', carrier: false, vehicle: true },
 ];
 
-export const SALES_DOCUMENT_TYPES = ['Invoice', 'E-Way Bill', 'Delivery Challan', 'LR / Consignment Note', 'Purchase Order', 'Other'];
+/** A spare part or repaired part in the single Despatch screen. */
+export interface ServiceDespatchItem {
+  sourceType: 'Spare' | 'Repair';
+  sourceId: number;
+  complaintId?: number | null;
+  complaintNumber?: string | null;
+  partName?: string | null;
+  partReference?: string | null;
+  quantity: number;
+  urgencyLevel?: string | null;
+  status?: string | null;
+  technicianName?: string | null;
+  customerName?: string | null;
+  customerMobile?: string | null;
+  readyAt?: string | null;
+  serviceDespatchId?: number | null;
+  despatchNo?: string | null;
+  despatchDate?: string | null;
+  despatchMode?: string | null;
+  referenceNo?: string | null;
+  referenceDate?: string | null;
+  transporterName?: string | null;
+  vehicleNo?: string | null;
+  driverName?: string | null;
+  remarks?: string | null;
+  unitPrice?: number | null;
+  stockQuantity?: number | null;
+  requestNotes?: string | null;
+  statusNotes?: string | null;
+  requestedAt?: string | null;
+  approvedAt?: string | null;
+  approvedByName?: string | null;
+  complaintSubject?: string | null;
+  productName?: string | null;
+  productSerial?: string | null;
+  customerAddress?: string | null;
+  customerCity?: string | null;
+  technicianMobile?: string | null;
+  despatchedAt?: string | null;
+  despatchedByName?: string | null;
+  addedLater?: boolean;
+  totalCount?: number;
+}
+
+export interface ServiceDespatchFilter {
+  stage: 'Pending' | 'Despatched';
+  sourceType?: 'Spare' | 'Repair';
+  searchTerm?: string;
+  fromDate?: string;
+  toDate?: string;
+  pageNumber: number;
+  pageSize: number;
+}
+
+/** The missing mode and reference of an older sales despatch. */
+export interface DespatchDetailsSave {
+  despatchMode: string;
+  referenceNo: string;
+  referenceDate?: string | null;
+  transporterName?: string | null;
+  vehicleNo?: string | null;
+  driverName?: string | null;
+}
+
+export interface ServiceDespatchCreate {
+  sourceType: 'Spare' | 'Repair';
+  sourceId: number;
+  despatchDate: string;
+  despatchMode: string;
+  referenceNo?: string | null;
+  referenceDate?: string | null;
+  transporterName?: string | null;
+  vehicleNo?: string | null;
+  driverName?: string | null;
+  remarks?: string | null;
+}
+
+export const SALES_DOCUMENT_TYPES =['Invoice', 'E-Way Bill', 'Delivery Challan', 'LR / Consignment Note', 'Purchase Order', 'Other'];
 
 /** A PDF attached to a bill, from the Sales Order or the Despatch screen. */
 export interface SalesDocument {

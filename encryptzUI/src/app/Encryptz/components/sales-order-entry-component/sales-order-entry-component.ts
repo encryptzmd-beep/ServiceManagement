@@ -14,6 +14,7 @@ import { SalesDocumentsComponent } from '../shared/sales-documents/sales-documen
 import { RightsService } from '../../Services/rights-service';
 import { DialogService } from '../../Services/dialog-service';
 import { AuthService } from '../../Auth/auth-service';
+import { isEmailOrBlank, isPinOrBlank, normalizeMobile, statusText } from '../shared/sales-input-rules';
 import {
   INDIAN_STATES, ProductMasterDTO, SALES_GST_RATES, SALES_PAYMENT_MODES,
   SalesCustomer, SalesCustomerSave, SalesOrderDetail, SalesOrderItemSave, SalesOrderSave,
@@ -45,6 +46,7 @@ interface BillLine {
   styleUrls: ['./sales-order-entry-component.scss'],
 })
 export class SalesOrderEntryComponent implements OnInit {
+  readonly statusText = statusText;
   private api = inject(ApiService);
   private auth = inject(AuthService);
   private route = inject(ActivatedRoute);
@@ -137,9 +139,10 @@ export class SalesOrderEntryComponent implements OnInit {
 
   // ── totals (same arithmetic as sp_SalesOrder_Save) ──
   private isInterStateSig = signal(false);
-  subTotal = computed(() => this.lines().reduce((s, l) => s + this.num(l.qty) * this.num(l.rate), 0));
-  discountTotal = computed(() => this.lines().reduce((s, l) => s + this.num(l.discountAmount), 0));
-  taxableTotal = computed(() => this.lines().reduce((s, l) => s + this.lineTaxable(l), 0));
+  // a value Save would refuse counts as nothing, so no negative total shows while typing
+  subTotal = computed(() => this.lines().reduce((s, l) => s + Math.max(0, this.num(l.qty)) * Math.max(0, this.num(l.rate)), 0));
+  discountTotal = computed(() => this.lines().reduce((s, l) => s + Math.min(Math.max(0, this.num(l.discountAmount)), Math.max(0, this.num(l.qty)) * Math.max(0, this.num(l.rate))), 0));
+  taxableTotal = computed(() => this.lines().reduce((s, l) => s + this.lineNet(l), 0));
   gstTotal = computed(() => this.lines().reduce((s, l) => s + this.lineGst(l), 0));
   cgst = computed(() => this.isInterStateSig() ? 0 : this.round2(this.gstTotal() / 2));
   sgst = computed(() => this.isInterStateSig() ? 0 : this.round2(this.gstTotal() - this.round2(this.gstTotal() / 2)));
@@ -369,6 +372,7 @@ export class SalesOrderEntryComponent implements OnInit {
     this.customer.set(c);
     this.customerSearch = '';
     this.customerDropdownOpen.set(false);
+    this.error.set('');
     // billing details from the master; the bill can still change them
     this.contactNumber = c.mobileNumber || '';
     this.gstin = c.gstin || '';
@@ -425,12 +429,15 @@ export class SalesOrderEntryComponent implements OnInit {
   saveCustomer(): void {
     const f = this.customerForm;
     if (!f.customerName?.trim()) { this.customerFormError.set('Customer name is required'); return; }
-    if (!f.mobileNumber?.trim() || f.mobileNumber.replace(/\D/g, '').length < 10) { this.customerFormError.set('A valid mobile number is required'); return; }
+    const mobile = normalizeMobile(f.mobileNumber);
+    if (!mobile) { this.customerFormError.set('Enter a valid 10-digit mobile number'); return; }
+    if (!isEmailOrBlank(f.email)) { this.customerFormError.set('Enter a valid e-mail address'); return; }
+    if (!isPinOrBlank(f.pinCode)) { this.customerFormError.set('PIN code must be 6 digits'); return; }
     if (f.gstin && f.gstin.trim() && !/^[0-9A-Z]{15}$/i.test(f.gstin.trim())) { this.customerFormError.set('GSTIN must be 15 characters'); return; }
 
     this.savingCustomer.set(true);
     this.customerFormError.set('');
-    this.api.saveSalesCustomer({ ...f, gstin: f.gstin?.trim().toUpperCase() || null }).subscribe({
+    this.api.saveSalesCustomer({ ...f, mobileNumber: mobile, gstin: f.gstin?.trim().toUpperCase() || null }).subscribe({
       next: r => {
         this.savingCustomer.set(false);
         if (!r?.success || !r.data) { this.customerFormError.set(r?.message || 'Could not save the customer'); return; }
@@ -479,11 +486,16 @@ export class SalesOrderEntryComponent implements OnInit {
   touch(): void {
     this.lines.update(ls => [...ls]);
     this.isInterStateSig.set(this.isInterState);
+    if (this.error()) this.error.set('');
   }
 
   lineTaxable(l: BillLine): number { return this.num(l.qty) * this.num(l.rate) - this.num(l.discountAmount); }
-  lineGst(l: BillLine): number { return this.round2(this.lineTaxable(l) * this.num(l.gstPercent) / 100); }
-  lineTotal(l: BillLine): number { return this.round2(this.lineTaxable(l) + this.lineGst(l)); }
+  /** What the line adds to the bill: never below zero on the screen. */
+  private lineNet(l: BillLine): number {
+    return Math.max(0, Math.max(0, this.num(l.qty)) * Math.max(0, this.num(l.rate)) - Math.max(0, this.num(l.discountAmount)));
+  }
+  lineGst(l: BillLine): number { return this.round2(this.lineNet(l) * this.num(l.gstPercent) / 100); }
+  lineTotal(l: BillLine): number { return this.round2(this.lineNet(l) + this.lineGst(l)); }
 
   productLabel(p: ProductMasterDTO): string {
     const bits = [p.productName, p.model, p.brand].filter(Boolean);
@@ -502,6 +514,8 @@ export class SalesOrderEntryComponent implements OnInit {
       const l = ls[i];
       if (!l.productName?.trim()) return `Line ${i + 1}: select a product`;
       if (this.num(l.qty) < 1) return `Line ${i + 1}: quantity must be at least 1`;
+      if (!Number.isInteger(this.num(l.qty))) return `Line ${i + 1}: quantity must be a whole number`;
+      if (l.rate === null || l.rate === undefined || (l.rate as unknown) === '') return `Line ${i + 1}: enter the rate`;
       if (this.num(l.rate) < 0 || this.num(l.discountAmount) < 0) return `Line ${i + 1}: rate / discount cannot be negative`;
       if (this.lineTaxable(l) < 0) return `Line ${i + 1}: discount is more than the line amount`;
       if (this.num(l.warrantyMonths) < 0) return `Line ${i + 1}: warranty months cannot be negative`;
@@ -509,10 +523,13 @@ export class SalesOrderEntryComponent implements OnInit {
     return '';
   }
 
-  save(andDespatch = true): void {
+  async save(andDespatch = true): Promise<void> {
     const err = this.validate();
     if (err) { this.error.set(err); this.showToast('error', err); return; }
     this.error.set('');
+
+    const free = this.lines().findIndex(l => this.num(l.rate) === 0);
+    if (free >= 0 && !(await this.dialog.confirm(`Line ${free + 1} has a rate of ₹0. Save it as a free item?`))) return;
 
     const dto: SalesOrderSave = {
       salesOrderId: this.salesOrderId(),

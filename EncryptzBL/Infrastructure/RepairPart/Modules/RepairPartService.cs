@@ -103,6 +103,16 @@ namespace EncryptzBL.Infrastructure.RepairPart.Modules
         {
             try
             {
+                // a despatch is made on the Despatch screen only, with its mode and reference
+                var current = await GetDataTableByQueryAsync(
+                    "SELECT Status FROM dbo.RepairPartRequests WHERE RepairRequestId = @RepairRequestId",
+                    new[] { SqlParameterHelper.Input("@RepairRequestId", repairRequestId) });
+                if (current.Rows.Count > 0)
+                {
+                    var flow = EncryptzBL.Common.Sales.ServiceDespatchRules.RepairStatusProblem(current.Rows[0]["Status"]?.ToString(), status);
+                    if (flow != null) return ApiResponse<bool>.Fail(flow);
+                }
+
                 var p = new[]
                 {
                     SqlParameterHelper.Input("@RepairRequestId", repairRequestId),

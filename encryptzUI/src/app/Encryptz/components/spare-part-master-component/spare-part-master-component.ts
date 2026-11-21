@@ -158,7 +158,7 @@ export interface SparePart {
                           {{ item.stockQuantity }}
                         </span>
                       </td>
-                      <td class="price-cell">{{ item.unitPrice | currency:'INR':'symbol':'1.0-0' }}</td>
+                      <td class="price-cell">{{ item.unitPrice | currency:'INR':'symbol':'1.2-2' }}</td>
                       <td>
                         <span class="status-badge" [class.active]="item.isActive" [class.inactive]="!item.isActive">
                           <span class="status-dot" [class.dot-active]="item.isActive" [class.dot-inactive]="!item.isActive"></span>
@@ -290,7 +290,7 @@ export interface SparePart {
         <div class="app-toast" [class.toast-error]="toastType() === 'error'" [class.toast-success]="toastType() === 'success'">
           <div class="toast-icon">{{ toastType() === 'success' ? '✓' : '!' }}</div>
           <div class="toast-copy">
-            <div class="toast-title">{{ toastType() === 'success' ? 'Success' : 'Something went wrong' }}</div>
+            <div class="toast-title">{{ toastType() === 'success' ? 'Success' : 'Please check' }}</div>
             <div class="toast-message">{{ toastMessage() }}</div>
           </div>
         </div>
@@ -1394,9 +1394,9 @@ export class SparePartMasterComponent implements OnInit {
             this.showToast(response.message || 'Update failed', 'error');
           }
         },
-        error: () => {
+        error: (e: any) => {
           this.saving.set(false);
-          this.showToast('Error updating spare part', 'error');
+          this.showToast(e?.error?.message || 'The spare part could not be updated', 'error');
         }
       });
     } else {
@@ -1411,9 +1411,9 @@ export class SparePartMasterComponent implements OnInit {
             this.showToast(response.message || 'Creation failed', 'error');
           }
         },
-        error: () => {
+        error: (e: any) => {
           this.saving.set(false);
-          this.showToast('Error creating spare part', 'error');
+          this.showToast(e?.error?.message || 'The spare part could not be saved', 'error');
         }
       });
     }

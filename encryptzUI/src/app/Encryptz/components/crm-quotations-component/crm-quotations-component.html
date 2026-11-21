@@ -27,9 +27,9 @@
         </label>
         <div class="crm-range" role="group" aria-label="Quote date">
           <span class="material-icons" aria-hidden="true">event</span>
-          <input type="date" name="from" aria-label="From" [ngModel]="from()" (change)="setDate('from', $any($event.target).value)" />
+          <input data-range="from" type="date" name="from" aria-label="From" [ngModel]="from()" (change)="setDate('from', $any($event.target).value)" />
           <span aria-hidden="true">–</span>
-          <input type="date" name="to" aria-label="To" [ngModel]="to()" (change)="setDate('to', $any($event.target).value)" />
+          <input data-range="to" type="date" name="to" aria-label="To" [ngModel]="to()" (change)="setDate('to', $any($event.target).value)" />
         </div>
         <span class="crm-spacer"></span>
         <span class="crm-result"><span class="crm-count-pill">{{ total() }}</span> {{ total() === 1 ? 'quotation' : 'quotations' }}</span>

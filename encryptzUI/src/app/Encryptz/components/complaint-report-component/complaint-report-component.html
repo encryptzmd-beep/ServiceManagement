@@ -8,14 +8,14 @@
   <div class="filter-row">
     <select [(ngModel)]="filter.statusId" class="input">
       <option [ngValue]="undefined">All Statuses</option>
-      @for (s of statuses(); track s.statusId) { <option [ngValue]="s.statusId">{{ s.statusName }}</option> }
+      @for (s of statuses(); track s.statusId) { <option [ngValue]="s.statusId">{{ statusText(s.statusName) }}</option> }
     </select>
     <select [(ngModel)]="filter.priority" class="input">
       <option value="">All Priorities</option>
       @for (p of priorities; track p) { <option [value]="p">{{ p }}</option> }
     </select>
-    <input type="date" [(ngModel)]="filter.fromDate" class="input" />
-    <input type="date" [(ngModel)]="filter.toDate" class="input" />
+    <input data-range="from" type="date" [(ngModel)]="filter.fromDate" class="input" />
+    <input data-range="to" type="date" [(ngModel)]="filter.toDate" class="input" />
     <button (click)="load()" class="btn-primary">Generate Report</button>
   </div>
   <div class="summary-row">
@@ -42,8 +42,7 @@
             <td>{{ c.subject }}</td>
             <td>{{ c.customerName }}</td>
             <td><span class="priority" [attr.data-p]="c.priority">{{ c.priority }}</span></td>
-            <td><span class="status-badge" [style.background]="c.statusColor+'20'" [style.color]="c.statusColor">{{
-                c.statusName }}</span></td>
+            <td><span class="status-badge" [style.background]="c.statusColor+'20'" [style.color]="c.statusColor">{{ statusText(c.statusName) }}</span></td>
             <td>{{ c.isSLABreached ? '⚠ Breached' : '✓ OK' }}</td>
             <td class="date">{{ c.createdAt | date:'dd MMM yyyy' }}</td>
           </tr>

@@ -59,6 +59,10 @@ getAllProducts(request: ProductMasterRequest) {
     params = params.set('subCategory', request.subCategory);
   }
 
+  if (request.includeInactive) {
+    params = params.set('includeInactive', 'true');
+  }
+
   return this.http.get<ApiResponse<PaginatedResult<ProductMasterDTO>>>(
     `${this.apiUrl}/all`,
     { params }

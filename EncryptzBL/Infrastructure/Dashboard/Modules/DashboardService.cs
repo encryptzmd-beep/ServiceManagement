@@ -174,6 +174,43 @@ namespace EncryptzBL.Infrastructure.Dashboard.Modules
         {
             try
             {
+                // Start / Complete of an assignment: the one procedure that moves the assignment
+                // and the job together and finds the statuses by name
+                if (request.OperationType == "UPDATE_ASSIGNMENT" && request.AssignmentId.HasValue
+                    && !string.IsNullOrWhiteSpace(request.AssignmentStatus))
+                {
+                    var status = request.AssignmentStatus.Trim();
+                    if (status != "InProgress" && status != "Completed")
+                        return ApiResponse<dynamic>.Fail("Invalid assignment status");
+
+                    var changed = await GetDataTableAsync("sp_Assignment_UpdateStatus", new[]
+                    {
+                        SqlParameterHelper.Input("@AssignmentId", request.AssignmentId.Value),
+                        SqlParameterHelper.Input("@Status", status),
+                        SqlParameterHelper.Input("@UpdatedBy", request.UserId ?? 0),
+                        SqlParameterHelper.Input("@Remarks", string.IsNullOrWhiteSpace(request.CompletionRemarks) ? null : request.CompletionRemarks.Trim()),
+                        SqlParameterHelper.Input("@WorkDone", string.IsNullOrWhiteSpace(request.WorkDone) ? null : request.WorkDone.Trim()),
+                        SqlParameterHelper.Input("@PartsUsed", string.IsNullOrWhiteSpace(request.PartsUsed) ? null : request.PartsUsed.Trim())
+                    });
+                    if (changed == null || changed.Rows.Count == 0) return ApiResponse<dynamic>.Fail("Operation failed");
+                    var message = changed.Rows[0]["Message"]?.ToString();
+                    if (Convert.ToInt32(changed.Rows[0]["Result"]) != 1) return ApiResponse<dynamic>.Fail(message);
+                    return ApiResponse<dynamic>.Ok(new OperationResultModel { Success = true, Message = message!, AssignmentId = request.AssignmentId }, message);
+                }
+
+                // the job window edits a spare request: its despatch is made on the Despatch screen only
+                if (request.OperationType == "UPDATE_SPARE" && request.SpareRequestId.HasValue && !string.IsNullOrWhiteSpace(request.SpareStatus))
+                {
+                    var spare = await GetDataTableByQueryAsync(
+                        "SELECT Status FROM dbo.SparePartRequests WHERE RequestId = @RequestId",
+                        new[] { SqlParameterHelper.Input("@RequestId", request.SpareRequestId.Value) });
+                    if (spare.Rows.Count > 0)
+                    {
+                        var flow = EncryptzBL.Common.Sales.ServiceDespatchRules.SpareStatusProblem(spare.Rows[0]["Status"]?.ToString(), request.SpareStatus);
+                        if (flow != null) return ApiResponse<dynamic>.Fail(flow);
+                    }
+                }
+
                 var parameters = new List<SqlParameter>
                 {
                     SqlParameterHelper.Input("@OperationType", request.OperationType)

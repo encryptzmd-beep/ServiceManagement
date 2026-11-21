@@ -337,6 +337,7 @@ $tint: #eef4ff;
   .jb-card { flex-wrap: wrap; padding: 14px; }
   .jb-card-main { flex-basis: calc(100% - 56px); }
   .jb-card-side { flex-basis: 100%; flex-direction: row; align-items: center; flex-wrap: wrap; }
+  .jb-segment button { min-height: 36px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

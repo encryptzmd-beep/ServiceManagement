@@ -1,3 +1,4 @@
+import { statusText } from '../shared/sales-input-rules';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -19,6 +20,7 @@ import { ComplaintDetailPopupComponent } from "../complaint-detail-popup-compone
   styleUrls: ['./complaint-list-component.scss'],
 })
 export class ComplaintListComponent implements OnInit {
+  readonly statusText = statusText;
   private api = inject(ApiService);
   complaints = signal<ComplaintListItem[]>([]);
   totalPages = signal(1);

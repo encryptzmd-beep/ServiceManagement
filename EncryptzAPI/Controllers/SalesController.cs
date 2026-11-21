@@ -124,6 +124,44 @@ namespace EncryptzAPI.Controllers
             return result.Success ? Ok(result) : BadRequest(result);
         }
 
+        // ---------------- spare and repaired parts, same Despatch screen ----------------
+        [HttpGet("service-despatches")]
+        [Authorize(Roles = "Admin,CompanyAdmin,ServiceManager,Manager,Storekeeper")]
+        public async Task<IActionResult> GetServiceDespatches([FromQuery] ServiceDespatchFilterDto filter)
+        {
+            var result = await _svc.GetServiceDespatches(filter);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        [MenuRight("/sales/despatch", MenuRightKind.Create, AllowRole = "Storekeeper")]
+        [HttpPost("service-despatches")]
+        [Authorize(Roles = "Admin,CompanyAdmin,ServiceManager,Manager,Storekeeper")]
+        public async Task<IActionResult> CreateServiceDespatch([FromBody] ServiceDespatchCreateDto dto)
+        {
+            var result = await _svc.CreateServiceDespatch(dto, UserId);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>The missing mode and reference of an older spare or repair despatch.</summary>
+        [MenuRight("/sales/despatch", MenuRightKind.Edit, AllowRole = "Storekeeper")]
+        [HttpPost("service-despatches/details")]
+        [Authorize(Roles = "Admin,CompanyAdmin,ServiceManager,Manager,Storekeeper")]
+        public async Task<IActionResult> AddServiceDespatchDetails([FromBody] ServiceDespatchCreateDto dto)
+        {
+            var result = await _svc.AddServiceDespatchDetails(dto, UserId);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>The missing mode and reference of an older sales despatch.</summary>
+        [MenuRight("/sales/despatch", MenuRightKind.Edit)]
+        [HttpPost("despatches/{id:int}/details")]
+        [Authorize(Roles = "Admin,CompanyAdmin,ServiceManager,Manager")]
+        public async Task<IActionResult> AddDespatchDetails(int id, [FromBody] DespatchDetailsDto dto)
+        {
+            var result = await _svc.AddDespatchDetails(id, dto, UserId);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
         // ---------------- documents of a bill (PDF) ----------------
         [HttpGet("orders/{id:int}/documents")]
         public async Task<IActionResult> GetDocuments(int id)

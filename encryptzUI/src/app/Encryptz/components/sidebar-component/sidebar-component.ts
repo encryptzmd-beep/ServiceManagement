@@ -4,7 +4,7 @@ import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
 import { DashboardStateService } from '../../Services/dashboard-state-service';
 import { PLATFORM_SECTIONS, PlatformNavService, PlatformTab } from '../../Services/platform-nav-service';
-import { inSideMenu, promoteComplaintMenus } from './sidebar-menu';
+import { groupDespatchMenus, inSideMenu, promoteComplaintMenus } from './sidebar-menu';
 
 @Component({
   selector: 'app-sidebar',
@@ -58,7 +58,7 @@ export class SidebarComponent {
       }
     });
 
-    return promoteComplaintMenus(roots);
+    return groupDespatchMenus(promoteComplaintMenus(roots), this.auth.userRole?.());
   }
 
   toggleMenu(menuId: number): void {

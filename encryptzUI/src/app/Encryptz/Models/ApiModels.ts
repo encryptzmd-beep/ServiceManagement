@@ -1345,6 +1345,8 @@ export interface ProductMasterDTO {
 }
 
 export interface ProductMasterRequest {
+  /** The product master screen also lists inactive products. */
+  includeInactive?: boolean;
   productMasterId?: number;
   productCode?: string;
   productName?: string;

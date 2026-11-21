@@ -2,6 +2,7 @@ import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ApiService } from '../../Services/API/api-service';
 
 const STATUS_ORDER = ['Requested','ReceivedAtHQ','UnderRepair','Repaired','Dispatched','Delivered','Resolved'];
@@ -15,6 +16,7 @@ const STATUS_ORDER = ['Requested','ReceivedAtHQ','UnderRepair','Repaired','Dispa
 })
 export class RepairPartsManagementComponent {
   private api = inject(ApiService);
+  private router = inject(Router);
 
   // Raw data from API (loaded once, filtered client-side)
   allItems  = signal<any[]>([]);
@@ -257,6 +259,17 @@ export class RepairPartsManagementComponent {
   saveStatus() {
     const item = this.statusTarget();
     if (!item || !this.newStatus) return;
+    // every despatch is made on the Despatch screen, with its mode and reference
+    if (this.newStatus === 'Dispatched' && item.status !== 'Dispatched') {
+      if (item.status !== 'Repaired') {
+        this.statusMsg.set('Mark the part as Repaired first, then despatch it from the Despatch menu');
+        this.statusMsgErr.set(true);
+        return;
+      }
+      this.closeStatusModal();
+      this.router.navigate(['/sales/despatch'], { queryParams: { source: 'repair', ids: item.repairRequestId } });
+      return;
+    }
     this.statusSaving.set(true);
     this.statusMsg.set('');
     this.api.updateRepairStatus(item.repairRequestId, this.newStatus, this.statusNotes || undefined).subscribe({
@@ -274,9 +287,9 @@ export class RepairPartsManagementComponent {
           this.statusMsgErr.set(true);
         }
       },
-      error: () => {
+      error: (e: any) => {
         this.statusSaving.set(false);
-        this.statusMsg.set('Update failed');
+        this.statusMsg.set(e?.error?.message || 'Update failed');
         this.statusMsgErr.set(true);
       }
     });

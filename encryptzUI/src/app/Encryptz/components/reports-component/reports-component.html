@@ -10,8 +10,8 @@
   </div>
 
   <div class="filter-bar">
-    <div class="fg"><label>Start Date</label><input type="date" [(ngModel)]="filter.startDate" class="fi" /></div>
-    <div class="fg"><label>End Date</label><input type="date" [(ngModel)]="filter.endDate" class="fi" /></div>
+    <div class="fg"><label>Start Date</label><input data-range="from" type="date" [(ngModel)]="filter.startDate" class="fi" /></div>
+    <div class="fg"><label>End Date</label><input data-range="to" type="date" [(ngModel)]="filter.endDate" class="fi" /></div>
     <button class="btn-primary" (click)="generateReport()">Generate Report</button>
   </div>
 

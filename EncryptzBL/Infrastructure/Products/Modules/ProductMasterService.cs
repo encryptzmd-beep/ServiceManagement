@@ -47,8 +47,22 @@ namespace EncryptzBL.Infrastructure.Products.Modules
                 : ApiResponse<int>.Fail(message);
         }
 
+        private static string? InvalidProduct(ProductMasterRequestDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.ProductCode)) return "Product code is required";
+            if (string.IsNullOrWhiteSpace(dto.ProductName)) return "Product name is required";
+            if (dto.MRP < 0) return "MRP cannot be negative";
+            if (dto.WarrantyMonths < 0) return "Warranty months cannot be negative";
+            dto.ProductCode = dto.ProductCode.Trim();
+            dto.ProductName = dto.ProductName.Trim();
+            return null;
+        }
+
         public async Task<ApiResponse<ProductMaster>> CreateProduct(ProductMasterRequestDto dto)
         {
+            var invalid = InvalidProduct(dto);
+            if (invalid != null) return ApiResponse<ProductMaster>.Fail(invalid);
+
             var parameters = new[]
             {
                 SqlParameterHelper.Input("@OperationType", "CREATE"),
@@ -86,6 +100,8 @@ namespace EncryptzBL.Infrastructure.Products.Modules
         {
             if (!dto.ProductMasterId.HasValue)
                 return ApiResponse<ProductMaster>.Fail("ProductMasterId is required for update");
+            var invalid = InvalidProduct(dto);
+            if (invalid != null) return ApiResponse<ProductMaster>.Fail(invalid);
 
             var parameters = new[]
             {
@@ -168,17 +184,27 @@ namespace EncryptzBL.Infrastructure.Products.Modules
 
         public async Task<ApiResponse<PaginatedResult<ProductMaster>>> GetAllProducts(ProductMasterRequestDto dto)
         {
-            var parameters = new[]
+            var parameters = new List<Microsoft.Data.SqlClient.SqlParameter>
             {
                 SqlParameterHelper.Input("@OperationType", "GET"),
-                SqlParameterHelper.Input("@SearchTerm", string.IsNullOrWhiteSpace(dto.SearchTerm) ? (object)DBNull.Value : dto.SearchTerm.Trim()),
+                SqlParameterHelper.Input("@SearchTerm", EncryptzBL.Common.Sales.SalesInputRules.LikeTerm(dto.SearchTerm)),
                 SqlParameterHelper.Input("@PageNumber", dto.PageNumber),
                 SqlParameterHelper.Input("@PageSize", dto.PageSize),
                 SqlParameterHelper.Input("@SortColumn", dto.SortColumn ?? "ProductMasterId"),
                 SqlParameterHelper.Input("@SortDirection", dto.SortDirection ?? "DESC")
             };
+            // the product master lists inactive products too, so they can be activated again (script 24)
+            if (dto.IncludeInactive) parameters.Add(SqlParameterHelper.Input("@IncludeInactive", true));
 
-            var dt = await GetDataTableAsync("sp_ProductMaster_Upsert", parameters);
+            System.Data.DataTable dt;
+            try
+            {
+                dt = await GetDataTableAsync("sp_ProductMaster_Upsert", parameters.ToArray());
+            }
+            catch (Microsoft.Data.SqlClient.SqlException e) when (e.Number == 8144)
+            {
+                return ApiResponse<PaginatedResult<ProductMaster>>.Fail("This company database needs script 24 (24_QA_Product_Job_Fixes.sql).");
+            }
 
             if (dt == null || dt.Rows.Count == 0)
                 return ApiResponse<PaginatedResult<ProductMaster>>.Ok(

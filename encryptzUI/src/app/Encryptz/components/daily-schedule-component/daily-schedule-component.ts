@@ -1,3 +1,4 @@
+import { statusText } from '../shared/sales-input-rules';
 import {
   Component,
   inject,
@@ -19,6 +20,7 @@ import { TechnicianScheduleBoard, TechnicianScheduleBoardItem } from '../../Mode
   styleUrls: ['./daily-schedule-component.scss'],
 })
 export class DailyScheduleComponent implements OnInit {
+  readonly statusText = statusText;
  private api = inject(ApiService);
 
   selectedDate = new Date().toISOString().substring(0, 10);

@@ -40,9 +40,9 @@
         @if (v.dated) {
           <div class="crm-range" role="group" aria-label="Joining date">
             <span class="material-icons" aria-hidden="true">event</span>
-            <input type="date" aria-label="From" [value]="from()" (change)="from.set($any($event.target).value)" />
+            <input data-range="from" type="date" aria-label="From" [value]="from()" (change)="from.set($any($event.target).value)" />
             <span aria-hidden="true">–</span>
-            <input type="date" aria-label="To" [value]="to()" (change)="to.set($any($event.target).value)" />
+            <input data-range="to" type="date" aria-label="To" [value]="to()" (change)="to.set($any($event.target).value)" />
           </div>
         }
         <span class="crm-spacer"></span>

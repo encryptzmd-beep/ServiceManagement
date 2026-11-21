@@ -1,3 +1,4 @@
+import { statusText } from '../shared/sales-input-rules';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -14,6 +15,7 @@ import { FormsModule } from '@angular/forms';
   styleUrls: ['./complaint-tracking-component.scss'],
 })
 export class ComplaintTrackingComponent implements OnInit {
+  readonly statusText = statusText;
   private api = inject(ApiService);
 
   complaints = signal<Complaint[]>([]);

@@ -66,7 +66,7 @@
         <div class="cd-section">
           <div class="cd-section-header">
             <h3>{{ jobTitle() }} Information</h3>
-            @if (!viewOnly && !editing.complaint) {
+            @if (!viewOnly && jobOpen() && !editing.complaint) {
               <button appRight="edit" appRightMenu="/complaints/list" class="cd-btn-edit" (click)="startEdit('complaint')">
                 <span class="material-icons">edit</span> Edit
               </button>
@@ -140,7 +140,7 @@
             <div class="cd-detail-grid">
               <div class="cd-detail"><span class="cd-lbl">{{ jobTitle() }} #</span><span class="cd-val mono">{{ display(complaintData()?.ComplaintNumber) }}</span></div>
               <div class="cd-detail"><span class="cd-lbl">Status</span>
-                <span class="cd-val"><span class="status-badge" [ngClass]="statusClass(complaintData()?.StatusId)">{{ display(complaintData()?.StatusName) }}</span></span></div>
+                <span class="cd-val"><span class="status-badge" [ngClass]="statusClass(complaintData()?.StatusId)">{{ statusText(display(complaintData()?.StatusName)) }}</span></span></div>
               <div class="cd-detail"><span class="cd-lbl">Priority</span>
                 <span class="cd-val"><span class="priority-badge" [ngClass]="priorityClass(complaintData()?.Priority)">{{ display(complaintData()?.Priority) }}</span></span></div>
               <div class="cd-detail"><span class="cd-lbl">Created</span><span class="cd-val">{{ formatDateTime(complaintData()?.CreatedAt) }}</span></div>
@@ -565,7 +565,7 @@
         <div class="cd-section">
           <div class="cd-section-header">
             <h3>Technician Assignments</h3>
-             @if (!viewOnly) {
+             @if (!viewOnly && jobOpen()) {
             <button appRight="create" appRightMenu="/complaints/assign" class="cd-btn-add" (click)="requestNewAssign()">
               <span class="material-icons">person_add</span> Assign Technician
             </button>
@@ -584,11 +584,11 @@
                     <strong>{{ display(a.TechnicianName) }}</strong>
                     <div class="ac-tags">
                       <span class="role-tag">{{ display(a.Role, 'Primary') }}</span>
-                      <span class="status-tag" [ngClass]="assignStatusClass(a.Status)">{{ display(a.Status) }}</span>
+                      <span class="status-tag" [ngClass]="assignStatusClass(a.Status)">{{ statusText(display(a.Status)) }}</span>
                     </div>
                   </div>
                   <div class="ac-actions">
-                    @if (!viewOnly) {
+                    @if (!viewOnly && jobOpen() && a.Status?.toLowerCase() !== 'completed') {
                       @if (a.Status?.toLowerCase() === 'assigned') {
                         <button class="btn-start" (click)="startAssignment(a)">
                           <span class="material-icons">play_arrow</span> Start
@@ -658,7 +658,7 @@
               <div class="cd-empty">
                 <span class="material-icons">person_off</span>
                 <p>No technicians assigned yet</p>
-                  @if (!viewOnly) {
+                  @if (!viewOnly && jobOpen()) {
                 <button appRight="create" appRightMenu="/complaints/assign" class="cd-btn-add" (click)="requestNewAssign()">
                   <span class="material-icons">person_add</span> Assign Now
                 </button>
@@ -733,11 +733,15 @@
                         </td>
                         <td>
                           <select class="cd-inp bare sm cd-select" [(ngModel)]="editSpare.Status">
-                            <option value="Requested">Requested</option>
-                            <option value="Approved">Approved</option>
-                            <option value="Dispatched">Dispatched</option>
-                            <option value="Used">Used</option>
-                            <option value="Rejected">Rejected</option>
+                            @if (p.Status === 'Dispatched' || p.Status === 'Used') {
+                              <!-- despatched on the Despatch screen: it can only move on to Used -->
+                              @if (p.Status === 'Dispatched') { <option value="Dispatched">Dispatched</option> }
+                              <option value="Used">Used</option>
+                            } @else {
+                              <option value="Requested">Requested</option>
+                              <option value="Approved">Approved</option>
+                              <option value="Rejected">Rejected</option>
+                            }
                           </select>
                         </td>
                         <td>{{ display(p.TechnicianName) }}</td>
@@ -1217,7 +1221,7 @@
       <span class="material-icons">refresh</span> Refresh
     </button>
 
-    @if (!viewOnly && complaintData()?.StatusId !== 5) {
+    @if (!viewOnly && complaintData() && jobOpen()) {
       <button class="cd-btn-save green" (click)="markComplaintResolved()" [disabled]="saving()">
         <span class="material-icons">task_alt</span> {{ isInstallation() ? 'Mark Completed' : 'Mark Resolved' }}
       </button>
