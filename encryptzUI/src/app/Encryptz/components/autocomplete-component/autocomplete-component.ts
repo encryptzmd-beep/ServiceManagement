@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, computed, forwardRef, inject, input, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, computed, forwardRef, inject, input, output, signal, viewChild } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 /** One choice: what is stored, what is shown, and a second line (a city, a count...). */
@@ -35,6 +35,11 @@ export class AutocompleteComponent<T = unknown> implements ControlValueAccessor 
   readonly emptyText = input('Nothing matches');
   /** The text for screen readers, when there is no visible label around it. */
   readonly ariaLabel = input<string | null>(null);
+
+  /** A last row that makes a new record, e.g. "Add new product"; none when empty. */
+  readonly createLabel = input('');
+  /** The create row was chosen; carries what was typed. */
+  readonly create = output<string>();
 
   static readonly SHOWN = 50;
 
@@ -107,6 +112,13 @@ export class AutocompleteComponent<T = unknown> implements ControlValueAccessor 
     this.close();
   }
 
+  /** The create row sits right after the last choice. */
+  chooseCreate(): void {
+    const typed = this.query().trim();
+    this.close();
+    this.create.emit(typed);
+  }
+
   clear(event: Event): void {
     event.stopPropagation();
     this.pick(null);
@@ -115,11 +127,12 @@ export class AutocompleteComponent<T = unknown> implements ControlValueAccessor 
 
   onKey(event: KeyboardEvent): void {
     const rows = this.rows();
+    const last = rows.length - (this.createLabel() ? 0 : 1);
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault();
         if (!this.open()) { this.openList(); return; }
-        this.active.set(Math.min(rows.length - 1, this.active() + 1));
+        this.active.set(Math.min(last, this.active() + 1));
         this.scrollToActive();
         break;
       case 'ArrowUp':
@@ -130,7 +143,8 @@ export class AutocompleteComponent<T = unknown> implements ControlValueAccessor 
       case 'Enter':
         if (!this.open()) return;
         event.preventDefault();
-        if (rows[this.active()]) this.pick(rows[this.active()].value);
+        if (this.createLabel() && this.active() === rows.length) this.chooseCreate();
+        else if (rows[this.active()]) this.pick(rows[this.active()].value);
         break;
       case 'Escape':
         if (this.open()) { event.preventDefault(); event.stopPropagation(); this.close(); }

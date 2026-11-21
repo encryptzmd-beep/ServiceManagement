@@ -209,7 +209,8 @@
                   @if (isEditable()) {
                     <app-autocomplete [ngModel]="l.productMasterId" (ngModelChange)="onProductChange(l, $event)"
                       [options]="productOptions()" placeholder="Search product by name, code or model"
-                      emptyText="No product matches" ariaLabel="Product" />
+                      emptyText="No product matches" ariaLabel="Product"
+                      [createLabel]="rights.can('create', '/products') ? 'Add new product' : ''" (create)="openNewProduct(l, $event)" />
 
                     @if (l.productMasterId === null && l.productName) {
                       <small class="muted">{{ l.productName }}</small>
@@ -539,3 +540,7 @@
 }
 
 @if (toast(); as t) { <app-toast [text]="t.text" [kind]="t.type" /> }
+
+@if (newProductLine()) {
+  <app-product-form [isEditMode]="false" [initialName]="newProductName()" (close)="closeNewProduct($event)" />
+}

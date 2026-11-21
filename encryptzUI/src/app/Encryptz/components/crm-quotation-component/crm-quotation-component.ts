@@ -1,3 +1,4 @@
+import { ProductFormComponent, ProductFormResult } from '../product-form-component/product-form-component';
 import { AppRightDirective } from '../shared/app-right/app-right';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -35,7 +36,7 @@ const blankCustomer = (): NewCustomer => ({ contactName: '', mobile: '', email: 
 @Component({
   selector: 'app-crm-quotation',
   standalone: true,
-  imports: [AppRightDirective, FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent, TransactionToolbarComponent, TransactionFindComponent],
+  imports: [ProductFormComponent, AppRightDirective, FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent, TransactionToolbarComponent, TransactionFindComponent],
   templateUrl: './crm-quotation-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-quotation-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -416,6 +417,32 @@ export class CrmQuotationComponent {
     this.crm.searchProducts(term.trim()).subscribe({
       next: res => { this.searching.set(false); if (this.term() === term) this.products.set(res.success ? res.data ?? [] : []); },
       error: () => { this.searching.set(false); this.products.set([]); },
+    });
+  }
+
+  newProduct = signal(false);
+  newProductName = signal('');
+  searchOpen = signal(false);
+
+  canAddProduct(): boolean {
+    return this.rights.can('create', '/products');
+  }
+
+  startNewProduct(): void {
+    this.newProductName.set(this.term().trim());
+    this.searchOpen.set(false);
+    this.newProduct.set(true);
+  }
+
+  /** A product made here goes on the quotation like a picked one. */
+  closeNewProduct(result: ProductFormResult): void {
+    this.newProduct.set(false);
+    if (typeof result !== 'object' || !result.product) return;
+    const p = result.product;
+    this.pick({
+      productMasterId: p.productMasterId, productCode: p.productCode, productName: p.productName,
+      brand: p.brand ?? '', model: p.model ?? '', category: p.category ?? '',
+      mrp: Number(p.mrp ?? 0), warrantyMonths: Number(p.warrantyMonths ?? 0),
     });
   }
 

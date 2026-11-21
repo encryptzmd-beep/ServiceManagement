@@ -1,3 +1,4 @@
+import { ProductFormComponent, ProductFormResult } from '../product-form-component/product-form-component';
 import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { AppRightDirective } from '../shared/app-right/app-right';
 import { Component, DestroyRef, computed, inject, OnInit, signal } from '@angular/core';
@@ -42,7 +43,7 @@ interface BillLine {
 @Component({
   selector: 'app-sales-order-entry',
   standalone: true,
-  imports: [AppToastComponent, AppRightDirective, CommonModule, FormsModule, RouterModule, AutocompleteComponent, TransactionToolbarComponent, TransactionFindComponent, SalesDocumentsComponent],
+  imports: [ProductFormComponent, AppToastComponent, AppRightDirective, CommonModule, FormsModule, RouterModule, AutocompleteComponent, TransactionToolbarComponent, TransactionFindComponent, SalesDocumentsComponent],
   templateUrl: './sales-order-entry-component.html',
   styleUrls: ['./sales-order-entry-component.scss'],
 })
@@ -468,6 +469,26 @@ export class SalesOrderEntryComponent implements OnInit {
   removeLine(index: number): void {
     if (!this.isEditable()) return;
     this.lines.update(ls => ls.filter((_, i) => i !== index));
+  }
+
+  // ── a new product without leaving the bill ──
+  newProductLine = signal<BillLine | null>(null);
+  newProductName = signal('');
+
+  openNewProduct(line: BillLine, typed = ''): void {
+    if (!this.isEditable()) return;
+    this.newProductName.set(typed);
+    this.newProductLine.set(line);
+  }
+
+  closeNewProduct(result: ProductFormResult): void {
+    const line = this.newProductLine();
+    this.newProductLine.set(null);
+    if (typeof result !== 'object' || !result.product || !line) return;
+    const product = result.product;
+    this.products.update(list => [product, ...list.filter(x => x.productMasterId !== product.productMasterId)]);
+    this.onProductChange(line, String(product.productMasterId));
+    this.showToast('success', result.message || 'Product created successfully');
   }
 
   onProductChange(line: BillLine, value: string): void {

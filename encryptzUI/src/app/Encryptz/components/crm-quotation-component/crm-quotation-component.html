@@ -159,14 +159,23 @@
         @if (editable()) {
           <div class="q-search">
             <label class="crm-field grow"><span>Add a product</span>
-              <input type="search" placeholder="Search by name, code or model" [value]="term()" (input)="search(text($event))" /></label>
+              <input type="search" placeholder="Search by name, code or model" [value]="term()" (input)="search(text($event))"
+                (focus)="searchOpen.set(true)" (blur)="searchOpen.set(false)" /></label>
             <button type="button" class="crm-btn" (click)="addLine()"><span class="material-icons" aria-hidden="true">add</span>Blank line</button>
-            @if (products().length) {
+            @if (products().length || (searchOpen() && canAddProduct())) {
               <ul class="q-results">
                 @for (p of products(); track p.productMasterId) {
                   <li><button type="button" (click)="pick(p)">
                     <strong>{{ p.productName }}</strong> <span class="crm-muted">{{ p.productCode }}@if (p.brand) { · {{ p.brand }} }@if (p.model) { · {{ p.model }} }</span>
                     <span class="q-mrp">{{ amount(p.mrp) }}</span>
+                  </button></li>
+                }
+                @if (searchOpen() && term().trim().length >= 2 && !searching() && !products().length) {
+                  <li class="q-list-none">No product matches</li>
+                }
+                @if (canAddProduct()) {
+                  <li class="q-create"><button type="button" (mousedown)="$event.preventDefault()" (click)="startNewProduct()">
+                    <span class="material-icons" aria-hidden="true">add</span>Add new product
                   </button></li>
                 }
               </ul>
@@ -247,4 +256,8 @@
     <app-crm-convert-dialog [leadId]="q.leadId" [quotationId]="q.quotationId" [quotations]="[q]" [mobile]="q.mobile"
       (converted)="converted($event)" (cancelled)="convertOpen.set(false)" (forbidden)="convertForbidden()" />
   }
+}
+
+@if (newProduct()) {
+  <app-product-form source="crm" [isEditMode]="false" [initialName]="newProductName()" (close)="closeNewProduct($event)" />
 }

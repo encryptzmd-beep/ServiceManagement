@@ -92,3 +92,12 @@
 
 .ac-list li.ac-empty, .ac-list li.ac-more { cursor: default; font-size: 12.5px; color: #9aa3b5; &:hover { background: none; } }
 .ac-list li.ac-more { border-top: 1px dashed #eef1f6; margin-top: 2px; }
+
+/* stays in view at the end of a long list */
+.ac-list li.ac-create {
+  position: sticky; bottom: -4px; flex-direction: row; align-items: center; gap: 6px; margin-top: 2px;
+  border-top: 1px solid #e4e8f0; border-radius: 0 0 8px 8px; background: #fff;
+  color: #1B4A7A; font-size: 13px; font-weight: 600;
+  .material-icons { font-size: 17px; }
+  &.active { background: #e8eef5; }
+}

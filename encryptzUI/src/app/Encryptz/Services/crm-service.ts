@@ -1,3 +1,5 @@
+import { ProductMasterDTO, ProductMasterRequest } from '../Models/ApiModels';
+import { ProductCategory } from '../components/product-categories-component/product-category-options';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -111,6 +113,19 @@ export class CrmService {
 
   searchProducts(term?: string, category?: string, top?: number): Observable<ApiResponse<CrmProductDto[]>> {
     return this.http.get<ApiResponse<CrmProductDto[]>>(`${this.base}/products`, { params: this.params({ term, category, top }) });
+  }
+
+  /** A new product from a lead or a quotation. */
+  createProduct(product: ProductMasterRequest): Observable<ApiResponse<ProductMasterDTO>> {
+    return this.http.post<ApiResponse<ProductMasterDTO>>(`${this.base}/products`, product);
+  }
+
+  productCategoryMaster(): Observable<ApiResponse<ProductCategory[]>> {
+    return this.http.get<ApiResponse<ProductCategory[]>>(`${this.base}/product-category-master`);
+  }
+
+  addProductCategory(dto: { categoryId: number; parentId: number | null; name: string; isActive: boolean }): Observable<ApiResponse<number>> {
+    return this.http.post<ApiResponse<number>>(`${this.base}/product-category-master`, dto);
   }
 
   getMasters(kind: CrmMasterKind | string): Observable<ApiResponse<CrmMasterDto[]>> {

@@ -2,7 +2,9 @@ using System.Security.Claims;
 using EncryptzAPI.Middleware;
 using EncryptzBL.Common.Tenant;
 using EncryptzBL.DTO_s;
+using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Crm;
+using EncryptzBL.Infrastructure.Products.Modules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,11 +23,13 @@ namespace EncryptzAPI.Controllers
         private readonly ICrmService _crm;
 
         private readonly TenantContext _tenant;
+        private readonly IProductMasterService _products;
 
-        public CrmController(ICrmService crm, TenantContext tenant)
+        public CrmController(ICrmService crm, TenantContext tenant, IProductMasterService products)
         {
             _crm = crm;
             _tenant = tenant;
+            _products = products;
         }
 
         private int Caller() => User.GetTenantUserId();
@@ -149,6 +153,28 @@ namespace EncryptzAPI.Controllers
         [HttpGet("product-categories")]
         public async Task<IActionResult> GetProductCategories()
             => Answer(await _crm.GetProductCategories(Caller(), await Manager(), Company()));
+
+        /// <summary>A new product while writing a lead or a quotation: the Products menu's Create right decides. Only adds.</summary>
+        [MenuRight("/products", MenuRightKind.Create)]
+        [HttpPost("products")]
+        public async Task<IActionResult> CreateProduct([FromBody] ProductMasterRequestDto dto)
+            => Answer(await _products.CreateProduct(dto));
+
+        [HttpGet("product-category-master")]
+        public async Task<IActionResult> GetProductCategoryMaster()
+            => Answer(await _products.GetCategories());
+
+        /// <summary>A new category or sub category from the product popup, on the same right as Products. Never renames or switches off one.</summary>
+        [MenuRight("/products", MenuRightKind.Edit)]
+        [Authorize(Roles = "Admin,CompanyAdmin,ServiceManager,Manager")]
+        [HttpPost("product-category-master")]
+        public async Task<IActionResult> AddProductCategory([FromBody] ProductCategorySaveDto dto)
+        {
+            if (dto == null) return BadRequest(ApiResponse<int>.Fail("Enter the name"));
+            dto.CategoryId = 0;
+            dto.IsActive = true;
+            return Answer(await _products.SaveCategory(dto));
+        }
 
         [HttpGet("masters/{kind}")]
         public async Task<IActionResult> GetMasters(string kind)

@@ -1,6 +1,8 @@
+import { ProductFormComponent, ProductFormResult } from '../product-form-component/product-form-component';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { CrmProductDto } from '../../Models/CrmModels';
 import { CrmService } from '../../Services/crm-service';
+import { RightsService } from '../../Services/rights-service';
 import { amount } from './crm-ui';
 
 /** The most products one category shows; the API allows up to 100. */
@@ -17,6 +19,7 @@ export const MIN_SEARCH = 2;
  */
 @Component({
   selector: 'app-crm-product-picker',
+  imports: [ProductFormComponent],
   standalone: true,
   templateUrl: './crm-product-picker-component.html',
   styleUrls: ['./crm-pages.scss', './crm-product-picker-component.scss'],
@@ -24,6 +27,7 @@ export const MIN_SEARCH = 2;
 })
 export class CrmProductPickerComponent {
   private crm = inject(CrmService);
+  private rights = inject(RightsService);
   private static seq = 0;
   readonly listId = `pp-list-${++CrmProductPickerComponent.seq}`;
   readonly amount = amount;
@@ -114,6 +118,44 @@ export class CrmProductPickerComponent {
     });
   }
 
+  newProduct = signal(false);
+  newProductName = signal('');
+  /** Adding a product needs the Create right of the Products menu. */
+  readonly canCreate = computed(() => this.rights.can('create', '/products'));
+  readonly panelOpen = computed(() => this.open()
+    && (this.canCreate() || this.showList() || this.showNone() || this.searching() || this.showHint()));
+
+  startNew(): void {
+    this.newProductName.set((this.query() ?? '').trim());
+    this.open.set(false);
+    this.newProduct.set(true);
+  }
+
+  /** A product made in the popup is chosen, with its own category. */
+  closeNewProduct(result: ProductFormResult): void {
+    this.newProduct.set(false);
+    if (typeof result !== 'object' || !result.product) return;
+    const x = result.product;
+    const p: CrmProductDto = {
+      productMasterId: x.productMasterId, productCode: x.productCode, productName: x.productName,
+      brand: x.brand ?? '', model: x.model ?? '', category: x.category ?? '',
+      mrp: Number(x.mrp ?? 0), warrantyMonths: Number(x.warrantyMonths ?? 0),
+    };
+    this.crm.productCategories().subscribe({
+      next: res => { if (res.success) this.master.set(res.data ?? []); }, error: () => {},
+    });
+    const current = (this.category() ?? '').trim();
+    if (p.category.trim() === current) {
+      if (current) this.products.update(list => [p, ...list.filter(y => y.productMasterId !== p.productMasterId)]);
+    } else {
+      this.categoryChange.emit(p.category);
+    }
+    this.picked.set(p);
+    this.productMasterIdChange.emit(p.productMasterId);
+    this.productPicked.emit(p);
+    this.query.set(null);
+  }
+
   meta(p: CrmProductDto): string {
     return [p.productCode, p.brand, p.model].filter(v => !!(v ?? '').trim()).join(' · ');
   }
@@ -156,18 +198,20 @@ export class CrmProductPickerComponent {
 
   onKey(e: KeyboardEvent): void {
     const list = this.results();
+    const count = list.length + (this.canCreate() ? 1 : 0);
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
         this.open.set(true);
-        if (list.length) this.active.set((this.active() + 1) % list.length);
+        if (count) this.active.set((this.active() + 1) % count);
         break;
       case 'ArrowUp':
         e.preventDefault();
-        if (list.length) this.active.set(this.active() <= 0 ? list.length - 1 : this.active() - 1);
+        if (count) this.active.set(this.active() <= 0 ? count - 1 : this.active() - 1);
         break;
       case 'Enter':
-        if (this.open() && this.active() >= 0 && list[this.active()]) { e.preventDefault(); this.pick(list[this.active()]); }
+        if (this.open() && this.canCreate() && this.active() === list.length) { e.preventDefault(); this.startNew(); }
+        else if (this.open() && this.active() >= 0 && list[this.active()]) { e.preventDefault(); this.pick(list[this.active()]); }
         break;
       case 'Escape':
         this.open.set(false);

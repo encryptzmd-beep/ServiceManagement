@@ -116,10 +116,23 @@ namespace EncryptzTests
         [Fact]
         public void Controller_takes_the_company_from_tenant_context()
         {
-            Assert.NotNull(typeof(CrmController).GetConstructor(new[] { typeof(ICrmService), typeof(EncryptzBL.Common.Tenant.TenantContext) }));
+            Assert.NotNull(typeof(CrmController).GetConstructor(new[] { typeof(ICrmService), typeof(EncryptzBL.Common.Tenant.TenantContext), typeof(EncryptzBL.Infrastructure.Products.Modules.IProductMasterService) }));
             var source = File.ReadAllText(Path.Combine(Root(), "EncryptzAPI", "Controllers", "CrmController.cs"));
             Assert.Contains("_tenant.CompanyId", source);
             Assert.DoesNotContain("FindFirst(\"CompanyId\")", source);
+        }
+
+        [Theory]
+        [InlineData("CreateProduct", EncryptzBL.Common.Tenant.MenuRightKind.Create)]
+        [InlineData("AddProductCategory", EncryptzBL.Common.Tenant.MenuRightKind.Edit)]
+        public void A_product_from_crm_needs_the_products_menu_right(string action, EncryptzBL.Common.Tenant.MenuRightKind right)
+        {
+            var need = (EncryptzAPI.Middleware.MenuRightAttribute)Attribute.GetCustomAttribute(
+                typeof(CrmController).GetMethod(action)!, typeof(EncryptzAPI.Middleware.MenuRightAttribute))!;
+            Assert.Equal("/products", need.MenuPath);
+            Assert.Equal(right, need.Right);
+            Assert.Null(need.OrMenuPath);
+            Assert.Null(need.AllowRole);
         }
 
         [Fact]

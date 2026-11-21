@@ -27,6 +27,13 @@
       @if (matches().more) {
         <li class="ac-more" role="option" aria-disabled="true">{{ matches().more }} more. Type to narrow the list.</li>
       }
+      @if (createLabel()) {
+        <li class="ac-create" role="option" [id]="id + '-opt-' + rows().length" [class.active]="active() === rows().length"
+            [attr.aria-selected]="active() === rows().length" (mousedown)="$event.preventDefault()" (click)="chooseCreate()"
+            (mouseenter)="active.set(rows().length)">
+          <span class="material-icons" aria-hidden="true">add</span>{{ createLabel() }}
+        </li>
+      }
     </ul>
   }
 </div>

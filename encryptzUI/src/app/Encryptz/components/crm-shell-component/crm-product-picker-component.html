@@ -13,6 +13,8 @@
       [placeholder]="category() ? 'Search in ' + category() : 'Search by name, code or model'"
       [value]="displayValue()"
       (focus)="onFocus()" (blur)="onBlur()" (input)="onInput($any($event.target).value)" (keydown)="onKey($event)" />
+    @if (panelOpen()) {
+    <div class="pp-panel">
     @if (showList()) {
       <ul class="pp-results" role="listbox" [id]="listId">
         @for (p of results(); track p.productMasterId; let i = $index) {
@@ -34,7 +36,18 @@
     } @else if (showHint()) {
       <div class="pp-results pp-none">Type {{ minSearch }} or more letters, or choose a category</div>
     }
+    @if (canCreate()) {
+      <button type="button" class="pp-create" [class.active]="active() === results().length"
+        (mousedown)="$event.preventDefault()" (click)="startNew()" (mouseenter)="active.set(results().length)">
+        <span class="material-icons" aria-hidden="true">add</span>Add new product
+      </button>
+    }
+    </div>
+    }
   </div>
 </div>
 @if (loadFailed()) { <p class="crm-error pp-note">The products could not be loaded</p> }
 @else if (products().length >= limit) { <p class="pp-note">Showing the first {{ limit }} products</p> }
+@if (newProduct()) {
+  <app-product-form source="crm" [isEditMode]="false" [initialCategory]="category() ?? ''" [initialName]="newProductName()" (close)="closeNewProduct($event)" />
+}
