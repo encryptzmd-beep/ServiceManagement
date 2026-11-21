@@ -21,6 +21,25 @@
             }
           </a>
         }
+        <div class="nav-group" [class.expanded]="reportsOpen()">
+          <button type="button" class="nav-item nav-group-header" [class.active]="reportsActive()" title="Reports"
+                  [attr.aria-expanded]="reportsOpen()" (click)="toggleReports()">
+            <span class="material-icons nav-icon">bar_chart</span>
+            <span class="nav-label">Reports</span>
+            <span class="material-icons nav-arrow" aria-hidden="true">{{ reportsOpen() ? 'expand_less' : 'expand_more' }}</span>
+          </button>
+          @if (reportsOpen()) {
+            <div class="nav-children">
+              @for (r of reports; track r.key) {
+                <a class="nav-item child" [routerLink]="['/consultancy/reports', r.key]" [class.active]="isActive('/consultancy/reports/' + r.key)"
+                   [attr.aria-current]="isActive('/consultancy/reports/' + r.key) ? 'page' : null" [title]="r.label">
+                  <span class="material-icons nav-icon child-icon">{{ r.icon }}</span>
+                  <span class="nav-label">{{ r.label }}</span>
+                </a>
+              }
+            </div>
+          }
+        </div>
       </div>
 
       <div class="side-footer">

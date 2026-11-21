@@ -75,6 +75,24 @@ describe('ConsultancyShellComponent', () => {
     expect(el(f).querySelector('.nav-item.active .nav-label')!.textContent).toBe('Candidates');
   });
 
+  it('Reports is its own menu with one sub-menu per report', () => {
+    const f = create();
+    const group = el(f).querySelector('button.nav-group-header') as HTMLButtonElement;
+    expect(group.textContent).toContain('Reports');
+    group.click();
+    f.detectChanges();
+    expect(Array.from(el(f).querySelectorAll('.nav-children a')).map(a => a.getAttribute('href')))
+      .toEqual(['jobs', 'clients', 'placements', 'fees', 'guarantees', 'sources'].map(k => '/consultancy/reports/' + k));
+  });
+
+  it('opens and marks Reports on a report address', async () => {
+    const f = create();
+    await TestBed.inject(Router).navigateByUrl('/consultancy/reports/fees');
+    f.detectChanges();
+    expect(el(f).querySelector('button.nav-group-header')!.getAttribute('aria-expanded')).toBe('true');
+    expect(el(f).querySelector('.nav-children .nav-item.active .nav-label')!.textContent).toBe('Fees outstanding');
+  });
+
   it('collapses with the header toggle', () => {
     const f = create();
     const dash = TestBed.inject(DashboardStateService);

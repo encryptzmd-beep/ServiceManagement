@@ -127,6 +127,8 @@ export const routes: Routes = [
       { path: 'messages', loadComponent: () => import('./Encryptz/components/messages-component/messages-component').then(m => m.MessagesComponent), canActivate: [authGuard], data: { title: 'Job Consultancy', side: 'company' } },
       { path: 'clients', loadComponent: () => import('./Encryptz/components/consultancy-clients-component/consultancy-clients-component').then(m => m.ConsultancyClientsComponent), canActivate: [authGuard], data: { title: 'Job Consultancy' } },
       { path: 'placements', loadComponent: () => import('./Encryptz/components/consultancy-placements-component/consultancy-placements-component').then(m => m.ConsultancyPlacementsComponent), canActivate: [authGuard], data: { title: 'Job Consultancy' } },
+      { path: 'reports', redirectTo: 'reports/jobs', pathMatch: 'full' },
+      { path: 'reports/:report', loadComponent: () => import('./Encryptz/components/consultancy-reports-component/consultancy-reports-component').then(m => m.ConsultancyReportsComponent), canActivate: [authGuard], data: { title: 'Job Consultancy Reports' } },
     ],
   },
   // CRM Lead Management. Works on the company database after select-branch + set-scope, like

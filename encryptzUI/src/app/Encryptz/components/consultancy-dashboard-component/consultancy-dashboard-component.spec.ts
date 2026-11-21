@@ -66,6 +66,33 @@ describe('ConsultancyDashboardComponent', () => {
     };
   });
 
+  it('shows what needs attention, each opening the place to act', () => {
+    const fixture = create();
+    const alert = (key: string) => fixture.nativeElement.querySelector(`.cd-alert[data-key="${key}"]`) as HTMLElement;
+    expect(alert('waiting').textContent).toContain('9 applicants waiting for a decision');
+    expect(alert('waiting').getAttribute('href')).toBe('/consultancy/postings?job=2');
+    expect(alert('messages').getAttribute('href')).toBe('/consultancy/messages');
+  });
+
+  it('says so when nothing needs attention', () => {
+    jobs.getPostings = () => ok([]);
+    jobs.getDashboard = () => ok({ interviews: [], latest: [], newThisWeek: 0, interviewsThisWeek: 0, hiredThisMonth: 0, rejectedThisMonth: 0 });
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [ConsultancyDashboardComponent],
+      providers: [
+        provideRouter([]),
+        { provide: CompanyJobsService, useValue: jobs },
+        { provide: ConsultancyService, useValue: consultancy },
+        { provide: MessageAlertsService, useValue: { unread: { person: signal(0), company: signal(0) }, watch: () => {} } },
+        { provide: AuthService, useValue: { userName: () => 'Anu Mathew', scopeState: () => ({ loggedIn: true, companyId, moduleKey: 'JOBCONSULTANCY', locationId: null }), currentUser: () => ({ userId: 3 }) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ConsultancyDashboardComponent);
+    fixture.detectChanges();
+    expect(text(fixture)).toContain('Nothing needs attention right now');
+  });
+
   it('greets the person and offers the main actions', () => {
     const fixture = create();
     expect(fixture.nativeElement.querySelector('h1').textContent).toMatch(/Good (morning|afternoon|evening), Anu/);

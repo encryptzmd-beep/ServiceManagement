@@ -5,6 +5,7 @@ import { CompanyDashboard, CompanyJobsService, CompanyPosting } from '../../Serv
 import { ConsultancyService, PlacementList } from '../../Services/consultancy-service';
 import { MessageAlertsService } from '../../Services/message-alerts-service';
 import { initial, interviewLabel, interviewParts, isWebLink } from '../../Services/job-labels';
+import { attentionItems } from '../consultancy-reports-component/consultancy-insights';
 import { VerifiedBadgeComponent } from '../verified-badge-component/verified-badge-component';
 
 const REFUSED = "You don't have access to Job Consultancy. Ask your administrator";
@@ -77,6 +78,50 @@ export class ConsultancyDashboardComponent implements OnInit {
       { key: 'messages', label: 'Unread messages', icon: 'chat_bubble_outline', value: String(this.unreadMessages()), link: '/consultancy/messages', hint: 'From candidates' },
     ];
   });
+
+  /** What should be done next, the most urgent first. */
+  readonly attention = computed(() => attentionItems({
+    postings: this.postings(),
+    interviews: this.board()?.interviews ?? null,
+    placements: this.placements()?.items ?? null,
+    suitable: this.suitable(),
+    unreadMessages: this.unreadMessages(),
+    today: new Date(),
+  }));
+
+  readonly urgentCount = computed(() => this.attention().filter(a => a.level === 'high').length);
+
+  /** Applicants of every job by where they stand now. */
+  readonly pipeline = computed(() => {
+    const posts = this.postings() ?? [];
+    const sum = (pick: (p: CompanyPosting) => number) => posts.reduce((s, p) => s + pick(p), 0);
+    const stages = [
+      { key: 'new', label: 'New', value: sum(p => p.applied) },
+      { key: 'shortlisted', label: 'Shortlisted', value: sum(p => p.shortlisted) },
+      { key: 'hired', label: 'Hired', value: sum(p => p.hired) },
+      { key: 'rejected', label: 'Not selected', value: sum(p => p.rejected) },
+    ];
+    const most = Math.max(1, ...stages.map(s => s.value));
+    return stages.map(s => ({ ...s, pct: (s.value / most) * 100 }));
+  });
+
+  readonly pipelineTotal = computed(() => this.pipeline().reduce((s, p) => s + p.value, 0));
+
+  /** Fees of all placements by status. */
+  readonly fees = computed(() => {
+    const items = this.placements()?.items ?? [];
+    const sum = (status: string) => items.filter(p => p.feeStatus === status).reduce((s, p) => s + (p.feeAmount ?? 0), 0);
+    const parts = [
+      { key: 'paid', label: 'Paid', value: sum('Paid') },
+      { key: 'invoiced', label: 'Invoiced', value: sum('Invoiced') },
+      { key: 'pending', label: 'Pending', value: sum('Pending') },
+    ];
+    const total = parts.reduce((s, p) => s + p.value, 0) || 1;
+    return parts.map(p => ({ ...p, pct: (p.value / total) * 100, text: this.money(p.value) }));
+  });
+
+  readonly feeTotal = computed(() => this.fees().reduce((s, f) => s + f.value, 0));
+  readonly feeSummary = computed(() => this.fees().map(f => `${f.label} ${f.text}`).join(', '));
 
   /** The open jobs with the most applicants first: where the work is. */
   readonly busyJobs = computed(() =>

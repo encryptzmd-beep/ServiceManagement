@@ -19,6 +19,34 @@
       </div>
     </header>
 
+    <!-- ═══════════ NEEDS ATTENTION ═══════════ -->
+    <section class="db-card cd-attention" aria-labelledby="cd-attention-title">
+      <div class="db-card-head">
+        <h2 id="cd-attention-title">Needs your attention
+          @if (attention().length) { <span class="cd-attention-count">{{ attention().length }}</span> }
+        </h2>
+        @if (urgentCount()) { <span class="cd-urgent">{{ urgentCount() }} urgent</span> }
+      </div>
+      @if (postings() === null) {
+        <div class="db-loading"><span class="jp-spinner" aria-hidden="true"></span></div>
+      } @else {
+        <div class="cd-alerts">
+          @for (a of attention(); track a.key) {
+            <a class="cd-alert" [attr.data-level]="a.level" [attr.data-key]="a.key" [routerLink]="a.link" [queryParams]="a.query">
+              <span class="cd-alert-icon" aria-hidden="true"><span class="material-icons">{{ a.icon }}</span></span>
+              <span class="cd-alert-text">
+                <strong>{{ a.title }}</strong>
+                <small>{{ a.detail }}</small>
+              </span>
+              <span class="cd-alert-action">{{ a.action }}<span class="material-icons" aria-hidden="true">chevron_right</span></span>
+            </a>
+          } @empty {
+            <p class="cd-clear"><span class="material-icons" aria-hidden="true">task_alt</span>Nothing needs attention right now.</p>
+          }
+        </div>
+      }
+    </section>
+
     <!-- ═══════════ AT A GLANCE ═══════════ -->
     <section class="db-card" aria-labelledby="cd-glance-title">
       <div class="db-card-head">
@@ -37,6 +65,27 @@
 
     <div class="db-layout">
       <div class="db-main">
+
+        <!-- ═══════════ HIRING PIPELINE ═══════════ -->
+        <section class="db-card" aria-labelledby="cd-pipe-title">
+          <div class="db-card-head">
+            <h2 id="cd-pipe-title">Hiring pipeline</h2>
+            <a routerLink="/consultancy/reports/jobs">Job performance</a>
+          </div>
+          @if (pipelineTotal()) {
+            <div class="cd-pipe">
+              @for (s of pipeline(); track s.label) {
+                <div class="cd-pipe-row" [attr.data-stage]="s.key">
+                  <span class="cd-pipe-label">{{ s.label }}</span>
+                  <span class="cd-pipe-track"><span class="cd-pipe-fill" [style.width.%]="s.pct"></span></span>
+                  <strong>{{ s.value }}</strong>
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="db-empty">No applicants yet.</p>
+          }
+        </section>
 
         <!-- ═══════════ OPEN JOBS ═══════════ -->
         <section class="db-card" aria-labelledby="cd-jobs-title">
@@ -127,6 +176,24 @@
             </ul>
           }
         </section>
+
+        <!-- ═══════════ FEES ═══════════ -->
+        @if (feeTotal()) {
+          <section class="db-card" aria-labelledby="cd-fees-title">
+            <div class="db-card-head">
+              <h2 id="cd-fees-title">Fees</h2>
+              <a routerLink="/consultancy/reports/fees">Outstanding</a>
+            </div>
+            <div class="cd-feebar" role="img" [attr.aria-label]="'Fees: ' + feeSummary()">
+              @for (f of fees(); track f.key) { <span [attr.data-fee]="f.key" [style.width.%]="f.pct" [title]="f.label + ': ' + f.text"></span> }
+            </div>
+            <ul class="cd-feelist">
+              @for (f of fees(); track f.key) {
+                <li><span class="cd-dot" [attr.data-fee]="f.key" aria-hidden="true"></span>{{ f.label }}<strong>{{ f.text }}</strong></li>
+              }
+            </ul>
+          </section>
+        }
 
         <!-- ═══════════ THE BUSINESS ═══════════ -->
         <section class="db-card tight" aria-label="Your business">

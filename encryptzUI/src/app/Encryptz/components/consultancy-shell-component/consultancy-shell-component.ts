@@ -6,6 +6,7 @@ import { DashboardStateService } from '../../Services/dashboard-state-service';
 import { MessageAlertsService } from '../../Services/message-alerts-service';
 import { FooterComponent } from '../footer-component/footer-component';
 import { HeaderComponent } from '../header-component/header-component';
+import { CONSULTANCY_REPORTS } from '../consultancy-reports-component/consultancy-insights';
 import { CONSULTANCY_MENU } from '../personal-shell-component/consultancy-menu';
 
 /** "Our candidates" is opened from the Candidates page, so Candidates stays marked there. */
@@ -33,6 +34,11 @@ export class ConsultancyShellComponent {
     badge: item.route === '/consultancy/messages' ? this.alerts.unread.company() : 0,
   })));
 
+  /** The Reports group: one sub-menu per report. */
+  readonly reports = CONSULTANCY_REPORTS;
+  readonly reportsActive = computed(() => this.isActive('/consultancy/reports'));
+  reportsOpen = signal(this.path().startsWith('/consultancy/reports'));
+
   constructor() {
     this.alerts.watch('company');
 
@@ -41,8 +47,19 @@ export class ConsultancyShellComponent {
       .pipe(filter(e => e instanceof NavigationEnd), takeUntilDestroyed(inject(DestroyRef)))
       .subscribe(() => {
         this.url.set(this.path());
+        if (this.reportsActive()) this.reportsOpen.set(true);
         if (typeof window !== 'undefined' && window.innerWidth <= 768) this.dash.closeSidebar();
       });
+  }
+
+  /** Header of the group; on the collapsed (icons only) menu it opens the menu and the group. */
+  toggleReports(): void {
+    if (!this.dash.sidebarOpen()) {
+      this.dash.openSidebar();
+      this.reportsOpen.set(true);
+      return;
+    }
+    this.reportsOpen.update(v => !v);
   }
 
   isActive(route: string | undefined): boolean {
