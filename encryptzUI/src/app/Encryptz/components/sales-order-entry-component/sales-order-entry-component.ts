@@ -14,7 +14,8 @@ import { salesProductOptions } from './sales-product-options';
 import { TransactionMode, TransactionToolbarComponent } from '../shared/transaction-toolbar/transaction-toolbar';
 import { FindQuery, FindRow, TransactionFindComponent } from '../shared/transaction-toolbar/transaction-find';
 import { SalesDocumentsComponent } from '../shared/sales-documents/sales-documents';
-import { DocumentPrintComponent, PrintCompany, PrintDocument, printLineDetails } from '../shared/document-print/document-print';
+import { DocumentPrintComponent, PrintCompany, PrintDocument, printCompanyOf, printLineDetails } from '../shared/document-print/document-print';
+import { DocumentPdfService, documentFileName } from '../shared/document-print/document-pdf';
 import { RightsService } from '../../Services/rights-service';
 import { DialogService } from '../../Services/dialog-service';
 import { AuthService } from '../../Auth/auth-service';
@@ -60,6 +61,7 @@ export class SalesOrderEntryComponent implements OnInit {
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
   private dialog = inject(DialogService);
+  private pdf = inject(DocumentPdfService);
   readonly rights = inject(RightsService);
 
   readonly paymentModes = SALES_PAYMENT_MODES;
@@ -82,12 +84,17 @@ export class SalesOrderEntryComponent implements OnInit {
   pinCode = '';
   isInterState = false;
   notes = '';
+  /** This bill's own copy; a new bill starts from Print Settings. */
+  terms = '';
+  warrantyText = '';
 
   // ── customer ──
   customer = signal<SalesCustomer | null>(null);
   customerSearch = '';
   customerResults = signal<SalesCustomer[]>([]);
   customerDropdownOpen = signal(false);
+  /** The Customer Details card is folded to its header; its fields keep their values. */
+  customerCollapsed = signal(false);
   searchingCustomers = signal(false);
   private customerSearch$ = new Subject<string>();
 
@@ -169,6 +176,9 @@ export class SalesOrderEntryComponent implements OnInit {
           const untouched = !this.isDirty();
           this.isInterState = ['true', '1', 'yes'].includes((s['Sales.DefaultInterState'] || '').trim().toLowerCase());
           this.isInterStateSig.set(this.isInterState);
+          // never over what the person has typed meanwhile
+          this.terms = this.terms || (s['Print.Terms'] || '');
+          this.warrantyText = this.warrantyText || (s['Print.Warranty'] || '');
           if (untouched) this.markSaved();   // the default is not a change of the user
         }
       },
@@ -188,7 +198,7 @@ export class SalesOrderEntryComponent implements OnInit {
   /** Everything that a save would send, to tell unsaved work. */
   private snapshot(): string {
     return JSON.stringify([this.orderDate, this.paymentMode, this.paymentDueDate, this.referenceNo, this.contactNumber, this.gstin, this.billingAddress,
-      this.city, this.state, this.pinCode, this.isInterState, this.notes, this.customer()?.customerId ?? null,
+      this.city, this.state, this.pinCode, this.isInterState, this.notes, this.terms, this.warrantyText, this.customer()?.customerId ?? null,
       this.lines().map(l => [l.productMasterId, l.productName, l.hsnSac, l.qty, l.rate, l.discountAmount, l.gstPercent, l.warrantyMonths])]);
   }
 
@@ -210,11 +220,19 @@ export class SalesOrderEntryComponent implements OnInit {
   }
 
   /** A blank bill, as a new page shows it. */
+  /** What the folded Customer Details header shows. */
+  customerSummary(): string {
+    return [this.customer()?.customerName, this.contactNumber, this.city].filter(Boolean).join(' · ');
+  }
+
   private resetNew(): void {
+    this.customerCollapsed.set(false);
     this.salesOrderId.set(0); this.orderNo.set(''); this.status.set('Billed'); this.detail.set(null);
     this.editing.set(false); this.error.set('');
     this.orderDate = this.todayInput(); this.paymentMode = 'Cash'; this.paymentDueDate = ''; this.referenceNo = ''; this.contactNumber = '';
     this.gstin = ''; this.billingAddress = ''; this.city = ''; this.state = 'Kerala'; this.pinCode = ''; this.notes = '';
+    this.terms = this.printSettings()['Print.Terms'] || '';
+    this.warrantyText = this.printSettings()['Print.Warranty'] || '';
     this.isInterState = ['true', '1', 'yes'].includes((this.printSettings()['Sales.DefaultInterState'] || '').trim().toLowerCase());
     this.isInterStateSig.set(this.isInterState);
     this.customer.set(null);
@@ -318,6 +336,8 @@ export class SalesOrderEntryComponent implements OnInit {
         this.isInterState = !!o.isInterState;
         this.isInterStateSig.set(this.isInterState);
         this.notes = o.notes || '';
+        this.terms = o.terms || '';
+        this.warrantyText = o.warrantyText || '';
         this.customer.set({
           customerId: o.customerId, customerName: o.customerName, mobileNumber: o.customerMobile || '',
           email: o.customerEmail, address: o.billingAddress, city: o.city, state: o.state, pinCode: o.pinCode, gstin: o.gstin,
@@ -547,7 +567,10 @@ export class SalesOrderEntryComponent implements OnInit {
 
   async save(andDespatch = true): Promise<void> {
     const err = this.validate();
-    if (err) { this.error.set(err); this.showToast('error', err); return; }
+    if (err) {
+      this.customerCollapsed.set(false);   // the field to correct may be in the folded card
+      this.error.set(err); this.showToast('error', err); return;
+    }
     this.error.set('');
 
     const free = this.lines().findIndex(l => this.num(l.rate) === 0);
@@ -568,6 +591,8 @@ export class SalesOrderEntryComponent implements OnInit {
       pinCode: this.pinCode || null,
       isInterState: !!this.isInterState,
       notes: this.notes || null,
+      terms: this.terms.trim() || null,
+      warrantyText: this.warrantyText.trim() || null,
       items: this.lines().map<SalesOrderItemSave>(l => ({
         salesOrderItemId: l.salesOrderItemId,
         productMasterId: l.productMasterId,
@@ -623,15 +648,21 @@ export class SalesOrderEntryComponent implements OnInit {
   // print
   // =====================================================================
   /** The login's company, used where Settings > Print is blank. */
-  printCompany(): PrintCompany {
-    const id = this.auth.selectedCompanyId?.();
-    const c = this.auth.companies?.().find(x => x.companyId === id);
-    const user = this.auth.currentUser() as any;
-    return {
-      name: c?.companyName || user?.companyName || user?.CompanyName || '',
-      address: [c?.address, c?.city].filter(Boolean).join(', '),
-      phone: c?.phoneNumber,
-    };
+  printCompany(): PrintCompany { return printCompanyOf(this.auth); }
+
+  pdfBusy = signal(false);
+
+  async downloadPdf(): Promise<void> {
+    if (this.isNew() || this.pdfBusy()) return;
+    this.pdfBusy.set(true);
+    try {
+      await this.pdf.download(this.buildPrintDoc(), this.printSettings(),
+        documentFileName('Invoice', this.orderNo(), this.customer()?.customerName));
+    } catch {
+      this.showToast('error', 'The PDF could not be made. Try again');
+    } finally {
+      this.pdfBusy.set(false);
+    }
   }
 
   private showPrintDate(value: string): string {
@@ -668,6 +699,7 @@ export class SalesOrderEntryComponent implements OnInit {
       })),
       subTotal: this.subTotal(), discountTotal: this.discountTotal(), isInterState: this.isInterState,
       cgst: this.cgst(), sgst: this.sgst(), igst: this.igst(), grandTotal: this.grandTotal(), notes: this.notes,
+      terms: this.terms, warranty: this.warrantyText,
     };
   }
 

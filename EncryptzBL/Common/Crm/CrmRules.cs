@@ -273,6 +273,8 @@ namespace EncryptzBL.Common.Crm
                 PinCode = lead.PinCode,
                 IsInterState = q.IsInterState,
                 Notes = string.IsNullOrWhiteSpace(req.Comment) ? $"From lead {lead.LeadNo}" : $"From lead {lead.LeadNo}\n{T(req.Comment)}",
+                Terms = q.Terms,
+                WarrantyText = q.WarrantyText,
                 Items = q.Items.Select(i =>
                 {
                     // a sales order always adds GST to its rate, so an inclusive quotation hands over its pre-GST value

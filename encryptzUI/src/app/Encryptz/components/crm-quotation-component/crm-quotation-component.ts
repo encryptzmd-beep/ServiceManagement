@@ -2,6 +2,7 @@ import { UppercaseInputDirective } from '../shared/uppercase-input';
 import { ProductFormComponent, ProductFormResult } from '../product-form-component/product-form-component';
 import { AppRightDirective } from '../shared/app-right/app-right';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ConvertResultDto, CrmProductDto, LeadDetailDto, LeadListDto, LeadSaveDto, QuotationDto, QuotationItemDto } from '../../Models/CrmModels';
@@ -11,6 +12,8 @@ import { CrmRefusedComponent } from '../crm-shell-component/crm-refused';
 import { FORBIDDEN, amount, isoDate, pill, quoteTotals, refusalOf, showDate } from '../crm-shell-component/crm-ui';
 import { TransactionMode, TransactionToolbarComponent } from '../shared/transaction-toolbar/transaction-toolbar';
 import { FindQuery, FindRow, TransactionFindComponent } from '../shared/transaction-toolbar/transaction-find';
+import { DocumentPdfService, documentFileName } from '../shared/document-print/document-pdf';
+import { quotationPrintDocument } from '../shared/document-print/quotation-document';
 import { DialogService } from '../../Services/dialog-service';
 import { RightsService } from '../../Services/rights-service';
 
@@ -47,6 +50,7 @@ export class CrmQuotationComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private dialog = inject(DialogService);
+  private pdf = inject(DocumentPdfService);
   readonly rights = inject(RightsService);
 
   readonly forbidden = FORBIDDEN;
@@ -375,6 +379,24 @@ export class CrmQuotationComponent {
   onPrint(): void {
     const id = this.quotationId();
     if (id) window.open(this.router.serializeUrl(this.router.createUrlTree(['/crm/quotations', id, 'print'])), '_blank');
+  }
+
+  pdfBusy = signal(false);
+
+  async onDownloadPdf(): Promise<void> {
+    const q = this.saved();
+    if (!q || this.pdfBusy()) return;
+    this.pdfBusy.set(true);
+    this.error.set('');
+    try {
+      const settings = await firstValueFrom(this.crm.getPrintSettings());
+      await this.pdf.download(quotationPrintDocument(q), settings?.data ?? {},
+        documentFileName('Quotation', `${q.quotationNo}-R${q.revisionNo}`, q.contactName));
+    } catch {
+      this.error.set('The PDF could not be made. Try again');
+    } finally {
+      this.pdfBusy.set(false);
+    }
   }
 
   async onCancelDoc(): Promise<void> {

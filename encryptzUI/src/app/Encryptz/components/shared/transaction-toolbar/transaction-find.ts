@@ -28,6 +28,8 @@ export class TransactionFindComponent implements OnInit {
   placeholder = input('Number or customer');
   rows = input<FindRow[]>([]);
   loading = input(false);
+  /** Off for documents without an amount, such as leads. */
+  showAmount = input(true);
 
   search = output<FindQuery>();
   pick = output<number>();

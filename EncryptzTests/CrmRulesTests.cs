@@ -202,6 +202,15 @@ namespace EncryptzTests
             => Assert.Equal(ok, EncryptzBL.Common.Tenant.PrintSettingRules.Problem("Print.X", value, type) == null);
 
         [Fact]
+        public void A_sales_order_made_from_a_quotation_keeps_its_terms_and_warranty()
+        {
+            var q = new QuotationDto { Terms = "Payment on billing", WarrantyText = "One year", Items = new() { new() { ProductName = "AC", Qty = 1, Rate = 100m } } };
+            var order = CrmRules.BuildOrder(new LeadDetailDto(), q, 1, new ConvertRequestDto());
+            Assert.Equal("Payment on billing", order.Terms);
+            Assert.Equal("One year", order.WarrantyText);
+        }
+
+        [Fact]
         public void Conversion_percent_is_zero_without_leads()
         {
             Assert.Equal(0m, CrmRules.Percent(0, 0));

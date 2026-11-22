@@ -7,8 +7,12 @@
 } @else {
   <div class="qp-bar">
     <a [routerLink]="['/crm/quotations', id]">Back to the quotation</a>
-    <button type="button" (click)="print()">Print or save as PDF</button>
+    <span class="qp-actions">
+      <button type="button" class="secondary" [disabled]="pdfBusy()" (click)="downloadPdf()">{{ pdfBusy() ? 'Preparing…' : 'Download PDF' }}</button>
+      <button type="button" (click)="print()">Print</button>
+    </span>
   </div>
+  @if (pdfError()) { <p class="qp-error" role="alert">{{ pdfError() }}</p> }
   <div class="qp-paper">
     <app-document-print [doc]="document()!" [settings]="settings()" [company]="companyInfo()" />
   </div>

@@ -13,7 +13,7 @@
       (newDoc)="onNew()" (discard)="cancel()" (save)="save()" (find)="onFind()" />
 
     @if (findOpen()) {
-      <app-transaction-find title="Find a lead" placeholder="Name, mobile, city or lead no."
+      <app-transaction-find title="Find a lead" placeholder="Name, mobile, city or lead no." [showAmount]="false"
         [rows]="findRows()" [loading]="findLoading()"
         (search)="onFindSearch($event)" (pick)="onFindPick($event)" (close)="findOpen.set(false)" />
     }

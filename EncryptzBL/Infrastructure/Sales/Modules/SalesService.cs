@@ -146,6 +146,8 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
 
             if (dto.PaymentDueDate.HasValue && dto.PaymentDueDate.Value.Date < dto.OrderDate.Date)
                 return ApiResponse<SalesOrderSaveResultDto>.Fail("The payment due date cannot be before the bill date.");
+            if ((dto.Terms?.Trim().Length ?? 0) > 4000) return ApiResponse<SalesOrderSaveResultDto>.Fail("The terms are too long.");
+            if ((dto.WarrantyText?.Trim().Length ?? 0) > 4000) return ApiResponse<SalesOrderSaveResultDto>.Fail("The warranty is too long.");
 
             var p = new[]
             {
@@ -163,6 +165,8 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
                 SqlParameterHelper.Input("@PinCode", Clean(dto.PinCode)),
                 SqlParameterHelper.Input("@IsInterState", dto.IsInterState),
                 SqlParameterHelper.Input("@Notes", Clean(dto.Notes)),
+                SqlParameterHelper.Input("@Terms", Clean(dto.Terms)),
+                SqlParameterHelper.Input("@WarrantyText", Clean(dto.WarrantyText)),
                 SqlParameterHelper.Input("@ItemsJson", JsonSerializer.Serialize(items, JsonOpts)),
                 SqlParameterHelper.Input("@UserId", userId)
             };

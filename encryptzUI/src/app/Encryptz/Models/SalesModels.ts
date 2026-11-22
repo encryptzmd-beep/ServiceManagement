@@ -66,6 +66,8 @@ export interface SalesOrderSave {
   pinCode?: string | null;
   isInterState: boolean;
   notes?: string | null;
+  terms?: string | null;
+  warrantyText?: string | null;
   items: SalesOrderItemSave[];
 }
 
@@ -113,6 +115,8 @@ export interface SalesOrderListItem {
 }
 
 export interface SalesOrderHeader {
+  terms?: string | null;
+  warrantyText?: string | null;
   salesOrderId: number;
   orderNo: string;
   orderDate: string;

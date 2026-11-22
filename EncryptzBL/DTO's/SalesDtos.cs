@@ -92,6 +92,8 @@ namespace EncryptzBL.DTO_s
         public string? PinCode { get; set; }
         public bool IsInterState { get; set; }
         public string? Notes { get; set; }
+        public string? Terms { get; set; }
+        public string? WarrantyText { get; set; }
         public List<SalesOrderItemSaveDto> Items { get; set; } = new();
     }
 
@@ -162,6 +164,8 @@ namespace EncryptzBL.DTO_s
         public string? PinCode { get; set; }
         public bool IsInterState { get; set; }
         public string? Notes { get; set; }
+        public string Terms { get; set; } = string.Empty;
+        public string WarrantyText { get; set; } = string.Empty;
         public decimal SubTotal { get; set; }
         public decimal DiscountTotal { get; set; }
         public decimal TaxableTotal { get; set; }

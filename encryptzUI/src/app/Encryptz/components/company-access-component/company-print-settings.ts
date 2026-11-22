@@ -27,7 +27,7 @@ export const PRINT_SECTIONS: Section[] = [
     { key: 'Print.BankIFSC', label: 'IFS code', kind: 'text' },
     { key: 'Print.BankName', label: 'Bank and branch', kind: 'text' },
   ] },
-  { title: 'Quotation defaults', hint: 'Loaded into each new quotation, where they can be changed before saving.', fields: [
+  { title: 'Quotation defaults', hint: 'Loaded into each new quotation and sales order, where they can be changed before saving.', fields: [
     { key: 'Print.Warranty', label: 'Warranty', kind: 'area', hint: 'One point per row, without numbers', wide: true },
     { key: 'Print.Terms', label: 'Terms and conditions', kind: 'area', hint: 'One point per row, without numbers', wide: true },
   ] },

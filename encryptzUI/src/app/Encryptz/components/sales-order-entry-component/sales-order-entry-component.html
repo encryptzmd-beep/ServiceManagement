@@ -17,8 +17,8 @@
     [canEdit]="canEditBill() && rights.can('edit', '/sales/orders')"
     [canSave]="isEditable() && rights.can(isNew() ? 'create' : 'edit', '/sales/orders')"
     [canCancel]="canCancelBill() && rights.can('delete', '/sales/orders')"
-    [previousId]="neighbours().previousId" [nextId]="neighbours().nextId" [busy]="saving() || loading()"
-    (newDoc)="onNew()" (edit)="onEdit()" (discard)="onDiscard()" (save)="onSave()" (print)="print()"
+    [previousId]="neighbours().previousId" [nextId]="neighbours().nextId" [busy]="saving() || loading()" [canPdf]="!isNew()" [pdfBusy]="pdfBusy()"
+    (newDoc)="onNew()" (edit)="onEdit()" (discard)="onDiscard()" (save)="onSave()" (print)="print()" (downloadPdf)="downloadPdf()"
     (cancelDoc)="onCancelBill()" (previous)="onPrevious()" (next)="onNext()" (find)="onFind()" />
 
   @if (findOpen()) {
@@ -70,11 +70,22 @@
 
   <!-- ── customer details ──────────────────────────────────── -->
   <section class="card">
-    <div class="card-head">
+    <div class="card-head" [class.collapsed]="customerCollapsed()">
       <span>Customer Details</span>
-      <span class="card-head-hint">A new customer is added to the customer master and can be used for complaints and the customer portal.</span>
+      <span class="card-head-end">
+        @if (customerCollapsed()) {
+          <span class="card-head-summary">{{ customerSummary() || 'No customer selected' }}</span>
+        } @else {
+          <span class="card-head-hint">A new customer is added to the customer master and can be used for complaints and the customer portal.</span>
+        }
+        <button type="button" class="card-collapse" aria-controls="so-customer-details" [attr.aria-expanded]="!customerCollapsed()"
+                [attr.aria-label]="customerCollapsed() ? 'Expand customer details' : 'Collapse customer details'"
+                [title]="customerCollapsed() ? 'Expand' : 'Collapse'" (click)="customerCollapsed.set(!customerCollapsed())">
+          <span class="material-icons" aria-hidden="true">{{ customerCollapsed() ? 'expand_more' : 'expand_less' }}</span>
+        </button>
+      </span>
     </div>
-    <div class="card-body">
+    <div class="card-body" id="so-customer-details" [hidden]="customerCollapsed()">
       <div class="grid-4">
         <div class="field span-2">
           <label>Customer <span class="req">*</span></label>
@@ -273,9 +284,19 @@
   <!-- ── notes + summary ───────────────────────────────────── -->
   <div class="bottom-grid">
     <section class="card">
-      <div class="card-head">Notes</div>
+      <div class="card-head">Notes, Warranty &amp; Terms</div>
       <div class="card-body">
-        <textarea rows="3" [(ngModel)]="notes" placeholder="Enter any notes or terms and conditions…" [disabled]="!isEditable()"></textarea>
+        <textarea rows="3" [(ngModel)]="notes" aria-label="Notes" placeholder="Enter any notes…" [disabled]="!isEditable()"></textarea>
+        <div class="so-text-grid">
+          <div class="field">
+            <label for="so-warranty">Warranty</label>
+            <textarea id="so-warranty" rows="6" maxlength="4000" [(ngModel)]="warrantyText" placeholder="One point per line" [disabled]="!isEditable()"></textarea>
+          </div>
+          <div class="field">
+            <label for="so-terms">Terms &amp; Conditions</label>
+            <textarea id="so-terms" rows="6" maxlength="4000" [(ngModel)]="terms" placeholder="One point per line" [disabled]="!isEditable()"></textarea>
+          </div>
+        </div>
 
         @if (detail()?.despatches?.length) {
           <div class="despatch-box">

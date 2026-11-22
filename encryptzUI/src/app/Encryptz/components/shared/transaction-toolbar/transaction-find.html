@@ -24,14 +24,14 @@
         <p class="tf-empty">Nothing found</p>
       } @else {
         <table class="tf-table">
-          <thead><tr><th>Number</th><th>Date</th><th>Customer</th><th class="num">Amount</th><th>Status</th></tr></thead>
+          <thead><tr><th>Number</th><th>Date</th><th>Customer</th>@if (showAmount()) { <th class="num">Amount</th> }<th>Status</th></tr></thead>
           <tbody>
             @for (r of rows(); track r.id) {
               <tr tabindex="0" (click)="pick.emit(r.id)" (keydown.enter)="pick.emit(r.id)">
                 <td class="tf-no">{{ r.number }}</td>
                 <td>{{ date(r.date) }}</td>
-                <td>{{ r.party }}</td>
-                <td class="num">{{ amount(r.amount) }}</td>
+                <td class="tf-party" [title]="r.party">{{ r.party }}</td>
+                @if (showAmount()) { <td class="num">{{ amount(r.amount) }}</td> }
                 <td><span class="tf-status" [attr.data-status]="r.status">{{ r.status }}</span></td>
               </tr>
             }

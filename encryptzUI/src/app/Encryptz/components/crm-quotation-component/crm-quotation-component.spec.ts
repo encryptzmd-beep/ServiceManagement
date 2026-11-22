@@ -535,6 +535,16 @@ describe('CrmQuotationComponent', () => {
       expect(crm.getPrintSettings).not.toHaveBeenCalled();
     });
 
+    it('offers the PDF on a saved quotation, not on a new one', () => {
+      const saved = create();
+      saved.detectChanges();
+      expect(saved.nativeElement.querySelector('[data-tb="pdf"]')).not.toBeNull();
+      params = { id: 'new' };
+      const fresh = create();
+      fresh.detectChanges();
+      expect(fresh.nativeElement.querySelector('[data-tb="pdf"]')).toBeNull();
+    });
+
     it('a picked lead fills the customer card', () => {
       params = { id: 'new' };
       const f = create();

@@ -38,8 +38,8 @@
       [canEdit]="canEditDoc() && rights.can('edit', '/crm/quotations')" [editLabel]="editLabel()"
       [canSave]="editable() && rights.can(saved() ? 'edit' : 'create', '/crm/quotations')"
       [canCancel]="canCancelDoc() && rights.can('delete', '/crm/quotations')"
-      [previousId]="neighbours().previousId" [nextId]="neighbours().nextId" [busy]="busy()"
-      (newDoc)="onNew()" (edit)="onEdit()" (discard)="onDiscard()" (save)="onSave()" (print)="onPrint()"
+      [previousId]="neighbours().previousId" [nextId]="neighbours().nextId" [busy]="busy()" [canPdf]="!!saved()" [pdfBusy]="pdfBusy()"
+      (newDoc)="onNew()" (edit)="onEdit()" (discard)="onDiscard()" (save)="onSave()" (print)="onPrint()" (downloadPdf)="onDownloadPdf()"
       (cancelDoc)="onCancelDoc()" (previous)="onPrevious()" (next)="onNext()" (find)="onFind()" />
 
     @if (findOpen()) {

@@ -41,6 +41,18 @@ export interface PrintCompany {
 const textLines = (value: string | null | undefined): string[] =>
   (value ?? '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
+/** The login's company, used where Print Settings is blank. */
+export function printCompanyOf(auth: any): PrintCompany {
+  const id = auth?.selectedCompanyId?.();
+  const c = auth?.companies?.()?.find((x: any) => x.companyId === id);
+  const user = auth?.currentUser?.();
+  return {
+    name: c?.companyName || user?.companyName || user?.CompanyName || '',
+    address: [c?.address, c?.city].filter((p: string | null | undefined) => !!p?.trim()).join(', '),
+    phone: c?.phoneNumber,
+  };
+}
+
 /** The smaller lines under a product, the same on the quotation and the sales order. */
 export function printLineDetails(i: {
   productDescription?: string | null; mrp?: number | null; hsnSac?: string | null; gstPercent?: number | null;

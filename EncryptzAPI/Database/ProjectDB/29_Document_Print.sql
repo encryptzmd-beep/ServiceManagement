@@ -4,7 +4,7 @@
    Adds what the printed quotation and sales order show:
      crm.Quotations     ReferenceNo, PaymentDueDate, CustomerGstin, PricesIncludeGst,
                         WarrantyText
-     dbo.SalesOrders    PaymentDueDate
+     dbo.SalesOrders    PaymentDueDate, Terms, WarrantyText
      Settings > Print   logo, MSME, e-mail, bank, seal, warranty, terms, optional
                         items, closing message and signatory (blank until filled)
    Procedures: crm.sp_Quotation_Save / _Revise / _Get,
@@ -49,6 +49,10 @@ IF COL_LENGTH('crm.Quotations', 'WarrantyText') IS NULL
     ALTER TABLE crm.Quotations ADD WarrantyText NVARCHAR(4000) NOT NULL CONSTRAINT DF_crm_Quotations_WarrantyText DEFAULT (N'');
 IF COL_LENGTH('dbo.SalesOrders', 'PaymentDueDate') IS NULL
     ALTER TABLE dbo.SalesOrders ADD PaymentDueDate DATE NULL;
+IF COL_LENGTH('dbo.SalesOrders', 'Terms') IS NULL
+    ALTER TABLE dbo.SalesOrders ADD Terms NVARCHAR(4000) NOT NULL CONSTRAINT DF_SalesOrders_Terms DEFAULT (N'');
+IF COL_LENGTH('dbo.SalesOrders', 'WarrantyText') IS NULL
+    ALTER TABLE dbo.SalesOrders ADD WarrantyText NVARCHAR(4000) NOT NULL CONSTRAINT DF_SalesOrders_WarrantyText DEFAULT (N'');
 GO
 
 MERGE dbo.SystemSettings AS t
@@ -63,8 +67,8 @@ USING (VALUES
     ('Print.SealImage', N'', 'Print', 'image', N'Company seal and signature image', 1),
     ('Print.ItemsNote', N'', 'Print', 'string', N'Line printed under the products, e.g. what is included with the unit', 1),
     ('Print.OptionalItems', N'', 'Print', 'textarea', N'IF REQUIRED table. One item per line: Description | Price | Quantity and unit, e.g. Outdoor Stand | 1200 | 1 Nos', 1),
-    ('Print.Warranty', N'', 'Print', 'textarea', N'Default warranty, one point per line. Loaded into each new quotation, where it can be changed', 1),
-    ('Print.Terms', N'', 'Print', 'textarea', N'Default terms, one point per line. Loaded into each new quotation, where they can be changed', 1),
+    ('Print.Warranty', N'', 'Print', 'textarea', N'Default warranty, one point per line. Loaded into each new quotation and sales order, where it can be changed', 1),
+    ('Print.Terms', N'', 'Print', 'textarea', N'Default terms, one point per line. Loaded into each new quotation and sales order, where they can be changed', 1),
     ('Print.ClosingMessage', N'', 'Print', 'textarea', N'Closing message printed above the signature', 1),
     ('Print.SignatoryName', N'', 'Print', 'string', N'Name under Thanks & Regards (blank = the company name)', 1),
     ('Print.SignatoryMobile', N'', 'Print', 'string', N'Mobile number under Thanks & Regards', 1)
@@ -360,7 +364,9 @@ CREATE OR ALTER PROCEDURE dbo.sp_SalesOrder_Save
     @Notes          NVARCHAR(2000) = NULL,
     @ItemsJson      NVARCHAR(MAX),
     @UserId         INT            = NULL,
-    @PaymentDueDate DATE           = NULL
+    @PaymentDueDate DATE           = NULL,
+    @Terms          NVARCHAR(4000) = NULL,
+    @WarrantyText   NVARCHAR(4000) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -460,11 +466,12 @@ BEGIN
 
             INSERT INTO dbo.SalesOrders
                 (OrderNo, OrderDate, CustomerId, PaymentMode, PaymentDueDate, ReferenceNo, ContactNumber, GSTIN, BillingAddress,
-                 City, [State], PinCode, IsInterState, Notes,
+                 City, [State], PinCode, IsInterState, Notes, Terms, WarrantyText,
                  SubTotal, DiscountTotal, TaxableTotal, CGST, SGST, IGST, GrandTotal, [Status], CreatedBy, CreatedAt)
             VALUES
                 (@OrderNo, @OrderDate, @CustomerId, @PaymentMode, @PaymentDueDate, @ReferenceNo, @ContactNumber, @GSTIN, @BillingAddress,
                  @City, @State, @PinCode, ISNULL(@IsInterState, 0), @Notes,
+                 LTRIM(RTRIM(ISNULL(@Terms, ''))), LTRIM(RTRIM(ISNULL(@WarrantyText, ''))),
                  @SubTotal, @DiscountTotal, @TaxableTotal, @CGST, @SGST, @IGST, @GrandTotal, 'Billed', @UserId, @Now);
             SET @SalesOrderId = SCOPE_IDENTITY();
         END
@@ -482,6 +489,7 @@ BEGIN
             SET OrderDate = @OrderDate, CustomerId = @CustomerId, PaymentMode = @PaymentMode, PaymentDueDate = @PaymentDueDate, ReferenceNo = @ReferenceNo,
                 ContactNumber = @ContactNumber, GSTIN = @GSTIN, BillingAddress = @BillingAddress,
                 City = @City, [State] = @State, PinCode = @PinCode, IsInterState = ISNULL(@IsInterState, 0), Notes = @Notes,
+                Terms = LTRIM(RTRIM(ISNULL(@Terms, ''))), WarrantyText = LTRIM(RTRIM(ISNULL(@WarrantyText, ''))),
                 SubTotal = @SubTotal, DiscountTotal = @DiscountTotal, TaxableTotal = @TaxableTotal,
                 CGST = @CGST, SGST = @SGST, IGST = @IGST, GrandTotal = @GrandTotal, UpdatedAt = @Now
             WHERE SalesOrderId = @SalesOrderId;
@@ -526,7 +534,7 @@ BEGIN
 
     SELECT so.SalesOrderId, so.OrderNo, so.OrderDate, so.[Status], so.PaymentMode, so.PaymentDueDate, so.ReferenceNo,
            so.CustomerId, c.CustomerName, c.MobileNumber AS CustomerMobile, c.Email AS CustomerEmail,
-           so.ContactNumber, so.GSTIN, so.BillingAddress, so.City, so.[State], so.PinCode, so.IsInterState, so.Notes,
+           so.ContactNumber, so.GSTIN, so.BillingAddress, so.City, so.[State], so.PinCode, so.IsInterState, so.Notes, so.Terms, so.WarrantyText,
            so.SubTotal, so.DiscountTotal, so.TaxableTotal, so.CGST, so.SGST, so.IGST, so.GrandTotal,
            so.CreatedAt, so.UpdatedAt
     FROM dbo.SalesOrders so
