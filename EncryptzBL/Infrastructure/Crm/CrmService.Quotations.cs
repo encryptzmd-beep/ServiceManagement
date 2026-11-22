@@ -40,7 +40,7 @@ namespace EncryptzBL.Infrastructure.Crm
                     In("@DiscountTotal", t.DiscountTotal), In("@TaxableTotal", t.TaxableTotal), In("@CGST", t.CGST), In("@SGST", t.SGST),
                     In("@IGST", t.IGST), In("@GrandTotal", t.GrandTotal), In("@Terms", dto.Terms), In("@ReferenceNo", dto.ReferenceNo),
                     In("@PaymentDueDate", dto.PaymentDueDate?.Date), In("@CustomerGstin", dto.CustomerGstin),
-                    In("@PricesIncludeGst", dto.PricesIncludeGst), In("@ItemsJson", itemsJson)
+                    In("@PricesIncludeGst", dto.PricesIncludeGst), In("@WarrantyText", dto.WarrantyText), In("@ItemsJson", itemsJson)
                 });
                 return ToResponse(Answer(dt));
             });

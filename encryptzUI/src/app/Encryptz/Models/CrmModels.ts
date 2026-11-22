@@ -237,6 +237,7 @@ export interface QuotationSaveDto {
   paymentDueDate?: string | null;
   customerGstin?: string | null;
   pricesIncludeGst?: boolean;
+  warrantyText?: string | null;
   items: QuotationItemDto[];
 }
 
@@ -260,6 +261,7 @@ export interface QuotationDto {
   paymentDueDate?: string | null;
   customerGstin?: string | null;
   pricesIncludeGst?: boolean;
+  warrantyText?: string | null;
   status: string;
   createdAt: string;
   updatedAt: string;

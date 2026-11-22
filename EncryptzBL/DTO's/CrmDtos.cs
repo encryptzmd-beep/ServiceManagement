@@ -320,6 +320,7 @@ namespace EncryptzBL.DTO_s
         public string? CustomerGstin { get; set; }
         /// <summary>The rates already contain GST; the taxable value is worked back from them.</summary>
         public bool PricesIncludeGst { get; set; }
+        public string? WarrantyText { get; set; }
         public List<QuotationItemDto> Items { get; set; } = new();
     }
 
@@ -355,6 +356,7 @@ namespace EncryptzBL.DTO_s
         public DateTime? PaymentDueDate { get; set; }
         public string? CustomerGstin { get; set; }
         public bool PricesIncludeGst { get; set; }
+        public string WarrantyText { get; set; } = string.Empty;
         public string Status { get; set; } = "Draft";
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }

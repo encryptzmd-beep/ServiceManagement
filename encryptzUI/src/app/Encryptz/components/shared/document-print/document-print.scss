@@ -66,9 +66,9 @@ $right-column: 78mm;
 .dp-right { display: flex; flex-direction: column; min-width: 0;
   dl { margin: 0; padding: 1.5mm 1mm; font-weight: 700; > div { display: grid; grid-template-columns: 26mm 1fr; padding: .7mm 0; } }
   dt, dd { margin: 0; overflow-wrap: anywhere; } }
-.dp-seal { position: relative; display: flex; flex: 1; min-height: 25mm; align-items: flex-end; justify-content: center; padding: 1mm; border-top: .2mm solid $line; background: $green-pale;
-  img { position: absolute; inset: 1mm; width: calc(100% - 2mm); height: calc(100% - 2mm); object-fit: contain; }
-  b { position: relative; } }
+/* the seal keeps one size however tall the warranty and terms beside it are */
+.dp-seal { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 1mm; min-height: 32mm; padding: 1.5mm 1mm; border-top: .2mm solid $line; background: $green-pale;
+  img { display: block; flex: none; width: auto; height: 25mm; max-width: 50mm; object-fit: contain; } }
 
 .dp-closing { padding: 1.2mm 2mm; border: .2mm solid $line; border-top: 0; background: $green-pale; text-align: center; break-inside: avoid; page-break-inside: avoid; }
 .dp-regards { margin-top: 2mm; padding-right: 1mm; text-align: right; break-inside: avoid; page-break-inside: avoid; b { display: block; } }

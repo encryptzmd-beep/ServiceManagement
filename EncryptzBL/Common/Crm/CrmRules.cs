@@ -134,6 +134,8 @@ namespace EncryptzBL.Common.Crm
             if (q == null) return "Nothing to save";
             q.Terms = T(q.Terms);
             if (q.Terms.Length > 4000) return "The terms are too long";
+            q.WarrantyText = T(q.WarrantyText);
+            if (q.WarrantyText.Length > 4000) return "The warranty is too long";
             q.ReferenceNo = T(q.ReferenceNo);
             q.CustomerGstin = T(q.CustomerGstin).ToUpperInvariant();
             if (q.ReferenceNo.Length > 100) return "The quotation reference is too long";

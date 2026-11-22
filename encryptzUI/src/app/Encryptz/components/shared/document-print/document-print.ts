@@ -25,8 +25,9 @@ export interface PrintDocument {
   sgst: number;
   igst: number;
   grandTotal: number;
-  /** The document's own terms; blank uses Settings > Print. */
+  /** The document's own text, printed as it is even when blank. Left out, Print Settings is used. */
   terms?: string | null;
+  warranty?: string | null;
   notes?: string | null;
 }
 
@@ -93,11 +94,8 @@ export class DocumentPrintComponent {
     return own.length ? own : textLines(this.company()?.address);
   });
   readonly phone = computed(() => this.s('Print.CompanyPhone') || this.company()?.phone?.trim() || '');
-  readonly warranty = computed(() => textLines(this.s('Print.Warranty')));
-  readonly terms = computed(() => {
-    const own = textLines(this.doc().terms);
-    return own.length ? own : textLines(this.s('Print.Terms'));
-  });
+  readonly warranty = computed(() => textLines(this.doc().warranty ?? this.s('Print.Warranty')));
+  readonly terms = computed(() => textLines(this.doc().terms ?? this.s('Print.Terms')));
   readonly closing = computed(() => textLines(this.s('Print.ClosingMessage')));
   readonly hasBank = computed(() => ['Holder', 'No', 'IFSC', 'Name'].some(k =>
     this.s(k === 'Holder' ? 'Print.BankAccountHolder' : k === 'No' ? 'Print.BankAccountNo' : k === 'IFSC' ? 'Print.BankIFSC' : 'Print.BankName')));

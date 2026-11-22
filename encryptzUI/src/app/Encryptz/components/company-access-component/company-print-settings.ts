@@ -27,10 +27,12 @@ export const PRINT_SECTIONS: Section[] = [
     { key: 'Print.BankIFSC', label: 'IFS code', kind: 'text' },
     { key: 'Print.BankName', label: 'Bank and branch', kind: 'text' },
   ] },
+  { title: 'Quotation defaults', hint: 'Loaded into each new quotation, where they can be changed before saving.', fields: [
+    { key: 'Print.Warranty', label: 'Warranty', kind: 'area', hint: 'One point per row, without numbers', wide: true },
+    { key: 'Print.Terms', label: 'Terms and conditions', kind: 'area', hint: 'One point per row, without numbers', wide: true },
+  ] },
   { title: 'Quotation content', hint: 'The same on every quotation.', hidden: true, fields: [
     { key: 'Print.ItemsNote', label: 'Note under the products', kind: 'text', wide: true },
-    { key: 'Print.Warranty', label: 'Warranty', kind: 'area', hint: 'One point per row', wide: true },
-    { key: 'Print.Terms', label: 'Terms and conditions', kind: 'area', hint: 'One point per row. A quotation with its own terms prints those instead', wide: true },
     { key: 'Print.ClosingMessage', label: 'Closing message', kind: 'area', wide: true },
     { key: 'Print.SignatoryName', label: 'Name under Thanks & Regards', kind: 'text', hint: 'Blank uses the company name' },
     { key: 'Print.SignatoryMobile', label: 'Mobile under Thanks & Regards', kind: 'text' },

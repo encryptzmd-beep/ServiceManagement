@@ -67,7 +67,8 @@ export class CrmQuotationPrintComponent {
       })),
       subTotal: x.subTotal, discountTotal: x.discountTotal, taxableTotal: x.taxableTotal,
       pricesIncludeGst: !!x.pricesIncludeGst, isInterState: x.isInterState,
-      cgst: x.cgst, sgst: x.sgst, igst: x.igst, grandTotal: x.grandTotal, terms: x.terms,
+      cgst: x.cgst, sgst: x.sgst, igst: x.igst, grandTotal: x.grandTotal,
+      terms: x.terms ?? '', warranty: x.warrantyText ?? '',
     };
   });
 

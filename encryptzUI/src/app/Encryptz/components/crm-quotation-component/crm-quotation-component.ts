@@ -23,7 +23,7 @@ const blankLine = (sortOrder: number): QuotationItemDto => ({
 });
 
 /** The header of the quotation being edited. */
-interface Head { quoteDate: string; validUntil: string; isInterState: boolean; terms: string; referenceNo: string; paymentDueDate: string; customerGstin: string; pricesIncludeGst: boolean; }
+interface Head { quoteDate: string; validUntil: string; isInterState: boolean; terms: string; referenceNo: string; paymentDueDate: string; customerGstin: string; pricesIncludeGst: boolean; warrantyText: string; }
 
 /** A customer typed on a new quotation; it becomes a lead when the quotation is saved. */
 interface NewCustomer { contactName: string; mobile: string; email: string; address: string; city: string; state: string; pinCode: string; }
@@ -59,7 +59,7 @@ export class CrmQuotationComponent {
   leadId = signal(0);
   saved = signal<QuotationDto | null>(null);
   leadTitle = signal('');
-  head = signal<Head>({ quoteDate: isoDate(new Date()), validUntil: '', isInterState: false, terms: '', referenceNo: '', paymentDueDate: '', customerGstin: '', pricesIncludeGst: false });
+  head = signal<Head>({ quoteDate: isoDate(new Date()), validUntil: '', isInterState: false, terms: '', referenceNo: '', paymentDueDate: '', customerGstin: '', pricesIncludeGst: false, warrantyText: '' });
   lines = signal<QuotationItemDto[]>([]);
   error = signal('');
   notice = signal('');
@@ -130,7 +130,7 @@ export class CrmQuotationComponent {
     this.quotationId.set(0);
     this.saved.set(null);
     this.editing.set(false);
-    this.head.set({ quoteDate: isoDate(new Date()), validUntil: '', isInterState: false, terms: '', referenceNo: '', paymentDueDate: '', customerGstin: '', pricesIncludeGst: false });
+    this.head.set({ quoteDate: isoDate(new Date()), validUntil: '', isInterState: false, terms: '', referenceNo: '', paymentDueDate: '', customerGstin: '', pricesIncludeGst: false, warrantyText: '' });
     this.lines.set([blankLine(1)]);
     this.lead.set(null);
     this.leadLoaded.set(false);
@@ -140,13 +140,30 @@ export class CrmQuotationComponent {
     this.newCust.set(blankCustomer());
     this.leadTerm.set('');
     this.leadResults.set([]);
+    this.leadListOpen.set(false);
     this.loaded.set(true);
     this.markSaved();
     this.crm.quotationNeighbours(0)?.subscribe({
       next: r => this.neighbours.set({ previousId: r?.data?.previousId ?? null, nextId: null }),
       error: () => {},
     });
+    this.loadDefaultTexts();
     if (leadId > 0) this.useLead(leadId, true);
+  }
+
+  /** A new quotation starts with the terms and warranty of Print Settings; what is saved is this quotation's own copy. */
+  private loadDefaultTexts(): void {
+    this.crm.getPrintSettings().subscribe({
+      next: res => {
+        if (this.quotationId() || this.saved()) return;
+        const d = res?.data ?? {};
+        const untouched = !this.isDirty();
+        // never over what the person has typed meanwhile
+        this.head.update(h => ({ ...h, terms: h.terms || (d['Print.Terms'] ?? ''), warrantyText: h.warrantyText || (d['Print.Warranty'] ?? '') }));
+        if (untouched) this.markSaved();   // the defaults are not a change of the user
+      },
+      error: () => {},   // the boxes stay blank and can be typed in
+    });
   }
 
   // ── customer: the quotation is always for a lead; a new quotation picks one or makes one ──
@@ -156,6 +173,7 @@ export class CrmQuotationComponent {
   newCust = signal<NewCustomer>(blankCustomer());
   leadTerm = signal('');
   leadResults = signal<LeadListDto[]>([]);
+  leadListOpen = signal(false);
   leadSearching = signal(false);
 
   /** What the Customer card shows: the saved quotation's copy, or the lead of a new one. */
@@ -175,24 +193,33 @@ export class CrmQuotationComponent {
   /** Only a new quotation may change its customer. */
   readonly canChangeCustomer = computed(() => !this.quotationId());
 
+  /** On focus the latest customers, then whatever is typed: at most 20 that can take a quotation. */
   searchLeads(term: string): void {
     this.leadTerm.set(term);
-    if (term.trim().length < 2) { this.leadResults.set([]); return; }
+    this.leadListOpen.set(true);
     this.leadSearching.set(true);
-    this.crm.getLeads({ search: term.trim(), page: 1, pageSize: 8 }).subscribe({
+    // more than 20 are read because converted and lost leads are dropped below
+    this.crm.getLeads({ search: term.trim() || undefined, page: 1, pageSize: 100 }).subscribe({
       next: res => {
         this.leadSearching.set(false);
         if (this.leadTerm() !== term) return;
         // a converted or lost lead takes no new quotation
-        this.leadResults.set((res.success ? res.data?.items ?? [] : []).filter(l => !['Converted', 'Lost'].includes(l.status)));
+        this.leadResults.set((res.success ? res.data?.items ?? [] : []).filter(l => !['Converted', 'Lost'].includes(l.status)).slice(0, 20));
       },
       error: () => { this.leadSearching.set(false); this.leadResults.set([]); },
     });
   }
 
-  /** Reads the lead into the Customer card; on a fresh quotation its product starts the first line. */
-  useLead(leadId: number, withProduct = this.lines().every(l => !l.productName.trim())): void {
+  /** Focus moving to a row of the list keeps it open; anywhere else closes it. */
+  onLeadSearchBlur(event: FocusEvent): void {
+    const box = event.currentTarget as HTMLElement;
+    if (!box.contains(event.relatedTarget as Node | null)) this.leadListOpen.set(false);
+  }
+
+  /** Reads the lead into the Customer card. Picking a customer leaves the lines alone; only a quotation opened from a lead starts with its products. */
+  useLead(leadId: number, withProduct = false): void {
     this.leadId.set(leadId);
+    this.leadListOpen.set(false);
     this.leadResults.set([]);
     this.leadTerm.set('');
     this.error.set('');
@@ -288,7 +315,7 @@ export class CrmQuotationComponent {
         this.head.set({
           quoteDate: (q.quoteDate ?? '').slice(0, 10), validUntil: (q.validUntil ?? '').slice(0, 10), isInterState: q.isInterState, terms: q.terms ?? '',
           referenceNo: q.referenceNo ?? '', paymentDueDate: (q.paymentDueDate ?? '').slice(0, 10), customerGstin: q.customerGstin ?? '',
-          pricesIncludeGst: !!q.pricesIncludeGst,
+          pricesIncludeGst: !!q.pricesIncludeGst, warrantyText: q.warrantyText ?? '',
         });
         this.lines.set([...(q.items ?? [])].sort((a, b) => a.sortOrder - b.sortOrder).map(i => ({ ...i })));
         this.loaded.set(true);
@@ -511,7 +538,7 @@ export class CrmQuotationComponent {
       quotationId: this.quotationId(), leadId: this.leadId(), quoteDate: h.quoteDate, validUntil: h.validUntil || null,
       isInterState: h.isInterState, terms: h.terms || null, referenceNo: h.referenceNo.trim() || null,
       paymentDueDate: h.paymentDueDate || null, customerGstin: h.customerGstin.trim().toUpperCase() || null,
-      pricesIncludeGst: h.pricesIncludeGst,
+      pricesIncludeGst: h.pricesIncludeGst, warrantyText: h.warrantyText.trim() || null,
       items: this.lines().map((l, i) => ({
         ...l, sortOrder: i + 1, qty: Number(l.qty), rate: Number(l.rate), discountAmount: Number(l.discountAmount),
         gstPercent: Number(l.gstPercent), warrantyMonths: Number(l.warrantyMonths),

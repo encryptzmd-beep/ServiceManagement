@@ -2,7 +2,8 @@
    ProjectDB (company database) · Quotation and sales order print
    -----------------------------------------------------------------------------
    Adds what the printed quotation and sales order show:
-     crm.Quotations     ReferenceNo, PaymentDueDate, CustomerGstin, PricesIncludeGst
+     crm.Quotations     ReferenceNo, PaymentDueDate, CustomerGstin, PricesIncludeGst,
+                        WarrantyText
      dbo.SalesOrders    PaymentDueDate
      Settings > Print   logo, MSME, e-mail, bank, seal, warranty, terms, optional
                         items, closing message and signatory (blank until filled)
@@ -44,6 +45,8 @@ IF COL_LENGTH('crm.Quotations', 'CustomerGstin') IS NULL
     ALTER TABLE crm.Quotations ADD CustomerGstin NVARCHAR(20) NULL;
 IF COL_LENGTH('crm.Quotations', 'PricesIncludeGst') IS NULL
     ALTER TABLE crm.Quotations ADD PricesIncludeGst BIT NOT NULL CONSTRAINT DF_crm_Quotations_PricesIncludeGst DEFAULT (0);
+IF COL_LENGTH('crm.Quotations', 'WarrantyText') IS NULL
+    ALTER TABLE crm.Quotations ADD WarrantyText NVARCHAR(4000) NOT NULL CONSTRAINT DF_crm_Quotations_WarrantyText DEFAULT (N'');
 IF COL_LENGTH('dbo.SalesOrders', 'PaymentDueDate') IS NULL
     ALTER TABLE dbo.SalesOrders ADD PaymentDueDate DATE NULL;
 GO
@@ -60,8 +63,8 @@ USING (VALUES
     ('Print.SealImage', N'', 'Print', 'image', N'Company seal and signature image', 1),
     ('Print.ItemsNote', N'', 'Print', 'string', N'Line printed under the products, e.g. what is included with the unit', 1),
     ('Print.OptionalItems', N'', 'Print', 'textarea', N'IF REQUIRED table. One item per line: Description | Price | Quantity and unit, e.g. Outdoor Stand | 1200 | 1 Nos', 1),
-    ('Print.Warranty', N'', 'Print', 'textarea', N'Warranty points, one per line', 1),
-    ('Print.Terms', N'', 'Print', 'textarea', N'Default terms, one per line. A quotation with its own terms prints those instead', 1),
+    ('Print.Warranty', N'', 'Print', 'textarea', N'Default warranty, one point per line. Loaded into each new quotation, where it can be changed', 1),
+    ('Print.Terms', N'', 'Print', 'textarea', N'Default terms, one point per line. Loaded into each new quotation, where they can be changed', 1),
     ('Print.ClosingMessage', N'', 'Print', 'textarea', N'Closing message printed above the signature', 1),
     ('Print.SignatoryName', N'', 'Print', 'string', N'Name under Thanks & Regards (blank = the company name)', 1),
     ('Print.SignatoryMobile', N'', 'Print', 'string', N'Mobile number under Thanks & Regards', 1)
@@ -94,6 +97,7 @@ CREATE OR ALTER PROCEDURE crm.sp_Quotation_Save
     @PaymentDueDate DATE          = NULL,
     @CustomerGstin NVARCHAR(20)   = NULL,
     @PricesIncludeGst BIT         = 0,
+    @WarrantyText  NVARCHAR(4000) = NULL,
     @ItemsJson     NVARCHAR(MAX)
 AS
 BEGIN
@@ -179,10 +183,11 @@ BEGIN
         DECLARE @QuotationNo NVARCHAR(20) = 'QT-' + CASE WHEN @n < 10000 THEN RIGHT('0000' + CAST(@n AS VARCHAR(10)), 4) ELSE CAST(@n AS VARCHAR(10)) END;
 
         INSERT INTO crm.Quotations (CompanyId, LeadId, QuotationNo, RevisionNo, QuoteDate, ValidUntil, IsInterState, SubTotal, DiscountTotal,
-                                    TaxableTotal, CGST, SGST, IGST, GrandTotal, Terms, ReferenceNo, PaymentDueDate, CustomerGstin, PricesIncludeGst, Status, CreatedBy)
+                                    TaxableTotal, CGST, SGST, IGST, GrandTotal, Terms, ReferenceNo, PaymentDueDate, CustomerGstin, PricesIncludeGst, WarrantyText, Status, CreatedBy)
         VALUES (@CompanyId, @LeadId, @QuotationNo, 1, @QuoteDate, @ValidUntil, ISNULL(@IsInterState, 0), ISNULL(@SubTotal, 0),
                 ISNULL(@DiscountTotal, 0), ISNULL(@TaxableTotal, 0), ISNULL(@CGST, 0), ISNULL(@SGST, 0), ISNULL(@IGST, 0),
-                ISNULL(@GrandTotal, 0), LTRIM(RTRIM(ISNULL(@Terms, ''))), @ReferenceNo, @PaymentDueDate, @CustomerGstin, ISNULL(@PricesIncludeGst, 0), 'Draft', @UserId);
+                ISNULL(@GrandTotal, 0), LTRIM(RTRIM(ISNULL(@Terms, ''))), @ReferenceNo, @PaymentDueDate, @CustomerGstin, ISNULL(@PricesIncludeGst, 0),
+                LTRIM(RTRIM(ISNULL(@WarrantyText, ''))), 'Draft', @UserId);
 
         SET @QuotationId = SCOPE_IDENTITY();
     END
@@ -210,7 +215,7 @@ BEGIN
             SGST = ISNULL(@SGST, 0), IGST = ISNULL(@IGST, 0), GrandTotal = ISNULL(@GrandTotal, 0),
             Terms = LTRIM(RTRIM(ISNULL(@Terms, ''))), ReferenceNo = @ReferenceNo,
             PaymentDueDate = @PaymentDueDate, CustomerGstin = @CustomerGstin,
-            PricesIncludeGst = ISNULL(@PricesIncludeGst, 0), UpdatedAt = DATEADD(MINUTE, 330, GETUTCDATE())
+            PricesIncludeGst = ISNULL(@PricesIncludeGst, 0), WarrantyText = LTRIM(RTRIM(ISNULL(@WarrantyText, ''))), UpdatedAt = DATEADD(MINUTE, 330, GETUTCDATE())
         WHERE QuotationId = @QuotationId AND CompanyId = @CompanyId;
 
         DELETE FROM crm.QuotationItems WHERE QuotationId = @QuotationId AND CompanyId = @CompanyId;
@@ -278,9 +283,9 @@ BEGIN
     END
 
     INSERT INTO crm.Quotations (CompanyId, LeadId, QuotationNo, RevisionNo, QuoteDate, ValidUntil, IsInterState, SubTotal, DiscountTotal,
-                                TaxableTotal, CGST, SGST, IGST, GrandTotal, Terms, ReferenceNo, PaymentDueDate, CustomerGstin, PricesIncludeGst, Status, CreatedBy)
+                                TaxableTotal, CGST, SGST, IGST, GrandTotal, Terms, ReferenceNo, PaymentDueDate, CustomerGstin, PricesIncludeGst, WarrantyText, Status, CreatedBy)
     SELECT @CompanyId, LeadId, QuotationNo, RevisionNo + 1, CAST(DATEADD(MINUTE, 330, GETUTCDATE()) AS DATE), ValidUntil, IsInterState,
-           SubTotal, DiscountTotal, TaxableTotal, CGST, SGST, IGST, GrandTotal, Terms, ReferenceNo, PaymentDueDate, CustomerGstin, PricesIncludeGst, 'Draft', @UserId
+           SubTotal, DiscountTotal, TaxableTotal, CGST, SGST, IGST, GrandTotal, Terms, ReferenceNo, PaymentDueDate, CustomerGstin, PricesIncludeGst, WarrantyText, 'Draft', @UserId
     FROM crm.Quotations
     WHERE QuotationId = @QuotationId AND CompanyId = @CompanyId;
 
@@ -314,7 +319,7 @@ BEGIN
     SET NOCOUNT ON;
 
     SELECT q.QuotationId, q.LeadId, q.QuotationNo, q.RevisionNo, q.QuoteDate, q.ValidUntil, q.IsInterState,
-           q.SubTotal, q.DiscountTotal, q.TaxableTotal, q.CGST, q.SGST, q.IGST, q.GrandTotal, q.Terms, q.ReferenceNo, q.PaymentDueDate, q.CustomerGstin, q.PricesIncludeGst, q.Status,
+           q.SubTotal, q.DiscountTotal, q.TaxableTotal, q.CGST, q.SGST, q.IGST, q.GrandTotal, q.Terms, q.ReferenceNo, q.PaymentDueDate, q.CustomerGstin, q.PricesIncludeGst, q.WarrantyText, q.Status,
            q.CreatedBy, ISNULL(u.FullName, N'') AS CreatedByName, q.CreatedAt, q.UpdatedAt,
            l.LeadNo, l.ContactName, l.Mobile, l.Email, l.Address, l.City, l.[State], l.PinCode, l.Status AS LeadStatus,
            CAST(CASE WHEN NOT EXISTS (SELECT 1 FROM crm.Quotations q2

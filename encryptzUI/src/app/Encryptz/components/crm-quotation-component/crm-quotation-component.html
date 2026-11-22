@@ -87,11 +87,12 @@
               <button type="button" role="tab" [class.on]="custMode() === 'new'" [attr.aria-selected]="custMode() === 'new'" (click)="custMode.set('new')">New customer</button>
             </div>
             @if (custMode() === 'pick') {
-              <div class="q-lead-search">
+              <div class="q-lead-search" (focusout)="onLeadSearchBlur($event)">
                 <label class="crm-field"><span>Search a lead</span>
-                  <input type="search" placeholder="Name, mobile, city or lead no." [value]="leadTerm()" (input)="searchLeads(text($event))" /></label>
-                @if (leadResults().length) {
-                  <ul class="q-results q-lead-results">
+                  <input type="search" placeholder="Name, mobile, city or lead no." [value]="leadTerm()" (focus)="searchLeads(leadTerm())" (input)="searchLeads(text($event))"
+                         (keydown.escape)="$event.preventDefault(); leadListOpen.set(false)" /></label>
+                @if (leadListOpen() && leadResults().length) {
+                  <ul class="q-results q-lead-results" (mousedown)="$event.preventDefault()">
                     @for (l of leadResults(); track l.leadId) {
                       <li><button type="button" (click)="useLead(l.leadId)">
                         <strong>{{ l.contactName }}</strong>
@@ -100,7 +101,7 @@
                       </button></li>
                     }
                   </ul>
-                } @else if (leadTerm().trim().length >= 2 && !leadSearching()) {
+                } @else if (leadListOpen() && !leadSearching()) {
                   <p class="crm-muted q-none">No open lead matches. <button type="button" class="crm-link" (click)="custMode.set('new')">Add a new customer</button></p>
                 }
               </div>
@@ -242,8 +243,12 @@
 
       <div class="q-bottom">
         <section class="crm-card q-terms">
-          <label class="crm-field"><span>Terms</span>
-            <textarea rows="5" maxlength="4000" [disabled]="!editable()" [ngModel]="head().terms" (ngModelChange)="setHead('terms', $event)"></textarea></label>
+          <div class="q-text-grid">
+            <label class="crm-field"><span>Warranty</span>
+              <textarea rows="6" maxlength="4000" placeholder="One point per line" [disabled]="!editable()" [ngModel]="head().warrantyText" (ngModelChange)="setHead('warrantyText', $event)"></textarea></label>
+            <label class="crm-field"><span>Terms &amp; Conditions</span>
+              <textarea rows="6" maxlength="4000" placeholder="One point per line" [disabled]="!editable()" [ngModel]="head().terms" (ngModelChange)="setHead('terms', $event)"></textarea></label>
+          </div>
         </section>
         <section class="crm-card q-totals" aria-label="Totals">
           <dl>
