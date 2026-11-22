@@ -41,6 +41,14 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SetManager([FromBody] SetCompanyManagerRequest req)
             => Ok(await _service.SetManager(req, Actor()));
 
+        /// <summary>The company's logo, seal, bank and other details printed on its documents.</summary>
+        [HttpGet("print-settings")]
+        public async Task<IActionResult> GetPrintSettings() => Ok(await _service.GetPrintSettings(Actor()));
+
+        [HttpPut("print-settings")]
+        public async Task<IActionResult> SavePrintSettings([FromBody] SavePrintSettingsRequest req)
+            => Ok(await _service.SavePrintSettings(req, Actor()));
+
         /// <summary>Who is calling and for which company: from the token, never from the body.</summary>
         private PlatformActor Actor() => new()
         {

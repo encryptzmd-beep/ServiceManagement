@@ -269,11 +269,11 @@
                 </button>
               }
               @if (canManageUsers() && mode() !== 'personal') {
-                <button type="button" class="lx-dock-btn" aria-label="Users and roles" (click)="openUsersRoles()">
+                <button type="button" class="lx-dock-btn" [attr.aria-label]="isPlatformAdmin() ? 'Users and roles' : 'Settings'" (click)="openUsersRoles()">
                   <span class="lx-icon" [attr.data-app]="isPlatformAdmin() ? 'navy' : 'slate'" aria-hidden="true">
                     <span class="material-icons">{{ isPlatformAdmin() ? 'manage_accounts' : 'settings' }}</span>
                   </span>
-                  <span class="lx-tip">Users &amp; Roles</span>
+                  <span class="lx-tip">{{ isPlatformAdmin() ? 'Users & Roles' : 'Settings' }}</span>
                 </button>
               }
               @if (showAdminInDock()) {

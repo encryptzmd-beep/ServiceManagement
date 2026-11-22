@@ -3,6 +3,12 @@ namespace EncryptzBL.DTO_s
     // ── Users & Roles of a company (outside the modules) ──
 
     /// <summary>What the signed-in person may do on the Users &amp; Roles screen.</summary>
+    /// <summary>The Print settings to change, by key. Keys outside the Print group are refused.</summary>
+    public class SavePrintSettingsRequest
+    {
+        public Dictionary<string, string> Values { get; set; } = new();
+    }
+
     public class CompanyAccessMeDto
     {
         public bool CanManage { get; set; }

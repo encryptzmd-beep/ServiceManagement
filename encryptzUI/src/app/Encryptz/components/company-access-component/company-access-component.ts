@@ -6,12 +6,13 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../Auth/auth-service';
 import { apiErrorMessage } from '../../Auth/api-error';
 import { NotificationBellComponent } from '../notification-bell-component/notification-bell-component';
+import { CompanyPrintSettingsComponent } from './company-print-settings';
 import {
   ACCESS_LEVELS, AccessModule, AccessOverview, AccessUser, CompanyAccessApi, CompanyRole, PERMISSIONS,
   PermissionKey, Permissions, RoleMenu, hasAnyPermission, noPermissions, withPermission,
 } from './company-access';
 
-type Tab = 'users' | 'roles' | 'access';
+type Tab = 'users' | 'roles' | 'access' | 'print';
 
 interface UserDraft {
   userId: number;
@@ -40,7 +41,7 @@ interface RoleDraft {
 @Component({
   selector: 'app-company-access',
   standalone: true,
-  imports: [AppToastComponent, CommonModule, NotificationBellComponent],
+  imports: [AppToastComponent, CommonModule, NotificationBellComponent, CompanyPrintSettingsComponent],
   templateUrl: './company-access-component.html',
   styleUrl: './company-access-component.scss',
 })
@@ -54,6 +55,8 @@ export class CompanyAccessComponent implements OnInit {
   readonly permissions = PERMISSIONS;
 
   tab = signal<Tab>('users');
+  /** Stays open once visited, so typed changes survive a look at another tab. */
+  printOpened = signal(false);
   loading = signal(true);
   loadError = signal('');
   data = signal<AccessOverview | null>(null);
@@ -124,8 +127,10 @@ export class CompanyAccessComponent implements OnInit {
     this.toastTimer = setTimeout(() => this.toast.set(''), 3200);
   }
 
-  readonly pageTitle = computed(() => this.tab() === 'users' ? 'Users' : this.tab() === 'roles' ? 'Roles' : 'Admin Access');
-  readonly pageSub = computed(() => this.tab() === 'users'
+  openPrint(): void { this.printOpened.set(true); this.tab.set('print'); }
+
+  readonly pageTitle = computed(() => this.tab() === 'print' ? 'Print Settings' : this.tab() === 'users' ? 'Users' : this.tab() === 'roles' ? 'Roles' : 'Admin Access');
+  readonly pageSub = computed(() => this.tab() === 'print' ? 'Logo, seal, bank and other details printed on quotations' : this.tab() === 'users'
     ? 'Roles decide which apps and menus each person can use'
     : this.tab() === 'roles' ? 'Choose modules, then what each role can do'
     : 'The tenant admin always has access and can grant it to others');

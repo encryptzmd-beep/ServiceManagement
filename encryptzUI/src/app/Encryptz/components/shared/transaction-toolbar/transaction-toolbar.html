@@ -18,6 +18,11 @@
     <button type="button" class="tb-btn" data-tb="print" [disabled]="!printOn()" (click)="print.emit()" title="Print">
       <span class="material-icons" aria-hidden="true">print</span><span class="tb-text">Print</span>
     </button>
+    @if (canPdf()) {
+      <button type="button" class="tb-btn" data-tb="pdf" [disabled]="!pdfOn()" (click)="downloadPdf.emit()" title="Download as PDF" aria-label="Download as PDF">
+        <span class="material-icons" aria-hidden="true">picture_as_pdf</span><span class="tb-text">{{ pdfBusy() ? 'Preparing…' : 'PDF' }}</span>
+      </button>
+    }
     <button type="button" class="tb-btn danger" data-tb="cancel" [disabled]="!cancelOn()" (click)="cancelDoc.emit()" title="Cancel (void) this document">
       <span class="material-icons" aria-hidden="true">block</span><span class="tb-text">Cancel</span>
     </button>

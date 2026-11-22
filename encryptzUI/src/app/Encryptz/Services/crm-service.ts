@@ -94,6 +94,11 @@ export class CrmService {
     return this.http.get<ApiResponse<QuotationDto>>(`${this.base}/quotations/${id}`);
   }
 
+  /** Settings > Print, readable by a CRM user for the quotation print. */
+  getPrintSettings(): Observable<ApiResponse<Record<string, string>>> {
+    return this.http.get<ApiResponse<Record<string, string>>>(`${this.base}/print-settings`);
+  }
+
   reviseQuotation(id: number): Observable<ApiResponse<number>> {
     return this.http.post<ApiResponse<number>>(`${this.base}/quotations/${id}/revise`, {});
   }

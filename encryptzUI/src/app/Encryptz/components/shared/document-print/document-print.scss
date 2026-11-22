@@ -1,0 +1,82 @@
+/* One A4 portrait layout. Sizes are in mm / pt and colours are forced, so paper and PDF match. */
+$line: #000;
+$blue: #45b0e1;
+$green: #3b7d23;
+$green-mid: #6fb24e;
+$green-light: #b5e6a2;
+$green-pale: #d9f2d0;
+$bill: #dae9f8;
+$soft: #f2f2f2;
+/* price + quantity + amount columns, so every block lines up with the table */
+$right-column: 78mm;
+
+:host { display: block; }
+
+.dp-sheet {
+  box-sizing: border-box; width: 190mm; margin: 0 auto; background: #fff; color: #000;
+  font-family: Arial, Helvetica, sans-serif; font-size: 9.5pt; line-height: 1.25;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  *, *::before, *::after { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+.dp-band { min-height: 7mm; background: $green-pale; }
+.dp-band-text { padding: 1.5mm; text-align: center; }
+.dp-banner { display: block; max-width: 100%; max-height: 32mm; margin: 0 auto; object-fit: contain; }
+
+.dp-head { display: flex; justify-content: space-between; align-items: center; gap: 8mm; padding: 1mm 1mm 0; }
+.dp-company { min-width: 0; h1 { margin: 0 0 .5mm; color: #1f4e96; font-size: 17pt; line-height: 1.1; } }
+.dp-logo { display: block; width: 62mm; max-height: 25mm; object-fit: contain; object-position: right center; flex: none; }
+.dp-title { margin: 1.5mm 0 1mm; text-align: center; font-size: 12.5pt; }
+
+.dp-billbar { display: grid; grid-template-columns: 1fr $right-column; border-bottom: .2mm solid #999;
+  span { padding: .5mm 1mm; background: $bill; } span:last-child { background: $soft; } }
+.dp-party { display: grid; grid-template-columns: 1fr $right-column; gap: 0; align-items: start; padding: 4mm 0 3mm; }
+.dp-customer { padding-left: 1mm; }
+.dp-customer-name { font-weight: 700; }
+.dp-customer-gap { margin-top: 3mm; }
+.dp-meta { width: 100%; border-collapse: collapse; table-layout: fixed;
+  td { height: 4.6mm; padding: .3mm 1mm; border: .15mm solid #777; }
+  td:last-child { text-align: right; font-weight: 700; overflow-wrap: anywhere; } }
+
+.dp-table { width: 100%; border-collapse: collapse; table-layout: fixed;
+  .c-sl { width: 14mm; } .c-price { width: 22mm; } .c-qty { width: 17mm; } .c-amt { width: 39mm; }
+  th, td { padding: .6mm 1mm; border: .2mm solid $line; vertical-align: middle; overflow-wrap: anywhere; }
+  th { font-weight: 400; text-align: center; }
+  tr { break-inside: avoid; page-break-inside: avoid; }
+  .left { text-align: left; } .center { text-align: center; } .right { text-align: right; } .strong { font-weight: 700; }
+  .blue th { background: $blue; }
+  .plain { border-top: 0; border-bottom: 0; }
+  .green-total { background: $green; color: #fff; font-weight: 700; }
+  .light-total, .sum { text-align: right; span { float: left; } }
+  .light-total { background: $green-light; font-weight: 700; }
+}
+.dp-line td { padding-top: 1.2mm; padding-bottom: 1.2mm; }
+.dp-detail { font-size: 8.5pt; }
+.dp-pre { white-space: pre-wrap; }
+.dp-final { .dp-words { background: $soft; text-align: center; } small { display: block; text-align: left; font-size: 9.5pt; } }
+
+.dp-lower { display: grid; grid-template-columns: 1fr $right-column; border: .2mm solid $line; border-top: 0; break-inside: avoid; page-break-inside: avoid;
+  h3 { margin: 0; padding: .3mm 1mm; font-size: 9.5pt; }
+  h3.green { background: $green-mid; }
+  h3.blue { background: $blue; }
+  h3.center { text-align: center; }
+  ol { margin: 0; padding: 1mm 2mm 1mm 8mm; li { padding: .35mm 0 .35mm 2mm; } }
+}
+.dp-left { min-width: 0; border-right: .2mm solid $line; }
+.dp-right { display: flex; flex-direction: column; min-width: 0;
+  dl { margin: 0; padding: 1.5mm 1mm; font-weight: 700; > div { display: grid; grid-template-columns: 26mm 1fr; padding: .7mm 0; } }
+  dt, dd { margin: 0; overflow-wrap: anywhere; } }
+/* the seal keeps one size however tall the warranty and terms beside it are */
+.dp-seal { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 1mm; min-height: 32mm; padding: 1.5mm 1mm; border-top: .2mm solid $line; background: $green-pale;
+  img { display: block; flex: none; width: auto; height: 25mm; max-width: 50mm; object-fit: contain; } }
+
+.dp-closing { padding: 1.2mm 2mm; border: .2mm solid $line; border-top: 0; background: $green-pale; text-align: center; break-inside: avoid; page-break-inside: avoid; }
+.dp-regards { margin-top: 2mm; padding-right: 1mm; text-align: right; break-inside: avoid; page-break-inside: avoid; b { display: block; } }
+.dp-footer-text { margin-top: 3mm; padding-top: 1mm; border-top: .2mm solid $line; text-align: center; }
+
+@media print {
+  /* overrides the app's landscape default while this document is on the page */
+  @page { size: A4 portrait; margin: 10mm; }
+  :host { width: 190mm; }
+  .dp-sheet { margin: 0; }
+}

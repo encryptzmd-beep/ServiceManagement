@@ -82,6 +82,7 @@ namespace EncryptzBL.DTO_s
         public DateTime OrderDate { get; set; } = DateTime.Today;
         public int CustomerId { get; set; }
         public string? PaymentMode { get; set; }
+        public DateTime? PaymentDueDate { get; set; }
         public string? ReferenceNo { get; set; }
         public string? ContactNumber { get; set; }
         public string? GSTIN { get; set; }
@@ -91,6 +92,8 @@ namespace EncryptzBL.DTO_s
         public string? PinCode { get; set; }
         public bool IsInterState { get; set; }
         public string? Notes { get; set; }
+        public string? Terms { get; set; }
+        public string? WarrantyText { get; set; }
         public List<SalesOrderItemSaveDto> Items { get; set; } = new();
     }
 
@@ -147,6 +150,7 @@ namespace EncryptzBL.DTO_s
         public DateTime OrderDate { get; set; }
         public string Status { get; set; } = string.Empty;
         public string? PaymentMode { get; set; }
+        public DateTime? PaymentDueDate { get; set; }
         public string? ReferenceNo { get; set; }
         public int CustomerId { get; set; }
         public string CustomerName { get; set; } = string.Empty;
@@ -160,6 +164,8 @@ namespace EncryptzBL.DTO_s
         public string? PinCode { get; set; }
         public bool IsInterState { get; set; }
         public string? Notes { get; set; }
+        public string Terms { get; set; } = string.Empty;
+        public string WarrantyText { get; set; } = string.Empty;
         public decimal SubTotal { get; set; }
         public decimal DiscountTotal { get; set; }
         public decimal TaxableTotal { get; set; }
@@ -189,6 +195,8 @@ namespace EncryptzBL.DTO_s
         public decimal GstAmount { get; set; }
         public decimal LineTotal { get; set; }
         public int WarrantyMonths { get; set; }
+        public string? ProductDescription { get; set; }
+        public decimal? Mrp { get; set; }
         public int DespatchedQty { get; set; }
         public string? SerialNumbers { get; set; }
         public DateTime? WarrantyStartDate { get; set; }

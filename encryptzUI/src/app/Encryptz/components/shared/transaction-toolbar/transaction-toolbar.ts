@@ -29,12 +29,16 @@ export class TransactionToolbarComponent {
   previousId = input<number | null>(null);
   nextId = input<number | null>(null);
   busy = input(false);
+  /** Offer the PDF download of a saved document. */
+  canPdf = input(false);
+  pdfBusy = input(false);
 
   newDoc = output<void>();
   edit = output<void>();
   discard = output<void>();
   save = output<void>();
   print = output<void>();
+  downloadPdf = output<void>();
   cancelDoc = output<void>();
   previous = output<void>();
   next = output<void>();
@@ -43,6 +47,8 @@ export class TransactionToolbarComponent {
   readonly saveOn = computed(() => !this.busy() && this.mode() !== 'view' && this.canSave());
   readonly editOn = computed(() => !this.busy() && this.canEdit());
   readonly printOn = computed(() => !this.busy() && this.mode() !== 'new');
+  /** The PDF is of what is saved, so not while it is being changed. */
+  readonly pdfOn = computed(() => !this.busy() && !this.pdfBusy() && this.mode() === 'view');
   readonly cancelOn = computed(() => !this.busy() && this.mode() === 'view' && this.canCancel());
   readonly previousOn = computed(() => !this.busy() && this.previousId() != null);
   readonly nextOn = computed(() => !this.busy() && this.nextId() != null);

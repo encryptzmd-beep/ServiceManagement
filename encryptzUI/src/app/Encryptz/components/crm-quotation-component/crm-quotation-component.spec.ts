@@ -61,6 +61,7 @@ describe('CrmQuotationComponent', () => {
       getQuotation: () => ok(current),
       getLead: () => ok({ leadId: 5, leadNo: 'LD-0005', contactName: 'Meera', status: 'Qualified' }),
       searchProducts: () => ok([]),
+      getPrintSettings: () => ok({}),
       saveQuotation: vi.fn(() => ok(30)),
       reviseQuotation: vi.fn(() => ok(31)),
       quotationNeighbours: vi.fn(() => ok({ previousId: 29, nextId: 31 })),
@@ -129,6 +130,18 @@ describe('CrmQuotationComponent', () => {
     const lines = f.componentInstance.lines();
     expect(lines.length).toBe(1);
     expect(lines[0]).toEqual(expect.objectContaining({ productMasterId: 9, productName: 'Treadmill T-10C', rate: 45000, warrantyMonths: 24, hsnSac: '9506' }));
+  });
+
+  it('picking a customer on a new quotation leaves the item lines blank', () => {
+    params = { id: 'new' };
+    query = {};
+    crm.getLead = () => ok({ leadId: 5, leadNo: 'LD-0005', contactName: 'Meera', status: 'Qualified', productMasterId: 9, productName: 'Treadmill T-10C',
+      products: [{ productMasterId: 9, productName: 'Treadmill T-10C', qty: 2 }] });
+    const f = create();
+    f.componentInstance.useLead(5);
+    expect(f.componentInstance.customer()?.name).toBe('Meera');
+    expect(f.componentInstance.lines().length).toBe(1);
+    expect(f.componentInstance.lines()[0].productName).toBe('');
   });
 
   it('a lead product that matches no name term is still found, by its category', () => {
@@ -484,6 +497,52 @@ describe('CrmQuotationComponent', () => {
       f.componentInstance.save();
       expect(crm.saveLead).toHaveBeenCalledWith(expect.objectContaining({ leadId: 0, contactName: 'Ravi', mobile: '98765 43210', remarks: 'Created from a quotation' }));
       expect(crm.saveQuotation).toHaveBeenCalledWith(expect.objectContaining({ quotationId: 0, leadId: 77 }));
+    });
+
+    it('shows at most 20 open customers on focus, and searches from one letter', () => {
+      params = { id: 'new' };
+      const rows = Array.from({ length: 25 }, (_, i) => ({ leadId: i + 1, leadNo: 'LD-' + i, contactName: 'Customer ' + i, mobile: '9876500000', status: i === 0 ? 'Lost' : 'New' }));
+      crm.getLeads = vi.fn(() => ok({ items: rows, totalCount: 25 }));
+      const f = create();
+      const c = f.componentInstance;
+      c.searchLeads('');
+      expect(crm.getLeads).toHaveBeenLastCalledWith(expect.objectContaining({ search: undefined }));
+      expect(c.leadListOpen()).toBe(true);
+      expect(c.leadResults().length).toBe(20);
+      expect(c.leadResults().some((l: any) => l.status === 'Lost')).toBe(false);
+      c.searchLeads('a');
+      expect(crm.getLeads).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'a' }));
+    });
+
+    it('a new quotation starts with the terms and warranty of Print Settings, as its own copy', () => {
+      params = { id: 'new' };
+      crm.getPrintSettings = () => ok({ 'Print.Terms': 'Payment on billing', 'Print.Warranty': 'One year' });
+      const f = create();
+      const c = f.componentInstance;
+      expect(c.head().terms).toBe('Payment on billing');
+      expect(c.head().warrantyText).toBe('One year');
+      expect(c.isDirty()).toBe(false);
+      c.setHead('warrantyText', 'Two years');
+      expect(c.head().warrantyText).toBe('Two years');
+    });
+
+    it('a saved quotation keeps its own text and is not refilled', () => {
+      current = quotation({ terms: 'Own terms', warrantyText: '' });
+      crm.getPrintSettings = vi.fn(() => ok({ 'Print.Terms': 'Default', 'Print.Warranty': 'Default' }));
+      const c = create().componentInstance;
+      expect(c.head().terms).toBe('Own terms');
+      expect(c.head().warrantyText).toBe('');
+      expect(crm.getPrintSettings).not.toHaveBeenCalled();
+    });
+
+    it('offers the PDF on a saved quotation, not on a new one', () => {
+      const saved = create();
+      saved.detectChanges();
+      expect(saved.nativeElement.querySelector('[data-tb="pdf"]')).not.toBeNull();
+      params = { id: 'new' };
+      const fresh = create();
+      fresh.detectChanges();
+      expect(fresh.nativeElement.querySelector('[data-tb="pdf"]')).toBeNull();
     });
 
     it('a picked lead fills the customer card', () => {

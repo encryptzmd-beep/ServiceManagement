@@ -12,16 +12,19 @@ namespace EncryptzBL.Infrastructure.User.Modules
     {
         private readonly IPlatformService _platform;
         private readonly ITenantUserSyncService _userSync;
+        private readonly IConnectionResolver _connections;
         private readonly ILogger<CompanyAccessService> _logger;
 
         public CompanyAccessService(
             MainDbHelper db,
             IPlatformService platform,
             ITenantUserSyncService userSync,
+            IConnectionResolver connections,
             ILogger<CompanyAccessService> logger) : base(db)
         {
             _platform = platform;
             _userSync = userSync;
+            _connections = connections;
             _logger = logger;
         }
 
@@ -97,6 +100,84 @@ namespace EncryptzBL.Infrastructure.User.Modules
             catch (Exception ex) when (CompanyCreateRules.IsNotInstalled(ex))
             {
                 return ApiResponse<CompanyAccessOverviewDto>.Fail(CompanyAccessRules.NotInstalled);
+            }
+        }
+
+        // ── print settings: kept in the company's own database, reached here without a module scope ──
+
+        private async Task<ExplicitDbHelper?> CompanyDbAsync(int companyId)
+        {
+            var dt = await GetDataTableByQueryAsync(
+                @"SELECT TenantKey FROM dbo.Companies
+                  WHERE CompanyId = @CompanyId AND IsActive = 1 AND ProvisionStatus = 'Ready' AND TenantKey IS NOT NULL",
+                new[] { SqlParameterHelper.Input("@CompanyId", companyId) });
+            if (dt.Rows.Count == 0) return null;
+            return new ExplicitDbHelper(await _connections.GetServiceConnectionAsync(dt.Rows[0]["TenantKey"].ToString()!));
+        }
+
+        private static async Task<List<SystemSetting>> ReadPrintRowsAsync(ExplicitDbHelper tenantDb)
+        {
+            var dt = await tenantDb.ExecuteDataTableAsync("sp_Settings_GetAll", new[]
+            {
+                SqlParameterHelper.Input("@SettingGroup", PrintSettingRules.Group)
+            });
+            return dt.ToList<SystemSetting>().Where(r => r.SettingGroup == PrintSettingRules.Group).ToList();
+        }
+
+        public async Task<ApiResponse<Dictionary<string, string>>> GetPrintSettings(PlatformActor actor)
+        {
+            if (!(await ReadRightsAsync(actor)).CanManage)
+                return ApiResponse<Dictionary<string, string>>.Fail(CompanyAccessRules.NotAllowed);
+            try
+            {
+                var tenantDb = await CompanyDbAsync(actor.CompanyId);
+                if (tenantDb == null) return ApiResponse<Dictionary<string, string>>.Fail("The company's database is not ready");
+
+                var rows = await ReadPrintRowsAsync(tenantDb);
+                if (!rows.Any(r => r.SettingKey == "Print.CompanyLogo"))
+                    return ApiResponse<Dictionary<string, string>>.Fail(PrintSettingRules.NotInstalled);
+
+                return ApiResponse<Dictionary<string, string>>.Ok(rows.ToDictionary(r => r.SettingKey, r => r.SettingValue ?? string.Empty));
+            }
+            catch (TenantNotRoutableException)
+            {
+                return ApiResponse<Dictionary<string, string>>.Fail("The company's database is not ready");
+            }
+        }
+
+        public async Task<ApiResponse<bool>> SavePrintSettings(SavePrintSettingsRequest req, PlatformActor actor)
+        {
+            if (!(await ReadRightsAsync(actor)).CanManage)
+                return ApiResponse<bool>.Fail(CompanyAccessRules.NotAllowed);
+            if (req?.Values == null || req.Values.Count == 0) return ApiResponse<bool>.Ok(true, "Nothing to save");
+            try
+            {
+                var tenantDb = await CompanyDbAsync(actor.CompanyId);
+                if (tenantDb == null) return ApiResponse<bool>.Fail("The company's database is not ready");
+
+                // only rows of the Print group can be reached, whatever the request names
+                var rows = (await ReadPrintRowsAsync(tenantDb)).ToDictionary(r => r.SettingKey);
+                var updates = new List<object>();
+                foreach (var (key, value) in req.Values)
+                {
+                    if (!rows.TryGetValue(key, out var row) || !row.IsEditable)
+                        return ApiResponse<bool>.Fail("That print setting cannot be changed");
+                    var problem = PrintSettingRules.Problem(key, value, row.DataType);
+                    if (problem != null) return ApiResponse<bool>.Fail(problem);
+                    updates.Add(new { id = row.SettingId, value = value ?? string.Empty });
+                }
+
+                // ModifiedBy holds a company-database user id, which a MainDB actor does not have here
+                await tenantDb.ExecuteDataTableAsync("sp_Settings_BulkUpdate", new[]
+                {
+                    SqlParameterHelper.Input("@SettingsJson", JsonSerializer.Serialize(updates)),
+                    SqlParameterHelper.Input("@ModifiedBy", null)
+                });
+                return ApiResponse<bool>.Ok(true, "Print settings saved");
+            }
+            catch (TenantNotRoutableException)
+            {
+                return ApiResponse<bool>.Fail("The company's database is not ready");
             }
         }
 

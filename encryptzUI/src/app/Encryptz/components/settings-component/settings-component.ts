@@ -49,7 +49,13 @@ export class SettingsComponent {
   loadData() {
     this.loading.set(true);
     this.svc.getAll().subscribe({
-      next: d => { this.settings.set(d); if (d.length && !d.some(s => s.settingGroup === this.activeGroup())) this.activeGroup.set(d[0].settingGroup); this.loading.set(false); },
+      next: all => {
+        // the print details are the company's: they are edited under the gear on the apps page
+        const d = all.filter(s => s.settingGroup !== 'Print');
+        this.settings.set(d);
+        if (d.length && !d.some(s => s.settingGroup === this.activeGroup())) this.activeGroup.set(d[0].settingGroup);
+        this.loading.set(false);
+      },
       error: () => { this.settings.set([]); this.loading.set(false); }
     });
   }

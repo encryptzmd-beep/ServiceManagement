@@ -29,7 +29,7 @@ namespace EncryptzBL.Infrastructure.Crm
                 }
 
                 // the amounts of every line and the totals are worked out here, as the Sales Order screen does
-                var t = CrmRules.Totals(dto.Items, dto.IsInterState);
+                var t = CrmRules.Totals(dto.Items, dto.IsInterState, dto.PricesIncludeGst);
                 var itemsJson = JsonSerializer.Serialize(dto.Items, ItemsJsonOptions);
 
                 var dt = await GetDataTableAsync("crm.sp_Quotation_Save", new[]
@@ -38,7 +38,9 @@ namespace EncryptzBL.Infrastructure.Crm
                     In("@IsManager", isManager), In("@LocationId", LocationId), In("@QuoteDate", dto.QuoteDate.Date),
                     In("@ValidUntil", dto.ValidUntil?.Date), In("@IsInterState", dto.IsInterState), In("@SubTotal", t.SubTotal),
                     In("@DiscountTotal", t.DiscountTotal), In("@TaxableTotal", t.TaxableTotal), In("@CGST", t.CGST), In("@SGST", t.SGST),
-                    In("@IGST", t.IGST), In("@GrandTotal", t.GrandTotal), In("@Terms", dto.Terms), In("@ItemsJson", itemsJson)
+                    In("@IGST", t.IGST), In("@GrandTotal", t.GrandTotal), In("@Terms", dto.Terms), In("@ReferenceNo", dto.ReferenceNo),
+                    In("@PaymentDueDate", dto.PaymentDueDate?.Date), In("@CustomerGstin", dto.CustomerGstin),
+                    In("@PricesIncludeGst", dto.PricesIncludeGst), In("@WarrantyText", dto.WarrantyText), In("@ItemsJson", itemsJson)
                 });
                 return ToResponse(Answer(dt));
             });

@@ -221,6 +221,9 @@ export interface QuotationItemDto {
   gstAmount: number;
   lineTotal: number;
   sortOrder: number;
+  /** From the product master, for the print. */
+  productDescription?: string | null;
+  mrp?: number | null;
 }
 
 export interface QuotationSaveDto {
@@ -230,6 +233,11 @@ export interface QuotationSaveDto {
   validUntil?: string | null;
   isInterState: boolean;
   terms?: string | null;
+  referenceNo?: string | null;
+  paymentDueDate?: string | null;
+  customerGstin?: string | null;
+  pricesIncludeGst?: boolean;
+  warrantyText?: string | null;
   items: QuotationItemDto[];
 }
 
@@ -249,6 +257,11 @@ export interface QuotationDto {
   igst: number;
   grandTotal: number;
   terms: string;
+  referenceNo?: string | null;
+  paymentDueDate?: string | null;
+  customerGstin?: string | null;
+  pricesIncludeGst?: boolean;
+  warrantyText?: string | null;
   status: string;
   createdAt: string;
   updatedAt: string;

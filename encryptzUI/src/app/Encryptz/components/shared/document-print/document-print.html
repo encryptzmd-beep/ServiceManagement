@@ -1,0 +1,116 @@
+@let d = doc();
+<article class="dp-sheet">
+  @if (headerMode() === 'image') {
+    <img class="dp-banner" [src]="s('Print.HeaderImage')" alt="" />
+  } @else if (headerMode() === 'text') {
+    <div class="dp-band dp-band-text">@for (l of lines('Print.HeaderText'); track $index) { <div>{{ l }}</div> }</div>
+  } @else {
+    <div class="dp-band"></div>
+  }
+
+  <header class="dp-head">
+    <div class="dp-company">
+      <h1>{{ companyName() }}</h1>
+      @for (l of addressLines(); track $index) { <div>{{ l }}</div> }
+      @if (phone()) { <div>Phone : {{ phone() }}</div> }
+      @if (s('Print.CompanyGSTIN')) { <div>GSTIN : <b>{{ s('Print.CompanyGSTIN') }}</b></div> }
+      @if (s('Print.CompanyMSME')) { <div>MSME : <b>{{ s('Print.CompanyMSME') }}</b></div> }
+      @if (s('Print.CompanyEmail')) { <div>Email : {{ s('Print.CompanyEmail') }}</div> }
+    </div>
+    @if (s('Print.CompanyLogo')) { <img class="dp-logo" [src]="s('Print.CompanyLogo')" alt="Company logo" /> }
+  </header>
+
+  <h2 class="dp-title">{{ d.title }}</h2>
+
+  <div class="dp-billbar"><span>Bill To:</span><span></span></div>
+  <section class="dp-party">
+    <div class="dp-customer">
+      <div class="dp-customer-name">{{ d.billTo.name }}</div>
+      @for (l of d.billTo.lines; track $index) { <div>{{ l }}</div> }
+      <div class="dp-customer-gap">Phone : {{ d.billTo.phone }}</div>
+      @if (d.billTo.email) { <div>Email : {{ d.billTo.email }}</div> }
+      <div>GSTIN : <b>{{ d.billTo.gstin }}</b></div>
+    </div>
+    <table class="dp-meta">
+      @for (m of d.metaRows; track m.label) { <tr><td>{{ m.label }}</td><td>{{ m.value }}</td></tr> }
+    </table>
+  </section>
+
+  <table class="dp-table">
+    <colgroup><col class="c-sl" /><col /><col class="c-price" /><col class="c-qty" /><col class="c-amt" /></colgroup>
+    <thead>
+      <tr class="blue"><th>Sl. No.</th><th class="left">Description</th><th>Price /Unit{{ d.pricesIncludeGst ? ' (Incl. GST)' : '' }}</th><th>Quantity</th><th>Amount</th></tr>
+    </thead>
+    <tbody>
+      @for (l of d.lines; track $index; let n = $index) {
+        <tr class="dp-line">
+          <td class="center">{{ n + 1 }}</td>
+          <td><div>{{ l.description }}</div>@for (x of l.details; track $index) { <div class="dp-detail">{{ x }}</div> }</td>
+          <td class="center">{{ money(l.rate) }}</td>
+          <td class="center">{{ l.qty }}</td>
+          <td class="right">₹ {{ money(l.amount) }}</td>
+        </tr>
+      }
+      @if (s('Print.ItemsNote')) { <tr><td colspan="4" class="center strong">{{ s('Print.ItemsNote') }}</td><td></td></tr> }
+      @if (d.notes) { <tr><td colspan="5" class="dp-pre">{{ d.notes }}</td></tr> }
+      <tr><td colspan="2" class="plain"></td><td colspan="2" class="green-total">Sub Total{{ d.pricesIncludeGst ? ' (Incl. GST)' : '' }}</td><td class="light-total"><span>₹</span>{{ money(d.subTotal) }}</td></tr>
+      @if (d.discountTotal) { <tr><td colspan="2" class="plain"></td><td colspan="2">Discount</td><td class="sum"><span>₹</span>{{ money(d.discountTotal) }}</td></tr> }
+      @if (d.pricesIncludeGst) { <tr><td colspan="2" class="plain"></td><td colspan="2">Taxable Value</td><td class="sum"><span>₹</span>{{ money(d.taxableTotal ?? 0) }}</td></tr> }
+      @if (d.isInterState) {
+        <tr><td colspan="2" class="plain"></td><td colspan="2">IGST{{ d.pricesIncludeGst ? ' (included)' : '' }}</td><td class="sum"><span>₹</span>{{ money(d.igst) }}</td></tr>
+      } @else {
+        <tr><td colspan="2" class="plain"></td><td colspan="2">CGST{{ d.pricesIncludeGst ? ' (included)' : '' }}</td><td class="sum"><span>₹</span>{{ money(d.cgst) }}</td></tr>
+        <tr><td colspan="2" class="plain"></td><td colspan="2">SGST{{ d.pricesIncludeGst ? ' (included)' : '' }}</td><td class="sum"><span>₹</span>{{ money(d.sgst) }}</td></tr>
+      }
+      <tr class="dp-final">
+        <td colspan="2" class="dp-words"><small>Amount In Words:</small><b>{{ words() }}</b></td>
+        <td colspan="2" class="green-total center">Final Amount:</td>
+        <td class="light-total"><span>₹</span>{{ money(d.grandTotal) }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <section class="dp-lower">
+    <div class="dp-left">
+      @if (warranty().length) {
+        <h3 class="green">Warranty</h3>
+        <ol>@for (w of warranty(); track $index) { <li>{{ w }}</li> }</ol>
+      }
+      <h3 class="blue">Terms &amp; Conditions</h3>
+      @if (terms().length) {
+        <ol>@for (t of terms(); track $index) { <li>{{ t }}</li> }</ol>
+      }
+    </div>
+    <div class="dp-right">
+      @if (hasBank()) {
+        <h3 class="green center">Bank Details</h3>
+        <dl>
+          <div><dt>Account Holder</dt><dd>: {{ s('Print.BankAccountHolder') }}</dd></div>
+          <div><dt>Account No.</dt><dd>: {{ s('Print.BankAccountNo') }}</dd></div>
+          <div><dt>IFS Code</dt><dd>: {{ s('Print.BankIFSC') }}</dd></div>
+          <div><dt>Bank Name</dt><dd>: {{ s('Print.BankName') }}</dd></div>
+        </dl>
+      }
+      <div class="dp-seal">
+        @if (s('Print.SealImage')) { <img [src]="s('Print.SealImage')" alt="Seal and signature" /> }
+        <b>Seal &amp; Signature</b>
+      </div>
+    </div>
+  </section>
+
+  @if (closing().length) {
+    <section class="dp-closing">@for (l of closing(); track $index) { <div>{{ l }}</div> }</section>
+  }
+
+  <footer class="dp-regards">
+    <div>Thanks &amp; Regards</div>
+    <b>{{ s('Print.SignatoryName') || companyName() }}</b>
+    @if (s('Print.SignatoryMobile')) { <div>Mob: {{ s('Print.SignatoryMobile') }}</div> }
+  </footer>
+
+  @if (footerMode() === 'image') {
+    <img class="dp-banner" [src]="s('Print.FooterImage')" alt="" />
+  } @else if (footerMode() === 'text') {
+    <div class="dp-footer-text">@for (l of lines('Print.FooterText'); track $index) { <div>{{ l }}</div> }</div>
+  }
+</article>

@@ -55,7 +55,17 @@
   padding: 12px 18px; border-bottom: 1px solid var(--border);
   font-size: 14.5px; font-weight: 600;
 }
+.card-head.collapsed { border-bottom: 0; }
 .card-head-hint { font-size: 12px; font-weight: 400; color: var(--muted); }
+.card-head-end { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex: 1 1 220px; min-width: 0; }
+.card-head-summary { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 500; color: var(--text); }
+.card-collapse {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px;
+  border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--navy); cursor: pointer;
+  .material-icons { font-size: 20px; }
+  &:hover { border-color: var(--navy); }
+  &:focus-visible { outline: 2px solid var(--navy); outline-offset: 1px; }
+}
 .card-body { padding: 16px 18px; &.no-pad { padding: 0; } }
 
 .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
@@ -160,7 +170,9 @@ table.lines {
 @media (max-width: 900px) { .bottom-grid { grid-template-columns: 1fr; } }
 
 // the Notes textarea sits directly in the card body (not in a .field)
-.card-body > textarea {
+.so-text-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; margin-top: 14px; }
+@media (max-width: 640px) { .so-text-grid { grid-template-columns: minmax(0, 1fr); } }
+.card-body > textarea, .so-text-grid textarea {
   width: 100%; min-height: 96px; border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px;
   font-size: 13.5px; color: var(--text); background: #fff; outline: none; resize: vertical; line-height: 1.45;
   &:focus { border-color: var(--navy-mid); box-shadow: 0 0 0 3px rgba(74, 122, 181, 0.15); }
@@ -224,47 +236,7 @@ table.lines {
   .modal-overlay { display: none !important; }
   .so-page { padding: 0; }
 
-  .invoice-print {
-    display: block;
-    font-size: 11.5pt; color: #000; background: #fff;
-
-    .inv-custom-header, .inv-custom-footer { text-align: center; font-size: 10pt; padding: 6px 0; border-bottom: 1px solid #000; }
-    .inv-custom-footer { border-bottom: none; border-top: 1px solid #000; margin-top: 16px; }
-    .inv-custom-header.image, .inv-custom-footer.image { border: none; padding: 0 0 8px; img { display: block; max-width: 100%; max-height: 140px; margin: 0 auto; object-fit: contain; } }
-    .inv-custom-footer.image { padding: 8px 0 0; }
-
-    .inv-top { display: flex; justify-content: space-between; gap: 24px; padding: 12px 0; border-bottom: 2px solid #000; }
-    .inv-company-name { font-size: 18pt; font-weight: 700; }
-    .inv-company-line { font-size: 10pt; }
-    .inv-meta { text-align: right; }
-    .inv-title { font-size: 14pt; font-weight: 700; letter-spacing: 0.08em; margin-bottom: 6px; }
-    .inv-meta table { margin-left: auto; font-size: 10pt; td { padding: 1px 6px; } td:first-child { color: #333; text-align: right; } }
-
-    .inv-parties { display: flex; gap: 16px; padding: 12px 0; }
-    .inv-box { flex: 1; border: 1px solid #000; padding: 8px 10px; font-size: 10pt; }
-    .inv-box-title { font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
-    .inv-box-name { font-weight: 700; font-size: 11pt; }
-
-    .inv-items { width: 100%; border-collapse: collapse; font-size: 10pt; margin-top: 4px;
-      th, td { border: 1px solid #000; padding: 5px 6px; vertical-align: top; }
-      th { background: #eee; font-size: 9pt; text-transform: uppercase; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .r { text-align: right; white-space: nowrap; }
-    }
-    .inv-item-name { font-weight: 600; }
-    .inv-item-sub { font-size: 9pt; color: #333; }
-
-    .inv-bottom { display: flex; justify-content: space-between; gap: 16px; margin-top: 10px; page-break-inside: avoid; }
-    .inv-words { flex: 1; font-size: 10pt; }
-    .inv-notes { white-space: pre-wrap; }
-    .inv-totals { min-width: 280px; border-collapse: collapse; font-size: 10.5pt;
-      td { padding: 4px 8px; border-bottom: 1px solid #ccc; }
-      .r { text-align: right; white-space: nowrap; }
-      .grand td { font-weight: 700; font-size: 12pt; border-top: 2px solid #000; border-bottom: 2px solid #000; }
-    }
-
-    .inv-sign { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 28px; font-size: 9.5pt; page-break-inside: avoid; }
-    .inv-sign-box { text-align: center; min-width: 220px; border-top: 1px solid #000; padding-top: 4px; }
-  }
+  .invoice-print { display: block; }
 }
 
 // mapped location of an existing customer (lat / long from the master)
@@ -281,6 +253,6 @@ table.lines {
   small { width: 100%; color: var(--muted); font-size: 11.5px; }
 }
 
-/* the product autocomplete list must not be cut by the card or the scrolling table while it is open */
-.card:has(.ac.open), .table-scroll:has(.ac.open) { overflow: visible; }
+/* the customer and product lists must not be cut by the card or the scrolling table while they are open */
+.card:has(.ac.open), .card:has(.customer-dropdown), .table-scroll:has(.ac.open) { overflow: visible; }
 .lines-table td app-autocomplete, td > app-autocomplete { display: block; min-width: 240px; }
