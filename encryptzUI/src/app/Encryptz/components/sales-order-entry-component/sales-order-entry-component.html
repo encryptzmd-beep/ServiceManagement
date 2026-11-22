@@ -58,6 +58,10 @@
         </select>
       </div>
       <div class="field">
+        <label>Payment Due Date</label>
+        <input type="date" [(ngModel)]="paymentDueDate" [min]="orderDate" [disabled]="!isEditable()" />
+      </div>
+      <div class="field">
         <label>Reference / PO No.</label>
         <input type="text" [(ngModel)]="referenceNo" placeholder="Optional" [disabled]="!isEditable()" />
       </div>
@@ -342,119 +346,9 @@
   }
 
   <!-- ── invoice print (only visible when printing) ─────────── -->
-  @if (!isNew()) {
+  @if (!isNew() && printDoc(); as doc) {
     <div class="invoice-print">
-      @if (headerMode() === 'text') {
-        <div class="inv-custom-header">
-          @for (l of printLines('Print.HeaderText'); track $index) { <div>{{ l }}</div> }
-        </div>
-      } @else if (headerMode() === 'image') {
-        <div class="inv-custom-header image"><img [src]="ps('Print.HeaderImage')" alt="Header" /></div>
-      }
-
-      <div class="inv-top">
-        <div class="inv-company">
-          <div class="inv-company-name">{{ printCompanyName() || 'Tax Invoice' }}</div>
-          @for (l of printLines('Print.CompanyAddress'); track $index) { <div class="inv-company-line">{{ l }}</div> }
-          @if (ps('Print.CompanyPhone')) { <div class="inv-company-line">{{ ps('Print.CompanyPhone') }}</div> }
-          @if (ps('Print.CompanyGSTIN')) { <div class="inv-company-line"><strong>GSTIN:</strong> {{ ps('Print.CompanyGSTIN') }}</div> }
-        </div>
-        <div class="inv-meta">
-          <div class="inv-title">TAX INVOICE</div>
-          <table>
-            <tr><td>Invoice No</td><td><strong>{{ orderNo() }}</strong></td></tr>
-            <tr><td>Invoice Date</td><td>{{ orderDate | date:'dd MMM yyyy' }}</td></tr>
-            <tr><td>Payment Mode</td><td>{{ paymentMode || '—' }}</td></tr>
-            @if (referenceNo) { <tr><td>Reference / PO</td><td>{{ referenceNo }}</td></tr> }
-            <tr><td>Status</td><td>{{ status() }}</td></tr>
-          </table>
-        </div>
-      </div>
-
-      <div class="inv-parties">
-        <div class="inv-box">
-          <div class="inv-box-title">Bill To</div>
-          <div class="inv-box-name">{{ customer()?.customerName }}</div>
-          @if (billingAddress) { <div>{{ billingAddress }}</div> }
-          <div>{{ [city, state, pinCode].join(' ') }}</div>
-          @if (contactNumber) { <div>Phone: {{ contactNumber }}</div> }
-          @if (gstin) { <div><strong>GSTIN:</strong> {{ gstin }}</div> }
-        </div>
-        <div class="inv-box">
-          <div class="inv-box-title">Supply</div>
-          <div>{{ isInterState ? 'Inter-state supply (IGST)' : 'Intra-state supply (CGST + SGST)' }}</div>
-          <div>Place of supply: {{ state || '—' }}</div>
-          @if (detail()?.despatches?.length) {
-            <div>Despatch: {{ detail()!.despatches[0].despatchNo }} · {{ detail()!.despatches[0].despatchDate | date:'dd MMM yyyy' }}</div>
-          }
-        </div>
-      </div>
-
-      <table class="inv-items">
-        <thead>
-          <tr>
-            <th>#</th><th>Product / Service</th><th>HSN/SAC</th><th class="r">Qty</th><th class="r">Rate</th>
-            <th class="r">Discount</th><th class="r">Taxable</th><th class="r">GST %</th><th class="r">GST Amt</th><th class="r">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (l of lines(); track $index; let i = $index) {
-            <tr>
-              <td>{{ i + 1 }}</td>
-              <td>
-                <div class="inv-item-name">{{ l.productName }}</div>
-                @if (l.brand || l.model) { <div class="inv-item-sub">{{ [l.brand, l.model].join(' ') }}</div> }
-                @if (l.serialNumbers) { <div class="inv-item-sub">SN: {{ l.serialNumbers }}</div> }
-                <div class="inv-item-sub">Warranty: {{ l.warrantyMonths }} months@if (l.warrantyEndDate) { (till {{ l.warrantyEndDate | date:'dd MMM yyyy' }}) }</div>
-              </td>
-              <td>{{ l.hsnSac || '—' }}</td>
-              <td class="r">{{ l.qty }}</td>
-              <td class="r">{{ l.rate | number:'1.2-2' }}</td>
-              <td class="r">{{ l.discountAmount | number:'1.2-2' }}</td>
-              <td class="r">{{ lineTaxable(l) | number:'1.2-2' }}</td>
-              <td class="r">{{ l.gstPercent }}%</td>
-              <td class="r">{{ lineGst(l) | number:'1.2-2' }}</td>
-              <td class="r">{{ lineTotal(l) | number:'1.2-2' }}</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-
-      <div class="inv-bottom">
-        <div class="inv-words">
-          <div class="inv-box-title">Amount in words</div>
-          <div>{{ amountInWords(grandTotal()) }}</div>
-          @if (notes) {
-            <div class="inv-box-title" style="margin-top:10px">Notes</div>
-            <div class="inv-notes">{{ notes }}</div>
-          }
-        </div>
-        <table class="inv-totals">
-          <tr><td>Subtotal</td><td class="r">₹{{ subTotal() | number:'1.2-2' }}</td></tr>
-          <tr><td>Discount</td><td class="r">₹{{ discountTotal() | number:'1.2-2' }}</td></tr>
-          <tr><td>Taxable Value</td><td class="r">₹{{ taxableTotal() | number:'1.2-2' }}</td></tr>
-          @if (isInterState) {
-            <tr><td>IGST</td><td class="r">₹{{ igst() | number:'1.2-2' }}</td></tr>
-          } @else {
-            <tr><td>CGST</td><td class="r">₹{{ cgst() | number:'1.2-2' }}</td></tr>
-            <tr><td>SGST</td><td class="r">₹{{ sgst() | number:'1.2-2' }}</td></tr>
-          }
-          <tr class="grand"><td>Grand Total</td><td class="r">₹{{ grandTotal() | number:'1.2-2' }}</td></tr>
-        </table>
-      </div>
-
-      <div class="inv-sign">
-        <div>Printed on {{ printedAt | date:'dd MMM yyyy, hh:mm a' }}</div>
-        <div class="inv-sign-box">For {{ printCompanyName() || 'the company' }}<br /><br /><br />Authorised Signatory</div>
-      </div>
-
-      @if (footerMode() === 'text') {
-        <div class="inv-custom-footer">
-          @for (l of printLines('Print.FooterText'); track $index) { <div>{{ l }}</div> }
-        </div>
-      } @else if (footerMode() === 'image') {
-        <div class="inv-custom-footer image"><img [src]="ps('Print.FooterImage')" alt="Footer" /></div>
-      }
+      <app-document-print [doc]="doc" [settings]="printSettings()" [company]="printCompany()" />
     </div>
   }
 </div>

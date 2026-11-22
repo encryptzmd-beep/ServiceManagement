@@ -169,6 +169,39 @@ namespace EncryptzTests
         }
 
         [Fact]
+        public void Inclusive_prices_keep_the_quoted_total_and_split_out_the_gst()
+        {
+            var items = new List<QuotationItemDto> { new() { ProductName = "AC", Qty = 47, Rate = 44500m, GstPercent = 18m } };
+            var t = CrmRules.Totals(items, false, pricesIncludeGst: true);
+            Assert.Equal(1772457.63m, t.TaxableTotal);
+            Assert.Equal(319042.37m, t.CGST + t.SGST);
+            Assert.Equal(2091500m, t.SubTotal);
+            Assert.Equal(2091500m, t.GrandTotal);
+        }
+
+        [Fact]
+        public void An_inclusive_quotation_gives_the_sales_order_its_pre_gst_value()
+        {
+            var items = new List<QuotationItemDto> { new() { ProductName = "AC", Qty = 47, Rate = 44500m, GstPercent = 18m } };
+            CrmRules.Totals(items, false, pricesIncludeGst: true);
+            var order = CrmRules.BuildOrder(new LeadDetailDto(), new QuotationDto { PricesIncludeGst = true, Items = items }, 1, new ConvertRequestDto());
+            var line = order.Items.Single();
+            Assert.Equal(items[0].TaxableAmount, line.Qty * line.Rate - line.DiscountAmount);
+            Assert.InRange(line.DiscountAmount, 0m, line.Qty * 0.01m);
+        }
+
+        [Theory]
+        [InlineData("image", "", true)]
+        [InlineData("image", "data:image/png;base64,AAAA", true)]
+        [InlineData("image", "data:image/svg+xml;base64,AAAA", false)]
+        [InlineData("image", "https://example.invalid/logo.png", false)]
+        [InlineData("select:none,text,image", "image", true)]
+        [InlineData("select:none,text,image", "other", false)]
+        [InlineData("string", "Kaloor", true)]
+        public void Print_settings_accept_only_safe_values(string type, string value, bool ok)
+            => Assert.Equal(ok, EncryptzBL.Common.Tenant.PrintSettingRules.Problem("Print.X", value, type) == null);
+
+        [Fact]
         public void Conversion_percent_is_zero_without_leads()
         {
             Assert.Equal(0m, CrmRules.Percent(0, 0));

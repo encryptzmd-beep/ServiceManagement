@@ -56,6 +56,7 @@ export interface SalesOrderSave {
   orderDate: string;
   customerId: number;
   paymentMode?: string | null;
+  paymentDueDate?: string | null;
   referenceNo?: string | null;
   contactNumber?: string | null;
   gstin?: string | null;
@@ -117,6 +118,7 @@ export interface SalesOrderHeader {
   orderDate: string;
   status: string;
   paymentMode?: string | null;
+  paymentDueDate?: string | null;
   referenceNo?: string | null;
   customerId: number;
   customerName: string;
@@ -142,6 +144,8 @@ export interface SalesOrderHeader {
 }
 
 export interface SalesOrderItem {
+  productDescription?: string | null;
+  mrp?: number | null;
   salesOrderItemId: number;
   salesOrderId: number;
   productMasterId?: number | null;

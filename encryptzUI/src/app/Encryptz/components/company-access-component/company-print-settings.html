@@ -1,0 +1,64 @@
+@if (loading()) {
+  <div class="ps-card ps-state">Loading print settings…</div>
+} @else if (loadError()) {
+  <div class="ps-card ps-state" role="alert">
+    <span>{{ loadError() }}</span>
+    <button type="button" class="ps-btn" (click)="load()">Try again</button>
+  </div>
+} @else {
+  @for (section of sections; track section.title) {
+    <section class="ps-card">
+      <header><h2>{{ section.title }}</h2><p>{{ section.hint }}</p></header>
+      <div class="ps-grid">
+        @for (f of section.fields; track f.key) {
+          <div class="ps-field" [class.wide]="f.wide">
+            @switch (f.kind) {
+              @case ('image') {
+                <span class="ps-label">{{ f.label }}</span>
+                <div class="ps-image">
+                  <div class="ps-preview">
+                    @if (value(f.key)) { <img [src]="value(f.key)" [alt]="f.label" /> } @else { <span>No image</span> }
+                  </div>
+                  <div class="ps-image-actions">
+                    <label class="ps-btn">
+                      <span class="material-icons" aria-hidden="true">upload</span>{{ value(f.key) ? 'Replace' : 'Upload' }}
+                      <input type="file" accept="image/png,image/jpeg,image/webp" [attr.aria-label]="'Upload ' + f.label" (change)="onImage(f.key, $event)" />
+                    </label>
+                    @if (value(f.key)) {
+                      <button type="button" class="ps-btn danger" (click)="set(f.key, '')">Remove</button>
+                    }
+                  </div>
+                </div>
+              }
+              @case ('mode') {
+                <label class="ps-label" [attr.for]="f.key">{{ f.label }}</label>
+                <select class="ps-input" [id]="f.key" [value]="value(f.key) || 'none'" (change)="set(f.key, text($event))">
+                  <option value="none" [selected]="(value(f.key) || 'none') === 'none'">None</option>
+                  <option value="text" [selected]="value(f.key) === 'text'">Text</option>
+                  <option value="image" [selected]="value(f.key) === 'image'">Image</option>
+                </select>
+              }
+              @case ('area') {
+                <label class="ps-label" [attr.for]="f.key">{{ f.label }}</label>
+                <textarea class="ps-input" rows="4" maxlength="4000" [id]="f.key" [value]="value(f.key)" (input)="set(f.key, text($event))"></textarea>
+              }
+              @default {
+                <label class="ps-label" [attr.for]="f.key">{{ f.label }}</label>
+                <input class="ps-input" type="text" maxlength="4000" [id]="f.key" [value]="value(f.key)" (input)="set(f.key, text($event))" />
+              }
+            }
+            @if (f.hint) { <small>{{ f.hint }}</small> }
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <div class="ps-savebar">
+    @if (saveError()) { <p role="alert">{{ saveError() }}</p> }
+    <button type="button" class="ps-btn primary" [disabled]="!dirty() || saving()" (click)="save()">
+      {{ saving() ? 'Saving…' : 'Save changes' }}
+    </button>
+  </div>
+}
+@if (toast()) { <app-toast [text]="toast()" kind="success" /> }

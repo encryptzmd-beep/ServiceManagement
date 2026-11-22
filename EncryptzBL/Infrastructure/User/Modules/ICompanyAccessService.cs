@@ -11,5 +11,7 @@ namespace EncryptzBL.Infrastructure.User.Modules
         Task<ApiResponse<bool>> DeleteRole(int companyRoleId, PlatformActor actor);
         Task<ApiResponse<int>> SaveUser(SaveCompanyUserRequest req, PlatformActor actor);
         Task<ApiResponse<bool>> SetManager(SetCompanyManagerRequest req, PlatformActor actor);
+        Task<ApiResponse<Dictionary<string, string>>> GetPrintSettings(PlatformActor actor);
+        Task<ApiResponse<bool>> SavePrintSettings(SavePrintSettingsRequest req, PlatformActor actor);
     }
 }

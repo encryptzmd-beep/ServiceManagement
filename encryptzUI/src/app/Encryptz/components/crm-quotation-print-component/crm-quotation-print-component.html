@@ -2,80 +2,14 @@
   <app-crm-refused />
 } @else if (error()) {
   <p class="qp-error">{{ error() }}</p>
-} @else if (!q()) {
+} @else if (!document()) {
   <p class="qp-loading">Loading…</p>
 } @else {
-  @let x = q()!;
   <div class="qp-bar">
-    <a [routerLink]="['/crm/quotations', x.quotationId]">Back to the quotation</a>
+    <a [routerLink]="['/crm/quotations', id]">Back to the quotation</a>
     <button type="button" (click)="print()">Print or save as PDF</button>
   </div>
-  <article class="qp-sheet">
-    <header class="qp-top">
-      <div>
-        <h1>{{ company()?.companyName || 'Quotation' }}</h1>
-        @if (join(company()?.address, company()?.city)) { <p>{{ join(company()?.address, company()?.city) }}</p> }
-        @if (company()?.phoneNumber) { <p>Phone {{ company()?.phoneNumber }}</p> }
-      </div>
-      <div class="qp-doc">
-        <h2>QUOTATION</h2>
-        <p><b>No.</b> {{ x.quotationNo }} / R{{ x.revisionNo }}</p>
-        <p><b>Date</b> {{ showDate(x.quoteDate) }}</p>
-        @if (x.validUntil) { <p><b>Valid until</b> {{ showDate(x.validUntil) }}</p> }
-      </div>
-    </header>
-
-    <section class="qp-to">
-      <p class="qp-label">To</p>
-      <p><b>{{ x.contactName }}</b></p>
-      @if (join(x.address, x.city, x.state, x.pinCode)) { <p>{{ join(x.address, x.city, x.state, x.pinCode) }}</p> }
-      <p>{{ x.mobile }}@if (x.email) { · {{ x.email }} }</p>
-    </section>
-
-    <table class="qp-lines">
-      <thead>
-        <tr><th>#</th><th>Product</th><th>HSN/SAC</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Discount</th>
-          <th class="num">Taxable</th><th class="num">GST %</th><th class="num">GST</th><th class="num">Amount</th></tr>
-      </thead>
-      <tbody>
-        @for (i of x.items; track $index; let n = $index) {
-          <tr>
-            <td>{{ n + 1 }}</td>
-            <td>{{ i.productName }}@if (i.warrantyMonths) { <div class="qp-small">Warranty {{ i.warrantyMonths }} months</div> }</td>
-            <td>{{ i.hsnSac }}</td>
-            <td class="num">{{ i.qty }}</td>
-            <td class="num">{{ amount(i.rate) }}</td>
-            <td class="num">{{ i.discountAmount ? amount(i.discountAmount) : '' }}</td>
-            <td class="num">{{ amount(i.taxableAmount) }}</td>
-            <td class="num">{{ i.gstPercent }}</td>
-            <td class="num">{{ amount(i.gstAmount) }}</td>
-            <td class="num">{{ amount(i.lineTotal) }}</td>
-          </tr>
-        }
-      </tbody>
-    </table>
-
-    <div class="qp-foot">
-      <div class="qp-terms">
-        @if (x.terms) { <p class="qp-label">Terms</p><p class="qp-pre">{{ x.terms }}</p> }
-      </div>
-      <dl class="qp-totals">
-        <div><dt>Sub total</dt><dd>{{ amount(x.subTotal) }}</dd></div>
-        @if (x.discountTotal) { <div><dt>Discount</dt><dd>{{ amount(x.discountTotal) }}</dd></div> }
-        <div><dt>Taxable</dt><dd>{{ amount(x.taxableTotal) }}</dd></div>
-        @if (x.isInterState) {
-          <div><dt>IGST</dt><dd>{{ amount(x.igst) }}</dd></div>
-        } @else {
-          <div><dt>CGST</dt><dd>{{ amount(x.cgst) }}</dd></div>
-          <div><dt>SGST</dt><dd>{{ amount(x.sgst) }}</dd></div>
-        }
-        <div class="grand"><dt>Total</dt><dd>₹{{ amount(x.grandTotal) }}</dd></div>
-      </dl>
-    </div>
-
-    <footer class="qp-sign">
-      <p>For {{ company()?.companyName }}</p>
-      <p class="qp-small">Authorised signatory</p>
-    </footer>
-  </article>
+  <div class="qp-paper">
+    <app-document-print [doc]="document()!" [settings]="settings()" [company]="companyInfo()" />
+  </div>
 }

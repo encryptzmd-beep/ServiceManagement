@@ -21,13 +21,15 @@ export interface QuoteTotals {
 /**
  * The amounts of a quotation, exactly as CrmRules.Totals (and sp_SalesOrder_Save): taxable = qty x rate - discount,
  * GST = round2(taxable x percent / 100), intra-state CGST = round2(GST / 2) and SGST the rest, inter-state all IGST.
+ * With pricesIncludeGst the line amount already holds the GST: taxable = round2(amount x 100 / (100 + percent)), GST = the rest.
  * The server's figures are the ones kept; this is what the editor shows while typing.
  */
-export function quoteTotals(items: QuoteLineInput[], isInterState: boolean): QuoteTotals {
+export function quoteTotals(items: QuoteLineInput[], isInterState: boolean, pricesIncludeGst = false): QuoteTotals {
   const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
   const lines = items.map(i => {
-    const taxableAmount = round2(num(i.qty) * num(i.rate) - num(i.discountAmount));
-    const gstAmount = round2(taxableAmount * num(i.gstPercent) / 100);
+    const lineAmount = round2(num(i.qty) * num(i.rate) - num(i.discountAmount));
+    const taxableAmount = pricesIncludeGst ? round2(lineAmount * 100 / (100 + num(i.gstPercent))) : lineAmount;
+    const gstAmount = pricesIncludeGst ? round2(lineAmount - taxableAmount) : round2(taxableAmount * num(i.gstPercent) / 100);
     return { taxableAmount, gstAmount, lineTotal: round2(taxableAmount + gstAmount) };
   });
   const sum = (f: (x: QuoteLineAmounts, i: number) => number) => round2(lines.reduce((s, x, i) => s + f(x, i), 0));

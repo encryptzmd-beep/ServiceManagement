@@ -302,6 +302,9 @@ namespace EncryptzBL.DTO_s
         public decimal GstAmount { get; set; }
         public decimal LineTotal { get; set; }
         public int SortOrder { get; set; }
+        /// <summary>From the product master, for the print; never saved with the line.</summary>
+        public string? ProductDescription { get; set; }
+        public decimal? Mrp { get; set; }
     }
 
     public class QuotationSaveDto
@@ -312,6 +315,11 @@ namespace EncryptzBL.DTO_s
         public DateTime? ValidUntil { get; set; }
         public bool IsInterState { get; set; }
         public string? Terms { get; set; }
+        public string? ReferenceNo { get; set; }
+        public DateTime? PaymentDueDate { get; set; }
+        public string? CustomerGstin { get; set; }
+        /// <summary>The rates already contain GST; the taxable value is worked back from them.</summary>
+        public bool PricesIncludeGst { get; set; }
         public List<QuotationItemDto> Items { get; set; } = new();
     }
 
@@ -343,6 +351,10 @@ namespace EncryptzBL.DTO_s
         public decimal IGST { get; set; }
         public decimal GrandTotal { get; set; }
         public string Terms { get; set; } = string.Empty;
+        public string? ReferenceNo { get; set; }
+        public DateTime? PaymentDueDate { get; set; }
+        public string? CustomerGstin { get; set; }
+        public bool PricesIncludeGst { get; set; }
         public string Status { get; set; } = "Draft";
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }

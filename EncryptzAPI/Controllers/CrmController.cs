@@ -5,6 +5,7 @@ using EncryptzBL.DTO_s;
 using EncryptzBL.DTO_s.EncryptzBL.DTO_s;
 using EncryptzBL.Infrastructure.Crm;
 using EncryptzBL.Infrastructure.Products.Modules;
+using EncryptzBL.Infrastructure.Settings.Modules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -153,6 +154,16 @@ namespace EncryptzAPI.Controllers
         [HttpPost("quotations")]
         public async Task<IActionResult> SaveQuotation([FromBody] QuotationSaveDto dto)
             => Answer(await _crm.SaveQuotation(Caller(), await Manager(), Company(), dto));
+
+        /// <summary>Settings > Print for the quotation print; a CRM user need not have the admin Settings screen.</summary>
+        [HttpGet("print-settings")]
+        public async Task<IActionResult> PrintSettings([FromServices] ISettingsService settings)
+        {
+            var rows = await settings.GetAll();
+            var map = rows.Where(r => r.SettingGroup == "Print")
+                .ToDictionary(r => r.SettingKey, r => r.SettingValue ?? string.Empty);
+            return Ok(ApiResponse<Dictionary<string, string>>.Ok(map));
+        }
 
         [HttpGet("quotations/{id:int}")]
         public async Task<IActionResult> GetQuotation(int id)

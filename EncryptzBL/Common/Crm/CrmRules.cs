@@ -134,6 +134,11 @@ namespace EncryptzBL.Common.Crm
             if (q == null) return "Nothing to save";
             q.Terms = T(q.Terms);
             if (q.Terms.Length > 4000) return "The terms are too long";
+            q.ReferenceNo = T(q.ReferenceNo);
+            q.CustomerGstin = T(q.CustomerGstin).ToUpperInvariant();
+            if (q.ReferenceNo.Length > 100) return "The quotation reference is too long";
+            if (q.CustomerGstin.Length > 20) return "The GSTIN is too long";
+            if (q.PaymentDueDate.HasValue && q.PaymentDueDate.Value.Date < q.QuoteDate.Date) return "The payment due date cannot be before the quotation date";
             if (q.Items == null || q.Items.Count == 0) return "Add at least one product line";
             if (q.ValidUntil.HasValue && q.ValidUntil.Value.Date < q.QuoteDate.Date) return "The quotation cannot be valid until a date before it is dated";
 
@@ -156,15 +161,25 @@ namespace EncryptzBL.Common.Crm
         /// <summary>
         /// Fills each item's amounts and returns the totals, exactly as sp_SalesOrder_Save does: taxable = qty x rate - discount,
         /// GST = ROUND(taxable x percent / 100, 2) (half away from zero, as SQL), intra-state CGST = ROUND(gst / 2, 2) and
-        /// SGST = gst - CGST, inter-state all IGST.
+        /// SGST = gst - CGST, inter-state all IGST. With pricesIncludeGst the line amount already holds the GST:
+        /// taxable = ROUND(amount x 100 / (100 + percent), 2), GST = amount - taxable, so the total stays what was quoted.
         /// </summary>
-        public static QuoteTotals Totals(IEnumerable<QuotationItemDto> items, bool isInterState)
+        public static QuoteTotals Totals(IEnumerable<QuotationItemDto> items, bool isInterState, bool pricesIncludeGst = false)
         {
             var list = items.ToList();
             foreach (var i in list)
             {
-                i.TaxableAmount = i.Qty * i.Rate - i.DiscountAmount;
-                i.GstAmount = Math.Round(i.TaxableAmount * i.GstPercent / 100m, 2, MidpointRounding.AwayFromZero);
+                var lineAmount = i.Qty * i.Rate - i.DiscountAmount;
+                if (pricesIncludeGst)
+                {
+                    i.TaxableAmount = Math.Round(lineAmount * 100m / (100m + i.GstPercent), 2, MidpointRounding.AwayFromZero);
+                    i.GstAmount = lineAmount - i.TaxableAmount;
+                }
+                else
+                {
+                    i.TaxableAmount = lineAmount;
+                    i.GstAmount = Math.Round(i.TaxableAmount * i.GstPercent / 100m, 2, MidpointRounding.AwayFromZero);
+                }
                 i.LineTotal = i.TaxableAmount + i.GstAmount;
             }
 
@@ -256,16 +271,21 @@ namespace EncryptzBL.Common.Crm
                 PinCode = lead.PinCode,
                 IsInterState = q.IsInterState,
                 Notes = string.IsNullOrWhiteSpace(req.Comment) ? $"From lead {lead.LeadNo}" : $"From lead {lead.LeadNo}\n{T(req.Comment)}",
-                Items = q.Items.Select(i => new SalesOrderItemSaveDto
+                Items = q.Items.Select(i =>
                 {
-                    ProductMasterId = i.ProductMasterId,
-                    ProductName = i.ProductName,
-                    HsnSac = i.HsnSac,
-                    Qty = i.Qty,
-                    Rate = i.Rate,
-                    DiscountAmount = i.DiscountAmount,
-                    GstPercent = i.GstPercent,
-                    WarrantyMonths = i.WarrantyMonths
+                    // a sales order always adds GST to its rate, so an inclusive quotation hands over its pre-GST value
+                    var rate = q.PricesIncludeGst ? Math.Ceiling(i.TaxableAmount * 100m / i.Qty) / 100m : i.Rate;
+                    return new SalesOrderItemSaveDto
+                    {
+                        ProductMasterId = i.ProductMasterId,
+                        ProductName = i.ProductName,
+                        HsnSac = i.HsnSac,
+                        Qty = i.Qty,
+                        Rate = rate,
+                        DiscountAmount = q.PricesIncludeGst ? i.Qty * rate - i.TaxableAmount : i.DiscountAmount,
+                        GstPercent = i.GstPercent,
+                        WarrantyMonths = i.WarrantyMonths
+                    };
                 }).ToList()
             };
 

@@ -14,6 +14,7 @@ import { salesProductOptions } from './sales-product-options';
 import { TransactionMode, TransactionToolbarComponent } from '../shared/transaction-toolbar/transaction-toolbar';
 import { FindQuery, FindRow, TransactionFindComponent } from '../shared/transaction-toolbar/transaction-find';
 import { SalesDocumentsComponent } from '../shared/sales-documents/sales-documents';
+import { DocumentPrintComponent, PrintCompany, PrintDocument, printLineDetails } from '../shared/document-print/document-print';
 import { RightsService } from '../../Services/rights-service';
 import { DialogService } from '../../Services/dialog-service';
 import { AuthService } from '../../Auth/auth-service';
@@ -36,6 +37,9 @@ interface BillLine {
   discountAmount: number;
   gstPercent: number;
   warrantyMonths: number;
+  /** from the product master, for the print */
+  productDescription?: string | null;
+  mrp?: number | null;
   /** after despatch */
   serialNumbers?: string | null;
   warrantyEndDate?: string | null;
@@ -44,7 +48,7 @@ interface BillLine {
 @Component({
   selector: 'app-sales-order-entry',
   standalone: true,
-  imports: [UppercaseInputDirective, ProductFormComponent, AppToastComponent, AppRightDirective, CommonModule, FormsModule, RouterModule, AutocompleteComponent, TransactionToolbarComponent, TransactionFindComponent, SalesDocumentsComponent],
+  imports: [UppercaseInputDirective, ProductFormComponent, AppToastComponent, AppRightDirective, CommonModule, FormsModule, RouterModule, AutocompleteComponent, TransactionToolbarComponent, TransactionFindComponent, SalesDocumentsComponent, DocumentPrintComponent],
   templateUrl: './sales-order-entry-component.html',
   styleUrls: ['./sales-order-entry-component.scss'],
 })
@@ -68,6 +72,7 @@ export class SalesOrderEntryComponent implements OnInit {
   status = signal('Billed');
   orderDate = this.todayInput();
   paymentMode = 'Cash';
+  paymentDueDate = '';
   referenceNo = '';
   contactNumber = '';
   gstin = '';
@@ -104,17 +109,8 @@ export class SalesOrderEntryComponent implements OnInit {
 
   // ── print (Settings > Print) ──
   printSettings = signal<Record<string, string>>({});
-  /** Settings > Print: 'none' | 'text' | 'image' for the invoice header and footer */
-  headerMode = computed(() => this.printMode('Header'));
-  footerMode = computed(() => this.printMode('Footer'));
-  private printMode(part: 'Header' | 'Footer'): 'none' | 'text' | 'image' {
-    const s = this.printSettings();
-    const mode = (s[`Print.${part}Mode`] || '').trim().toLowerCase();
-    if (mode === 'image' && (s[`Print.${part}Image`] || '').trim()) return 'image';
-    if (mode === 'text' && (s[`Print.${part}Text`] || '').trim()) return 'text';
-    return 'none';
-  }
-  printedAt = new Date();
+  /** What the sheet prints; built when Print is pressed, from the bill as it stands. */
+  printDoc = signal<PrintDocument | null>(null);
 
   // ── ui state ──
   loading = signal(false);
@@ -191,7 +187,7 @@ export class SalesOrderEntryComponent implements OnInit {
   // =====================================================================
   /** Everything that a save would send, to tell unsaved work. */
   private snapshot(): string {
-    return JSON.stringify([this.orderDate, this.paymentMode, this.referenceNo, this.contactNumber, this.gstin, this.billingAddress,
+    return JSON.stringify([this.orderDate, this.paymentMode, this.paymentDueDate, this.referenceNo, this.contactNumber, this.gstin, this.billingAddress,
       this.city, this.state, this.pinCode, this.isInterState, this.notes, this.customer()?.customerId ?? null,
       this.lines().map(l => [l.productMasterId, l.productName, l.hsnSac, l.qty, l.rate, l.discountAmount, l.gstPercent, l.warrantyMonths])]);
   }
@@ -217,7 +213,7 @@ export class SalesOrderEntryComponent implements OnInit {
   private resetNew(): void {
     this.salesOrderId.set(0); this.orderNo.set(''); this.status.set('Billed'); this.detail.set(null);
     this.editing.set(false); this.error.set('');
-    this.orderDate = this.todayInput(); this.paymentMode = 'Cash'; this.referenceNo = ''; this.contactNumber = '';
+    this.orderDate = this.todayInput(); this.paymentMode = 'Cash'; this.paymentDueDate = ''; this.referenceNo = ''; this.contactNumber = '';
     this.gstin = ''; this.billingAddress = ''; this.city = ''; this.state = 'Kerala'; this.pinCode = ''; this.notes = '';
     this.isInterState = ['true', '1', 'yes'].includes((this.printSettings()['Sales.DefaultInterState'] || '').trim().toLowerCase());
     this.isInterStateSig.set(this.isInterState);
@@ -311,6 +307,7 @@ export class SalesOrderEntryComponent implements OnInit {
         this.status.set(o.status);
         this.orderDate = this.toDateInput(o.orderDate);
         this.paymentMode = o.paymentMode || 'Cash';
+        this.paymentDueDate = o.paymentDueDate ? this.toDateInput(o.paymentDueDate) : '';
         this.referenceNo = o.referenceNo || '';
         this.contactNumber = o.contactNumber || '';
         this.gstin = o.gstin || '';
@@ -333,6 +330,7 @@ export class SalesOrderEntryComponent implements OnInit {
           hsnSac: i.hsnSac || '',
           qty: i.qty, rate: i.rate, discountAmount: i.discountAmount, gstPercent: i.gstPercent,
           warrantyMonths: i.warrantyMonths,
+          productDescription: i.productDescription, mrp: i.mrp,
           serialNumbers: i.serialNumbers, warrantyEndDate: i.warrantyEndDate,
         })));
         // a loaded bill opens read-only; Edit unlocks it
@@ -531,6 +529,7 @@ export class SalesOrderEntryComponent implements OnInit {
   validate(): string {
     if (!this.customer()) return 'Select a customer or add a new one';
     if (!this.orderDate) return 'Invoice date is required';
+    if (this.paymentDueDate && this.paymentDueDate < this.orderDate) return 'The payment due date cannot be before the invoice date';
     const ls = this.lines();
     if (!ls.length) return 'Add at least one product';
     for (let i = 0; i < ls.length; i++) {
@@ -559,6 +558,7 @@ export class SalesOrderEntryComponent implements OnInit {
       orderDate: this.orderDate,
       customerId: this.customer()!.customerId,
       paymentMode: this.paymentMode || null,
+      paymentDueDate: this.paymentDueDate || null,
       referenceNo: this.referenceNo || null,
       contactNumber: this.contactNumber || null,
       gstin: this.gstin?.trim().toUpperCase() || null,
@@ -622,45 +622,64 @@ export class SalesOrderEntryComponent implements OnInit {
   // =====================================================================
   // print
   // =====================================================================
-  /** A Settings > Print value, blank when not set. */
-  ps(key: string): string { return (this.printSettings()[key] || '').trim(); }
-
-  /** Company name on the invoice: Settings > Print, else the company of the login. */
-  printCompanyName(): string {
-    return this.ps('Print.CompanyName') || String((this.auth.currentUser() as any)?.companyName || (this.auth.currentUser() as any)?.CompanyName || '');
+  /** The login's company, used where Settings > Print is blank. */
+  printCompany(): PrintCompany {
+    const id = this.auth.selectedCompanyId?.();
+    const c = this.auth.companies?.().find(x => x.companyId === id);
+    const user = this.auth.currentUser() as any;
+    return {
+      name: c?.companyName || user?.companyName || user?.CompanyName || '',
+      address: [c?.address, c?.city].filter(Boolean).join(', '),
+      phone: c?.phoneNumber,
+    };
   }
 
-  printLines(key: string): string[] {
-    return this.ps(key).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  private showPrintDate(value: string): string {
+    const [y, m, d] = (value || '').slice(0, 10).split('-');
+    return d ? `${d}/${m}/${y}` : '';
+  }
+
+  private buildPrintDoc(): PrintDocument {
+    const despatch = this.detail()?.despatches?.[0];
+    return {
+      title: 'TAX INVOICE',
+      metaRows: [
+        { label: 'Invoice No.', value: this.orderNo() },
+        { label: 'Reference / PO', value: this.referenceNo },
+        { label: 'Date:', value: this.showPrintDate(this.orderDate) },
+        { label: 'Payment Due Date:', value: this.showPrintDate(this.paymentDueDate) },
+        { label: 'Payment Mode', value: this.paymentMode },
+        { label: 'Place of Supply', value: this.state },
+        { label: 'Status', value: this.status() },
+        ...(despatch ? [{ label: 'Despatch', value: `${despatch.despatchNo} · ${this.showPrintDate(String(despatch.despatchDate))}` }] : []),
+      ],
+      billTo: {
+        name: this.customer()?.customerName ?? '',
+        lines: [this.billingAddress, [this.city, this.state, this.pinCode].filter(Boolean).join(', ')].filter(Boolean),
+        phone: this.contactNumber, email: this.customer()?.email, gstin: this.gstin,
+      },
+      lines: this.lines().map(l => ({
+        description: l.productName,
+        details: printLineDetails({
+          ...l, brandModel: [l.brand, l.model].filter(Boolean).join(' '),
+          warrantyEndDate: l.warrantyEndDate ? this.showPrintDate(l.warrantyEndDate) : null,
+        }),
+        rate: this.num(l.rate), qty: this.num(l.qty), amount: this.num(l.qty) * this.num(l.rate),
+      })),
+      subTotal: this.subTotal(), discountTotal: this.discountTotal(), isInterState: this.isInterState,
+      cgst: this.cgst(), sgst: this.sgst(), igst: this.igst(), grandTotal: this.grandTotal(), notes: this.notes,
+    };
   }
 
   print(): void {
     if (this.isNew()) { this.showToast('error', 'Save the bill before printing'); return; }
-    this.printedAt = new Date();
-    setTimeout(() => window.print(), 50);
-  }
-
-  /** Grand total in words (Indian numbering), for the invoice. */
-  amountInWords(amount: number): string {
-    const n = Math.round(Math.abs(amount) * 100);
-    const rupees = Math.floor(n / 100), paise = n % 100;
-    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    const two = (x: number): string => x < 20 ? ones[x] : tens[Math.floor(x / 10)] + (x % 10 ? ' ' + ones[x % 10] : '');
-    const three = (x: number): string => (x >= 100 ? ones[Math.floor(x / 100)] + ' Hundred' + (x % 100 ? ' ' : '') : '') + (x % 100 ? two(x % 100) : '');
-    const words = (x: number): string => {
-      if (x === 0) return 'Zero';
-      const parts: string[] = [];
-      const crore = Math.floor(x / 10000000); x %= 10000000;
-      const lakh = Math.floor(x / 100000); x %= 100000;
-      const thousand = Math.floor(x / 1000); x %= 1000;
-      if (crore) parts.push(two(crore) + ' Crore');
-      if (lakh) parts.push(two(lakh) + ' Lakh');
-      if (thousand) parts.push(two(thousand) + ' Thousand');
-      if (x) parts.push(three(x));
-      return parts.join(' ');
-    };
-    return 'Rupees ' + words(rupees) + (paise ? ' and ' + two(paise) + ' Paise' : '') + ' Only';
+    this.printDoc.set(this.buildPrintDoc());
+    // the logo and seal must be ready, or the page prints without them
+    setTimeout(async () => {
+      const images = Array.from(document.querySelectorAll<HTMLImageElement>('.invoice-print img'));
+      await Promise.all(images.map(i => i.decode().catch(() => undefined)));
+      window.print();
+    }, 50);
   }
 
   // =====================================================================

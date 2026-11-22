@@ -12,8 +12,8 @@
 
   <div class="ca-body">
     <aside class="ca-side">
-      <div class="ca-side-label">USERS &amp; ROLES</div>
-      <nav class="ca-nav" aria-label="Users and roles">
+      <div class="ca-side-label">SETTINGS</div>
+      <nav class="ca-nav" aria-label="Company settings">
         <button type="button" [class.on]="tab() === 'users'" (click)="tab.set('users')">
           <span class="material-icons" aria-hidden="true">group</span>Users<em>{{ data()?.users?.length ?? '' }}</em>
         </button>
@@ -22,6 +22,9 @@
         </button>
         <button type="button" [class.on]="tab() === 'access'" (click)="tab.set('access')">
           <span class="material-icons" aria-hidden="true">admin_panel_settings</span>Admin Access<em>{{ data() ? managers().length : '' }}</em>
+        </button>
+        <button type="button" [class.on]="tab() === 'print'" (click)="openPrint()">
+          <span class="material-icons" aria-hidden="true">print</span>Print Settings
         </button>
       </nav>
     </aside>
@@ -58,6 +61,10 @@
         </div>
       } @else if (data(); as d) {
         @if (loadError()) { <p class="ca-error" role="alert">{{ loadError() }}</p> }
+
+        @if (printOpened()) {
+          <div [hidden]="tab() !== 'print'"><app-company-print-settings /></div>
+        }
 
         <!-- USERS -->
         @if (tab() === 'users') {

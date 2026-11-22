@@ -23,7 +23,7 @@ const blankLine = (sortOrder: number): QuotationItemDto => ({
 });
 
 /** The header of the quotation being edited. */
-interface Head { quoteDate: string; validUntil: string; isInterState: boolean; terms: string; }
+interface Head { quoteDate: string; validUntil: string; isInterState: boolean; terms: string; referenceNo: string; paymentDueDate: string; customerGstin: string; pricesIncludeGst: boolean; }
 
 /** A customer typed on a new quotation; it becomes a lead when the quotation is saved. */
 interface NewCustomer { contactName: string; mobile: string; email: string; address: string; city: string; state: string; pinCode: string; }
@@ -59,7 +59,7 @@ export class CrmQuotationComponent {
   leadId = signal(0);
   saved = signal<QuotationDto | null>(null);
   leadTitle = signal('');
-  head = signal<Head>({ quoteDate: isoDate(new Date()), validUntil: '', isInterState: false, terms: '' });
+  head = signal<Head>({ quoteDate: isoDate(new Date()), validUntil: '', isInterState: false, terms: '', referenceNo: '', paymentDueDate: '', customerGstin: '', pricesIncludeGst: false });
   lines = signal<QuotationItemDto[]>([]);
   error = signal('');
   notice = signal('');
@@ -90,7 +90,7 @@ export class CrmQuotationComponent {
   findRows = signal<FindRow[]>([]);
   findLoading = signal(false);
   private savedSnapshot = '';
-  readonly totals = computed(() => quoteTotals(this.lines(), this.head().isInterState));
+  readonly totals = computed(() => quoteTotals(this.lines(), this.head().isInterState, this.head().pricesIncludeGst));
 
   /** The convert dialog is open; after a convert, the order that was made. */
   convertOpen = signal(false);
@@ -130,7 +130,7 @@ export class CrmQuotationComponent {
     this.quotationId.set(0);
     this.saved.set(null);
     this.editing.set(false);
-    this.head.set({ quoteDate: isoDate(new Date()), validUntil: '', isInterState: false, terms: '' });
+    this.head.set({ quoteDate: isoDate(new Date()), validUntil: '', isInterState: false, terms: '', referenceNo: '', paymentDueDate: '', customerGstin: '', pricesIncludeGst: false });
     this.lines.set([blankLine(1)]);
     this.lead.set(null);
     this.leadLoaded.set(false);
@@ -287,6 +287,8 @@ export class CrmQuotationComponent {
         this.leadTitle.set(`${q.leadNo} · ${q.contactName}`);
         this.head.set({
           quoteDate: (q.quoteDate ?? '').slice(0, 10), validUntil: (q.validUntil ?? '').slice(0, 10), isInterState: q.isInterState, terms: q.terms ?? '',
+          referenceNo: q.referenceNo ?? '', paymentDueDate: (q.paymentDueDate ?? '').slice(0, 10), customerGstin: q.customerGstin ?? '',
+          pricesIncludeGst: !!q.pricesIncludeGst,
         });
         this.lines.set([...(q.items ?? [])].sort((a, b) => a.sortOrder - b.sortOrder).map(i => ({ ...i })));
         this.loaded.set(true);
@@ -489,6 +491,7 @@ export class CrmQuotationComponent {
     }
     const h = this.head();
     if (h.validUntil && h.validUntil < h.quoteDate) return 'The quotation cannot be valid until a date before it is dated';
+    if (h.paymentDueDate && h.paymentDueDate < h.quoteDate) return 'The payment due date cannot be before the quotation date';
     return null;
   }
 
@@ -506,7 +509,9 @@ export class CrmQuotationComponent {
     this.busy.set(true);
     this.crm.saveQuotation({
       quotationId: this.quotationId(), leadId: this.leadId(), quoteDate: h.quoteDate, validUntil: h.validUntil || null,
-      isInterState: h.isInterState, terms: h.terms || null,
+      isInterState: h.isInterState, terms: h.terms || null, referenceNo: h.referenceNo.trim() || null,
+      paymentDueDate: h.paymentDueDate || null, customerGstin: h.customerGstin.trim().toUpperCase() || null,
+      pricesIncludeGst: h.pricesIncludeGst,
       items: this.lines().map((l, i) => ({
         ...l, sortOrder: i + 1, qty: Number(l.qty), rate: Number(l.rate), discountAmount: Number(l.discountAmount),
         gstPercent: Number(l.gstPercent), warrantyMonths: Number(l.warrantyMonths),

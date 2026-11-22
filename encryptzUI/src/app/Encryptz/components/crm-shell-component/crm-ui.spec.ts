@@ -12,6 +12,9 @@ describe('crm-ui', () => {
   });
 
   it('works out an intra-state quotation: 18% on 1000 is CGST 90, SGST 90, total 1180', () => {
+    const inclusive = quoteTotals([line(47, 44500, 0, 18)], false, true);
+    expect(inclusive.taxableTotal).toBe(1772457.63);
+    expect(inclusive.grandTotal).toBe(2091500);
     const t = quoteTotals([line(1, 1000, 0, 18)], false);
     expect(t.taxableTotal).toBe(1000);
     expect(t.cgst).toBe(90);

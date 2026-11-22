@@ -114,6 +114,12 @@ export class CompanyAccessApi {
   saveUser(user: SaveUserPayload): Observable<ApiResponse<number>> {
     return this.http.post<ApiResponse<number>>(`${this.url}/users`, user);
   }
+  printSettings(): Observable<ApiResponse<Record<string, string>>> {
+    return this.http.get<ApiResponse<Record<string, string>>>(`${this.url}/print-settings`);
+  }
+  savePrintSettings(values: Record<string, string>): Observable<ApiResponse<boolean>> {
+    return this.http.put<ApiResponse<boolean>>(`${this.url}/print-settings`, { values });
+  }
   setManager(userId: number, enabled: boolean): Observable<ApiResponse<boolean>> {
     return this.http.post<ApiResponse<boolean>>(`${this.url}/managers`, { userId, enabled });
   }

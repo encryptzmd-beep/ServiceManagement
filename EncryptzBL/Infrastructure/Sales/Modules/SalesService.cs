@@ -144,12 +144,16 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
             if (items.Any(i => i.Rate < 0 || i.DiscountAmount < 0 || i.GstPercent < 0))
                 return ApiResponse<SalesOrderSaveResultDto>.Fail("Rate, discount and GST cannot be negative.");
 
+            if (dto.PaymentDueDate.HasValue && dto.PaymentDueDate.Value.Date < dto.OrderDate.Date)
+                return ApiResponse<SalesOrderSaveResultDto>.Fail("The payment due date cannot be before the bill date.");
+
             var p = new[]
             {
                 SqlParameterHelper.Input("@SalesOrderId", dto.SalesOrderId),
                 SqlParameterHelper.Input("@OrderDate", dto.OrderDate.Date),
                 SqlParameterHelper.Input("@CustomerId", dto.CustomerId),
                 SqlParameterHelper.Input("@PaymentMode", Clean(dto.PaymentMode)),
+                SqlParameterHelper.Input("@PaymentDueDate", dto.PaymentDueDate?.Date),
                 SqlParameterHelper.Input("@ReferenceNo", Clean(dto.ReferenceNo)),
                 SqlParameterHelper.Input("@ContactNumber", Clean(dto.ContactNumber)),
                 SqlParameterHelper.Input("@GSTIN", Clean(dto.GSTIN)),

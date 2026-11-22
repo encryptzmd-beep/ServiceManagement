@@ -141,11 +141,23 @@
               <input type="date" [disabled]="!editable()" [ngModel]="head().quoteDate" (ngModelChange)="setHead('quoteDate', $event)" /></label>
             <label class="crm-field"><span>Valid until</span>
               <input type="date" [disabled]="!editable()" [min]="head().quoteDate" [ngModel]="head().validUntil" (ngModelChange)="setHead('validUntil', $event)" /></label>
+            <label class="crm-field"><span>Quotation reference</span>
+              <input type="text" maxlength="100" [disabled]="!editable()" [ngModel]="head().referenceNo" (ngModelChange)="setHead('referenceNo', $event)" /></label>
+            <label class="crm-field"><span>Payment due date</span>
+              <input type="date" [disabled]="!editable()" [min]="head().quoteDate" [ngModel]="head().paymentDueDate" (ngModelChange)="setHead('paymentDueDate', $event)" /></label>
+            <label class="crm-field"><span>Customer GSTIN</span>
+              <input type="text" maxlength="20" style="text-transform:uppercase" [disabled]="!editable()" [ngModel]="head().customerGstin" (ngModelChange)="setHead('customerGstin', $event)" /></label>
             <label class="crm-field span-2"><span>Supply</span>
               <select [disabled]="!editable()" [ngModel]="head().isInterState" (ngModelChange)="setHead('isInterState', $event === true || $event === 'true')">
                 <option [ngValue]="false">Within the state (CGST + SGST)</option>
                 <option [ngValue]="true">Another state (IGST)</option>
               </select></label>
+            <div class="crm-field"><span>Prices include GST</span>
+              <label class="q-switch">
+                <input type="checkbox" role="switch" [disabled]="!editable()" [ngModel]="head().pricesIncludeGst" (ngModelChange)="setHead('pricesIncludeGst', $event)" />
+                <span class="q-switch-track" aria-hidden="true"></span>
+                <span>{{ head().pricesIncludeGst ? 'On: GST is inside the rate' : 'Off: GST is added to the rate' }}</span>
+              </label></div>
             <div class="crm-field"><span>Prepared by</span>
               <div class="q-ro">@if (saved(); as q) { {{ q.createdByName || '—' }} } @else { <span class="q-none-val">You</span> }</div></div>
           </div>
@@ -235,14 +247,14 @@
         </section>
         <section class="crm-card q-totals" aria-label="Totals">
           <dl>
-            <div><dt>Sub total</dt><dd data-total="sub">{{ amount(totals().subTotal) }}</dd></div>
+            <div><dt>Sub total{{ head().pricesIncludeGst ? ' (incl. GST)' : '' }}</dt><dd data-total="sub">{{ amount(totals().subTotal) }}</dd></div>
             <div><dt>Discount</dt><dd data-total="discount">{{ amount(totals().discountTotal) }}</dd></div>
             <div><dt>Taxable</dt><dd data-total="taxable">{{ amount(totals().taxableTotal) }}</dd></div>
             @if (head().isInterState) {
-              <div><dt>IGST</dt><dd data-total="igst">{{ amount(totals().igst) }}</dd></div>
+              <div><dt>IGST{{ head().pricesIncludeGst ? ' (included)' : '' }}</dt><dd data-total="igst">{{ amount(totals().igst) }}</dd></div>
             } @else {
-              <div><dt>CGST</dt><dd data-total="cgst">{{ amount(totals().cgst) }}</dd></div>
-              <div><dt>SGST</dt><dd data-total="sgst">{{ amount(totals().sgst) }}</dd></div>
+              <div><dt>CGST{{ head().pricesIncludeGst ? ' (included)' : '' }}</dt><dd data-total="cgst">{{ amount(totals().cgst) }}</dd></div>
+              <div><dt>SGST{{ head().pricesIncludeGst ? ' (included)' : '' }}</dt><dd data-total="sgst">{{ amount(totals().sgst) }}</dd></div>
             }
             <div class="grand"><dt>Total</dt><dd data-total="grand">{{ amount(totals().grandTotal) }}</dd></div>
           </dl>
