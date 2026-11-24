@@ -76,6 +76,7 @@
       <button [class.active]="tab() === 'applications'" (click)="setTab('applications')">Applications</button>
       <button [class.active]="tab() === 'verification'" (click)="setTab('verification')">Verification</button>
       <button [class.active]="tab() === 'servers'" (click)="setTab('servers')">Database Servers</button>
+      <button [class.active]="tab() === 'admins'" (click)="setTab('admins')">Platform Admins</button>
       <button [class.active]="tab() === 'settings'" (click)="setTab('settings')">Settings</button>
       <button [class.active]="tab() === 'loginAds'" (click)="setTab('loginAds')">Login Ads</button>
       <button [class.active]="tab() === 'menus'" (click)="setTab('menus')">Menus</button>
@@ -413,6 +414,11 @@
         </tbody>
       </table>
     </div>
+  }
+
+  <!-- ═══════════ PLATFORM ADMINS (users whose global role is Admin) ═══════════ -->
+  @if (tab() === 'admins' && isPlatformAdmin()) {
+    <app-platform-admins-panel />
   }
 
   <!-- ═══════════ VERIFICATION (certificates and job postings of Job Portal) ═══════════ -->
