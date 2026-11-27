@@ -17,6 +17,8 @@ import { quotationPrintDocument } from '../shared/document-print/quotation-docum
 import { DialogService } from '../../Services/dialog-service';
 import { RightsService } from '../../Services/rights-service';
 import { QUOTATION_PRICES_KEY, QUOTATION_VALIDITY_KEY, pricesIncludeGstByDefault, validUntilFor } from '../shared/quotation-defaults';
+import { openPendingTab, whatsAppNumber, whatsAppUrl } from '../shared/whatsapp';
+import { quotationWhatsAppFileName, quotationWhatsAppMessage } from './quotation-whatsapp';
 
 export const GST_RATES = [0, 5, 12, 18, 28];
 
@@ -401,6 +403,40 @@ export class CrmQuotationComponent {
       await this.pdf.download(quotationPrintDocument(q), settings?.data ?? {},
         documentFileName('Quotation', `${q.quotationNo}-R${q.revisionNo}`, q.contactName));
     } catch {
+      this.error.set('The PDF could not be made. Try again');
+    } finally {
+      this.pdfBusy.set(false);
+    }
+  }
+
+  /**
+   * Send via WhatsApp (no WhatsApp API): downloads the PDF as QTN-001_ABC-ENTERPRISES.pdf and opens the customer's
+   * chat (wa.me, their registered mobile) with a message; the person attaches the file and presses Send.
+   */
+  async onSendWhatsApp(): Promise<void> {
+    const q = this.saved();
+    if (!q || this.pdfBusy()) return;
+    this.error.set('');
+    this.notice.set('');
+    if (!whatsAppNumber(q.mobile)) {
+      this.error.set(`The customer's mobile number (${q.mobile || 'none'}) is not a valid 10-digit number. Correct it on the lead first`);
+      return;
+    }
+    if (this.isDirty()) {
+      this.error.set('Save the changes first, so the PDF sent has them');
+      return;
+    }
+    // opened now, during the click: a tab opened after the PDF is made is blocked as a popup
+    const tab = openPendingTab();
+    this.pdfBusy.set(true);
+    try {
+      const settings = (await firstValueFrom(this.crm.getPrintSettings()))?.data ?? {};
+      const fileName = quotationWhatsAppFileName(q.quotationNo, q.revisionNo, q.contactName);
+      await this.pdf.download(quotationPrintDocument(q), settings, fileName);
+      tab.go(whatsAppUrl(q.mobile, quotationWhatsAppMessage(q, settings['Print.CompanyName'])));
+      this.notice.set(`${fileName} is downloaded. Attach it in the WhatsApp chat with ${q.contactName} and press Send`);
+    } catch {
+      tab.close();
       this.error.set('The PDF could not be made. Try again');
     } finally {
       this.pdfBusy.set(false);

@@ -5,18 +5,12 @@ import { environment } from '../../../../../environments/environment';
 import { AuthService } from '../../../Auth/auth-service';
 import { printCompanyOf } from '../document-print/document-print';
 import { JobCard, buildJobCardPdf, jobCardFileName, jobCardMessage } from './job-card';
+import { openPendingTab, whatsAppUrl } from '../whatsapp';
 
 /** How a share ended: through the device's share sheet, or downloaded with a WhatsApp chat opened beside it. */
 export type JobCardShareResult = 'shared' | 'downloaded' | 'cancelled';
 
-/** "919876543210" for WhatsApp from an Indian mobile as typed; '' when it is not one. */
-export function whatsAppNumber(mobile: string | null | undefined): string {
-  const digits = (mobile ?? '').replace(/\D/g, '');
-  if (digits.length === 10) return `91${digits}`;
-  if (digits.length === 12 && digits.startsWith('91')) return digits;
-  if (digits.length === 11 && digits.startsWith('0')) return `91${digits.slice(1)}`;
-  return '';
-}
+export { whatsAppNumber } from '../whatsapp';
 
 /**
  * The job card of an assignment as a PDF, made in the browser: downloaded (to keep it on the phone for places
@@ -49,11 +43,20 @@ export class JobCardService {
    * downloaded and a WhatsApp chat with the technician opens with the job summary, to attach the file to.
    */
   async share(assignmentId: number): Promise<JobCardShareResult> {
-    const card = await this.load(assignmentId);
-    const file = await this.file(card);
-    const text = jobCardMessage(card);
     const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
-    if (nav.share && nav.canShare?.({ files: [file] })) {
+    const canShareFiles = !!nav.share && !!nav.canShare?.({ files: [new File([''], 'job-card.pdf', { type: 'application/pdf' })] });
+    // without a share sheet the WhatsApp tab is opened now, during the click, or it is blocked as a popup
+    const tab = canShareFiles ? null : openPendingTab();
+    let card: JobCard, file: File;
+    try {
+      card = await this.load(assignmentId);
+      file = await this.file(card);
+    } catch (e) {
+      tab?.close();
+      throw e;
+    }
+    const text = jobCardMessage(card);
+    if (canShareFiles) {
       try {
         await nav.share({ files: [file], title: `Job Card ${card.complaintNumber}`, text });
         return 'shared';
@@ -63,8 +66,8 @@ export class JobCardService {
       }
     }
     saveFile(file);
-    const to = whatsAppNumber(card.technicianMobile);
-    window.open(`https://wa.me/${to}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+    const url = whatsAppUrl(card.technicianMobile, text);
+    if (tab) tab.go(url); else window.open(url, '_blank', 'noopener');
     return 'downloaded';
   }
 }

@@ -194,3 +194,8 @@
   input:focus-visible + .q-switch-track { outline: 2px solid #1b4a7a; outline-offset: 2px; }
   input:disabled ~ * { opacity: .6; cursor: default; }
 }
+
+/* Send via WhatsApp: WhatsApp's green on a plain button, so it reads as WhatsApp at a glance */
+.q-whatsapp { display: inline-flex; align-items: center; gap: 6px; color: #128C4A; border-color: #9fd8b5; }
+.q-whatsapp:hover:not(:disabled) { background: #effaf3; }
+.q-wa-icon { width: 17px; height: 17px; flex: 0 0 auto; }

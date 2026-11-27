@@ -176,9 +176,9 @@ const PAGE_W = 210, PAGE_H = 297, M = 12, W = PAGE_W - 2 * M;
 const INK = 26, MUTED = 100, LINE = 190, FILL = 242;
 
 /** Draws the job card into a new A4 PDF: the facts, then boxes the technician fills in on site. */
-export async function buildJobCardPdf(c: JobCard, company: PrintCompany, printedAt = new Date()): Promise<jsPDF> {
+export async function buildJobCardPdf(c: JobCard, company: PrintCompany, printedAt = new Date(), compress = true): Promise<jsPDF> {
   const { jsPDF: Pdf } = await import('jspdf');
-  const pdf = new Pdf({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+  const pdf = new Pdf({ orientation: 'portrait', unit: 'mm', format: 'a4', compress });
   let y = M;
 
   const ensure = (h: number) => { if (y + h > PAGE_H - M - 8) { pdf.addPage('a4', 'portrait'); y = M; } };

@@ -57,7 +57,7 @@ describe('job card', () => {
 
   it('draws an A4 PDF with the job and the boxes to fill in', async () => {
     const pdf = await buildJobCardPdf(card(), { name: 'Felix Fitness', address: 'Kaloor, Kochi', phone: '0484 2345678' },
-      new Date(2026, 10, 27, 9, 30));
+      new Date(2026, 10, 27, 9, 30), false);
     const raw = pdf.output();
     expect(pdf.getNumberOfPages()).toBeGreaterThanOrEqual(1);
     for (const t of ['JOB CARD', 'CMP-0012', 'Anil Kumar', 'TM10C-0042', 'Work done', 'Parts used / replaced', 'Technician signature'])
