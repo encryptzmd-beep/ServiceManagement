@@ -38,6 +38,14 @@
                   <option value="image" [selected]="value(f.key) === 'image'">Image</option>
                 </select>
               }
+              @case ('choice') {
+                <label class="ps-label" [attr.for]="f.key">{{ f.label }}</label>
+                <select class="ps-input" [id]="f.key" (change)="set(f.key, text($event))">
+                  @for (c of f.choices ?? []; track c.value; let first = $first) {
+                    <option [value]="c.value" [selected]="(value(f.key) || (first ? c.value : '')) === c.value">{{ c.label }}</option>
+                  }
+                </select>
+              }
               @case ('area') {
                 <label class="ps-label" [attr.for]="f.key">{{ f.label }}</label>
                 <textarea class="ps-input" rows="4" maxlength="4000" [id]="f.key" [value]="value(f.key)" (input)="set(f.key, text($event))"></textarea>

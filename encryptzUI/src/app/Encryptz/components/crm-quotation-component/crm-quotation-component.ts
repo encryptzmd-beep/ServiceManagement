@@ -16,6 +16,7 @@ import { DocumentPdfService, documentFileName } from '../shared/document-print/d
 import { quotationPrintDocument } from '../shared/document-print/quotation-document';
 import { DialogService } from '../../Services/dialog-service';
 import { RightsService } from '../../Services/rights-service';
+import { QUOTATION_PRICES_KEY, QUOTATION_VALIDITY_KEY, pricesIncludeGstByDefault, validUntilFor } from '../shared/quotation-defaults';
 
 export const GST_RATES = [0, 5, 12, 18, 28];
 
@@ -147,15 +148,30 @@ export class CrmQuotationComponent {
     if (leadId > 0) this.useLead(leadId, true);
   }
 
-  /** A new quotation starts with the terms and warranty of Print Settings; what is saved is this quotation's own copy. */
+  /** The admin's validity period (7d, 1m, ...) a new quotation follows; '' when none. */
+  validityPeriod = signal('');
+
+  /**
+   * A new quotation starts with the defaults of Print Settings: terms, warranty, the validity period (Valid Until =
+   * its date + the period) and whether its rates include GST. What is saved is this quotation's own copy.
+   */
   private loadDefaultTexts(): void {
+    this.validityPeriod.set('');
     this.crm.getPrintSettings().subscribe({
       next: res => {
         if (this.quotationId() || this.saved()) return;
         const d = res?.data ?? {};
         const untouched = !this.isDirty();
+        const period = d[QUOTATION_VALIDITY_KEY] ?? '';
+        this.validityPeriod.set(validUntilFor('2000-01-01', period) ? period : '');
         // never over what the person has typed meanwhile
-        this.head.update(h => ({ ...h, terms: h.terms || (d['Print.Terms'] ?? ''), warrantyText: h.warrantyText || (d['Print.Warranty'] ?? '') }));
+        this.head.update(h => ({
+          ...h,
+          terms: h.terms || (d['Print.Terms'] ?? ''),
+          warrantyText: h.warrantyText || (d['Print.Warranty'] ?? ''),
+          validUntil: h.validUntil || validUntilFor(h.quoteDate, period),
+          pricesIncludeGst: untouched ? pricesIncludeGstByDefault(d[QUOTATION_PRICES_KEY]) : h.pricesIncludeGst,
+        }));
         if (untouched) this.markSaved();   // the defaults are not a change of the user
       },
       error: () => {},   // the boxes stay blank and can be typed in
@@ -435,7 +451,14 @@ export class CrmQuotationComponent {
   }
 
   setHead<K extends keyof Head>(key: K, value: Head[K]): void {
-    this.head.update(h => ({ ...h, [key]: value }));
+    this.head.update(h => {
+      const next = { ...h, [key]: value };
+      // a new date moves Valid Until along with it, unless Valid Until was changed by hand
+      const period = this.validityPeriod();
+      if (key === 'quoteDate' && period && (!h.validUntil || h.validUntil === validUntilFor(h.quoteDate, period)))
+        next.validUntil = validUntilFor(String(value), period) || h.validUntil;
+      return next;
+    });
   }
 
   setLine<K extends keyof QuotationItemDto>(index: number, key: K, value: QuotationItemDto[K]): void {

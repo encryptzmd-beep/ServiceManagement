@@ -26,7 +26,16 @@ namespace EncryptzBL.Common.Tenant
                 return ImageData.IsMatch(text) ? null : "Only PNG, JPG or WEBP images can be used";
             }
             if (type.StartsWith("select"))
-                return Modes.Contains(text.Trim().ToLowerInvariant()) ? null : "Choose none, text or image";
+            {
+                // the row's type names its choices, e.g. select:none,text,image or select:exclusive,inclusive
+                var colon = type.IndexOf(':');
+                var options = colon >= 0
+                    ? type[(colon + 1)..].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    : Modes;
+                if (options.Length == 0) options = Modes;
+                return options.Contains(text.Trim().ToLowerInvariant()) ? null
+                    : "Choose " + (options.Length == 1 ? options[0] : string.Join(", ", options[..^1]) + " or " + options[^1]);
+            }
             return text.Length > MaxTextLength ? $"{key} is too long" : null;
         }
     }

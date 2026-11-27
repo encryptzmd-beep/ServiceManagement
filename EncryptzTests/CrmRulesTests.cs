@@ -198,6 +198,11 @@ namespace EncryptzTests
         [InlineData("select:none,text,image", "image", true)]
         [InlineData("select:none,text,image", "other", false)]
         [InlineData("string", "Kaloor", true)]
+        [InlineData("select:none,7d,14d,15d,30d,1m,2m,3m", "14d", true)]
+        [InlineData("select:none,7d,14d,15d,30d,1m,2m,3m", "1m", true)]
+        [InlineData("select:none,7d,14d,15d,30d,1m,2m,3m", "5y", false)]
+        [InlineData("select:exclusive,inclusive", "inclusive", true)]
+        [InlineData("select:exclusive,inclusive", "both", false)]
         public void Print_settings_accept_only_safe_values(string type, string value, bool ok)
             => Assert.Equal(ok, EncryptzBL.Common.Tenant.PrintSettingRules.Problem("Print.X", value, type) == null);
 

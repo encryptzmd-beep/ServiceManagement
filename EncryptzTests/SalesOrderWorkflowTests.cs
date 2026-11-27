@@ -92,6 +92,22 @@ namespace EncryptzTests
         }
 
         [Fact]
+        public void Quotation_defaults_are_print_settings_with_the_ui_choices()
+        {
+            var s = Read("EncryptzAPI", "Database", "ProjectDB", "31_Quotation_Defaults.sql").Replace("\r\n", "\n");
+            Assert.Contains("('Print.QuotationValidity', N'none', 'Print', 'select:none,7d,14d,15d,30d,1m,2m,3m'", s);
+            Assert.Contains("('Print.QuotationPrices', N'exclusive', 'Print', 'select:exclusive,inclusive'", s);
+            Assert.Contains("WHEN NOT MATCHED THEN", s);   // an admin's choice is never overwritten
+            Assert.Contains(@"Database\ProjectDB\31_Quotation_Defaults.sql", Read("EncryptzAPI", "EncryptzAPI.csproj"));
+            Assert.NotEmpty(EncryptzBL.Common.Provisioning.TenantScript.ParseFollowUp("31_Quotation_Defaults.sql", s).Batches);
+
+            // the admin page offers the same values the setting row accepts
+            var ui = Read("encryptzUI", "src", "app", "Encryptz", "components", "shared", "quotation-defaults.ts");
+            foreach (var v in new[] { "none", "7d", "14d", "15d", "30d", "1m", "2m", "3m", "exclusive", "inclusive" })
+                Assert.Contains($"value: '{v}'", ui);
+        }
+
+        [Fact]
         public void Script_is_shipped_and_parses_as_a_follow_up()
         {
             Assert.Contains(@"Database\ProjectDB\30_Sales_Order_Workflow.sql", Read("EncryptzAPI", "EncryptzAPI.csproj"));
