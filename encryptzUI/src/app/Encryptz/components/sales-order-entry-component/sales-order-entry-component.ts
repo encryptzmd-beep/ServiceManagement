@@ -23,6 +23,7 @@ import { isEmailOrBlank, isPinOrBlank, normalizeMobile, statusText } from '../sh
 import {
   INDIAN_STATES, ProductMasterDTO, SALES_GST_RATES, SALES_PAYMENT_MODES,
   SalesCustomer, SalesCustomerSave, SalesOrderDetail, SalesOrderItemSave, SalesOrderSave,
+  INVOICE_DOCUMENT_TYPE, SALES_ORDER_STEPS, SalesDocument, isOpenSalesOrder, nextSalesOrderStep,
 } from '../../Models/ApiModels';
 
 /** One bill line on the screen (amounts are recomputed by the API on save). */
@@ -71,7 +72,7 @@ export class SalesOrderEntryComponent implements OnInit {
   // ── bill header ──
   salesOrderId = signal(0);
   orderNo = signal('');
-  status = signal('Billed');
+  status = signal('Sales Order');
   orderDate = this.todayInput();
   paymentMode = 'Cash';
   paymentDueDate = '';
@@ -131,11 +132,24 @@ export class SalesOrderEntryComponent implements OnInit {
   /** An existing bill opens read-only; Edit unlocks it. */
   editing = signal(false);
   mode = computed<TransactionMode>(() => this.isNew() ? 'new' : this.editing() ? 'edit' : 'view');
-  /** The fields can be changed now: a Billed bill that is new or being edited. */
-  isEditable = computed(() => this.status() === 'Billed' && this.mode() !== 'view');
-  canEditBill = computed(() => !this.isNew() && this.status() === 'Billed');
-  /** Only a bill not yet despatched can be cancelled (as sp_SalesOrder_Cancel decides). */
-  canCancelBill = computed(() => !this.isNew() && this.status() === 'Billed');
+  /** The fields can be changed now: an order not yet billed that is new or being edited. */
+  isEditable = computed(() => isOpenSalesOrder(this.status()) && this.mode() !== 'view');
+  canEditBill = computed(() => !this.isNew() && isOpenSalesOrder(this.status()));
+  /** Only an order not yet despatched can be cancelled (as sp_SalesOrder_Cancel decides). */
+  canCancelBill = computed(() => !this.isNew() && (isOpenSalesOrder(this.status()) || this.status() === 'Billed'));
+
+  // ── workflow: Sales Order → Sales Confirmed → Billed (invoice attached) → Despatch ──
+  readonly steps = SALES_ORDER_STEPS;
+  /** Where the order stands in `steps`; -1 when cancelled. */
+  stepIndex = computed(() => (SALES_ORDER_STEPS as readonly string[]).indexOf(this.status()));
+  /** The step the saved order can move to now (not while its fields are being changed). */
+  nextStep = computed(() => this.isNew() || this.mode() !== 'view' ? null : nextSalesOrderStep(this.status()));
+  /** The documents of the order, as the Documents card last read them. */
+  documents = signal<SalesDocument[]>([]);
+  hasInvoice = computed(() => this.documents().some(d => d.documentType === INVOICE_DOCUMENT_TYPE));
+  /** Why the next step cannot be taken yet, or ''. */
+  nextStepHint = computed(() => this.nextStep() === 'Billed' && !this.hasInvoice()
+    ? 'Attach the invoice PDF in Documents (type Invoice) before marking it billed.' : '');
   neighbours = signal<{ previousId: number | null; nextId: number | null }>({ previousId: null, nextId: null });
   findOpen = signal(false);
   findRows = signal<FindRow[]>([]);
@@ -227,7 +241,7 @@ export class SalesOrderEntryComponent implements OnInit {
 
   private resetNew(): void {
     this.customerCollapsed.set(false);
-    this.salesOrderId.set(0); this.orderNo.set(''); this.status.set('Billed'); this.detail.set(null);
+    this.salesOrderId.set(0); this.orderNo.set(''); this.status.set('Sales Order'); this.detail.set(null); this.documents.set([]);
     this.editing.set(false); this.error.set('');
     this.orderDate = this.todayInput(); this.paymentMode = 'Cash'; this.paymentDueDate = ''; this.referenceNo = ''; this.contactNumber = '';
     this.gstin = ''; this.billingAddress = ''; this.city = ''; this.state = 'Kerala'; this.pinCode = ''; this.notes = '';
@@ -262,7 +276,7 @@ export class SalesOrderEntryComponent implements OnInit {
 
   onDiscard(): void { this.leave(() => this.load(this.salesOrderId())); }
 
-  onSave(): void { this.save(false); }
+  onSave(): void { this.save(); }
 
   onPrevious(): void { const id = this.neighbours().previousId; if (id) this.leave(() => this.open(id)); }
 
@@ -565,7 +579,7 @@ export class SalesOrderEntryComponent implements OnInit {
     return '';
   }
 
-  async save(andDespatch = true): Promise<void> {
+  async save(): Promise<void> {
     const err = this.validate();
     if (err) {
       this.customerCollapsed.set(false);   // the field to correct may be in the folded card
@@ -614,12 +628,10 @@ export class SalesOrderEntryComponent implements OnInit {
         const wasNew = this.isNew();
         this.salesOrderId.set(r.data.salesOrderId);
         this.orderNo.set(r.data.orderNo);
-        this.showToast('success', r.message || `Bill ${r.data.orderNo} saved`);
+        this.showToast('success', r.message || `Sales order ${r.data.orderNo} saved`);
         this.markSaved();
-        if (andDespatch) {
-          // the bill goes straight on to despatch
-          setTimeout(() => this.router.navigate(['/sales/despatch', r.data!.salesOrderId]), 500);
-        } else if (wasNew) {
+        // an order goes to Despatch only once billed (setStep), so a save stays on this screen
+        if (wasNew) {
           // the address of the saved bill (a new page that loads it)
           this.router.navigate(['/sales/orders', r.data.salesOrderId], { replaceUrl: true });
         } else {
@@ -631,6 +643,27 @@ export class SalesOrderEntryComponent implements OnInit {
         const msg = e?.error?.message || 'Could not save the bill';
         this.error.set(msg); this.showToast('error', msg);
       },
+    });
+  }
+
+  /** Sales Order → Sales Confirmed, or Sales Confirmed → Billed (the invoice attached), which sends it to Despatch. */
+  async setStep(): Promise<void> {
+    const id = this.salesOrderId();
+    const step = this.nextStep();
+    if (!id || !step || this.nextStepHint() || this.saving()) return;
+    const ok = await this.dialog.confirm(step === 'Billed'
+      ? { message: `Mark sales order ${this.orderNo()} as billed? It can no longer be changed, and it goes to Despatch.`, okText: 'Mark billed' }
+      : { message: `Confirm the sale ${this.orderNo()}?`, okText: 'Confirm sale' });
+    if (!ok) return;
+    this.saving.set(true);
+    this.api.setSalesOrderStatus(id, step).subscribe({
+      next: r => {
+        this.saving.set(false);
+        if (r?.success === false) { this.showToast('error', r.message || 'The status could not be changed'); return; }
+        this.showToast('success', r?.message || (step === 'Billed' ? `Sales order ${this.orderNo()} billed and sent to Despatch` : `Sales order ${this.orderNo()} confirmed`));
+        this.load(id);
+      },
+      error: e => { this.saving.set(false); this.showToast('error', e?.error?.message || 'The status could not be changed'); },
     });
   }
 

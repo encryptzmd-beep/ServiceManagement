@@ -16,7 +16,8 @@ namespace EncryptzAPI.Controllers
     ///   GET    api/Sales/orders/next-number
     ///   GET    api/Sales/orders?searchTerm=&status=&pageNumber=&pageSize=
     ///   GET    api/Sales/orders/{id}               bill + lines (+ warranty) + despatch
-    ///   POST   api/Sales/orders                    save bill (insert / update while Billed)
+    ///   POST   api/Sales/orders                    save a sales order (insert / update before Billed)
+    ///   POST   api/Sales/orders/{id}/status        Sales Order -> Sales Confirmed -> Billed (needs an Invoice PDF)
     ///   POST   api/Sales/orders/{id}/cancel
     ///   GET    api/Sales/despatches?searchTerm=&pageNumber=&pageSize=
     ///   GET    api/Sales/despatches/{id}           despatch + units with warranty + complaint
@@ -106,6 +107,15 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SaveOrder([FromBody] SalesOrderSaveDto dto)
         {
             var result = await _svc.SaveOrder(dto, UserId);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>Sales Order → Sales Confirmed → Billed; Billed needs an Invoice PDF attached, and sends the order to Despatch.</summary>
+        [MenuRight("/sales/orders", MenuRightKind.Edit)]
+        [HttpPost("orders/{id:int}/status")]
+        public async Task<IActionResult> SetOrderStatus(int id, [FromBody] SalesOrderStatusDto dto)
+        {
+            var result = await _svc.SetOrderStatus(id, dto?.Status, UserId);
             return result.Success ? Ok(result) : BadRequest(result);
         }
 

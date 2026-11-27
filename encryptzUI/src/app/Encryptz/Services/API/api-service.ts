@@ -1147,6 +1147,11 @@ getSalesOrderNeighbours(id: number): Observable<M.ApiResponse<{ previousId: numb
   return this.get<M.ApiResponse<{ previousId: number | null; nextId: number | null }>>(`Sales/orders/${id}/neighbours`);
 }
 
+/** Sales Order → Sales Confirmed → Billed (Billed needs an Invoice PDF attached and sends the order to Despatch). */
+setSalesOrderStatus(id: number, status: 'Sales Confirmed' | 'Billed'): Observable<M.ApiResponse> {
+  return this.post<M.ApiResponse>(`Sales/orders/${id}/status`, { status });
+}
+
 cancelSalesOrder(id: number): Observable<M.ApiResponse> {
   return this.post<M.ApiResponse>(`Sales/orders/${id}/cancel`, {});
 }

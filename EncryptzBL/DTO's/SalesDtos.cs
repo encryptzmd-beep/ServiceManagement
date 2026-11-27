@@ -97,6 +97,12 @@ namespace EncryptzBL.DTO_s
         public List<SalesOrderItemSaveDto> Items { get; set; } = new();
     }
 
+    /// <summary>The step a sales order is moved to: Sales Confirmed or Billed.</summary>
+    public class SalesOrderStatusDto
+    {
+        public string? Status { get; set; }
+    }
+
     public class SalesOrderSaveResultDto
     {
         public int SalesOrderId { get; set; }

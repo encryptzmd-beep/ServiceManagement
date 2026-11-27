@@ -31,10 +31,23 @@
     <div class="so-loading"><div class="spinner"></div><span>Loading bill…</span></div>
   } @else {
 
-  @if (!isNew() && status() !== 'Billed') {
+  <!-- ── workflow: Sales Order → Sales Confirmed → Billed → Despatched ── -->
+  @if (!isNew() && status() !== 'Cancelled') {
+    <ol class="so-steps" aria-label="Sales order progress">
+      @for (s of steps; track s; let i = $index) {
+        <li [class.done]="i < stepIndex()" [class.current]="i === stepIndex()" [attr.aria-current]="i === stepIndex() ? 'step' : null">
+          <span class="so-step-dot" aria-hidden="true">@if (i < stepIndex()) { <span class="material-icons">check</span> } @else { {{ i + 1 }} }</span>
+          <span class="so-step-label">{{ s }}</span>
+        </li>
+      }
+    </ol>
+  }
+
+  @if (!isNew() && !canEditBill()) {
     <div class="so-note info">
       <span class="material-icons">lock</span>
-      This bill is <strong>{{ status() }}</strong> and cannot be changed.
+      This sales order is <strong>{{ status() }}</strong> and cannot be changed.
+      @if (status() === 'Billed') { It is waiting at Despatch. }
       @if (status() === 'Despatched') { The warranty of each unit starts on the despatch date. }
     </div>
   }
@@ -278,7 +291,8 @@
 
   <!-- ── PDFs of the bill (also shown on its despatch) ─────── -->
   @if (!isNew()) {
-    <app-sales-documents [salesOrderId]="salesOrderId()" [canAdd]="status() !== 'Cancelled'" [canRemove]="status() !== 'Cancelled'" />
+    <app-sales-documents [salesOrderId]="salesOrderId()" [canAdd]="status() !== 'Cancelled'" [canRemove]="status() !== 'Cancelled'"
+      (documentsChange)="documents.set($event)" />
   }
 
   <!-- ── notes + summary ───────────────────────────────────── -->
@@ -342,12 +356,18 @@
 
         <div class="summary-actions">
           @if (isEditable()) {
-            <button appRight="save" appRightMenu="/sales/orders" type="button" class="btn-outline" [disabled]="saving()" (click)="save(false)">
-              {{ isNew() ? 'Save Bill' : 'Update Bill' }}
+            <button appRight="save" appRightMenu="/sales/orders" type="button" class="btn-primary so-save" [disabled]="saving()" (click)="save()">
+              <span class="material-icons">save</span>
+              {{ saving() ? 'Saving…' : isNew() ? 'Save Sales Order' : 'Update Sales Order' }}
             </button>
-            <button appRight="save" appRightMenu="/sales/orders" type="button" class="btn-primary" [disabled]="saving()" (click)="save(true)">
-              <span class="material-icons">local_shipping</span>
-              {{ saving() ? 'Saving…' : 'Save & Despatch' }}
+          } @else if (nextStep() === 'Sales Confirmed') {
+            <button appRight="edit" appRightMenu="/sales/orders" type="button" class="btn-primary so-next-step" [disabled]="saving()" (click)="setStep()">
+              <span class="material-icons">task_alt</span> Confirm Sale
+            </button>
+          } @else if (nextStep() === 'Billed') {
+            <button appRight="edit" appRightMenu="/sales/orders" type="button" class="btn-primary so-next-step" [disabled]="saving() || !!nextStepHint()"
+              [attr.aria-describedby]="nextStepHint() ? 'so-step-hint' : null" (click)="setStep()">
+              <span class="material-icons">receipt_long</span> Mark as Billed
             </button>
           } @else if (status() === 'Billed' && !isNew()) {
             <!-- a saved bill, shown read-only: it can go on to despatch without Edit -->
@@ -360,6 +380,7 @@
             </button>
           }
         </div>
+        @if (nextStepHint()) { <p id="so-step-hint" class="so-step-hint">{{ nextStepHint() }}</p> }
       </div>
     </section>
   </div>

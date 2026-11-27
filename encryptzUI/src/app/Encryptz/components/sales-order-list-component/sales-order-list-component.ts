@@ -7,7 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { ApiService } from '../../Services/API/api-service';
 import { ModuleRefusedComponent, isModuleRefusal } from '../shared/module-refused';
-import { SalesOrderFilter, SalesOrderListItem } from '../../Models/ApiModels';
+import { SALES_ORDER_STATUSES, SalesOrderFilter, SalesOrderListItem, isOpenSalesOrder } from '../../Models/ApiModels';
 import { DialogService } from '../../Services/dialog-service';
 
 @Component({
@@ -32,7 +32,8 @@ export class SalesOrderListComponent implements OnInit {
   toast = signal<{ type: 'success' | 'error'; text: string } | null>(null);
 
   filter: SalesOrderFilter = { pageNumber: 1, pageSize: 20, status: '', searchTerm: '' };
-  readonly statuses = ['Billed', 'Despatched', 'Cancelled'];
+  readonly statuses = SALES_ORDER_STATUSES;
+  readonly isOpen = isOpenSalesOrder;
 
   billedCount = computed(() => this.orders().filter(o => o.status === 'Billed').length);
   despatchedCount = computed(() => this.orders().filter(o => o.status === 'Despatched').length);
@@ -67,7 +68,7 @@ export class SalesOrderListComponent implements OnInit {
 
   async cancel(o: SalesOrderListItem, ev?: Event): Promise<void> {
     ev?.stopPropagation();
-    if (!(await this.dialog.confirm(`Cancel bill ${o.orderNo}? This cannot be undone.`))) return;
+    if (!(await this.dialog.confirm(`Cancel sales order ${o.orderNo}? This cannot be undone.`))) return;
     this.api.cancelSalesOrder(o.salesOrderId).subscribe({
       next: r => { this.showToast(r?.success ? 'success' : 'error', r?.message || 'Done'); this.load(); },
       error: e => this.showToast('error', e?.error?.message || 'Could not cancel the bill'),

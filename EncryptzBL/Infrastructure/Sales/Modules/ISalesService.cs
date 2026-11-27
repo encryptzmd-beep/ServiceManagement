@@ -16,7 +16,13 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
 
         // sales order
         Task<string> GetNextOrderNumber();
-        Task<ApiResponse<SalesOrderSaveResultDto>> SaveOrder(SalesOrderSaveDto dto, int userId);
+        /// <summary>
+        /// Saves a sales order. A new one starts as <paramref name="initialStatus"/>: Sales Order, or Sales Confirmed
+        /// for a CRM convert. It is never taken from the request, so no client can save an order as Billed.
+        /// </summary>
+        Task<ApiResponse<SalesOrderSaveResultDto>> SaveOrder(SalesOrderSaveDto dto, int userId, string initialStatus = EncryptzBL.Common.Sales.SalesOrderStatus.Order);
+        /// <summary>Sales Order → Sales Confirmed → Billed (Billed needs an Invoice PDF attached).</summary>
+        Task<ApiResponse> SetOrderStatus(int salesOrderId, string? status, int userId);
         Task<ApiResponse> CancelOrder(int salesOrderId, int userId);
         /// <summary>Previous / next sales order (0 = from a new one).</summary>
         Task<ApiResponse<NeighboursDto>> GetOrderNeighbours(int salesOrderId);

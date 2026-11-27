@@ -316,6 +316,25 @@ export interface ServiceDespatchCreate {
 
 export const SALES_DOCUMENT_TYPES =['Invoice', 'E-Way Bill', 'Delivery Challan', 'LR / Consignment Note', 'Purchase Order', 'Other'];
 
+/**
+ * The steps of a sales order (as dbo.sp_SalesOrder_SetStatus): Sales Order → Sales Confirmed → Billed → Despatched.
+ * Billed needs an Invoice PDF attached; a billed order is what the Despatch screen lists as pending.
+ */
+export const SALES_ORDER_STEPS = ['Sales Order', 'Sales Confirmed', 'Billed', 'Despatched'] as const;
+export const SALES_ORDER_STATUSES = [...SALES_ORDER_STEPS, 'Cancelled'];
+/** An order that can still be changed: it is not billed yet. */
+export const isOpenSalesOrder = (status: string | null | undefined) => status === 'Sales Order' || status === 'Sales Confirmed';
+/** The step a person may move the order to next, or null. */
+export const nextSalesOrderStep = (status: string | null | undefined): 'Sales Confirmed' | 'Billed' | null =>
+  status === 'Sales Order' ? 'Sales Confirmed' : status === 'Sales Confirmed' ? 'Billed' : null;
+/** The document type that must be attached before an order is marked Billed. */
+export const INVOICE_DOCUMENT_TYPE = 'Invoice';
+/** Why a sales order is not at Despatch, or '' when it may be despatched. */
+export const notDespatchableReason = (orderNo: string, status: string): string =>
+  status === 'Billed' ? ''
+    : isOpenSalesOrder(status) ? `Sales order ${orderNo} is not billed yet. Attach its invoice and mark it billed first.`
+    : `Sales order ${orderNo} is ${status.toLowerCase()} and cannot be despatched.`;
+
 /** A PDF attached to a bill, from the Sales Order or the Despatch screen. */
 export interface SalesDocument {
   documentId: number;

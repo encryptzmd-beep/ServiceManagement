@@ -1,4 +1,5 @@
 using EncryptzBL.Common;
+using EncryptzBL.Common.Sales;
 using EncryptzBL.DTO_s;
 using Microsoft.Data.SqlClient;
 using System.Data;
@@ -131,9 +132,11 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
             return dt != null && dt.Rows.Count > 0 ? dt.Rows[0]["OrderNo"]?.ToString() ?? string.Empty : string.Empty;
         }
 
-        public async Task<ApiResponse<SalesOrderSaveResultDto>> SaveOrder(SalesOrderSaveDto dto, int userId)
+        public async Task<ApiResponse<SalesOrderSaveResultDto>> SaveOrder(SalesOrderSaveDto dto, int userId, string initialStatus = SalesOrderStatus.Order)
         {
             if (dto == null) return ApiResponse<SalesOrderSaveResultDto>.Fail("No bill data.");
+            if (!SalesOrderStatus.IsStart(initialStatus))
+                return ApiResponse<SalesOrderSaveResultDto>.Fail("A new sales order starts as Sales Order or Sales Confirmed.");
             if (dto.CustomerId <= 0) return ApiResponse<SalesOrderSaveResultDto>.Fail("Select a customer first.");
 
             var items = (dto.Items ?? new())
@@ -168,7 +171,8 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
                 SqlParameterHelper.Input("@Terms", Clean(dto.Terms)),
                 SqlParameterHelper.Input("@WarrantyText", Clean(dto.WarrantyText)),
                 SqlParameterHelper.Input("@ItemsJson", JsonSerializer.Serialize(items, JsonOpts)),
-                SqlParameterHelper.Input("@UserId", userId)
+                SqlParameterHelper.Input("@UserId", userId),
+                SqlParameterHelper.Input("@Status", initialStatus)
             };
 
             var dt = await GetDataTableAsync("sp_SalesOrder_Save", p);
@@ -184,6 +188,24 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
                 SalesOrderId = Convert.ToInt32(row["SalesOrderId"]),
                 OrderNo = row["OrderNo"]?.ToString() ?? string.Empty
             }, row["Message"]?.ToString() ?? "Saved");
+        }
+
+        public async Task<ApiResponse> SetOrderStatus(int salesOrderId, string? status, int userId)
+        {
+            status = status?.Trim();
+            if (salesOrderId <= 0) return new ApiResponse(false, "Sales order not found.");
+            if (status is not (SalesOrderStatus.Confirmed or SalesOrderStatus.Billed))
+                return new ApiResponse(false, "A sales order can be marked Sales Confirmed or Billed.");
+
+            // sp_SalesOrder_SetStatus decides: the step order and, for Billed, an Invoice PDF attached
+            var dt = await GetDataTableAsync("sp_SalesOrder_SetStatus", new[]
+            {
+                SqlParameterHelper.Input("@SalesOrderId", salesOrderId),
+                SqlParameterHelper.Input("@Status", status),
+                SqlParameterHelper.Input("@UserId", userId)
+            });
+            if (dt == null || dt.Rows.Count == 0) return new ApiResponse(false, "No response from the database.");
+            return new ApiResponse(Convert.ToInt32(dt.Rows[0]["Success"]) == 1, dt.Rows[0]["Message"]?.ToString() ?? string.Empty);
         }
 
         public async Task<ApiResponse> CancelOrder(int salesOrderId, int userId)

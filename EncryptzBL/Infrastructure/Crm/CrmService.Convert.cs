@@ -1,5 +1,6 @@
 using EncryptzBL.Common;
 using EncryptzBL.Common.Crm;
+using EncryptzBL.Common.Sales;
 using EncryptzBL.DTO_s;
 using Microsoft.Extensions.Logging;
 
@@ -85,7 +86,8 @@ namespace EncryptzBL.Infrastructure.Crm
 
                     // from here sp_SalesOrder_Save may commit even if the call then throws (a timeout, a dropped connection)
                     orderAttempted = true;
-                    var saved = await _sales.SaveOrder(CrmRules.BuildOrder(lead, q!, customerId, dto), userId);
+                    // the customer accepted the quotation: the order starts as Sales Confirmed (Billed once its invoice is attached)
+                    var saved = await _sales.SaveOrder(CrmRules.BuildOrder(lead, q!, customerId, dto), userId, SalesOrderStatus.Confirmed);
                     if (!saved.Success || saved.Data == null || saved.Data.SalesOrderId <= 0)
                     {
                         if (newCustomer)
