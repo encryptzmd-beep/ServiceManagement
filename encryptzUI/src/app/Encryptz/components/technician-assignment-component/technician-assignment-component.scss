@@ -546,6 +546,14 @@
 .role-btn, .priority-btn, .iw { border-radius: 8px; }
 .schedule-section { border-style: solid; border-color: var(--fx-border, #e2e8f0); background: #f8fafc; border-radius: 10px; }
 
+// job card of the assignment just made, and on each active assignment
+.jc-after-assign {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  margin-top: 10px; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff;
+  font-size: 13px; font-weight: 600; color: #1a2332;
+}
+.ac-jobcard { margin-top: 8px; }
+
 @media (max-width: 900px) {
   .grid-layout { grid-template-columns: 1fr; gap: 16px; }
   .page-header { align-items: flex-start; }

@@ -9,6 +9,8 @@ namespace EncryptzBL.Infrastructure.Technician.modules
     {
         Task<ApiResponse<int>> SaveServiceImage(ServiceImageSaveDto dto);
         Task<WorkOrderDetailDto?> GetWorkOrderDetails(int assignmentId);
+        /// <summary>The job card of one assignment (job, visit, customer, product, team); null when it does not exist.</summary>
+        Task<JobCardDto?> GetJobCard(int assignmentId);
         Task<object> GetAll(TechnicianFilterDto filter);
         Task<TechnicianDetail> GetById(int technicianId);
         Task<ApiResponse<int>> Create(TechnicianCreateDto dto);

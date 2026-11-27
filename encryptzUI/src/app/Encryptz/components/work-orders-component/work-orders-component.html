@@ -356,6 +356,9 @@
  }
  </div>
 
+ <!-- keep the job card on the phone for sites without network -->
+ <app-job-card-actions class="order-jobcard" [assignmentId]="wo.assignmentId" [label]="wo.complaintNumber" />
+
  <div class="order-actions">
  @if (wo.status === 'Assigned') {
  <button

@@ -1,3 +1,4 @@
+import { JobCardActionsComponent } from '../shared/job-card/job-card-actions';
 import { Component, inject, OnInit, signal, computed, DestroyRef, HostListener, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -26,7 +27,7 @@ type SpareCartItem = {
 @Component({
   selector: 'app-work-orders',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, JobCardActionsComponent],
   templateUrl: './work-orders-component.html',
   styleUrls: ['./work-orders-component.scss'],
 })

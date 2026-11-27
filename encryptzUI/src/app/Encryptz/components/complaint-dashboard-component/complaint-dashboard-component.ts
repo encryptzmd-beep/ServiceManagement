@@ -1,3 +1,4 @@
+import { JobCardActionsComponent } from '../shared/job-card/job-card-actions';
 import { statusText } from '../shared/sales-input-rules';
 import { AppRightDirective } from '../shared/app-right/app-right';
 import { CommonModule } from '@angular/common';
@@ -23,7 +24,7 @@ interface TileConfig {
 
 @Component({
   selector: 'app-complaint-dashboard-component',
-  imports: [AppRightDirective, CommonModule, FormsModule, RouterModule, ComplaintDetailPopupComponent],
+  imports: [AppRightDirective, CommonModule, FormsModule, RouterModule, ComplaintDetailPopupComponent, JobCardActionsComponent],
   templateUrl: './complaint-dashboard-component.html',
   styleUrl: './complaint-dashboard-component.scss',
 })
@@ -92,6 +93,8 @@ private _scrollTileTop(): void {
   aNotes = '';
   assigning = signal(false);
   assignOk = signal('');
+  /** The assignment just made in the popup, so its job card can be shared with the technician at once. */
+  lastAssignment = signal<{ assignmentId: number; technicianName: string } | null>(null);
   assignErr = signal('');
 
   // Schedule
@@ -494,7 +497,7 @@ get pagedItems(): any[] {
 
   private resetPanel(): void {
     this.selectedTech.set(null); this.aRole='Primary'; this.aPriority='Medium'; this.aNotes='';
-    this.assignOk.set(''); this.assignErr.set(''); this.techSearch.set(''); this.techFilter=null;
+    this.assignOk.set(''); this.assignErr.set(''); this.lastAssignment.set(null); this.techSearch.set(''); this.techFilter=null;
     this.sched=false; this.schedDate=''; this.schedSlot=''; this.schedStart=''; this.schedEnd=''; this.schedDur=null;
     this.cSearch=''; this.selectedC.set(null); this.cResults.set([]); this.showCDropdown=false;
     this.completeOk.set(''); this.completeErr.set('');
@@ -891,7 +894,7 @@ doAssign(): void {
   const cid = this.selectedC()?.complaintId ?? this.assignTarget()?.complaintId;
   if (!cid || !this.selectedTech()) return;
   this.assigning.set(true);
-  this.assignOk.set('');
+  this.assignOk.set(''); this.lastAssignment.set(null);
   this.assignErr.set('');
 
   const p: any = {
@@ -924,6 +927,8 @@ doAssign(): void {
         this.assignOk.set(
           `${(t as any)?.fullName || 'Technician'} assigned as ${this.aRole}`
         );
+        const newId = Number(r.data);
+        if (newId > 0) this.lastAssignment.set({ assignmentId: newId, technicianName: (t as any)?.fullName || 'Technician' });
         this.loadData();
         this.loadActiveAssignments();
         if (this.auditCId) this.loadAuditLog();

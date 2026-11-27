@@ -108,6 +108,24 @@ namespace EncryptzTests
         }
 
         [Fact]
+        public void Job_card_reads_one_assignment_and_only_its_own_technician_may_open_it()
+        {
+            var s = Read("EncryptzAPI", "Database", "ProjectDB", "32_Job_Card.sql").Replace("\r\n", "\n");
+            Assert.Contains("CREATE OR ALTER PROCEDURE dbo.sp_JobCard_Get", s);
+            Assert.Contains("WHERE a.AssignmentId = @AssignmentId;", s);
+            Assert.Contains("a.Status NOT IN ('Removed', 'Cancelled')", s);
+            Assert.Contains(@"Database\ProjectDB\32_Job_Card.sql", Read("EncryptzAPI", "EncryptzAPI.csproj"));
+            Assert.NotEmpty(EncryptzBL.Common.Provisioning.TenantScript.ParseFollowUp("32_Job_Card.sql", s).Batches);
+
+            // a technician gets only an own assignment (GuardAssignment), as on the work order details
+            var api = Read("EncryptzAPI", "Controllers", "TechnicianController.cs");
+            var at = api.IndexOf("[HttpGet(\"job-card/{assignmentId:int}\")]", StringComparison.Ordinal);
+            Assert.True(at > 0, "the job card endpoint is missing");
+            var body = api.Substring(at, api.IndexOf("_service.GetJobCard(", at, StringComparison.Ordinal) - at);
+            Assert.Contains("await GuardAssignment(assignmentId)", body);
+        }
+
+        [Fact]
         public void Script_is_shipped_and_parses_as_a_follow_up()
         {
             Assert.Contains(@"Database\ProjectDB\30_Sales_Order_Workflow.sql", Read("EncryptzAPI", "EncryptzAPI.csproj"));
