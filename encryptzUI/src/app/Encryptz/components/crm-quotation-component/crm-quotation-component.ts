@@ -7,7 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ConvertResultDto, CrmProductDto, LeadDetailDto, LeadListDto, LeadSaveDto, QuotationDto, QuotationItemDto } from '../../Models/CrmModels';
 import { CrmService } from '../../Services/crm-service';
-import { CrmConvertDialogComponent } from '../crm-shell-component/crm-convert-dialog-component';
+import { CrmConvertDialogComponent, convertBlockedReason } from '../crm-shell-component/crm-convert-dialog-component';
 import { CrmRefusedComponent } from '../crm-shell-component/crm-refused';
 import { FORBIDDEN, amount, isoDate, pill, quoteTotals, refusalOf, showDate } from '../crm-shell-component/crm-ui';
 import { TransactionMode, TransactionToolbarComponent } from '../shared/transaction-toolbar/transaction-toolbar';
@@ -18,7 +18,6 @@ import { DialogService } from '../../Services/dialog-service';
 import { RightsService } from '../../Services/rights-service';
 
 export const GST_RATES = [0, 5, 12, 18, 28];
-const OPEN_FOR_CONVERT = ['Quotation', 'Negotiation'];
 
 const blankLine = (sortOrder: number): QuotationItemDto => ({
   quotationItemId: 0, productMasterId: null, productName: '', hsnSac: '', qty: 1, rate: 0, discountAmount: 0, gstPercent: 18,
@@ -106,21 +105,14 @@ export class CrmQuotationComponent {
     return !!q && q.isLatest && (q.status === 'Draft' || q.status === 'Sent') && !['Converted', 'Lost'].includes(q.leadStatus ?? '');
   });
 
-  /** The server converts only a lead in Quotation or Negotiation (CrmRules.ConvertProblem). */
   /** The lead's convert flags (the quotation does not carry them); null until read. */
   lead = signal<LeadDetailDto | null>(null);
   /** False until the lead read has answered (success or failure); Convert stays disabled meanwhile. */
   leadLoaded = signal(false);
 
-  /** Why a shown Convert button is disabled, or '' when the convert may go ahead. Same wording as the lead page. */
-  readonly convertHint = computed(() => {
-    if (!this.showConvert()) return '';
-    const l = this.lead();
-    if (l?.salesOrderId) return 'This lead has already been converted to a sales order';
-    if (l?.convertNeedsCheck) return 'A manager must check the sales orders for this lead first, then link the order or cancel the convert';
-    if (!OPEN_FOR_CONVERT.includes(this.saved()?.leadStatus ?? '')) return 'Mark the quotation as sent first';
-    return '';
-  });
+  /** Why a shown Convert button is disabled, or '' when the convert may go ahead. The lead page asks the same rule. */
+  readonly convertHint = computed(() =>
+    this.showConvert() ? convertBlockedReason(this.saved()?.leadStatus, this.lead()) : '');
   readonly canConvert = computed(() => this.showConvert() && this.leadLoaded() && !this.convertHint());
 
   constructor() {

@@ -1,7 +1,7 @@
 <div class="crm-overlay">
   <div class="crm-dialog wide cv-dialog" role="dialog" aria-modal="true" aria-labelledby="crm-convert-dialog-title"
        (click)="$event.stopPropagation()" (keydown.escape)="cancel()">
-    <h2 id="crm-convert-dialog-title">Convert to Sale</h2>
+    <h2 id="crm-convert-dialog-title">Convert to sales order</h2>
     @if (quotations().length > 1) {
       <label class="crm-field"><span>Quotation</span>
         <select class="cv-quotation" [ngModel]="convertQuotationId()" (ngModelChange)="open(+$event)">

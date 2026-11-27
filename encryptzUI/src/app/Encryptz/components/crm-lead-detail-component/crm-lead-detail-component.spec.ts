@@ -61,15 +61,25 @@ describe('CrmLeadDetailComponent', () => {
     expect(el(f).textContent).toContain('Treadmill T-10C');
   });
 
-  it('offers Convert for a lead in Quotation or Negotiation with a current quotation', () => {
-    expect(el(create()).querySelector('.crm-convert')).not.toBeNull();
+  it('offers Convert to sales order for a lead in Quotation or Negotiation with a current quotation', () => {
+    const btn = () => el(create()).querySelector('.crm-convert') as HTMLButtonElement;
+    expect(btn().textContent).toContain('Convert to sales order');
+    expect(btn().disabled).toBe(false);
     current = lead({ status: 'Negotiation' });
-    expect(el(create()).querySelector('.crm-convert')).not.toBeNull();
+    expect(btn().disabled).toBe(false);
   });
 
-  it('hides Convert in another status, or when every quotation is superseded', () => {
+  it('shows Convert disabled with the quotation editor\'s hint while the quotation is not sent', () => {
     current = lead({ status: 'Qualified' });
-    expect(el(create()).querySelector('.crm-convert')).toBeNull();
+    const f = create();
+    expect((el(f).querySelector('.crm-convert') as HTMLButtonElement).disabled).toBe(true);
+    expect(el(f).querySelector('.ld-convert-hint')!.textContent).toContain('Mark the quotation as sent first');
+    f.componentInstance.openConvert();
+    f.detectChanges();
+    expect(el(f).querySelector('app-crm-convert-dialog')).toBeNull();
+  });
+
+  it('hides Convert when every quotation is superseded or there is none', () => {
     current = lead({ quotations: [quote({ status: 'Superseded', isLatest: false })] });
     expect(el(create()).querySelector('.crm-convert')).toBeNull();
     current = lead({ quotations: [] });
@@ -111,7 +121,7 @@ describe('CrmLeadDetailComponent', () => {
     f.detectChanges();
     expect(crm.convert).toHaveBeenCalledWith(5, expect.objectContaining({ quotationId: 30, customerId: null, paymentMode: 'Cash' }));
     expect(el(f).querySelector('app-crm-convert-dialog')).toBeNull();
-    expect(el(f).textContent).toContain('Sales order SO-0009 made. Despatch it from the Sales screens.');
+    expect(el(f).textContent).toContain('Converted to sales order SO-0009.');
     expect(crm.getLead.mock.calls.length).toBe(reads + 1);
   });
 
@@ -145,8 +155,8 @@ describe('CrmLeadDetailComponent', () => {
     expect(el(f).querySelector('.crm-link-order')).not.toBeNull();
     expect(el(f).querySelector('.crm-cancel-convert')).not.toBeNull();
     expect(el(f).querySelector('.crm-needs-check')!.textContent).toContain('A manager must check the sales orders for this lead first');
-    // the convert is not offered again while the check is pending
-    expect(el(f).querySelector('.crm-convert')).toBeNull();
+    // the convert cannot go ahead again while the check is pending
+    expect((el(f).querySelector('.crm-convert') as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('shows the needs-check notice but no link or cancel to a sales user', () => {

@@ -1,4 +1,4 @@
-/* Convert to Sale: the shared .crm-overlay / .crm-dialog.wide / .crm-choice, full screen on a phone. */
+/* Convert to sales order: the shared .crm-overlay / .crm-dialog.wide / .crm-choice, full screen on a phone. */
 :host { display: contents; }
 .cv-choices { display: flex; flex-direction: column; gap: 8px; }
 .cv-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }

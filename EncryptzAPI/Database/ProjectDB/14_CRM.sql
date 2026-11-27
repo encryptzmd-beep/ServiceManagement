@@ -765,7 +765,7 @@ BEGIN
     IF @Status NOT IN ('New', 'Contacted', 'Qualified', 'Quotation', 'Negotiation', 'Lost')
     BEGIN
         SELECT CAST(0 AS BIT) AS Success,
-               CASE WHEN @Status = 'Converted' THEN N'A lead is converted with Convert to Sale' ELSE N'Choose the status from the list' END AS Message,
+               CASE WHEN @Status = 'Converted' THEN N'A lead is converted with Convert to sales order' ELSE N'Choose the status from the list' END AS Message,
                CAST(0 AS INT) AS Id; RETURN;
     END
 
