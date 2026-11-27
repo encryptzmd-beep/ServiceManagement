@@ -463,6 +463,9 @@
             <input type="text" [(ngModel)]="customerForm.gstin" maxlength="20" placeholder="15-character GSTIN (optional)" style="text-transform:uppercase" />
           </div>
         </div>
+        <!-- one record per party: a customer with this mobile or GSTIN is used, not made again -->
+        <app-customer-match-warning [mobile]="customerForm.mobileNumber" [gstin]="customerForm.gstin"
+          [excludeId]="customerPanelMode() === 'edit' ? customer()?.customerId : null" (use)="useSavedCustomer($event)" />
         @if (customerFormError()) { <div class="so-note error"><span class="material-icons">error_outline</span>{{ customerFormError() }}</div> }
       </div>
       <div class="modal-foot">

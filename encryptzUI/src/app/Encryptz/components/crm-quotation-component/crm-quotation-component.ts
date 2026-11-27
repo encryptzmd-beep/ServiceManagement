@@ -19,6 +19,8 @@ import { RightsService } from '../../Services/rights-service';
 import { QUOTATION_PRICES_KEY, QUOTATION_VALIDITY_KEY, pricesIncludeGstByDefault, validUntilFor } from '../shared/quotation-defaults';
 import { openPendingTab, whatsAppNumber, whatsAppUrl } from '../shared/whatsapp';
 import { quotationWhatsAppFileName, quotationWhatsAppMessage } from './quotation-whatsapp';
+import { CustomerMatchWarningComponent } from '../shared/customer-match/customer-match-warning';
+import { CustomerMatch } from '../../Models/ApiModels';
 
 export const GST_RATES = [0, 5, 12, 18, 28];
 
@@ -42,7 +44,7 @@ const blankCustomer = (): NewCustomer => ({ contactName: '', mobile: '', email: 
 @Component({
   selector: 'app-crm-quotation',
   standalone: true,
-  imports: [UppercaseInputDirective, ProductFormComponent, AppRightDirective, FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent, TransactionToolbarComponent, TransactionFindComponent],
+  imports: [UppercaseInputDirective, ProductFormComponent, AppRightDirective, FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent, TransactionToolbarComponent, TransactionFindComponent, CustomerMatchWarningComponent],
   templateUrl: './crm-quotation-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-quotation-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -259,6 +261,16 @@ export class CrmQuotationComponent {
 
   setCust<K extends keyof NewCustomer>(key: K, value: NewCustomer[K]): void {
     this.newCust.update(c => ({ ...c, [key]: value }));
+  }
+
+  /** The warning offered a customer already in Customers: its saved details fill the form, so the quotation uses that party. */
+  useSavedCustomer(c: CustomerMatch): void {
+    this.newCust.set({
+      contactName: c.customerName, mobile: c.mobileNumber, email: c.email ?? '', address: c.address ?? '',
+      city: c.city ?? '', state: c.state ?? '', pinCode: c.pinCode ?? '',
+    });
+    if (c.gstin) this.setHead('customerGstin', c.gstin);
+    this.notice.set(`Using the saved customer ${c.customerName}`);
   }
 
   /** The customer problem of a new quotation, or null when it has one. */

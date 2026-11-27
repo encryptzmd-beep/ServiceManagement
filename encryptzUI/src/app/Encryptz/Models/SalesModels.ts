@@ -19,6 +19,49 @@ export interface SalesCustomer {
   totalProducts?: number;
 }
 
+/** A customer that is the same party (same mobile or same GSTIN) as what is being entered. */
+export interface CustomerMatch extends SalesCustomer { matchedOn: 'Mobile' | 'GSTIN' | string; }
+
+/** A row of the Customers screen. */
+export interface CustomerListItem extends SalesCustomer {
+  totalOrders: number;
+  totalComplaints: number;
+  createdAt?: string | null;
+  totalCount: number;
+}
+
+export interface CustomerImportRow {
+  rowNumber: number;
+  customerName?: string;
+  mobileNumber?: string;
+  alternatePhone?: string;
+  email?: string;
+  address?: string;
+  landmark?: string;
+  city?: string;
+  state?: string;
+  pinCode?: string;
+  gstin?: string;
+}
+
+export interface CustomerImportRowResult {
+  rowNumber: number;
+  customerName: string;
+  mobileNumber: string;
+  action: 'New' | 'Update' | 'Error' | string;
+  customerId?: number | null;
+  existingName?: string | null;
+  message?: string | null;
+}
+
+export interface CustomerImportResult {
+  applied: boolean;
+  newCount: number;
+  updateCount: number;
+  errorCount: number;
+  rows: CustomerImportRowResult[];
+}
+
 export interface SalesCustomerSave {
   customerId: number;
   customerName: string;

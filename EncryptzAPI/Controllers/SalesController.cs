@@ -73,11 +73,30 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SearchCustomers([FromQuery] string? search = null, [FromQuery] int top = 50)
             => Ok(ApiResponse<List<SalesCustomerDto>>.Ok(await _svc.SearchCustomers(search, top)));
 
-        [MenuRight("/sales/orders", MenuRightKind.Save, IdProperty = "CustomerId")]
+        [MenuRight("/sales/orders", MenuRightKind.Save, IdProperty = "CustomerId", OrMenuPath = "/sales/customers")]
         [HttpPost("customers")]
         public async Task<IActionResult> SaveCustomer([FromBody] SalesCustomerSaveDto dto)
         {
             var result = await _svc.SaveCustomer(dto);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>The Customers screen: the one customer master (party) of CRM, Sales and Service.</summary>
+        [HttpGet("customers/list")]
+        public async Task<IActionResult> ListCustomers([FromQuery] string? search = null, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 25)
+            => Ok(ApiResponse<PagedResult<CustomerListDto>>.Ok(await _svc.ListCustomers(search, pageNumber, pageSize)));
+
+        /// <summary>The customers that are the same party as a mobile / GSTIN being entered (same mobile or same GSTIN).</summary>
+        [HttpGet("customers/matches")]
+        public async Task<IActionResult> CustomerMatches([FromQuery] string? mobile = null, [FromQuery] string? gstin = null, [FromQuery] int? excludeId = null)
+            => Ok(ApiResponse<List<CustomerMatchDto>>.Ok(await _svc.CustomerMatches(mobile, gstin, excludeId)));
+
+        /// <summary>Bulk upload of customers: apply=false checks the rows, apply=true saves them.</summary>
+        [MenuRight("/sales/customers", MenuRightKind.Create)]
+        [HttpPost("customers/import")]
+        public async Task<IActionResult> ImportCustomers([FromBody] CustomerImportRequestDto req)
+        {
+            var result = await _svc.ImportCustomers(req);
             return result.Success ? Ok(result) : BadRequest(result);
         }
 

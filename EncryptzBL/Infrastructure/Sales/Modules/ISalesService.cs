@@ -10,7 +10,14 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
     {
         // customer master (from the bill)
         Task<List<SalesCustomerDto>> SearchCustomers(string? searchTerm, int top = 50);
+        /// <summary>Saves a customer; one with the same mobile or GSTIN already in the master is updated, never made twice.</summary>
         Task<ApiResponse<SalesCustomerSaveResultDto>> SaveCustomer(SalesCustomerSaveDto dto);
+        /// <summary>The Customers screen: searched and paged, with each party's orders, complaints and products.</summary>
+        Task<PagedResult<CustomerListDto>> ListCustomers(string? search, int pageNumber, int pageSize);
+        /// <summary>The customers that are the same party as this mobile / GSTIN: the warning before a new customer is made.</summary>
+        Task<List<CustomerMatchDto>> CustomerMatches(string? mobile, string? gstin, int? excludeCustomerId = null);
+        /// <summary>Bulk upload: checks every row (Apply false) or saves them (Apply true); a match is overwritten with the file's values.</summary>
+        Task<ApiResponse<CustomerImportResultDto>> ImportCustomers(CustomerImportRequestDto req);
         Task<List<TransporterDto>> GetTransporters(bool includeInactive);
         Task<ApiResponse<int>> SaveTransporter(TransporterDto dto);
 

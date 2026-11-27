@@ -38,6 +38,8 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
             if (mobile == null) return ApiResponse<SalesCustomerSaveResultDto>.Fail("Enter a valid 10-digit mobile number.");
             if (!EncryptzBL.Common.Sales.SalesInputRules.IsEmailOrBlank(dto.Email)) return ApiResponse<SalesCustomerSaveResultDto>.Fail("Enter a valid e-mail address.");
             if (!EncryptzBL.Common.Sales.SalesInputRules.IsPinOrBlank(dto.PinCode)) return ApiResponse<SalesCustomerSaveResultDto>.Fail("PIN code must be 6 digits.");
+            if (!SalesInputRules.IsGstinOrBlank(dto.GSTIN)) return ApiResponse<SalesCustomerSaveResultDto>.Fail("GSTIN must be 15 characters, e.g. 32ABCDE1234F1Z5.");
+            dto.GSTIN = SalesInputRules.CleanGstin(dto.GSTIN);
 
             var p = new[]
             {
@@ -80,6 +82,90 @@ namespace EncryptzBL.Infrastructure.Sales.Modules
             result.Customer = list.FirstOrDefault(c => c.CustomerId == customerId);
 
             return ApiResponse<SalesCustomerSaveResultDto>.Ok(result, row["Message"]?.ToString() ?? "Saved");
+        }
+
+        // =====================================================================
+        // Customer master: one record per party (same mobile or same GSTIN)
+        // =====================================================================
+        public async Task<PagedResult<CustomerListDto>> ListCustomers(string? search, int pageNumber, int pageSize)
+        {
+            var items = await GetListAsync<CustomerListDto>("sp_Customer_List", new[]
+            {
+                SqlParameterHelper.Input("@SearchTerm", SalesInputRules.LikeTerm(search)),
+                SqlParameterHelper.Input("@PageNumber", pageNumber),
+                SqlParameterHelper.Input("@PageSize", pageSize)
+            });
+            return new PagedResult<CustomerListDto>
+            {
+                Items = items, TotalCount = items.FirstOrDefault()?.TotalCount ?? 0,
+                PageNumber = Math.Max(1, pageNumber), PageSize = pageSize,
+                TotalPages = pageSize > 0 ? (int)Math.Ceiling((items.FirstOrDefault()?.TotalCount ?? 0) / (double)pageSize) : 0
+            };
+        }
+
+        public async Task<List<CustomerMatchDto>> CustomerMatches(string? mobile, string? gstin, int? excludeCustomerId = null)
+        {
+            var m = SalesInputRules.NormalizeMobile(mobile);
+            var g = SalesInputRules.CleanGstin(gstin);
+            if (m == null && g == null) return new List<CustomerMatchDto>();
+            return await GetListAsync<CustomerMatchDto>("sp_Customer_Matches", new[]
+            {
+                SqlParameterHelper.Input("@MobileNumber", m),
+                SqlParameterHelper.Input("@GSTIN", g),
+                SqlParameterHelper.Input("@ExcludeCustomerId", excludeCustomerId)
+            });
+        }
+
+        public async Task<ApiResponse<CustomerImportResultDto>> ImportCustomers(CustomerImportRequestDto req)
+        {
+            var rows = req?.Rows ?? new();
+            if (rows.Count == 0) return ApiResponse<CustomerImportResultDto>.Fail("The file has no customer rows.");
+            if (rows.Count > CustomerImportRules.MaxRows)
+                return ApiResponse<CustomerImportResultDto>.Fail($"Upload at most {CustomerImportRules.MaxRows} customers at a time.");
+
+            var sameInFile = CustomerImportRules.SamePartyInFile(rows);
+            var result = new CustomerImportResultDto { Applied = req!.Apply };
+            foreach (var r in rows)
+            {
+                var line = new CustomerImportRowResultDto
+                {
+                    RowNumber = r.RowNumber, CustomerName = r.CustomerName?.Trim() ?? "", MobileNumber = r.MobileNumber?.Trim() ?? ""
+                };
+                result.Rows.Add(line);
+
+                var problem = CustomerImportRules.RowProblem(r);
+                if (problem == null && sameInFile.TryGetValue(r.RowNumber, out var first))
+                    problem = $"Same customer (mobile or GSTIN) as row {first}";
+                if (problem != null) { line.Action = CustomerImportRules.Error; line.Message = problem; continue; }
+
+                var matches = await CustomerMatches(r.MobileNumber, r.GSTIN);
+                var (existingId, matchProblem) = CustomerImportRules.Existing(matches);
+                if (matchProblem != null) { line.Action = CustomerImportRules.Error; line.Message = matchProblem; continue; }
+
+                line.CustomerId = existingId;
+                line.ExistingName = matches.FirstOrDefault(m => m.CustomerId == existingId)?.CustomerName;
+                line.Action = existingId.HasValue ? CustomerImportRules.Update : CustomerImportRules.New;
+                if (!req.Apply) continue;
+
+                // the file's values overwrite the stored ones wherever the file has a value
+                var saved = await SaveCustomer(new SalesCustomerSaveDto
+                {
+                    CustomerId = existingId ?? 0, CustomerName = r.CustomerName!, MobileNumber = r.MobileNumber!,
+                    AlternatePhone = r.AlternatePhone, Email = r.Email, Address = r.Address, Landmark = r.Landmark,
+                    City = r.City, State = r.State, PinCode = r.PinCode, GSTIN = r.GSTIN
+                });
+                if (!saved.Success || saved.Data == null) { line.Action = CustomerImportRules.Error; line.Message = saved.Message; continue; }
+                line.CustomerId = saved.Data.CustomerId;
+                line.Message = saved.Data.IsNew ? "Created" : "Updated";
+            }
+
+            result.NewCount = result.Rows.Count(x => x.Action == CustomerImportRules.New);
+            result.UpdateCount = result.Rows.Count(x => x.Action == CustomerImportRules.Update);
+            result.ErrorCount = result.Rows.Count(x => x.Action == CustomerImportRules.Error);
+            var said = req.Apply
+                ? $"{result.NewCount} created, {result.UpdateCount} updated, {result.ErrorCount} not imported"
+                : $"{result.NewCount} new, {result.UpdateCount} to update, {result.ErrorCount} with errors";
+            return ApiResponse<CustomerImportResultDto>.Ok(result, said);
         }
 
         // =====================================================================

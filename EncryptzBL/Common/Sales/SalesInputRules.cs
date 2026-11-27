@@ -25,6 +25,18 @@ namespace EncryptzBL.Common.Sales
         public static bool IsPinOrBlank(string? value)
             => string.IsNullOrWhiteSpace(value) || Pin.IsMatch(value.Trim());
 
+        private static readonly Regex Gstin = new(@"^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$", RegexOptions.Compiled, TimeSpan.FromMilliseconds(100));
+
+        /// <summary>The 15 characters of a GSTIN in capitals; null when blank. Its shape is checked by IsGstinOrBlank.</summary>
+        public static string? CleanGstin(string? value)
+        {
+            var text = (value ?? string.Empty).Replace(" ", "").Trim().ToUpperInvariant();
+            return text.Length == 0 ? null : text;
+        }
+
+        public static bool IsGstinOrBlank(string? value)
+            => CleanGstin(value) is not { } g || Gstin.IsMatch(g);
+
         /// <summary>A search term for SQL LIKE in which % _ and [ are plain characters.</summary>
         public static string? LikeTerm(string? value)
         {

@@ -14,6 +14,7 @@ import { salesProductOptions } from './sales-product-options';
 import { TransactionMode, TransactionToolbarComponent } from '../shared/transaction-toolbar/transaction-toolbar';
 import { FindQuery, FindRow, TransactionFindComponent } from '../shared/transaction-toolbar/transaction-find';
 import { SalesDocumentsComponent } from '../shared/sales-documents/sales-documents';
+import { CustomerMatchWarningComponent } from '../shared/customer-match/customer-match-warning';
 import { DocumentPrintComponent, PrintCompany, PrintDocument, printCompanyOf, printLineDetails } from '../shared/document-print/document-print';
 import { DocumentPdfService, documentFileName } from '../shared/document-print/document-pdf';
 import { RightsService } from '../../Services/rights-service';
@@ -50,7 +51,7 @@ interface BillLine {
 @Component({
   selector: 'app-sales-order-entry',
   standalone: true,
-  imports: [UppercaseInputDirective, ProductFormComponent, AppToastComponent, AppRightDirective, CommonModule, FormsModule, RouterModule, AutocompleteComponent, TransactionToolbarComponent, TransactionFindComponent, SalesDocumentsComponent, DocumentPrintComponent],
+  imports: [UppercaseInputDirective, ProductFormComponent, AppToastComponent, AppRightDirective, CommonModule, FormsModule, RouterModule, AutocompleteComponent, TransactionToolbarComponent, TransactionFindComponent, SalesDocumentsComponent, DocumentPrintComponent, CustomerMatchWarningComponent],
   templateUrl: './sales-order-entry-component.html',
   styleUrls: ['./sales-order-entry-component.scss'],
 })
@@ -460,6 +461,13 @@ export class SalesOrderEntryComponent implements OnInit {
   }
 
   closeCustomerPanel(): void { this.customerPanelOpen.set(false); }
+
+  /** The warning offered a customer already saved (same mobile or GSTIN): bill that one instead of a second record. */
+  useSavedCustomer(c: SalesCustomer): void {
+    this.selectCustomer(c);
+    this.customerPanelOpen.set(false);
+    this.showToast('success', `Using the saved customer ${c.customerName}`);
+  }
 
   saveCustomer(): void {
     const f = this.customerForm;

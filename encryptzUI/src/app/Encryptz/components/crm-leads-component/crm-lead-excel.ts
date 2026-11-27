@@ -28,13 +28,13 @@ const EXPORT_COLUMNS: { title: string; key: keyof LeadExportRowDto }[] = [
   { title: 'Status', key: 'status' }, { title: 'Remarks', key: 'remarks' },
 ];
 
-const workbook = async () => {
+export const workbook = async () => {
   const mod: any = await import('exceljs');
   const Workbook = (mod.default ?? mod).Workbook ?? mod.Workbook;
   return new Workbook();
 };
 
-async function download(wb: any, fileName: string): Promise<void> {
+export async function download(wb: any, fileName: string): Promise<void> {
   const buffer = await wb.xlsx.writeBuffer();
   const url = URL.createObjectURL(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
   const a = document.createElement('a');
@@ -53,7 +53,7 @@ const asText = (value: unknown): string => {
   return /^\d{4}-\d{2}-\d{2}T/.test(text) ? text.slice(0, 10) : text;
 };
 
-function addSheet(wb: any, name: string, titles: string[], rows: string[][]): void {
+export function addSheet(wb: any, name: string, titles: string[], rows: string[][]): void {
   const ws = wb.addWorksheet(name);
   ws.columns = titles.map((title, i) => ({
     header: title,

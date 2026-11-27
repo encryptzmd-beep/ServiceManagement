@@ -3,6 +3,7 @@ using System.Text.Json;
 using EncryptzBL.Common;
 using EncryptzBL.Common.Crm;
 using EncryptzBL.DTO_s;
+using Microsoft.Extensions.Logging;
 
 namespace EncryptzBL.Infrastructure.Crm
 {
@@ -42,8 +43,50 @@ namespace EncryptzBL.Infrastructure.Crm
                     In("@PaymentDueDate", dto.PaymentDueDate?.Date), In("@CustomerGstin", dto.CustomerGstin),
                     In("@PricesIncludeGst", dto.PricesIncludeGst), In("@WarrantyText", dto.WarrantyText), In("@ItemsJson", itemsJson)
                 });
-                return ToResponse(Answer(dt));
+                var saved = Answer(dt);
+                if (saved.Success) await LinkCustomer(userId, isManager, companyId, dto.LeadId, dto.CustomerGstin);
+                return ToResponse(saved);
             });
+
+        /// <summary>
+        /// The quotation's customer goes into the customer master now, so it is one reusable party for the sales order,
+        /// repeat supplies and Service: the customer with the same mobile or GSTIN when there is one, else a new one.
+        /// Linked once per lead (crm.sp_Lead_SetCustomer); a failure here never fails the quotation.
+        /// </summary>
+        private async Task LinkCustomer(int userId, bool isManager, int companyId, int leadId, string? gstin)
+        {
+            try
+            {
+                var lead = await ReadLeadRow(userId, isManager, companyId, leadId);
+                if (lead == null || lead.CustomerId is > 0) return;
+
+                var customerId = (await _sales.CustomerMatches(lead.Mobile, gstin)).FirstOrDefault()?.CustomerId;
+                if (customerId == null)
+                {
+                    var made = await _sales.SaveCustomer(new SalesCustomerSaveDto
+                    {
+                        CustomerName = lead.ContactName, MobileNumber = lead.Mobile, Email = lead.Email, Address = lead.Address,
+                        City = lead.City, State = lead.State, PinCode = lead.PinCode, Landmark = lead.Landmark, GSTIN = gstin
+                    });
+                    if (!made.Success || made.Data == null)
+                    {
+                        _logger.LogWarning("CRM: the customer of lead {LeadId} could not be saved with its quotation: {Message}", leadId, made.Message);
+                        return;
+                    }
+                    customerId = made.Data.CustomerId;
+                }
+
+                await GetDataTableAsync("crm.sp_Lead_SetCustomer", new[]
+                {
+                    In("@CompanyId", companyId), In("@LeadId", leadId), In("@UserId", userId), In("@IsManager", isManager),
+                    In("@LocationId", LocationId), In("@CustomerId", customerId)
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "CRM: the customer of lead {LeadId} could not be linked with its quotation", leadId);
+            }
+        }
 
         public Task<ApiResponse<QuotationDto>> GetQuotation(int userId, bool isManager, int companyId, int quotationId)
             => Guard(async () =>

@@ -1,0 +1,65 @@
+// Customers: the shared fx- list look, plus the two dialogs (new / edit and upload)
+.cu-head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.cu-upload { display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; }
+.cu-upload .material-icons { font-size: 18px; }
+.cu-scroll { overflow-x: auto; }
+.cu-row { cursor: pointer; }
+.cu-row:focus-visible { outline: 2px solid #1B4A7A; outline-offset: -2px; }
+.cu-cell { display: flex; flex-direction: column; gap: 2px; small { font-size: 11.5px; color: #8a9ab0; } }
+.num { text-align: right; white-space: nowrap; }
+.nowrap { white-space: nowrap; }
+.mono { font-family: 'Courier New', monospace; font-size: 12px; white-space: nowrap; }
+
+.cu-overlay {
+  position: fixed; inset: 0; z-index: 1000; background: rgba(15, 23, 42, 0.45);
+  display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto;
+}
+.cu-dialog {
+  width: 100%; max-width: 640px; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0;
+  display: flex; flex-direction: column;
+  &.wide { max-width: 900px; }
+}
+.cu-dialog-head {
+  display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #e2e8f0;
+  h2 { margin: 0; font-size: 16px; font-weight: 600; color: #1a2332; }
+}
+.cu-close { border: 0; background: none; cursor: pointer; color: #5a6a7e; width: 34px; height: 34px; border-radius: 8px; }
+.cu-close:hover { background: #f1f5f9; }
+.cu-dialog-body { padding: 16px 18px; }
+.cu-dialog-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: 1px solid #e2e8f0; }
+
+.cu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; margin-bottom: 4px; }
+.cu-field {
+  display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: #5a6a7e; font-weight: 600;
+  &.wide { grid-column: 1 / -1; }
+  input, select, textarea {
+    font: inherit; font-weight: 400; font-size: 14px; color: #1a2332; padding: 8px 10px; min-height: 38px;
+    border: 1px solid #d4dce6; border-radius: 8px; background: #fff;
+  }
+  input:focus, select:focus, textarea:focus { outline: 2px solid #1B4A7A; outline-offset: -1px; }
+}
+.cu-error { margin: 10px 0 0; color: #D42B2B; font-size: 13px; }
+
+.cu-steps { margin: 0 0 12px; padding-left: 18px; font-size: 13px; color: #1a2332; line-height: 1.6; }
+.cu-upload-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cu-upload-actions .fx-page-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; }
+.cu-upload-actions .material-icons { font-size: 18px; }
+.cu-file { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; cursor: pointer; position: relative;
+  input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  &.busy { opacity: .7; }
+}
+.cu-file-name { font-size: 12.5px; color: #5a6a7e; }
+.cu-summary { margin: 14px 0 8px; font-size: 13.5px; color: #1a2332; }
+.cu-result { max-height: 360px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 10px; }
+.cu-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11.5px; font-weight: 600; white-space: nowrap;
+  background: #e8eef5; color: #1B4A7A;
+  &[data-action="New"] { background: #edf7ee; color: #2d7a38; }
+  &[data-action="Error"] { background: #f9e8e8; color: #D42B2B; }
+}
+
+@media (max-width: 600px) {
+  .cu-grid { grid-template-columns: 1fr; }
+  .cu-overlay { padding: 0; }
+  .cu-dialog { border-radius: 0; min-height: 100%; }
+}
