@@ -1132,8 +1132,12 @@ listCustomers(search: string | undefined, pageNumber: number, pageSize: number):
 }
 
 /** The customers that are the same party (same mobile or same GSTIN): the warning before a new customer is made. */
-customerMatches(mobile: string | null | undefined, gstin: string | null | undefined, excludeId?: number | null): Observable<M.ApiResponse<M.CustomerMatch[]>> {
-  return this.get<M.ApiResponse<M.CustomerMatch[]>>('Sales/customers/matches', { mobile: mobile || undefined, gstin: gstin || undefined, excludeId: excludeId || undefined });
+customerMatches(mobile: string | null | undefined, gstin: string | null | undefined, excludeId?: number | null,
+                via: 'sales' | 'crm' = 'sales'): Observable<M.ApiResponse<M.CustomerMatch[]>> {
+  // a CRM session may not call the Sales (Service Management) API: CRM has its own endpoint
+  return via === 'crm'
+    ? this.get<M.ApiResponse<M.CustomerMatch[]>>('crm/customer-matches', { mobile: mobile || undefined, gstin: gstin || undefined })
+    : this.get<M.ApiResponse<M.CustomerMatch[]>>('Sales/customers/matches', { mobile: mobile || undefined, gstin: gstin || undefined, excludeId: excludeId || undefined });
 }
 
 /** Bulk upload: apply=false checks the rows, apply=true saves them (a match is overwritten with the file's values). */

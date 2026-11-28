@@ -1,4 +1,4 @@
-import { JobCard, buildJobCardPdf, cardDate, cardTime, jobCardFileName, jobCardMessage, jobCardSections, pdfText, visitWhen, warrantyText } from './job-card';
+import { JobCard, buildJobCardPdf, cardDate, cardTime, customerAddress, jobCardFileName, jobCardMessage, jobCardSections, pdfText, visitWhen, warrantyText } from './job-card';
 import { whatsAppNumber } from './job-card-service';
 
 const card = (over: Partial<JobCard> = {}): JobCard => ({
@@ -42,6 +42,13 @@ describe('job card', () => {
     expect(all).toContain('Serial number: TM10C-0042');
     expect(all).toContain('Instructions: Carry a spare belt');
     expect(all.some(r => r.startsWith('Email'))).toBe(false);
+  });
+
+  it('writes the address once, when the location address holds the city and the landmark says Near', () => {
+    expect(customerAddress(card({
+      customerAddress: '14 Temple Road, Edappally, Kochi, Kerala, 682024', landmark: 'Near Lulu Mall',
+      city: 'Kochi', state: 'Kerala', pinCode: '682024',
+    }))).toBe('14 Temple Road, Edappally, Kochi, Kerala, 682024, Near Lulu Mall');
   });
 
   it('names the file and the message after the job', () => {

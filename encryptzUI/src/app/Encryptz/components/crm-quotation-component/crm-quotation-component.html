@@ -132,7 +132,7 @@
                   <input inputmode="numeric" maxlength="10" [ngModel]="newCust().pinCode" (ngModelChange)="setCust('pinCode', $event)" /></label>
               </div>
               <!-- a customer already saved (same mobile or GSTIN) is used, not made again -->
-              <app-customer-match-warning [mobile]="newCust().mobile" [gstin]="head().customerGstin" (use)="useSavedCustomer($event)" />
+              <app-customer-match-warning via="crm" [mobile]="newCust().mobile" [gstin]="head().customerGstin" (use)="useSavedCustomer($event)" />
               <p class="crm-muted q-hint">A lead is made for this customer when the quotation is saved, and the customer is kept in Customers for later orders and service.</p>
             }
           } @else {

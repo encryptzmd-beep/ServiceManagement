@@ -103,9 +103,17 @@ export function warrantyText(c: Pick<JobCard, 'warrantyExpiryDate' | 'scheduledD
   return `${end >= on ? 'In warranty' : 'Out of warranty'} (till ${cardDate(end)})`;
 }
 
+/**
+ * The address once: a complaint's location address often holds the city, state and PIN already, and a landmark is
+ * often typed as "Near ...". A part already in the address is not added again.
+ */
 export function customerAddress(c: JobCard): string {
-  return [c.customerAddress, c.landmark ? `Near ${clean(c.landmark)}` : '', c.city, c.state, c.pinCode]
-    .map(clean).filter(Boolean).join(', ');
+  const address = clean(c.customerAddress);
+  const has = (part: string) => address.toLowerCase().includes(part.toLowerCase());
+  const landmark = clean(c.landmark);
+  const near = landmark && !has(landmark) ? (/^near\b/i.test(landmark) ? landmark : `Near ${landmark}`) : '';
+  return [address, near, ...[c.city, c.state, c.pinCode].map(clean).filter(p => p && !has(p))]
+    .filter(Boolean).join(', ');
 }
 
 export function mapUrl(c: Pick<JobCard, 'latitude' | 'longitude'>): string {

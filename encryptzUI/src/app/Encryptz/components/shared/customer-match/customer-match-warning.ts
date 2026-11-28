@@ -54,6 +54,8 @@ export class CustomerMatchWarningComponent {
   gstin = input<string | null | undefined>('');
   /** The customer being edited, left out of its own matches. */
   excludeId = input<number | null | undefined>(null);
+  /** Which API to ask: a CRM session may not call the Sales (Service Management) API. */
+  via = input<'sales' | 'crm'>('sales');
   use = output<CustomerMatch>();
 
   matches = signal<CustomerMatch[]>([]);
@@ -64,15 +66,15 @@ export class CustomerMatchWarningComponent {
       debounceTime(350),
       distinctUntilChanged(),
       switchMap(key => {
-        const [mobile, gstin, exclude] = JSON.parse(key) as [string, string, number | null];
+        const [mobile, gstin, exclude, via] = JSON.parse(key) as [string, string, number | null, 'sales' | 'crm'];
         if (!worthChecking(mobile, gstin)) return of([] as CustomerMatch[]);
-        return this.api.customerMatches(mobile, gstin, exclude).pipe(map(r => r?.data ?? []), catchError(() => of([] as CustomerMatch[])));
+        return this.api.customerMatches(mobile, gstin, exclude, via).pipe(map(r => r?.data ?? []), catchError(() => of([] as CustomerMatch[])));
       }),
       takeUntilDestroyed(inject(DestroyRef)),
     ).subscribe(list => this.matches.set(list));
 
     effect(() => {
-      const key = JSON.stringify([this.mobile() ?? '', this.gstin() ?? '', this.excludeId() ?? null]);
+      const key = JSON.stringify([this.mobile() ?? '', this.gstin() ?? '', this.excludeId() ?? null, this.via()]);
       untracked(() => this.ask$.next(key));
     });
   }
