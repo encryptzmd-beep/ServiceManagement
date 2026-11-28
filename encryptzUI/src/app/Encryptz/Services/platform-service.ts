@@ -280,6 +280,26 @@ export interface RejectionReviewPage {
   pageSize: number;
 }
 
+/** A platform (SaaS) administrator: a user whose global role is Admin. */
+export interface PlatformAdmin {
+  userId: number;
+  fullName: string;
+  email: string;
+  mobileNumber: string;
+  isActive: boolean;
+  /** null for an administrator made before the Platform Admins screen existed */
+  grantedAt: string | null;
+  grantedByName: string;
+}
+
+/** An active user who is not a platform administrator yet. */
+export interface PlatformAdminCandidate {
+  userId: number;
+  fullName: string;
+  email: string;
+  mobileNumber: string;
+}
+
 export interface VerificationQueue {
   certificates: CertificateReview[];
   postings: PostingReview[];
@@ -308,6 +328,25 @@ export class PlatformService {
 
   lock(): void {
     sessionStorage.removeItem(PlatformService.UNLOCK_KEY);
+  }
+
+  // ── platform administrators (users whose global role is Admin) ──
+
+  getAdmins(): Observable<ApiResponse<PlatformAdmin[]>> {
+    return this.http.get<ApiResponse<PlatformAdmin[]>>(`${this.api}/admins`, { headers: this.headers });
+  }
+
+  findAdminCandidates(search: string): Observable<ApiResponse<PlatformAdminCandidate[]>> {
+    return this.http.get<ApiResponse<PlatformAdminCandidate[]>>(`${this.api}/admins/candidates`,
+      { headers: this.headers, params: new HttpParams().set('search', search) });
+  }
+
+  addAdmin(userId: number): Observable<ApiResponse<boolean>> {
+    return this.http.post<ApiResponse<boolean>>(`${this.api}/admins/${userId}`, {}, { headers: this.headers });
+  }
+
+  removeAdmin(userId: number): Observable<ApiResponse<boolean>> {
+    return this.http.delete<ApiResponse<boolean>>(`${this.api}/admins/${userId}`, { headers: this.headers });
   }
 
   // ── login ads (the slides of the sign-in and register pages) ──

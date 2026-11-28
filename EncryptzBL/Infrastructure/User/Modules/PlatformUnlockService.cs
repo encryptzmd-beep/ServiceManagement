@@ -47,7 +47,8 @@ namespace EncryptzBL.Infrastructure.User.Modules
         }
 
         private string OtpEmail => _config["PlatformAdmin:OtpEmail"] ?? "";
-        private bool RequireOtp => !bool.TryParse(_config["PlatformAdmin:RequireOtp"], out var required) || required;
+        // The access code is off by default; set PlatformAdmin:RequireOtp = true to bring it back.
+        private bool RequireOtp => bool.TryParse(_config["PlatformAdmin:RequireOtp"], out var required) && required;
         private int OtpMinutes => int.TryParse(_config["PlatformAdmin:OtpMinutes"], out var m) && m > 0 ? m : 5;
         private int SessionMinutes => int.TryParse(_config["PlatformAdmin:SessionMinutes"], out var m) && m > 0 ? m : 30;
 

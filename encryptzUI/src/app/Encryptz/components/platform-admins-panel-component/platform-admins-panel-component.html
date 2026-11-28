@@ -1,0 +1,74 @@
+<div class="ap">
+  <div class="ap-head">
+    <div>
+      <h2>Platform Admins</h2>
+      <p>These users manage the whole platform: every company, the database servers, the settings and the menus. A change applies from the user's next sign-in.</p>
+    </div>
+    <button class="ap-btn" (click)="load()" [disabled]="loading()"><span class="material-icons" aria-hidden="true">refresh</span>Refresh</button>
+  </div>
+
+  <!-- ═══════════ ADD: an existing user ═══════════ -->
+  <div class="ap-card">
+    <h3>Add a platform admin</h3>
+    <form class="ap-tools" (ngSubmit)="find()">
+      <label class="ap-search">
+        <span class="material-icons" aria-hidden="true">search</span>
+        <input name="search" [(ngModel)]="search" maxlength="200" placeholder="Name, email or mobile of an existing user" aria-label="Search users" />
+      </label>
+      <button class="ap-btn" type="submit" [disabled]="searching()">{{ searching() ? 'Searching…' : 'Search' }}</button>
+    </form>
+    @if (searchError()) { <div class="ap-error">{{ searchError() }}</div> }
+
+    @if (searched() && !searchError()) {
+      @if (candidates().length) {
+        <ul class="ap-list">
+          @for (c of candidates(); track c.userId) {
+            <li>
+              <div class="ap-who">
+                <strong>{{ c.fullName || '—' }}</strong>
+                <span>{{ c.email }}@if (c.mobileNumber) { · {{ c.mobileNumber }} }</span>
+              </div>
+              <button class="ap-btn ap-primary" (click)="add(c)" [disabled]="busy() !== null">{{ busy() === c.userId ? 'Adding…' : 'Make admin' }}</button>
+            </li>
+          }
+        </ul>
+      } @else {
+        <div class="ap-empty">No active user found who is not an admin already. Only existing users can be added.</div>
+      }
+    }
+  </div>
+
+  <!-- ═══════════ THE ADMINISTRATORS ═══════════ -->
+  <div class="ap-card">
+    <h3>Current platform admins <span class="ap-count">{{ admins().length }}</span></h3>
+
+    @if (loading()) {
+      <div class="ap-empty">Loading…</div>
+    } @else if (error()) {
+      <div class="ap-error">{{ error() }}</div>
+    } @else {
+      <ul class="ap-list">
+        @for (a of admins(); track a.userId) {
+          <li>
+            <div class="ap-who">
+              <strong>
+                {{ a.fullName || '—' }}
+                @if (a.userId === myUserId()) { <em class="ap-tag">You</em> }
+                @if (!a.isActive) { <em class="ap-tag ap-off">Inactive</em> }
+              </strong>
+              <span>{{ a.email }}@if (a.mobileNumber) { · {{ a.mobileNumber }} }</span>
+              @if (a.grantedAt) {
+                <span class="ap-faint">Added {{ a.grantedAt | date: 'dd MMM yyyy' }}@if (a.grantedByName) { by {{ a.grantedByName }} }</span>
+              }
+            </div>
+            @if (canRemove(a)) {
+              <button class="ap-btn ap-danger" (click)="remove(a)" [disabled]="busy() !== null">{{ busy() === a.userId ? 'Removing…' : 'Remove' }}</button>
+            }
+          </li>
+        } @empty {
+          <li class="ap-empty">No platform admins</li>
+        }
+      </ul>
+    }
+  </div>
+</div>

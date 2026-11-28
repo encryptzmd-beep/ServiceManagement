@@ -273,6 +273,28 @@ namespace EncryptzBL.DTO_s
         public string UpdatedByName { get; set; } = "";
     }
 
+    /// <summary>A platform (SaaS) administrator: a user whose global role is Admin.</summary>
+    public class PlatformAdminDto
+    {
+        public int UserId { get; set; }
+        public string FullName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string MobileNumber { get; set; } = "";
+        public bool IsActive { get; set; }
+        /// <summary>Null for an administrator made before this screen existed.</summary>
+        public DateTime? GrantedAt { get; set; }
+        public string GrantedByName { get; set; } = "";
+    }
+
+    /// <summary>An active user who is not a platform administrator yet.</summary>
+    public class PlatformAdminCandidateDto
+    {
+        public int UserId { get; set; }
+        public string FullName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string MobileNumber { get; set; } = "";
+    }
+
     public class SavePlatformSettingRequest
     {
         public string SettingKey { get; set; } = "";

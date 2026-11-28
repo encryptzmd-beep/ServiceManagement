@@ -42,6 +42,11 @@ namespace EncryptzBL.Infrastructure.User.Modules
         Task<ApiResponse<List<PlatformSettingDto>>> GetSettings(PlatformActor actor);
         Task<ApiResponse<bool>> SaveSetting(SavePlatformSettingRequest req, PlatformActor actor);
 
+        Task<ApiResponse<List<PlatformAdminDto>>> GetAdmins(PlatformActor actor);
+        Task<ApiResponse<List<PlatformAdminCandidateDto>>> FindAdminCandidates(string? search, PlatformActor actor);
+        Task<ApiResponse<bool>> AddAdmin(int userId, PlatformActor actor);
+        Task<ApiResponse<bool>> RemoveAdmin(int userId, PlatformActor actor);
+
         Task<ApiResponse<List<PlatformMenuDto>>> GetMenus(PlatformActor actor);
         Task<ApiResponse<int>> SaveMenu(PlatformMenuDto dto, PlatformActor actor);
     }

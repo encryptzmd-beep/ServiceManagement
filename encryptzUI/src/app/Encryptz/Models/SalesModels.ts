@@ -19,6 +19,49 @@ export interface SalesCustomer {
   totalProducts?: number;
 }
 
+/** A customer that is the same party (same mobile or same GSTIN) as what is being entered. */
+export interface CustomerMatch extends SalesCustomer { matchedOn: 'Mobile' | 'GSTIN' | string; }
+
+/** A row of the Customers screen. */
+export interface CustomerListItem extends SalesCustomer {
+  totalOrders: number;
+  totalComplaints: number;
+  createdAt?: string | null;
+  totalCount: number;
+}
+
+export interface CustomerImportRow {
+  rowNumber: number;
+  customerName?: string;
+  mobileNumber?: string;
+  alternatePhone?: string;
+  email?: string;
+  address?: string;
+  landmark?: string;
+  city?: string;
+  state?: string;
+  pinCode?: string;
+  gstin?: string;
+}
+
+export interface CustomerImportRowResult {
+  rowNumber: number;
+  customerName: string;
+  mobileNumber: string;
+  action: 'New' | 'Update' | 'Error' | string;
+  customerId?: number | null;
+  existingName?: string | null;
+  message?: string | null;
+}
+
+export interface CustomerImportResult {
+  applied: boolean;
+  newCount: number;
+  updateCount: number;
+  errorCount: number;
+  rows: CustomerImportRowResult[];
+}
+
 export interface SalesCustomerSave {
   customerId: number;
   customerName: string;
@@ -315,6 +358,25 @@ export interface ServiceDespatchCreate {
 }
 
 export const SALES_DOCUMENT_TYPES =['Invoice', 'E-Way Bill', 'Delivery Challan', 'LR / Consignment Note', 'Purchase Order', 'Other'];
+
+/**
+ * The steps of a sales order (as dbo.sp_SalesOrder_SetStatus): Sales Order → Sales Confirmed → Billed → Despatched.
+ * Billed needs an Invoice PDF attached; a billed order is what the Despatch screen lists as pending.
+ */
+export const SALES_ORDER_STEPS = ['Sales Order', 'Sales Confirmed', 'Billed', 'Despatched'] as const;
+export const SALES_ORDER_STATUSES = [...SALES_ORDER_STEPS, 'Cancelled'];
+/** An order that can still be changed: it is not billed yet. */
+export const isOpenSalesOrder = (status: string | null | undefined) => status === 'Sales Order' || status === 'Sales Confirmed';
+/** The step a person may move the order to next, or null. */
+export const nextSalesOrderStep = (status: string | null | undefined): 'Sales Confirmed' | 'Billed' | null =>
+  status === 'Sales Order' ? 'Sales Confirmed' : status === 'Sales Confirmed' ? 'Billed' : null;
+/** The document type that must be attached before an order is marked Billed. */
+export const INVOICE_DOCUMENT_TYPE = 'Invoice';
+/** Why a sales order is not at Despatch, or '' when it may be despatched. */
+export const notDespatchableReason = (orderNo: string, status: string): string =>
+  status === 'Billed' ? ''
+    : isOpenSalesOrder(status) ? `Sales order ${orderNo} is not billed yet. Attach its invoice and mark it billed first.`
+    : `Sales order ${orderNo} is ${status.toLowerCase()} and cannot be despatched.`;
 
 /** A PDF attached to a bill, from the Sales Order or the Despatch screen. */
 export interface SalesDocument {

@@ -26,6 +26,67 @@ namespace EncryptzBL.DTO_s
         public int TotalProducts { get; set; }
     }
 
+    /// <summary>A customer that is the same party as a mobile / GSTIN being entered (dbo.sp_Customer_Matches).</summary>
+    public class CustomerMatchDto : SalesCustomerDto
+    {
+        /// <summary>Mobile or GSTIN.</summary>
+        public string MatchedOn { get; set; } = string.Empty;
+    }
+
+    /// <summary>A row of the Customers screen (dbo.sp_Customer_List).</summary>
+    public class CustomerListDto : SalesCustomerDto
+    {
+        public int TotalOrders { get; set; }
+        public int TotalComplaints { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public int TotalCount { get; set; }
+    }
+
+    /// <summary>A row of a bulk customer upload, as read from the file.</summary>
+    public class CustomerImportRowDto
+    {
+        public int RowNumber { get; set; }
+        public string? CustomerName { get; set; }
+        public string? MobileNumber { get; set; }
+        public string? AlternatePhone { get; set; }
+        public string? Email { get; set; }
+        public string? Address { get; set; }
+        public string? Landmark { get; set; }
+        public string? City { get; set; }
+        public string? State { get; set; }
+        public string? PinCode { get; set; }
+        public string? GSTIN { get; set; }
+    }
+
+    public class CustomerImportRequestDto
+    {
+        /// <summary>False: only check the rows and say what each would do. True: save them.</summary>
+        public bool Apply { get; set; }
+        public List<CustomerImportRowDto> Rows { get; set; } = new();
+    }
+
+    public class CustomerImportRowResultDto
+    {
+        public int RowNumber { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
+        public string MobileNumber { get; set; } = string.Empty;
+        /// <summary>New, Update or Error.</summary>
+        public string Action { get; set; } = string.Empty;
+        public int? CustomerId { get; set; }
+        /// <summary>The name stored now, for a row that updates an existing customer.</summary>
+        public string? ExistingName { get; set; }
+        public string? Message { get; set; }
+    }
+
+    public class CustomerImportResultDto
+    {
+        public bool Applied { get; set; }
+        public int NewCount { get; set; }
+        public int UpdateCount { get; set; }
+        public int ErrorCount { get; set; }
+        public List<CustomerImportRowResultDto> Rows { get; set; } = new();
+    }
+
     /// <summary>Create / update a customer of the master from the bill.</summary>
     public class TransporterDto
     {
@@ -95,6 +156,12 @@ namespace EncryptzBL.DTO_s
         public string? Terms { get; set; }
         public string? WarrantyText { get; set; }
         public List<SalesOrderItemSaveDto> Items { get; set; } = new();
+    }
+
+    /// <summary>The step a sales order is moved to: Sales Confirmed or Billed.</summary>
+    public class SalesOrderStatusDto
+    {
+        public string? Status { get; set; }
     }
 
     public class SalesOrderSaveResultDto

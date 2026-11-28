@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { SALES_DOCUMENT_TYPES, SalesDocument } from '../../../Models/ApiModels';
@@ -29,6 +29,8 @@ export class SalesDocumentsComponent {
   despatchId = input<number | null>(null);
   canAdd = input(true);
   canRemove = input(true);
+  /** The list as read from the server, each time it is read (the Sales Order screen checks for an invoice). */
+  documentsChange = output<SalesDocument[]>();
 
   /** A document belongs to both screens: a right on either of them is enough (as the API checks). */
   readonly addAllowed = computed(() => this.canAdd() && (this.rights.can('edit', '/sales/orders') || this.rights.can('edit', '/sales/despatch')));
@@ -55,6 +57,7 @@ export class SalesDocumentsComponent {
         this.loading.set(false);
         this.documents.set(r?.success ? r.data ?? [] : []);
         this.error.set(r?.success ? '' : r?.message || 'The documents could not be read');
+        this.documentsChange.emit(this.documents());
       },
       error: e => { this.loading.set(false); this.error.set(e?.error?.message || 'The documents could not be read'); },
     });

@@ -491,6 +491,14 @@ export const routes: Routes = [
 // 9. Sales: Sales Order (bill) -> Despatch -> Installation complaint -> Warranty
 //    (sidebar entries: MainDB/12_Sales_Menus.sql)
 {
+  // the one customer master (party) of CRM, Sales and Service (sidebar entry: MainDB/37_Customers_Menu.sql)
+  path: 'sales/customers',
+  loadComponent: () => import('./Encryptz/components/customers-component/customers-component')
+    .then(m => m.CustomersComponent),
+  canActivate: [roleGuard(['Admin', 'CompanyAdmin', 'ServiceManager', 'Manager'])],
+  data: { title: 'Customers', icon: 'contacts', menu: 'sales' }
+},
+{
   path: 'sales/orders',
   loadComponent: () => import('./Encryptz/components/sales-order-list-component/sales-order-list-component')
     .then(m => m.SalesOrderListComponent),

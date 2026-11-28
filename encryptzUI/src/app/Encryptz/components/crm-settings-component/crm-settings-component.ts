@@ -1,12 +1,15 @@
 import { AppRightDirective } from '../shared/app-right/app-right';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CrmMasterDto, CrmMasterKind, CrmMemberDto, CrmUserOptionDto } from '../../Models/CrmModels';
 import { CrmService } from '../../Services/crm-service';
 import { CrmRefusedComponent } from '../crm-shell-component/crm-refused';
 import { FORBIDDEN, refusalOf } from '../crm-shell-component/crm-ui';
+import {
+  QUOTATION_PRICES_KEY, QUOTATION_PRICE_CHOICES, QUOTATION_VALIDITY_CHOICES, QUOTATION_VALIDITY_KEY,
+} from '../shared/quotation-defaults';
 
-/** /crm/settings (managers): the lead sources, the lost reasons, and who is on the sales team and who manages it. */
+/** /crm/settings (managers): quotation defaults, the lead sources, the lost reasons, and who is on the sales team. */
 @Component({
   selector: 'app-crm-settings',
   standalone: true,
@@ -33,9 +36,47 @@ export class CrmSettingsComponent {
   error = signal('');
   notice = signal('');
 
+  // ── quotation defaults: what a new quotation starts with ──
+  readonly validityChoices = QUOTATION_VALIDITY_CHOICES;
+  readonly priceChoices = QUOTATION_PRICE_CHOICES;
+  validity = signal('none');
+  prices = signal('exclusive');
+  private savedDefaults = signal({ validity: 'none', prices: 'exclusive' });
+  defaultsLoaded = signal(false);
+  savingDefaults = signal(false);
+  readonly defaultsChanged = computed(() =>
+    this.validity() !== this.savedDefaults().validity || this.prices() !== this.savedDefaults().prices);
+
   constructor() {
+    this.loadDefaults();
     for (const l of this.lists) this.loadMasters(l.kind);
     this.loadMembers();
+  }
+
+  loadDefaults(): void {
+    this.crm.getPrintSettings().subscribe({
+      next: res => {
+        const d = res?.data ?? {};
+        const validity = (d[QUOTATION_VALIDITY_KEY] || 'none').trim().toLowerCase();
+        const prices = (d[QUOTATION_PRICES_KEY] || 'exclusive').trim().toLowerCase();
+        this.savedDefaults.set({ validity, prices });
+        this.validity.set(validity);
+        this.prices.set(prices);
+        this.defaultsLoaded.set(true);
+      },
+      error: err => { this.defaultsLoaded.set(true); this.fail(err); },
+    });
+  }
+
+  saveDefaults(): void {
+    this.savingDefaults.set(true);
+    this.crm.saveQuotationDefaults({ validity: this.validity(), prices: this.prices() }).subscribe({
+      next: res => {
+        this.savingDefaults.set(false);
+        this.done(res, 'Quotation defaults saved', () => this.savedDefaults.set({ validity: this.validity(), prices: this.prices() }));
+      },
+      error: err => { this.savingDefaults.set(false); this.error.set(err?.error?.message || refusalOf(err)); },
+    });
   }
 
   private fail(err: unknown): void {

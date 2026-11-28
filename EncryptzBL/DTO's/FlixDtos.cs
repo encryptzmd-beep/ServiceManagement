@@ -1237,6 +1237,67 @@ namespace EncryptzBL.DTO_s
         public string? CustomPartNumber { get; set; }
     }
 
+    /// <summary>What the job card of one assignment prints (dbo.sp_JobCard_Get, 32_Job_Card.sql).</summary>
+    public class JobCardDto
+    {
+        public int AssignmentId { get; set; }
+        public int ComplaintId { get; set; }
+        public string ComplaintNumber { get; set; } = string.Empty;
+        public string? Subject { get; set; }
+        public string? Description { get; set; }
+        public string? NatureOfJob { get; set; }
+        public string? ComplaintCategory { get; set; }
+        public string? Priority { get; set; }
+        public DateTime? SLADeadline { get; set; }
+        public DateTime? ComplaintDate { get; set; }
+        public DateTime? PreferredDate { get; set; }
+        public string? PreferredTimeSlot { get; set; }
+        public bool? IsWarranty { get; set; }
+        public string? StatusName { get; set; }
+        public string? AssignmentRole { get; set; }
+        public string? AssignmentStatus { get; set; }
+        public DateTime? AssignedAt { get; set; }
+        public DateTime? ScheduledDate { get; set; }
+        public string? StartTime { get; set; }
+        public string? EndTime { get; set; }
+        public string? TimeSlot { get; set; }
+        public int? EstimatedDuration { get; set; }
+        public string? Notes { get; set; }
+        public string? TechnicianName { get; set; }
+        public string? TechnicianMobile { get; set; }
+        public string? CustomerName { get; set; }
+        public string? CustomerMobile { get; set; }
+        public string? CustomerAlternatePhone { get; set; }
+        public string? CustomerEmail { get; set; }
+        public string? CustomerAddress { get; set; }
+        public string? Landmark { get; set; }
+        public string? City { get; set; }
+        public string? State { get; set; }
+        public string? PinCode { get; set; }
+        public decimal? Latitude { get; set; }
+        public decimal? Longitude { get; set; }
+        public string? ProductName { get; set; }
+        public string? Brand { get; set; }
+        public string? Model { get; set; }
+        public string? SerialNumber { get; set; }
+        public string? ProductCategory { get; set; }
+        public DateTime? PurchaseDate { get; set; }
+        public DateTime? WarrantyExpiryDate { get; set; }
+        /// <summary>Every technician on the complaint (not removed), the primary first.</summary>
+        public List<JobCardTechnicianDto> Team { get; set; } = new();
+    }
+
+    public class JobCardTechnicianDto
+    {
+        public int AssignmentId { get; set; }
+        public string? TechnicianName { get; set; }
+        public string? TechnicianMobile { get; set; }
+        public string? AssignmentRole { get; set; }
+        public DateTime? ScheduledDate { get; set; }
+        public string? StartTime { get; set; }
+        public string? EndTime { get; set; }
+    }
+
     public class WorkOrderDetailDto
     {
         public int AssignmentId { get; set; }

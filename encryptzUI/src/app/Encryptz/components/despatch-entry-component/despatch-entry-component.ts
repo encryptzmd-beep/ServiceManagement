@@ -6,7 +6,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ApiService } from '../../Services/API/api-service';
-import { AssignTechnician, DESPATCH_MODES, DespatchCreate, DespatchDetail, DespatchHeader, SalesOrderDetail, PRIORITIES } from '../../Models/ApiModels';
+import { AssignTechnician, DESPATCH_MODES, DespatchCreate, DespatchDetail, DespatchHeader, SalesOrderDetail, PRIORITIES, notDespatchableReason } from '../../Models/ApiModels';
 import { SalesDocumentsComponent } from '../shared/sales-documents/sales-documents';
 
 /** A technician as the picker shows it. */
@@ -193,7 +193,7 @@ export class DespatchEntryComponent implements OnInit {
           this.router.navigate(['/sales/despatch/view', d.despatches[0].despatchId], { replaceUrl: true });
           return;
         }
-        if (d.order.status !== 'Billed') { this.error.set(`Bill ${d.order.orderNo} is ${d.order.status.toLowerCase()} and cannot be despatched.`); }
+        if (d.order.status !== 'Billed') { this.error.set(notDespatchableReason(d.order.orderNo, d.order.status)); }
 
         const o = d.order;
         this.deliveryAddress = [o.billingAddress, o.city, o.state, o.pinCode].filter(Boolean).join(', ');
@@ -227,7 +227,7 @@ export class DespatchEntryComponent implements OnInit {
   async submit(): Promise<void> {
     const o = this.order();
     if (!o) return;
-    if (o.order.status !== 'Billed') { this.error.set('This bill cannot be despatched.'); return; }
+    if (o.order.status !== 'Billed') { this.error.set(notDespatchableReason(o.order.orderNo, o.order.status)); return; }
     if (!this.despatchDate) { this.error.set('Despatch date is required'); return; }
     if (this.billDate() && this.despatchDate < this.billDate()) { this.error.set('Despatch date cannot be before the bill date'); return; }
     if (!this.trackingNo.trim()) { this.error.set(`Enter the ${this.modeInfo().reference}`); return; }

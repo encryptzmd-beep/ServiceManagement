@@ -1126,6 +1126,25 @@ saveSalesCustomer(dto: M.SalesCustomerSave): Observable<M.ApiResponse<M.SalesCus
   return this.post<M.ApiResponse<M.SalesCustomerSaveResult>>('Sales/customers', dto);
 }
 
+/** The Customers screen: searched and paged. */
+listCustomers(search: string | undefined, pageNumber: number, pageSize: number): Observable<M.ApiResponse<M.PagedResult<M.CustomerListItem>>> {
+  return this.get<M.ApiResponse<M.PagedResult<M.CustomerListItem>>>('Sales/customers/list', { search, pageNumber, pageSize });
+}
+
+/** The customers that are the same party (same mobile or same GSTIN): the warning before a new customer is made. */
+customerMatches(mobile: string | null | undefined, gstin: string | null | undefined, excludeId?: number | null,
+                via: 'sales' | 'crm' = 'sales'): Observable<M.ApiResponse<M.CustomerMatch[]>> {
+  // a CRM session may not call the Sales (Service Management) API: CRM has its own endpoint
+  return via === 'crm'
+    ? this.get<M.ApiResponse<M.CustomerMatch[]>>('crm/customer-matches', { mobile: mobile || undefined, gstin: gstin || undefined })
+    : this.get<M.ApiResponse<M.CustomerMatch[]>>('Sales/customers/matches', { mobile: mobile || undefined, gstin: gstin || undefined, excludeId: excludeId || undefined });
+}
+
+/** Bulk upload: apply=false checks the rows, apply=true saves them (a match is overwritten with the file's values). */
+importCustomers(rows: M.CustomerImportRow[], apply: boolean): Observable<M.ApiResponse<M.CustomerImportResult>> {
+  return this.post<M.ApiResponse<M.CustomerImportResult>>('Sales/customers/import', { apply, rows });
+}
+
 getNextSalesOrderNumber(): Observable<M.ApiResponse<string>> {
   return this.get<M.ApiResponse<string>>('Sales/orders/next-number');
 }
@@ -1145,6 +1164,11 @@ saveSalesOrder(dto: M.SalesOrderSave): Observable<M.ApiResponse<M.SalesOrderSave
 /** Toolbar previous / next of a bill (0 = from a new one): { previousId, nextId } */
 getSalesOrderNeighbours(id: number): Observable<M.ApiResponse<{ previousId: number | null; nextId: number | null }>> {
   return this.get<M.ApiResponse<{ previousId: number | null; nextId: number | null }>>(`Sales/orders/${id}/neighbours`);
+}
+
+/** Sales Order → Sales Confirmed → Billed (Billed needs an Invoice PDF attached and sends the order to Despatch). */
+setSalesOrderStatus(id: number, status: 'Sales Confirmed' | 'Billed'): Observable<M.ApiResponse> {
+  return this.post<M.ApiResponse>(`Sales/orders/${id}/status`, { status });
 }
 
 cancelSalesOrder(id: number): Observable<M.ApiResponse> {

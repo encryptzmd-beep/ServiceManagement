@@ -7,8 +7,23 @@ import { FORBIDDEN, amount, isoDate, refusalOf } from './crm-ui';
 
 export const PAYMENT_MODES = ['Cash', 'UPI', 'Card', 'Bank Transfer', 'Cheque', 'Credit'];
 
+/** The server converts only a lead in Quotation or Negotiation (CrmRules.ConvertProblem). */
+const OPEN_FOR_CONVERT = ['Quotation', 'Negotiation'];
+
 /**
- * Convert to Sale, shared by the lead page and the quotation editor: it reads the convert preview of the chosen
+ * Why a shown Convert button is disabled, or '' when the convert may go ahead. The lead page and the quotation
+ * editor both ask this, so the button is disabled for the same reasons, with the same words, on either screen.
+ */
+export function convertBlockedReason(leadStatus: string | null | undefined,
+                                     lead: { salesOrderId?: number | null; convertNeedsCheck?: boolean } | null): string {
+  if (lead?.salesOrderId) return 'This lead has already been converted to a sales order';
+  if (lead?.convertNeedsCheck) return 'A manager must check the sales orders for this lead first, then link the order or cancel the convert';
+  if (!OPEN_FOR_CONVERT.includes(leadStatus ?? '')) return 'Mark the quotation as sent first';
+  return '';
+}
+
+/**
+ * Convert to sales order, shared by the lead page and the quotation editor: it reads the convert preview of the chosen
  * quotation (the customers with the lead's mobile and the quotation's lines), asks the customer when several match,
  * the order date and the payment mode, and on Confirm asks the server to make the sales order. The server decides;
  * a refusal is shown here as the server said it, except a 403, which the page shows as every page does.

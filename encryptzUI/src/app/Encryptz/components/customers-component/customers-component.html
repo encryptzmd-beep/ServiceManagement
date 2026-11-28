@@ -1,0 +1,183 @@
+<div class="fx-page">
+
+  <div class="fx-page-header">
+    <div>
+      <div class="fx-page-title">Customers</div>
+      <div class="fx-page-sub">One record per customer, used by quotations, sales orders, repeat supplies and service · a customer with the same mobile or GSTIN is never added twice</div>
+    </div>
+    <div class="cu-head-actions" [hidden]="refused()">
+      <button appRight="create" appRightMenu="/sales/customers" type="button" class="fx-page-btn cu-upload" (click)="openUpload()">
+        <span class="material-icons" aria-hidden="true">upload_file</span> Upload customers
+      </button>
+      <button appRight="create" appRightMenu="/sales/customers" type="button" class="fx-btn-new" (click)="newCustomer()">
+        <span class="material-icons" aria-hidden="true" style="font-size:18px">add</span> New Customer
+      </button>
+    </div>
+  </div>
+
+  @if (refused()) {
+    <app-module-refused moduleName="Service Management" />
+  } @else {
+  <div class="fx-table-wrap">
+    <div class="fx-table-toolbar">
+      <div class="fx-toolbar-left">
+        <span class="fx-table-title">All Customers</span>
+        <span class="fx-table-count">{{ totalCount() }} total</span>
+      </div>
+      <div class="fx-toolbar-right">
+        <div class="fx-search-box">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="5" stroke="#8a9ab0" stroke-width="1.5"/><path d="M11 11l3 3" stroke="#8a9ab0" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input type="text" class="fx-search-input" placeholder="Name, mobile, GSTIN, city…" aria-label="Search customers"
+                 [(ngModel)]="search" (keyup.enter)="find()" />
+        </div>
+        <button type="button" class="fx-btn-navy" style="padding:8px 14px" (click)="find()">Search</button>
+      </div>
+    </div>
+
+    <div class="cu-scroll">
+      <table class="fx-table">
+        <thead>
+          <tr><th>Customer</th><th>GSTIN</th><th>Address</th><th class="num">Orders</th><th class="num">Service jobs</th><th class="num">Products</th><th>Added</th></tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            <tr><td colspan="7" class="fx-empty-row">Loading…</td></tr>
+          } @else {
+            @for (c of customers(); track c.customerId) {
+              <tr class="cu-row" tabindex="0" (click)="edit(c)" (keydown.enter)="edit(c)">
+                <td><div class="cu-cell"><strong>{{ c.customerName }}</strong><small>{{ c.mobileNumber }}@if (c.alternatePhone) { / {{ c.alternatePhone }} }@if (c.email) { · {{ c.email }} }</small></div></td>
+                <td class="mono">{{ c.gstin || '—' }}</td>
+                <td><div class="cu-cell"><span>{{ c.city || '—' }}@if (c.state) { , {{ c.state }} }</span><small>{{ c.address }}</small></div></td>
+                <td class="num">{{ c.totalOrders }}</td>
+                <td class="num">{{ c.totalComplaints }}</td>
+                <td class="num">{{ c.totalProducts || 0 }}</td>
+                <td class="nowrap">{{ c.createdAt ? (c.createdAt | date:'dd MMM yyyy') : '—' }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="fx-empty-row">No customers found. Add one or upload your customer list.</td></tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages() > 1) {
+      <div class="fx-pagination">
+        <div class="fx-pagination-info">Page {{ page }} of {{ totalPages() }} · {{ totalCount() }} customers</div>
+        <div class="fx-pagination-actions">
+          <button type="button" class="fx-page-btn" (click)="prev()" [disabled]="page <= 1">‹ Prev</button>
+          <button type="button" class="fx-page-btn" (click)="next()" [disabled]="page >= totalPages()">Next ›</button>
+        </div>
+      </div>
+    }
+  </div>
+  }
+</div>
+
+<!-- ── new / edit customer ─────────────────────────────── -->
+@if (formOpen()) {
+  <div class="cu-overlay">
+    <div class="cu-dialog" role="dialog" aria-modal="true" aria-labelledby="cu-form-title" (keydown.escape)="formOpen.set(false)">
+      <div class="cu-dialog-head">
+        <h2 id="cu-form-title">{{ form().customerId ? 'Edit customer' : 'New customer' }}</h2>
+        <button type="button" class="cu-close" aria-label="Close" (click)="formOpen.set(false)"><span class="material-icons">close</span></button>
+      </div>
+      <div class="cu-dialog-body">
+        <div class="cu-grid">
+          <label class="cu-field wide"><span>Customer / party name *</span>
+            <input type="text" maxlength="150" [ngModel]="form().customerName" (ngModelChange)="set('customerName', $event)" /></label>
+          <label class="cu-field"><span>Mobile *</span>
+            <input type="tel" maxlength="15" [ngModel]="form().mobileNumber" (ngModelChange)="set('mobileNumber', $event)" /></label>
+          <label class="cu-field"><span>Alternate phone</span>
+            <input type="tel" maxlength="15" [ngModel]="form().alternatePhone" (ngModelChange)="set('alternatePhone', $event)" /></label>
+          <label class="cu-field"><span>GSTIN</span>
+            <input type="text" maxlength="15" style="text-transform:uppercase" [ngModel]="form().gstin" (ngModelChange)="set('gstin', $event)" /></label>
+          <label class="cu-field"><span>E-mail</span>
+            <input type="email" [ngModel]="form().email" (ngModelChange)="set('email', $event)" /></label>
+        </div>
+        <app-customer-match-warning [mobile]="form().mobileNumber" [gstin]="form().gstin" [excludeId]="form().customerId" (use)="useExisting($event)" />
+        <div class="cu-grid">
+          <label class="cu-field wide"><span>Address</span>
+            <textarea rows="2" maxlength="500" [ngModel]="form().address" (ngModelChange)="set('address', $event)"></textarea></label>
+          <label class="cu-field"><span>Landmark</span>
+            <input type="text" maxlength="200" [ngModel]="form().landmark" (ngModelChange)="set('landmark', $event)" /></label>
+          <label class="cu-field"><span>City</span>
+            <input type="text" maxlength="100" [ngModel]="form().city" (ngModelChange)="set('city', $event)" /></label>
+          <label class="cu-field"><span>State</span>
+            <select [ngModel]="form().state" (ngModelChange)="set('state', $event)">
+              <option value="">Select state</option>
+              @for (s of states; track s) { <option [value]="s">{{ s }}</option> }
+            </select></label>
+          <label class="cu-field"><span>PIN code</span>
+            <input type="text" maxlength="6" inputmode="numeric" [ngModel]="form().pinCode" (ngModelChange)="set('pinCode', $event)" /></label>
+        </div>
+        @if (formError()) { <p class="cu-error" role="alert">{{ formError() }}</p> }
+      </div>
+      <div class="cu-dialog-foot">
+        <button type="button" class="fx-page-btn" (click)="formOpen.set(false)">Cancel</button>
+        <button appRight="save" appRightMenu="/sales/customers" type="button" class="fx-btn-navy" [disabled]="saving()" (click)="save()">
+          {{ saving() ? 'Saving…' : 'Save customer' }}</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── bulk upload ─────────────────────────────────────── -->
+@if (uploadOpen()) {
+  <div class="cu-overlay">
+    <div class="cu-dialog wide" role="dialog" aria-modal="true" aria-labelledby="cu-upload-title" (keydown.escape)="uploadOpen.set(false)">
+      <div class="cu-dialog-head">
+        <h2 id="cu-upload-title">Upload customers</h2>
+        <button type="button" class="cu-close" aria-label="Close" (click)="uploadOpen.set(false)"><span class="material-icons">close</span></button>
+      </div>
+      <div class="cu-dialog-body">
+        <ol class="cu-steps">
+          <li>Download the template, or use your own Excel sheet with the columns <strong>Customer Name</strong> and <strong>Mobile</strong> (GSTIN, Address, City, State, Pin Code and others are optional).</li>
+          <li>Choose the file. Each row is checked first: a customer whose mobile or GSTIN is already saved is <strong>updated with the file's values</strong>, the others are added.</li>
+          <li>Press Import.</li>
+        </ol>
+        <div class="cu-upload-actions">
+          <button type="button" class="fx-page-btn" (click)="template()"><span class="material-icons" aria-hidden="true">download</span> Template</button>
+          <label class="fx-btn-navy cu-file" [class.busy]="checking()">
+            <span class="material-icons" aria-hidden="true">upload_file</span>{{ checking() ? 'Checking…' : 'Choose .xlsx file' }}
+            <input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" [disabled]="checking() || importing()" (change)="onFile($event)" />
+          </label>
+          @if (fileName()) { <span class="cu-file-name">{{ fileName() }}</span> }
+        </div>
+        @if (fileProblem()) { <p class="cu-error" role="alert">{{ fileProblem() }}</p> }
+
+        @if (result(); as r) {
+          <p class="cu-summary" role="status">
+            @if (r.applied) { Imported: <strong>{{ r.newCount }}</strong> added, <strong>{{ r.updateCount }}</strong> updated, <strong>{{ r.errorCount }}</strong> not imported. }
+            @else { Checked: <strong>{{ r.newCount }}</strong> new, <strong>{{ r.updateCount }}</strong> already saved (will be updated), <strong>{{ r.errorCount }}</strong> with errors (left out). }
+          </p>
+          <div class="cu-scroll cu-result">
+            <table class="fx-table">
+              <thead><tr><th>Row</th><th>Customer</th><th>Mobile</th><th>Result</th><th>Note</th></tr></thead>
+              <tbody>
+                @for (x of r.rows; track x.rowNumber) {
+                  <tr>
+                    <td class="num">{{ x.rowNumber }}</td>
+                    <td>{{ x.customerName || '—' }}</td>
+                    <td class="nowrap">{{ x.mobileNumber || '—' }}</td>
+                    <td><span class="cu-badge" [attr.data-action]="x.action">{{ x.action === 'Update' ? 'Update existing' : x.action }}</span></td>
+                    <td>{{ x.message || (x.existingName ? 'Saved as ' + x.existingName : '') }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+      <div class="cu-dialog-foot">
+        <button type="button" class="fx-page-btn" (click)="uploadOpen.set(false)">{{ result()?.applied ? 'Close' : 'Cancel' }}</button>
+        @if (!result()?.applied) {
+          <button appRight="create" appRightMenu="/sales/customers" type="button" class="fx-btn-navy" [disabled]="!canImport() || importing()" (click)="check(true)">
+            {{ importing() ? 'Importing…' : 'Import ' + ((result()?.newCount ?? 0) + (result()?.updateCount ?? 0)) + ' customers' }}</button>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+@if (toast(); as t) { <app-toast [text]="t.text" [kind]="t.type" /> }

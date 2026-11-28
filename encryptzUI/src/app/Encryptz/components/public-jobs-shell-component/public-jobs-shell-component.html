@@ -1,17 +1,20 @@
 <div class="ps">
   <header class="ps-head">
     <div class="ps-wrap ps-head-row">
-      <a class="ps-brand" routerLink="/jobs" aria-label="Encryptz Jobs, all jobs">
-        <img src="/logo.png" alt="" width="30" height="30" />
+      <a class="ps-brand" routerLink="/jobs" aria-label="Encryptz Jobs, home">
+        <img src="/logo.png" alt="" width="28" height="28" />
         <span>Encryptz <strong>Jobs</strong></span>
       </a>
-      <nav class="ps-nav" aria-label="Site">
+      <nav class="ps-tabs" aria-label="Site">
         <a routerLink="/jobs" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: false }">Find jobs</a>
+      </nav>
+      <nav class="ps-nav" aria-label="Account">
         @if (signedIn()) {
-          <a class="ps-cta" routerLink="/apps/jobs" rel="nofollow">My Job Portal</a>
+          <a class="ps-strong" routerLink="/apps/jobs" rel="nofollow">My Job Portal</a>
         } @else {
-          <a routerLink="/login" rel="nofollow">Sign in</a>
-          <a class="ps-cta" routerLink="/register" rel="nofollow">Create free profile</a>
+          <a class="ps-strong" routerLink="/login" rel="nofollow">Sign in</a>
+          <span class="ps-sep" aria-hidden="true"></span>
+          <a routerLink="/register" rel="nofollow">Create free profile</a>
         }
       </nav>
     </div>
@@ -23,12 +26,12 @@
 
   <footer class="ps-foot">
     <div class="ps-wrap ps-foot-row">
-      <span>© {{ year }} Encryptz. Find a job and apply with one profile.</span>
       <nav aria-label="Footer">
-        <a routerLink="/jobs">All jobs</a>
+        <a routerLink="/jobs" [queryParams]="{ q: '' }">Browse jobs</a>
         <a routerLink="/register" rel="nofollow">Create a profile</a>
         <a routerLink="/login" rel="nofollow">Sign in</a>
       </nav>
+      <span>© {{ year }} Encryptz</span>
     </div>
   </footer>
 </div>

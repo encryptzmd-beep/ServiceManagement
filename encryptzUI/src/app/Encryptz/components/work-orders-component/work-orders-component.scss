@@ -5316,3 +5316,9 @@
   /* action buttons: thumb-sized */
   .order-card .order-actions .btn-action { min-width: 44px; min-height: 40px; }
 }
+
+/* job card (Share / PDF) of each work order: its own row, so the phone's icon column stays as it is */
+.order-card .order-jobcard { padding: 10px 24px 0; }
+@media (max-width: 768px) {
+  .order-card .order-jobcard { padding: 8px 40px 2px 12px; }
+}

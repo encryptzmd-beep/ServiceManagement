@@ -7,7 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ConvertResultDto, CrmProductDto, LeadDetailDto, LeadListDto, LeadSaveDto, QuotationDto, QuotationItemDto } from '../../Models/CrmModels';
 import { CrmService } from '../../Services/crm-service';
-import { CrmConvertDialogComponent } from '../crm-shell-component/crm-convert-dialog-component';
+import { CrmConvertDialogComponent, convertBlockedReason } from '../crm-shell-component/crm-convert-dialog-component';
 import { CrmRefusedComponent } from '../crm-shell-component/crm-refused';
 import { FORBIDDEN, amount, isoDate, pill, quoteTotals, refusalOf, showDate } from '../crm-shell-component/crm-ui';
 import { TransactionMode, TransactionToolbarComponent } from '../shared/transaction-toolbar/transaction-toolbar';
@@ -16,9 +16,13 @@ import { DocumentPdfService, documentFileName } from '../shared/document-print/d
 import { quotationPrintDocument } from '../shared/document-print/quotation-document';
 import { DialogService } from '../../Services/dialog-service';
 import { RightsService } from '../../Services/rights-service';
+import { QUOTATION_PRICES_KEY, QUOTATION_VALIDITY_KEY, pricesIncludeGstByDefault, validUntilFor } from '../shared/quotation-defaults';
+import { openPendingTab, whatsAppNumber, whatsAppUrl } from '../shared/whatsapp';
+import { quotationWhatsAppFileName, quotationWhatsAppMessage } from './quotation-whatsapp';
+import { CustomerMatchWarningComponent } from '../shared/customer-match/customer-match-warning';
+import { CustomerMatch } from '../../Models/ApiModels';
 
 export const GST_RATES = [0, 5, 12, 18, 28];
-const OPEN_FOR_CONVERT = ['Quotation', 'Negotiation'];
 
 const blankLine = (sortOrder: number): QuotationItemDto => ({
   quotationItemId: 0, productMasterId: null, productName: '', hsnSac: '', qty: 1, rate: 0, discountAmount: 0, gstPercent: 18,
@@ -40,7 +44,7 @@ const blankCustomer = (): NewCustomer => ({ contactName: '', mobile: '', email: 
 @Component({
   selector: 'app-crm-quotation',
   standalone: true,
-  imports: [UppercaseInputDirective, ProductFormComponent, AppRightDirective, FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent, TransactionToolbarComponent, TransactionFindComponent],
+  imports: [UppercaseInputDirective, ProductFormComponent, AppRightDirective, FormsModule, RouterLink, CrmRefusedComponent, CrmConvertDialogComponent, TransactionToolbarComponent, TransactionFindComponent, CustomerMatchWarningComponent],
   templateUrl: './crm-quotation-component.html',
   styleUrls: ['../crm-shell-component/crm-pages.scss', './crm-quotation-component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -106,21 +110,14 @@ export class CrmQuotationComponent {
     return !!q && q.isLatest && (q.status === 'Draft' || q.status === 'Sent') && !['Converted', 'Lost'].includes(q.leadStatus ?? '');
   });
 
-  /** The server converts only a lead in Quotation or Negotiation (CrmRules.ConvertProblem). */
   /** The lead's convert flags (the quotation does not carry them); null until read. */
   lead = signal<LeadDetailDto | null>(null);
   /** False until the lead read has answered (success or failure); Convert stays disabled meanwhile. */
   leadLoaded = signal(false);
 
-  /** Why a shown Convert button is disabled, or '' when the convert may go ahead. Same wording as the lead page. */
-  readonly convertHint = computed(() => {
-    if (!this.showConvert()) return '';
-    const l = this.lead();
-    if (l?.salesOrderId) return 'This lead has already been converted to a sales order';
-    if (l?.convertNeedsCheck) return 'A manager must check the sales orders for this lead first, then link the order or cancel the convert';
-    if (!OPEN_FOR_CONVERT.includes(this.saved()?.leadStatus ?? '')) return 'Mark the quotation as sent first';
-    return '';
-  });
+  /** Why a shown Convert button is disabled, or '' when the convert may go ahead. The lead page asks the same rule. */
+  readonly convertHint = computed(() =>
+    this.showConvert() ? convertBlockedReason(this.saved()?.leadStatus, this.lead()) : '');
   readonly canConvert = computed(() => this.showConvert() && this.leadLoaded() && !this.convertHint());
 
   constructor() {
@@ -155,15 +152,30 @@ export class CrmQuotationComponent {
     if (leadId > 0) this.useLead(leadId, true);
   }
 
-  /** A new quotation starts with the terms and warranty of Print Settings; what is saved is this quotation's own copy. */
+  /** The admin's validity period (7d, 1m, ...) a new quotation follows; '' when none. */
+  validityPeriod = signal('');
+
+  /**
+   * A new quotation starts with the defaults of Print Settings: terms, warranty, the validity period (Valid Until =
+   * its date + the period) and whether its rates include GST. What is saved is this quotation's own copy.
+   */
   private loadDefaultTexts(): void {
+    this.validityPeriod.set('');
     this.crm.getPrintSettings().subscribe({
       next: res => {
         if (this.quotationId() || this.saved()) return;
         const d = res?.data ?? {};
         const untouched = !this.isDirty();
+        const period = d[QUOTATION_VALIDITY_KEY] ?? '';
+        this.validityPeriod.set(validUntilFor('2000-01-01', period) ? period : '');
         // never over what the person has typed meanwhile
-        this.head.update(h => ({ ...h, terms: h.terms || (d['Print.Terms'] ?? ''), warrantyText: h.warrantyText || (d['Print.Warranty'] ?? '') }));
+        this.head.update(h => ({
+          ...h,
+          terms: h.terms || (d['Print.Terms'] ?? ''),
+          warrantyText: h.warrantyText || (d['Print.Warranty'] ?? ''),
+          validUntil: h.validUntil || validUntilFor(h.quoteDate, period),
+          pricesIncludeGst: untouched ? pricesIncludeGstByDefault(d[QUOTATION_PRICES_KEY]) : h.pricesIncludeGst,
+        }));
         if (untouched) this.markSaved();   // the defaults are not a change of the user
       },
       error: () => {},   // the boxes stay blank and can be typed in
@@ -249,6 +261,16 @@ export class CrmQuotationComponent {
 
   setCust<K extends keyof NewCustomer>(key: K, value: NewCustomer[K]): void {
     this.newCust.update(c => ({ ...c, [key]: value }));
+  }
+
+  /** The warning offered a customer already in Customers: its saved details fill the form, so the quotation uses that party. */
+  useSavedCustomer(c: CustomerMatch): void {
+    this.newCust.set({
+      contactName: c.customerName, mobile: c.mobileNumber, email: c.email ?? '', address: c.address ?? '',
+      city: c.city ?? '', state: c.state ?? '', pinCode: c.pinCode ?? '',
+    });
+    if (c.gstin) this.setHead('customerGstin', c.gstin);
+    this.notice.set(`Using the saved customer ${c.customerName}`);
   }
 
   /** The customer problem of a new quotation, or null when it has one. */
@@ -399,6 +421,40 @@ export class CrmQuotationComponent {
     }
   }
 
+  /**
+   * Send via WhatsApp (no WhatsApp API): downloads the PDF as QTN-001_ABC-ENTERPRISES.pdf and opens the customer's
+   * chat (wa.me, their registered mobile) with a message; the person attaches the file and presses Send.
+   */
+  async onSendWhatsApp(): Promise<void> {
+    const q = this.saved();
+    if (!q || this.pdfBusy()) return;
+    this.error.set('');
+    this.notice.set('');
+    if (!whatsAppNumber(q.mobile)) {
+      this.error.set(`The customer's mobile number (${q.mobile || 'none'}) is not a valid 10-digit number. Correct it on the lead first`);
+      return;
+    }
+    if (this.isDirty()) {
+      this.error.set('Save the changes first, so the PDF sent has them');
+      return;
+    }
+    // opened now, during the click: a tab opened after the PDF is made is blocked as a popup
+    const tab = openPendingTab();
+    this.pdfBusy.set(true);
+    try {
+      const settings = (await firstValueFrom(this.crm.getPrintSettings()))?.data ?? {};
+      const fileName = quotationWhatsAppFileName(q.quotationNo, q.revisionNo, q.contactName);
+      await this.pdf.download(quotationPrintDocument(q), settings, fileName);
+      tab.go(whatsAppUrl(q.mobile, quotationWhatsAppMessage(q, settings['Print.CompanyName'])));
+      this.notice.set(`${fileName} is downloaded. Attach it in the WhatsApp chat with ${q.contactName} and press Send`);
+    } catch {
+      tab.close();
+      this.error.set('The PDF could not be made. Try again');
+    } finally {
+      this.pdfBusy.set(false);
+    }
+  }
+
   async onCancelDoc(): Promise<void> {
     const q = this.saved();
     if (!q || !this.canCancelDoc()) return;
@@ -443,7 +499,14 @@ export class CrmQuotationComponent {
   }
 
   setHead<K extends keyof Head>(key: K, value: Head[K]): void {
-    this.head.update(h => ({ ...h, [key]: value }));
+    this.head.update(h => {
+      const next = { ...h, [key]: value };
+      // a new date moves Valid Until along with it, unless Valid Until was changed by hand
+      const period = this.validityPeriod();
+      if (key === 'quoteDate' && period && (!h.validUntil || h.validUntil === validUntilFor(h.quoteDate, period)))
+        next.validUntil = validUntilFor(String(value), period) || h.validUntil;
+      return next;
+    });
   }
 
   setLine<K extends keyof QuotationItemDto>(index: number, key: K, value: QuotationItemDto[K]): void {

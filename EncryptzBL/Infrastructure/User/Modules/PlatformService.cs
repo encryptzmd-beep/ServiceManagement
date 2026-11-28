@@ -944,6 +944,67 @@ namespace EncryptzBL.Infrastructure.User.Modules
         }
 
         // ============================================
+        // PLATFORM ADMINISTRATORS (global role Admin)
+        // ============================================
+
+        public async Task<ApiResponse<List<PlatformAdminDto>>> GetAdmins(PlatformActor actor)
+        {
+            if (!actor.IsPlatformAdmin)
+                return ApiResponse<List<PlatformAdminDto>>.Fail(NotAllowed);
+
+            var list = await GetListAsync<PlatformAdminDto>("sp_Platform_GetAdmins");
+            return ApiResponse<List<PlatformAdminDto>>.Ok(list);
+        }
+
+        public async Task<ApiResponse<List<PlatformAdminCandidateDto>>> FindAdminCandidates(string? search, PlatformActor actor)
+        {
+            if (!actor.IsPlatformAdmin)
+                return ApiResponse<List<PlatformAdminCandidateDto>>.Fail(NotAllowed);
+
+            search = (search ?? "").Trim();
+            if (search.Length < 3)
+                return ApiResponse<List<PlatformAdminCandidateDto>>.Ok(new List<PlatformAdminCandidateDto>());
+
+            var list = await GetListAsync<PlatformAdminCandidateDto>("sp_Platform_FindAdminCandidates", new[]
+            {
+                SqlParameterHelper.Input("@Search", search.Length > 200 ? search[..200] : search)
+            });
+            return ApiResponse<List<PlatformAdminCandidateDto>>.Ok(list);
+        }
+
+        public async Task<ApiResponse<bool>> AddAdmin(int userId, PlatformActor actor)
+        {
+            if (!actor.IsPlatformAdmin)
+                return ApiResponse<bool>.Fail(NotAllowed);
+
+            var result = ToFlag(await GetDataTableAsync("sp_Platform_AddAdmin", new[]
+            {
+                SqlParameterHelper.Input("@UserId", userId),
+                SqlParameterHelper.Input("@GrantedBy", actor.UserId)
+            }));
+
+            if (result.Success)
+                _logger.LogInformation("User {TargetUserId} made a platform administrator by user {UserId}", userId, actor.UserId);
+            return result;
+        }
+
+        public async Task<ApiResponse<bool>> RemoveAdmin(int userId, PlatformActor actor)
+        {
+            if (!actor.IsPlatformAdmin)
+                return ApiResponse<bool>.Fail(NotAllowed);
+
+            var result = ToFlag(await GetDataTableAsync("sp_Platform_RemoveAdmin", new[]
+            {
+                SqlParameterHelper.Input("@UserId", userId),
+                SqlParameterHelper.Input("@RemovedBy", actor.UserId)
+            }));
+
+            if (result.Success)
+                _logger.LogInformation("Platform administrator access of user {TargetUserId} removed by user {UserId}", userId, actor.UserId);
+            return result;
+        }
+
+        // ============================================
         // MENU TREE
         // ============================================
 

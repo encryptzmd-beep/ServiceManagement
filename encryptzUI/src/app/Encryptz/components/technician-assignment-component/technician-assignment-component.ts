@@ -5,13 +5,14 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../Services/API/api-service';
 import { ActiveAssignment, AssignTechnician, AuditLog, ComplaintLookup, Technician } from '../../Models/ApiModels';
 import { debounceTime, Subject } from 'rxjs';
+import { JobCardActionsComponent } from '../shared/job-card/job-card-actions';
 
 
 
 @Component({
   selector: 'app-technician-assignment',
   standalone: true,
-  imports: [AppRightDirective, CommonModule, FormsModule],
+  imports: [AppRightDirective, CommonModule, FormsModule, JobCardActionsComponent],
   templateUrl: './technician-assignment-component.html',
   styleUrl: './technician-assignment-component.scss',
 })
@@ -26,6 +27,8 @@ export class TechnicianAssignmentComponent implements OnInit {
   saving = signal(false);
   successMsg = signal('');
   errorMsg = signal('');
+  /** The assignment just made, so its job card can be shared with the technician at once. */
+  lastAssignment = signal<{ assignmentId: number; technicianName: string } | null>(null);
 
   activeTab: 'assign' | 'complete' = 'assign';
   searchTerm = '';
@@ -114,7 +117,7 @@ export class TechnicianAssignmentComponent implements OnInit {
       this.errorMsg.set(scheduleError);
       return;
     }
-    this.saving.set(true); this.successMsg.set(''); this.errorMsg.set('');
+    this.saving.set(true); this.successMsg.set(''); this.errorMsg.set(''); this.lastAssignment.set(null);
 
     const payload: any = {
       complaintId: this.form.complaintId, technicianId: this.form.technicianId,
@@ -132,6 +135,8 @@ export class TechnicianAssignmentComponent implements OnInit {
         if (res.success) {
           const techName = this.technicians().find((t: any) => t.technicianId === this.form.technicianId)?.fullName || '';
           this.successMsg.set(techName + ' assigned as ' + this.form.assignmentRole + ' to Complaint #' + this.form.complaintId);
+          const newId = Number(res.data);
+          if (newId > 0) this.lastAssignment.set({ assignmentId: newId, technicianName: techName });
           this.loadTechnicians(); this.loadActiveAssignments();
           if (this.form.complaintId) { this.auditComplaintId = this.form.complaintId; this.loadAuditLog(); }
           // MULTI-ASSIGN: keep complaint, reset only tech + switch role to Supporting

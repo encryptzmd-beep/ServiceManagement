@@ -276,6 +276,7 @@
             }
             @if (a.notes) { <div class="ac-notes"><span class="material-icons">notes</span> {{ a.notes }}</div> }
             <div class="ac-date">Assigned: {{ a.assignedAt | date:'dd MMM, hh:mm a' }}</div>
+            <app-job-card-actions class="ac-jobcard" [assignmentId]="a.assignmentId" [label]="a.complaintNumber" />
           </div>
           } @empty {
           <div class="t-empty"><span class="material-icons">assignment_turned_in</span><p>No active assignments</p></div>
@@ -300,6 +301,13 @@
 
       @if (successMsg()) { <div class="alert ok"><span class="material-icons">check_circle</span> {{ successMsg() }}</div> }
       @if (errorMsg()) { <div class="alert err"><span class="material-icons">error</span> {{ errorMsg() }}</div> }
+      @if (lastAssignment(); as la) {
+        <!-- the technician gets the job card right after the assignment -->
+        <div class="jc-after-assign">
+          <span>Job card for {{ la.technicianName }}</span>
+          <app-job-card-actions [assignmentId]="la.assignmentId" [label]="la.technicianName" />
+        </div>
+      }
     </div>
 
     <!-- RIGHT PANEL: Audit Log -->

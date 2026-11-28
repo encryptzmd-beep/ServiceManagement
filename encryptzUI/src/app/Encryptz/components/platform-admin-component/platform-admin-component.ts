@@ -26,12 +26,13 @@ import { provisionLabel, requestErrorMessage } from '../../Auth/company-creation
 import { PlatformNavService, PlatformTab } from '../../Services/platform-nav-service';
 import { Router } from '@angular/router';
 import { VerificationPanelComponent } from '../verification-panel-component/verification-panel-component';
+import { PlatformAdminsPanelComponent } from '../platform-admins-panel-component/platform-admins-panel-component';
 import { LoginAdsPanelComponent } from '../login-ads-panel-component/login-ads-panel-component';
 import { ScrollIntoViewOn } from '../shared/scroll-into-view';
 import { EscapeClose } from '../shared/escape-close';
 
 type Tab = PlatformTab;
-const SECTION_TABS: Tab[] = ['companies', 'applications', 'verification', 'projects', 'locations', 'branchAccess', 'access', 'menus', 'servers', 'settings', 'loginAds'];
+const SECTION_TABS: Tab[] = ['companies', 'applications', 'verification', 'projects', 'locations', 'branchAccess', 'access', 'menus', 'servers', 'settings', 'loginAds', 'admins'];
 
 /**
  * Administration of the main database: companies and their modules, the database each
@@ -42,7 +43,7 @@ const SECTION_TABS: Tab[] = ['companies', 'applications', 'verification', 'proje
  */
 @Component({
   selector: 'app-platform-admin-component',
-  imports: [AppToastComponent, CommonModule, FormsModule, VerificationPanelComponent, LoginAdsPanelComponent, ScrollIntoViewOn, EscapeClose],
+  imports: [AppToastComponent, CommonModule, FormsModule, VerificationPanelComponent, PlatformAdminsPanelComponent, LoginAdsPanelComponent, ScrollIntoViewOn, EscapeClose],
   templateUrl: './platform-admin-component.html',
   styleUrl: './platform-admin-component.scss',
 })
@@ -317,7 +318,7 @@ export class PlatformAdminComponent implements OnInit {
   }
 
   setTab(tab: Tab): void {
-    if ((tab === 'servers' || tab === 'settings' || tab === 'applications' || tab === 'verification' || tab === 'loginAds') && !this.isPlatformAdmin()) return;
+    if ((tab === 'servers' || tab === 'settings' || tab === 'applications' || tab === 'verification' || tab === 'loginAds' || tab === 'admins') && !this.isPlatformAdmin()) return;
     if (tab !== this.tab()) { this.closeForms(); this.cancelServersLoad(); this.cancelSettingsLoad(); this.cancelApplicationsLoad(); }
     this.tab.set(tab);
     this.nav.tab.set(tab);

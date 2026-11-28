@@ -516,6 +516,15 @@ namespace EncryptzBL.Infrastructure.Technician.Modules
             var list = await GetListAsync<AttendanceDto>("sp_Technician_GetAttendance", p);
             return ApiResponse<List<AttendanceDto>>.Ok(list);
         }
+        public async Task<JobCardDto?> GetJobCard(int assignmentId)
+        {
+            var ds = await GetDataSetAsync("sp_JobCard_Get", new[] { SqlParameterHelper.Input("@AssignmentId", assignmentId) });
+            var card = ds != null && ds.Tables.Count > 0 ? ds.Tables[0].ToList<JobCardDto>().FirstOrDefault() : null;
+            if (card == null) return null;
+            card.Team = ds!.Tables.Count > 1 ? ds.Tables[1].ToList<JobCardTechnicianDto>() : new List<JobCardTechnicianDto>();
+            return card;
+        }
+
         public async Task<WorkOrderDetailDto?> GetWorkOrderDetails(int assignmentId)
         {
             var p = new[] { SqlParameterHelper.Input("@AssignmentId", assignmentId) };

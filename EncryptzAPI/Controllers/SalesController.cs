@@ -16,7 +16,8 @@ namespace EncryptzAPI.Controllers
     ///   GET    api/Sales/orders/next-number
     ///   GET    api/Sales/orders?searchTerm=&status=&pageNumber=&pageSize=
     ///   GET    api/Sales/orders/{id}               bill + lines (+ warranty) + despatch
-    ///   POST   api/Sales/orders                    save bill (insert / update while Billed)
+    ///   POST   api/Sales/orders                    save a sales order (insert / update before Billed)
+    ///   POST   api/Sales/orders/{id}/status        Sales Order -> Sales Confirmed -> Billed (needs an Invoice PDF)
     ///   POST   api/Sales/orders/{id}/cancel
     ///   GET    api/Sales/despatches?searchTerm=&pageNumber=&pageSize=
     ///   GET    api/Sales/despatches/{id}           despatch + units with warranty + complaint
@@ -72,11 +73,30 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SearchCustomers([FromQuery] string? search = null, [FromQuery] int top = 50)
             => Ok(ApiResponse<List<SalesCustomerDto>>.Ok(await _svc.SearchCustomers(search, top)));
 
-        [MenuRight("/sales/orders", MenuRightKind.Save, IdProperty = "CustomerId")]
+        [MenuRight("/sales/orders", MenuRightKind.Save, IdProperty = "CustomerId", OrMenuPath = "/sales/customers")]
         [HttpPost("customers")]
         public async Task<IActionResult> SaveCustomer([FromBody] SalesCustomerSaveDto dto)
         {
             var result = await _svc.SaveCustomer(dto);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>The Customers screen: the one customer master (party) of CRM, Sales and Service.</summary>
+        [HttpGet("customers/list")]
+        public async Task<IActionResult> ListCustomers([FromQuery] string? search = null, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 25)
+            => Ok(ApiResponse<PagedResult<CustomerListDto>>.Ok(await _svc.ListCustomers(search, pageNumber, pageSize)));
+
+        /// <summary>The customers that are the same party as a mobile / GSTIN being entered (same mobile or same GSTIN).</summary>
+        [HttpGet("customers/matches")]
+        public async Task<IActionResult> CustomerMatches([FromQuery] string? mobile = null, [FromQuery] string? gstin = null, [FromQuery] int? excludeId = null)
+            => Ok(ApiResponse<List<CustomerMatchDto>>.Ok(await _svc.CustomerMatches(mobile, gstin, excludeId)));
+
+        /// <summary>Bulk upload of customers: apply=false checks the rows, apply=true saves them.</summary>
+        [MenuRight("/sales/customers", MenuRightKind.Create)]
+        [HttpPost("customers/import")]
+        public async Task<IActionResult> ImportCustomers([FromBody] CustomerImportRequestDto req)
+        {
+            var result = await _svc.ImportCustomers(req);
             return result.Success ? Ok(result) : BadRequest(result);
         }
 
@@ -106,6 +126,15 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SaveOrder([FromBody] SalesOrderSaveDto dto)
         {
             var result = await _svc.SaveOrder(dto, UserId);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>Sales Order → Sales Confirmed → Billed; Billed needs an Invoice PDF attached, and sends the order to Despatch.</summary>
+        [MenuRight("/sales/orders", MenuRightKind.Edit)]
+        [HttpPost("orders/{id:int}/status")]
+        public async Task<IActionResult> SetOrderStatus(int id, [FromBody] SalesOrderStatusDto dto)
+        {
+            var result = await _svc.SetOrderStatus(id, dto?.Status, UserId);
             return result.Success ? Ok(result) : BadRequest(result);
         }
 

@@ -1,5 +1,6 @@
 using EncryptzBL.Common;
 using EncryptzBL.Common.Crm;
+using EncryptzBL.Common.Sales;
 using EncryptzBL.DTO_s;
 using Microsoft.Extensions.Logging;
 
@@ -30,7 +31,7 @@ namespace EncryptzBL.Infrastructure.Crm
                 var problem = CrmRules.ConvertProblem(lead, q);
                 if (problem != null) return ApiResponse<ConvertPreviewDto>.Fail(problem);
 
-                return ApiResponse<ConvertPreviewDto>.Ok(new ConvertPreviewDto { Matches = await CustomersWithMobile(lead.Mobile), Quotation = q! });
+                return ApiResponse<ConvertPreviewDto>.Ok(new ConvertPreviewDto { Matches = await PartyOf(lead, q), Quotation = q! });
             });
 
         // explicit, so that the name Convert does not hide System.Convert inside the class
@@ -47,7 +48,7 @@ namespace EncryptzBL.Infrastructure.Crm
                 var problem = CrmRules.ConvertProblem(lead, q);
                 if (problem != null) return ApiResponse<ConvertResultDto>.Fail(problem);
 
-                var matches = await CustomersWithMobile(lead.Mobile);
+                var matches = await PartyOf(lead, q);
                 var choiceProblem = CrmRules.CustomerChoiceProblem(matches.Select(c => c.CustomerId).ToList(), dto.CustomerId);
                 if (choiceProblem != null) return ApiResponse<ConvertResultDto>.Fail(choiceProblem);
 
@@ -72,7 +73,7 @@ namespace EncryptzBL.Infrastructure.Crm
                         var customer = await _sales.SaveCustomer(new SalesCustomerSaveDto
                         {
                             CustomerName = lead.ContactName, MobileNumber = lead.Mobile, Email = lead.Email, Address = lead.Address,
-                            City = lead.City, State = lead.State, PinCode = lead.PinCode, Landmark = lead.Landmark
+                            City = lead.City, State = lead.State, PinCode = lead.PinCode, Landmark = lead.Landmark, GSTIN = q!.CustomerGstin
                         });
                         if (!customer.Success || customer.Data == null || customer.Data.CustomerId <= 0)
                         {
@@ -85,7 +86,8 @@ namespace EncryptzBL.Infrastructure.Crm
 
                     // from here sp_SalesOrder_Save may commit even if the call then throws (a timeout, a dropped connection)
                     orderAttempted = true;
-                    var saved = await _sales.SaveOrder(CrmRules.BuildOrder(lead, q!, customerId, dto), userId);
+                    // the customer accepted the quotation: the order starts as Sales Confirmed (Billed once its invoice is attached)
+                    var saved = await _sales.SaveOrder(CrmRules.BuildOrder(lead, q!, customerId, dto), userId, SalesOrderStatus.Confirmed);
                     if (!saved.Success || saved.Data == null || saved.Data.SalesOrderId <= 0)
                     {
                         if (newCustomer)
@@ -214,13 +216,22 @@ namespace EncryptzBL.Infrastructure.Crm
             }
         }
 
-        /// <summary>The customers of the master whose mobile is the lead's, compared as CrmRules.NormaliseMobile does.</summary>
-        private async Task<List<SalesCustomerDto>> CustomersWithMobile(string mobile)
+        /// <summary>
+        /// The customer the order is for: the one linked to the lead when its quotation was saved, else every customer
+        /// that is the same party (same mobile or the quotation's GSTIN), from which the user chooses when there are several.
+        /// </summary>
+        private async Task<List<SalesCustomerDto>> PartyOf(LeadDetailDto lead, QuotationDto? q)
         {
-            var normalised = CrmRules.NormaliseMobile(mobile);
-            if (normalised.Length == 0) return new List<SalesCustomerDto>();
-            var found = await _sales.SearchCustomers(normalised, 50);
-            return found.Where(c => CrmRules.SameMobile(c.MobileNumber, normalised)).ToList();
+            var found = (await _sales.CustomerMatches(lead.Mobile, q?.CustomerGstin)).Cast<SalesCustomerDto>().ToList();
+            var linked = found.FirstOrDefault(c => c.CustomerId == lead.CustomerId);
+            if (linked != null) return new List<SalesCustomerDto> { linked };
+            if (lead.CustomerId is > 0)
+            {
+                // the linked customer changed its mobile since: it is still the lead's party
+                var byId = (await _sales.SearchCustomers(lead.ContactName, 200)).FirstOrDefault(c => c.CustomerId == lead.CustomerId);
+                if (byId != null) return new List<SalesCustomerDto> { byId };
+            }
+            return found;
         }
 
         /// <summary>The lead alone (crm.sp_Lead_Get), without its follow-ups, history and quotations.</summary>

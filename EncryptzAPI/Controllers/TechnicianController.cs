@@ -268,6 +268,22 @@ namespace EncryptzAPI.Controllers
 
         //    return Ok(new { success = true, message = response.Message });
         //}
+        /// <summary>
+        /// The job card of an assignment, made into a PDF in the browser and shared with the technician:
+        /// the back office for any assignment, a technician only for an own one.
+        /// </summary>
+        [HttpGet("job-card/{assignmentId:int}")]
+        public async Task<IActionResult> GetJobCard(int assignmentId)
+        {
+            var denied = await GuardAssignment(assignmentId);
+            if (denied != null) return denied;
+
+            var card = await _service.GetJobCard(assignmentId);
+            if (card == null)
+                return NotFound(new { success = false, message = "Assignment not found" });
+            return Ok(new { success = true, data = card });
+        }
+
         [HttpGet("work-order-details/{assignmentId}")]
         public async Task<IActionResult> GetWorkOrderDetails(int assignmentId)
         {

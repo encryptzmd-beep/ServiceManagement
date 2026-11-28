@@ -638,6 +638,13 @@
     </div>
 
     @if (assignOk()) { <div class="ap-alert ok"><span class="material-icons">check_circle</span>{{ assignOk() }}</div> }
+    @if (lastAssignment(); as la) {
+      <!-- the technician gets the job card right after the assignment -->
+      <div class="ap-jobcard">
+        <span>Job card for {{ la.technicianName }}</span>
+        <app-job-card-actions [assignmentId]="la.assignmentId" [label]="la.technicianName" />
+      </div>
+    }
     @if (assignErr()) { <div class="ap-alert err"><span class="material-icons">error</span>{{ assignErr() }}</div> }
 
     <button appRight="create" appRightMenu="/complaints/assign" class="ap-submit" (click)="doAssign()"

@@ -10,7 +10,7 @@ import { TransactionMode, TransactionToolbarComponent } from '../shared/transact
 import { FindQuery, FindRow, TransactionFindComponent } from '../shared/transaction-toolbar/transaction-find';
 import { DialogService } from '../../Services/dialog-service';
 import { CrmService } from '../../Services/crm-service';
-import { CrmConvertDialogComponent } from '../crm-shell-component/crm-convert-dialog-component';
+import { CrmConvertDialogComponent, convertBlockedReason } from '../crm-shell-component/crm-convert-dialog-component';
 import { CrmRefusedComponent } from '../crm-shell-component/crm-refused';
 import { FORBIDDEN, amount, isoDateTime, pill, refusalOf, showDate, showDateTime } from '../crm-shell-component/crm-ui';
 
@@ -21,7 +21,6 @@ interface TimelineEntry { key: string; at: string; kind: 'followup' | 'status'; 
 
 export const FOLLOW_UP_TYPES = ['Phone Call', 'Meeting', 'Site Visit', 'WhatsApp', 'Email', 'Other'];
 export { PAYMENT_MODES } from '../crm-shell-component/crm-convert-dialog-component';
-const OPEN_FOR_CONVERT = ['Quotation', 'Negotiation'];
 
 /**
  * /crm/leads/:id: the lead, its timeline and quotations, and what may be done with it: a follow-up, a change of
@@ -109,10 +108,15 @@ export class CrmLeadDetailComponent {
   readonly convertible = computed<QuotationSummaryDto[]>(() =>
     (this.lead()?.quotations ?? []).filter(q => q.isLatest && (q.status === 'Draft' || q.status === 'Sent')));
 
-  readonly canConvert = computed(() => {
+  /** Convert to sales order is offered, as on the quotation editor, while the open lead has a current quotation. */
+  readonly showConvert = computed(() => !!this.lead() && !this.isClosed() && this.convertible().length > 0);
+
+  /** Why a shown Convert button is disabled, or '' when it may go ahead: the quotation editor's rule and words. */
+  readonly convertHint = computed(() => {
     const l = this.lead();
-    return !!l && !l.salesOrderId && !l.convertNeedsCheck && OPEN_FOR_CONVERT.includes(l.status) && this.convertible().length > 0;
+    return this.showConvert() && l ? convertBlockedReason(l.status, l) : '';
   });
+  readonly canConvert = computed(() => this.showConvert() && !this.convertHint());
 
   /**
    * A convert whose order call failed leaves it unknown whether the order was made: the server flags the lead
@@ -283,16 +287,18 @@ export class CrmLeadDetailComponent {
     this.router.navigate(['/crm/quotations', 'new'], { queryParams: { leadId: this.leadId } });
   }
 
-  // ── convert to sale: app-crm-convert-dialog reads the preview and asks the server; the page hears the outcome ──
+  // ── convert to sales order: app-crm-convert-dialog (shared with the quotation editor) reads the preview and asks the server ──
 
   openConvert(quotationId?: number): void {
+    if (!this.canConvert() || this.busy()) return;
+    this.notice.set('');
     this.convertQuotationId.set(quotationId ?? null);
     this.dialog.set('convert');
   }
 
   converted(res: ConvertResultDto): void {
     this.dialog.set(null);
-    this.notice.set(`Sales order ${res.orderNo} made. Despatch it from the Sales screens.`);
+    this.notice.set(`Converted to sales order ${res.orderNo}.`);
     this.load();
   }
 

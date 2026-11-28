@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { AuthService } from '../Auth/auth-service';
 
-export type PlatformTab = 'companies' | 'applications' | 'verification' | 'projects' | 'locations' | 'branchAccess' | 'access' | 'menus' | 'servers' | 'settings' | 'loginAds';
+export type PlatformTab = 'companies' | 'applications' | 'verification' | 'projects' | 'locations' | 'branchAccess' | 'access' | 'menus' | 'servers' | 'settings' | 'loginAds' | 'admins';
 
 export interface PlatformSection {
   tab: PlatformTab;
@@ -21,6 +21,7 @@ export const PLATFORM_SECTIONS: PlatformSection[] = [
   { tab: 'projects', label: 'Company Databases', icon: 'storage' },
   { tab: 'access', label: 'Module Access', icon: 'apps' },
   { tab: 'servers', label: 'Database Servers', icon: 'dns' },
+  { tab: 'admins', label: 'Platform Admins', icon: 'admin_panel_settings' },
   { tab: 'settings', label: 'Settings', icon: 'tune' },
   { tab: 'loginAds', label: 'Login Ads', icon: 'view_carousel' },
   { tab: 'menus', label: 'Menus', icon: 'menu_book' },

@@ -193,6 +193,28 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SaveSetting([FromBody] SavePlatformSettingRequest req)
             => Ok(await _service.SaveSetting(req, Actor()));
 
+        // ── PLATFORM ADMINISTRATORS ───────────────
+
+        [PlatformUnlocked]
+        [HttpGet("admins")]
+        public async Task<IActionResult> GetAdmins()
+            => Ok(await _service.GetAdmins(Actor()));
+
+        [PlatformUnlocked]
+        [HttpGet("admins/candidates")]
+        public async Task<IActionResult> FindAdminCandidates([FromQuery] string? search)
+            => Ok(await _service.FindAdminCandidates(search, Actor()));
+
+        [PlatformUnlocked]
+        [HttpPost("admins/{userId:int}")]
+        public async Task<IActionResult> AddAdmin(int userId)
+            => Ok(await _service.AddAdmin(userId, Actor()));
+
+        [PlatformUnlocked]
+        [HttpDelete("admins/{userId:int}")]
+        public async Task<IActionResult> RemoveAdmin(int userId)
+            => Ok(await _service.RemoveAdmin(userId, Actor()));
+
         // ── LOGIN ADS ─────────────────────────────
 
         [PlatformUnlocked]

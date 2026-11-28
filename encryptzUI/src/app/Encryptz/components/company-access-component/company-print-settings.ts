@@ -3,9 +3,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { apiErrorMessage } from '../../Auth/api-error';
 import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { CompanyAccessApi } from './company-access';
+import { SettingChoice } from '../shared/quotation-defaults';
 
-type FieldKind = 'text' | 'area' | 'image' | 'mode';
-interface Field { key: string; label: string; kind: FieldKind; hint?: string; wide?: boolean; }
+type FieldKind = 'text' | 'area' | 'image' | 'mode' | 'choice';
+/** `choices` is for a 'choice' field: the first one shows when the setting is blank. */
+interface Field { key: string; label: string; kind: FieldKind; hint?: string; wide?: boolean; choices?: SettingChoice[]; }
 interface Section { title: string; hint: string; fields: Field[]; hidden?: boolean; }
 
 export const PRINT_SECTIONS: Section[] = [
@@ -27,6 +29,7 @@ export const PRINT_SECTIONS: Section[] = [
     { key: 'Print.BankIFSC', label: 'IFS code', kind: 'text' },
     { key: 'Print.BankName', label: 'Bank and branch', kind: 'text' },
   ] },
+  // the quotation validity and GST mode defaults are kept in CRM > Settings
   { title: 'Quotation defaults', hint: 'Loaded into each new quotation and sales order, where they can be changed before saving.', fields: [
     { key: 'Print.Warranty', label: 'Warranty', kind: 'area', hint: 'One point per row, without numbers', wide: true },
     { key: 'Print.Terms', label: 'Terms and conditions', kind: 'area', hint: 'One point per row, without numbers', wide: true },

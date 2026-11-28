@@ -21,6 +21,8 @@ describe('CrmSettingsComponent', () => {
 
   beforeEach(() => {
     crm = {
+      getPrintSettings: () => ok({ 'Print.QuotationValidity': '14d', 'Print.QuotationPrices': 'inclusive' }),
+      saveQuotationDefaults: vi.fn(() => ok(2)),
       getMasters: (kind: string) => ok(kind === 'sources'
         ? [{ id: 1, name: 'Walk-in', sortOrder: 1, isActive: true }]
         : [{ id: 2, name: 'Price', sortOrder: 1, isActive: true }]),
@@ -38,6 +40,22 @@ describe('CrmSettingsComponent', () => {
     expect(text).toContain('Walk-in');
     expect(text).toContain('Price');
     expect(text).toContain('Anu');
+  });
+
+  it('shows the quotation defaults and saves a change', () => {
+    const f = create();
+    const c = f.componentInstance;
+    expect(c.validity()).toBe('14d');
+    expect(c.prices()).toBe('inclusive');
+    expect(c.defaultsChanged()).toBe(false);
+    expect((f.nativeElement as HTMLElement).textContent).toContain('Quotation defaults');
+
+    c.validity.set('1m');
+    c.prices.set('exclusive');
+    expect(c.defaultsChanged()).toBe(true);
+    c.saveDefaults();
+    expect(crm.saveQuotationDefaults).toHaveBeenCalledWith({ validity: '1m', prices: 'exclusive' });
+    expect(c.defaultsChanged()).toBe(false);
   });
 
   it('adds a source and a member', () => {

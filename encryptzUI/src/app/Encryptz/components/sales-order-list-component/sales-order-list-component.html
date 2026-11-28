@@ -115,7 +115,10 @@
                       <button appRight="create" appRightMenu="/sales/despatch" class="fx-btn-navy btn-xs" title="Despatch this bill" (click)="despatch(o)">
                         <span class="material-icons" style="font-size:15px">local_shipping</span> Despatch
                       </button>
-                      <button appRight="delete" appRightMenu="/sales/orders" class="fx-action-btn is-danger" title="Cancel bill" (click)="cancel(o, $event)"><span class="material-icons">block</span></button>
+                      <button appRight="delete" appRightMenu="/sales/orders" class="fx-action-btn is-danger" title="Cancel sales order" (click)="cancel(o, $event)"><span class="material-icons">block</span></button>
+                    } @else if (isOpen(o.status)) {
+                      <!-- not billed yet: confirm / bill it on the order itself, where its invoice is attached -->
+                      <button appRight="delete" appRightMenu="/sales/orders" class="fx-action-btn is-danger" title="Cancel sales order" (click)="cancel(o, $event)"><span class="material-icons">block</span></button>
                     } @else if (o.despatchId) {
                       <button class="fx-action-btn" title="Despatch & warranty" (click)="viewDespatch(o)"><span class="material-icons">verified_user</span></button>
                     }

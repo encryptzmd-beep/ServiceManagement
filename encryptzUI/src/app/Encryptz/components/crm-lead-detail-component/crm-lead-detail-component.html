@@ -22,8 +22,9 @@
           <button type="button" class="crm-btn danger" (click)="open('lost')">Mark lost</button>
           @if (isManager()) { <button type="button" class="crm-btn crm-reassign" (click)="open('reassign')">Reassign</button> }
           <button appRight="create" appRightMenu="/crm/quotations" type="button" class="crm-btn" (click)="newQuotation()">New quotation</button>
-          @if (canConvert()) {
-            <button appRight="edit" appRightMenu="/crm/leads" type="button" class="crm-btn navy crm-convert" (click)="openConvert()"><span class="material-icons" aria-hidden="true">shopping_cart_checkout</span>Convert to Sale</button>
+          @if (showConvert()) {
+            <button appRight="edit" appRightMenu="/crm/leads" type="button" class="crm-btn primary crm-convert" [disabled]="busy() || !canConvert()"
+              [attr.aria-describedby]="canConvert() ? null : 'ld-convert-hint'" (click)="openConvert()"><span class="material-icons" aria-hidden="true">shopping_cart_checkout</span>Convert to sales order</button>
           }
         }
         @if (l.status === 'Lost' && isManager()) { <button appRight="edit" appRightMenu="/crm/leads" type="button" class="crm-btn" (click)="reopen()">Reopen</button> }
@@ -44,8 +45,9 @@
         (search)="onFindSearch($event)" (pick)="onFindPick($event)" (close)="findOpen.set(false)" />
     }
 
+    @if (convertHint() && !needsCheck()) { <p id="ld-convert-hint" class="crm-muted ld-convert-hint">{{ convertHint() }}</p> }
     @if (needsCheck()) {
-      <p class="crm-error crm-needs-check">A convert of this lead may have made a sales order. A manager must check the sales orders for this lead first, then link the order or cancel the convert.</p>
+      <p id="ld-convert-hint" class="crm-error crm-needs-check">A convert of this lead may have made a sales order. A manager must check the sales orders for this lead first, then link the order or cancel the convert.</p>
     }
 
     @if (notice()) { <p class="crm-ok">{{ notice() }}</p> }
