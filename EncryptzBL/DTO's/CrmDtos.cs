@@ -606,6 +606,15 @@ namespace EncryptzBL.DTO_s
         public int TotalCount { get; set; }
     }
 
+    /// <summary>CRM Settings > Quotation defaults: what a new quotation starts with (null = leave as it is).</summary>
+    public class QuotationDefaultsDto
+    {
+        /// <summary>none, 7d, 14d, 15d, 30d, 1m, 2m or 3m.</summary>
+        public string? Validity { get; set; }
+        /// <summary>exclusive or inclusive (GST).</summary>
+        public string? Prices { get; set; }
+    }
+
     public class QuotationFilterDto
     {
         public string? Search { get; set; }

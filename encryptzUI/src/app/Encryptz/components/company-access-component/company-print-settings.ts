@@ -3,9 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { apiErrorMessage } from '../../Auth/api-error';
 import { AppToastComponent } from '../app-toast-component/app-toast-component';
 import { CompanyAccessApi } from './company-access';
-import {
-  QUOTATION_PRICES_KEY, QUOTATION_PRICE_CHOICES, QUOTATION_VALIDITY_CHOICES, QUOTATION_VALIDITY_KEY, SettingChoice,
-} from '../shared/quotation-defaults';
+import { SettingChoice } from '../shared/quotation-defaults';
 
 type FieldKind = 'text' | 'area' | 'image' | 'mode' | 'choice';
 /** `choices` is for a 'choice' field: the first one shows when the setting is blank. */
@@ -31,11 +29,8 @@ export const PRINT_SECTIONS: Section[] = [
     { key: 'Print.BankIFSC', label: 'IFS code', kind: 'text' },
     { key: 'Print.BankName', label: 'Bank and branch', kind: 'text' },
   ] },
+  // the quotation validity and GST mode defaults are kept in CRM > Settings
   { title: 'Quotation defaults', hint: 'Loaded into each new quotation and sales order, where they can be changed before saving.', fields: [
-    { key: QUOTATION_VALIDITY_KEY, label: 'Quotation validity', kind: 'choice', choices: QUOTATION_VALIDITY_CHOICES,
-      hint: 'Valid Until of a new quotation = its date plus this period' },
-    { key: QUOTATION_PRICES_KEY, label: 'Quotation prices', kind: 'choice', choices: QUOTATION_PRICE_CHOICES,
-      hint: 'How the rates of a new quotation are entered' },
     { key: 'Print.Warranty', label: 'Warranty', kind: 'area', hint: 'One point per row, without numbers', wide: true },
     { key: 'Print.Terms', label: 'Terms and conditions', kind: 'area', hint: 'One point per row, without numbers', wide: true },
   ] },

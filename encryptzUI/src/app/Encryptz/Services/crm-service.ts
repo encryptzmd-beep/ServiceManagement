@@ -99,6 +99,11 @@ export class CrmService {
     return this.http.get<ApiResponse<Record<string, string>>>(`${this.base}/print-settings`);
   }
 
+  /** CRM Settings > Quotation defaults (managers): the validity period and GST mode a new quotation starts with. */
+  saveQuotationDefaults(dto: { validity?: string | null; prices?: string | null }): Observable<ApiResponse<number>> {
+    return this.http.put<ApiResponse<number>>(`${this.base}/quotation-defaults`, dto);
+  }
+
   reviseQuotation(id: number): Observable<ApiResponse<number>> {
     return this.http.post<ApiResponse<number>>(`${this.base}/quotations/${id}/revise`, {});
   }

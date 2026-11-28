@@ -16,3 +16,8 @@
   .st-hint { padding: 12px 14px; }
   .st-add { padding: 12px 14px; .crm-btn { flex: 1 1 100%; justify-content: center; } }
 }
+
+/* quotation defaults: two choices and Save on one row, stacked on a phone */
+.st-defaults { align-items: flex-end;
+  .crm-field small { font-size: 11.5px; color: #8a9ab0; font-weight: 400; }
+}

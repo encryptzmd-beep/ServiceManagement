@@ -108,6 +108,21 @@ namespace EncryptzTests
         }
 
         [Fact]
+        public void Quotation_defaults_are_kept_in_crm_settings_by_a_manager()
+        {
+            var api = Read("EncryptzAPI", "Controllers", "CrmController.cs");
+            var at = api.IndexOf("[HttpPut(\"quotation-defaults\")]", StringComparison.Ordinal);
+            Assert.True(at > 0, "the CRM quotation defaults endpoint is missing");
+            var head = api.Substring(at - 200, 200);
+            Assert.Contains("[MenuRight(\"/crm/settings\", MenuRightKind.Edit)]", head);
+            var body = api.Substring(at, api.IndexOf("BulkUpdate(", at, StringComparison.Ordinal) - at);
+            Assert.Contains("if (!await Manager())", body);
+            Assert.Contains("PrintSettingRules.Problem(key, value, row.DataType)", body);
+            // only the two defaults can be reached through it
+            Assert.Contains("(\"Print.QuotationValidity\", dto?.Validity), (\"Print.QuotationPrices\", dto?.Prices)", body);
+        }
+
+        [Fact]
         public void Job_card_reads_one_assignment_and_only_its_own_technician_may_open_it()
         {
             var s = Read("EncryptzAPI", "Database", "ProjectDB", "32_Job_Card.sql").Replace("\r\n", "\n");

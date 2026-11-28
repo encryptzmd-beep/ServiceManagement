@@ -5,12 +5,38 @@
     <header class="crm-page-head">
       <div>
         <h1>Settings</h1>
-        <p>The lists the team chooses from, and the sales team.</p>
+        <p>Quotation defaults, the lists the team chooses from, and the sales team.</p>
       </div>
     </header>
 
     @if (notice()) { <p class="crm-ok">{{ notice() }}</p> }
     @if (error()) { <p class="crm-error">{{ error() }}</p> }
+
+    <!-- what a new quotation starts with; each quotation can still be changed -->
+    <section class="crm-table-card" aria-labelledby="st-qd-title">
+      <div class="crm-table-toolbar">
+        <div class="crm-toolbar-left"><span class="crm-table-title" id="st-qd-title">Quotation defaults</span></div>
+      </div>
+      <p class="st-hint">A new quotation starts with these. They can still be changed on each quotation; saved quotations keep their own.</p>
+      @if (defaultsLoaded()) {
+        <div class="crm-filters st-add st-defaults">
+          <label class="crm-field grow"><span>Validity</span>
+            <select [ngModel]="validity()" (ngModelChange)="validity.set($event)" aria-describedby="st-validity-hint">
+              @for (c of validityChoices; track c.value) { <option [value]="c.value">{{ c.label }}</option> }
+            </select>
+            <small id="st-validity-hint">Valid Until = quotation date + this period</small></label>
+          <label class="crm-field grow"><span>Prices</span>
+            <select [ngModel]="prices()" (ngModelChange)="prices.set($event)" aria-describedby="st-prices-hint">
+              @for (c of priceChoices; track c.value) { <option [value]="c.value">{{ c.label }}</option> }
+            </select>
+            <small id="st-prices-hint">How the rates of a new quotation are entered</small></label>
+          <button appRight="edit" appRightMenu="/crm/settings" type="button" class="crm-btn primary"
+            [disabled]="savingDefaults() || !defaultsChanged()" (click)="saveDefaults()">{{ savingDefaults() ? 'Saving…' : 'Save' }}</button>
+        </div>
+      } @else {
+        <p class="st-hint">Loading…</p>
+      }
+    </section>
 
     <section class="crm-table-card">
       <div class="crm-table-toolbar">

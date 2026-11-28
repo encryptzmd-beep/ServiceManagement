@@ -155,6 +155,42 @@ namespace EncryptzAPI.Controllers
         public async Task<IActionResult> SaveQuotation([FromBody] QuotationSaveDto dto)
             => Answer(await _crm.SaveQuotation(Caller(), await Manager(), Company(), dto));
 
+        /// <summary>
+        /// The customers that are already the same party (same mobile or GSTIN) as a new quotation's customer: the
+        /// warning on the quotation. The Sales endpoint is for Service Management sessions only.
+        /// </summary>
+        [HttpGet("customer-matches")]
+        public async Task<IActionResult> CustomerMatches([FromServices] EncryptzBL.Infrastructure.Sales.Modules.ISalesService sales,
+            [FromQuery] string? mobile = null, [FromQuery] string? gstin = null)
+            => Ok(ApiResponse<List<CustomerMatchDto>>.Ok(await sales.CustomerMatches(mobile, gstin)));
+
+        /// <summary>
+        /// CRM Settings > Quotation defaults (managers): the validity period and the GST mode a new quotation starts with
+        /// (Print.QuotationValidity / Print.QuotationPrices, 31_Quotation_Defaults.sql). Read through print-settings.
+        /// </summary>
+        [MenuRight("/crm/settings", MenuRightKind.Edit)]
+        [HttpPut("quotation-defaults")]
+        public async Task<IActionResult> SaveQuotationDefaults([FromServices] ISettingsService settings, [FromBody] QuotationDefaultsDto dto)
+        {
+            if (!await Manager()) return Answer(ApiResponse<int>.Fail("Only a CRM manager can change the quotation defaults"));
+
+            var rows = (await settings.GetAll("Print")).Where(r => r.SettingGroup == "Print").ToDictionary(r => r.SettingKey);
+            var updates = new List<SettingUpdateDto>();
+            foreach (var (key, value) in new[] { ("Print.QuotationValidity", dto?.Validity), ("Print.QuotationPrices", dto?.Prices) })
+            {
+                if (value == null) continue;
+                if (!rows.TryGetValue(key, out var row))
+                    return Answer(ApiResponse<int>.Fail("Quotation defaults are not set up for this company. Run 31_Quotation_Defaults.sql in its database"));
+                var problem = PrintSettingRules.Problem(key, value, row.DataType);
+                if (problem != null) return Answer(ApiResponse<int>.Fail(problem));
+                updates.Add(new SettingUpdateDto { SettingId = row.SettingId, SettingValue = value.Trim().ToLowerInvariant() });
+            }
+            if (updates.Count == 0) return Answer(ApiResponse<int>.Ok(0, "Nothing to save"));
+
+            var saved = await settings.BulkUpdate(new BulkSettingsUpdateDto { Settings = updates }, Caller());
+            return Answer(saved.Success ? ApiResponse<int>.Ok(updates.Count, "Quotation defaults saved") : ApiResponse<int>.Fail(saved.Message ?? "The defaults could not be saved"));
+        }
+
         /// <summary>Settings > Print for the quotation print; a CRM user need not have the admin Settings screen.</summary>
         [HttpGet("print-settings")]
         public async Task<IActionResult> PrintSettings([FromServices] ISettingsService settings)
