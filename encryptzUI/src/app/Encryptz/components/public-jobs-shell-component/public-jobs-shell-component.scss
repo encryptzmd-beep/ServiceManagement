@@ -1,4 +1,4 @@
-/* The frame of the public job pages. Colours of the Job Portal pages. */
+/* The frame of the public job pages: a plain white top bar and a one-line footer. */
 
 $display: var(--app-font);
 $ink: #141b34;
@@ -12,75 +12,80 @@ $accent: #2563eb;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f6f8fc;
+  background: #fff;
   font-family: var(--app-font);
   color: $ink;
 }
 
-.ps-wrap { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 20px; box-sizing: border-box; }
+.ps-wrap { width: 100%; max-width: 1280px; margin: 0 auto; padding: 0 24px; box-sizing: border-box; }
 
 .ps-head {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
+  background: #fff;
   border-bottom: 1px solid $line;
 }
 
-.ps-head-row { display: flex; align-items: center; gap: 16px; height: 62px; }
+.ps-head-row { display: flex; align-items: stretch; gap: 24px; height: 64px; }
 
 .ps-brand {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   text-decoration: none;
   font-family: $display;
-  font-size: 18px;
-  font-weight: 500;
+  font-size: 19px;
+  font-weight: 600;
   color: $ink;
 
-  img { border-radius: 8px; }
-  strong { font-weight: 700; color: $accent; }
+  strong { font-weight: 800; color: $accent; }
+}
+
+/* a tab: underlined at the foot of the bar when it is the page */
+.ps-tabs {
+  display: flex;
+  align-items: stretch;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 4px;
+    border-bottom: 2px solid transparent;
+    font-size: 14px;
+    color: $ink;
+    text-decoration: none;
+
+    &:hover { border-bottom-color: #c7cdd8; }
+    &.on { border-bottom-color: $accent; }
+  }
 }
 
 .ps-nav {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 16px;
   margin-left: auto;
 
   a {
-    padding: 8px 12px;
-    border-radius: 9px;
-    font-size: 13.5px;
-    font-weight: 500;
-    color: #3b4357;
+    font-size: 14px;
+    color: $ink;
     text-decoration: none;
     white-space: nowrap;
-
-    &:hover { background: #f0f4ff; color: $accent; }
-    &.on { color: $accent; font-weight: 600; }
+    &:hover { text-decoration: underline; }
   }
 
-  .ps-cta {
-    background: $accent;
-    color: #fff;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-
-    &:hover { background: #1d4ed8; color: #fff; }
-  }
+  .ps-strong { font-weight: 700; color: $accent; }
 }
+
+.ps-sep { width: 1px; height: 24px; background: $line; }
 
 .ps-main { flex: 1 1 auto; }
 
 .ps-foot {
   margin-top: 48px;
-  padding: 22px 0;
-  border-top: 1px solid $line;
-  background: #fff;
-  font-size: 12.5px;
+  padding: 18px 0;
+  font-size: 13px;
   color: $muted;
 }
 
@@ -90,13 +95,22 @@ $accent: #2563eb;
   flex-wrap: wrap;
   gap: 10px 20px;
 
-  nav { display: flex; gap: 16px; margin-left: auto; }
-  a { color: $muted; text-decoration: none; &:hover { color: $accent; } }
+  nav { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+  span { margin-left: auto; }
+  a { color: #474f62; text-decoration: none; &:hover { text-decoration: underline; } }
+}
+
+/* the name goes only where it would crowd the links */
+@media (max-width: 420px) {
+  .ps-brand span { display: none; }
 }
 
 @media (max-width: 640px) {
   .ps-wrap { padding: 0 16px; }
-  .ps-brand span { display: none; }
-  .ps-nav a:not(.ps-cta):first-child { display: none; }
-  .ps-foot-row nav { margin-left: 0; }
+  .ps-head-row { gap: 12px; height: 56px; }
+  .ps-tabs { display: none; }
+  .ps-nav { gap: 10px; }
+  .ps-nav a { padding: 10px 2px; font-size: 13.5px; }
+  .ps-sep { height: 20px; }
+  .ps-foot-row span { margin-left: 0; }
 }
